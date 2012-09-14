@@ -154,8 +154,8 @@ Class.create("Tiled", {
 
 var Tiled = {
 	Tiled: {
-		new: function(scene, el, url) {
-			return Class.new("Tiled", [scene, el, url]);
+		"new": function(scene, el, url) {
+			return Class["new"]("Tiled", [scene, el, url]);
 		}
 	}
 };

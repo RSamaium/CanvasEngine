@@ -223,8 +223,8 @@ Class.create("Scrolling", {
 
 var Scrolling = {
 	Scrolling: {
-		new: function(scene, tile_h, tile_w) {
-			return Class.new("Scrolling", [scene, tile_h, tile_w]);
+		"new": function(scene, tile_h, tile_w) {
+			return Class["new"]("Scrolling", [scene, tile_h, tile_w]);
 		}
 	}
 };

@@ -81,8 +81,8 @@ Class.create("Spritesheet", {
 
 var Spritesheet = {
 	Spritesheet: {
-		new: function(image, set) {
-			return Class.new("Spritesheet", [image, set]);
+		"new": function(image, set) {
+			return Class["new"]("Spritesheet", [image, set]);
 		}
 	}
 };

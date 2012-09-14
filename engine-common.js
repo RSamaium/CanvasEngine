@@ -27,7 +27,7 @@ Kernel._extend = function(self, object, clone) {
 }
 
 Kernel.prototype = {
-	new: function() {
+	"new": function() {
 		this._class = new Class();
 		this._construct();
 		return this._class;
@@ -124,14 +124,14 @@ Class.create = function(name, methods, _static) {
 	return kernel;
 }
 
-Class.new = function(name, params) {
+Class["new"] = function(name, params) {
 	var _class;
 	params = params || [];
 	if (!Class.__class_config[name]) {
 		throw name + " class does not exist. Use method \"create\" for build the structure of this class";
 		return;
 	}
-	_class = Class.__class_config[name].kernel.new();
+	_class = Class.__class_config[name].kernel["new"]();
 	if (_class.initialize) {
 		_class.initialize.apply(_class, params);
 	}

@@ -58,8 +58,8 @@ Class.create("ModelClientClass", {
 		model.events = events;
 		Class.create(name, model);
 	},
-	new: function(name) {
-		var _class = Class.new(name).extend({
+	"new": function(name) {
+		var _class = Class["new"](name).extend({
 			_methods: {},
 			emit: function(name, data, callback) {
 				
@@ -114,9 +114,7 @@ Class.create("ModelClientClass", {
 	}
 });
 
-var Model = Class.new("ModelClientClass");
-
-var old;
+var Model = Class["new"]("ModelClientClass");
 
 /**
 	@class CanvasEngine
@@ -192,7 +190,7 @@ CanvasEngine.defines = function(canvas, params) {
 			
 			function onReady() {	
 				for (var i=0 ; i < self.canvas.length ; i++) {
-					self.el_canvas.push(self.Canvas.new(self.canvas[i]));
+					self.el_canvas.push(self.Canvas["new"](self.canvas[i]));
 				}
 				callback();
 				
@@ -465,28 +463,28 @@ CanvasEngine.defines = function(canvas, params) {
 		},
 		
 		Canvas:  {
-			new: function(id) {
-				return Class.new("Canvas", [id]);
+			"new": function(id) {
+				return Class["new"]("Canvas", [id]);
 			}
 		},
 		
 		Element: {
-			new: function(scene, layer, width, height) {
-				return Class.new("Element", [scene, layer, width, height]).extend("Context");
+			"new": function(scene, layer, width, height) {
+				return Class["new"]("Element", [scene, layer, width, height]).extend("Context");
 			}
 		},
 		
 		Context:  {
-			new: function(layer) {
-				return Class.new("Context", [layer]);
+			"new": function(layer) {
+				return Class["new"]("Context", [layer]);
 			}
 		},
 		
 		Scene: 	{
 				  _scenes: {},
 				  _current: null,
-				  new: function(obj) {
-					var _class = Class.new("Scene", [obj]).extend(obj, false);
+				  "new": function(obj) {
+					var _class = Class["new"]("Scene", [obj]).extend(obj, false);
 					this._scenes[obj.name] = _class;
 					return _class;
 				  },
@@ -693,7 +691,7 @@ CanvasEngine.defines = function(canvas, params) {
 				height = width;
 				width = name;
 			}
-			var el = CanvasEngine.Element.new(this, null, width, height);
+			var el = CanvasEngine.Element["new"](this, null, width, height);
 			if (name) {
 			  this._global_elements[name] = el;
 			}
@@ -706,7 +704,7 @@ CanvasEngine.defines = function(canvas, params) {
 		},
 		_load: function() {
 			var self = this;
-			this._stage = CanvasEngine.Element.new(this);
+			this._stage = CanvasEngine.Element["new"](this);
 
 			
 			for (var i=0 ; i < CanvasEngine.el_canvas.length ; i++) {
@@ -1482,7 +1480,7 @@ CanvasEngine.defines = function(canvas, params) {
 		}
 	});
 	
-	CanvasEngine = Class.new("CanvasEngineClass");
+	CanvasEngine = Class["new"]("CanvasEngineClass");
 	return CanvasEngine;
 }
 var CE = CanvasEngine;

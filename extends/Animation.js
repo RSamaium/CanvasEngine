@@ -541,13 +541,13 @@ var Animation = {
 		</code>
 	*/
 	Timeline: {
-		new: function(el) {
-			return Class.new("Timeline", [el]);
+		"new": function(el) {
+			return Class["new"]("Timeline", [el]);
 		}
 	},
 	Animation: {
-		new: function(options, canvas) {
-			return Class.new("Animation", [options, canvas]);
+		"new": function(options, canvas) {
+			return Class["new"]("Animation", [options, canvas]);
 		}
 	}
 };
