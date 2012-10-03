@@ -20,20 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
 
- Spritesheet.new("img", {
- 
-	grid: [{
-		size: [4, 5],
-		tile: [107, 107],
-		set: ["play", "player_hover", "zoom_p", "zoom_m"]
-	}],
-	btn_play: [433, 33, 215, 188]
- 
- });
-
-*/
 
 Class.create("Spritesheet", {
 	image: null,
@@ -42,6 +29,27 @@ Class.create("Spritesheet", {
 		this.image = image;
 		if (set) this.set(set);
 	},
+	/**
+		@method set Assigns an identifier to an area of the spritesheet. A grid can be defined to be faster.
+		@param {Object} set : If the key is called "grid", the image is cut from a grid. Set the grid with
+			- size: [Line number, column number]
+			- tile : [Width of the box, Height of the box]
+			- set : Each identifier in array starting from the firt case in top left of the grid
+		If the key is not "grid", we assign a zone identifier: [x, y, width, height]
+		@example :
+			<code>
+			var spritesheet = canvas.Spritesheet.new("my_spritesheet");
+			spritesheet.set({
+				grid: [{
+					size: [4, 5],
+					tile: [107, 107],
+					set: ["play", "player_hover", "zoom_p", "zoom_m"]
+				}],
+				btn_play: [433, 33, 215, 188]
+			});
+			</code>
+		Here, there is a grid of rows and 5 columns of 107px width and height. The first box is called "play". We have another area placed at positions (433, 33), width is 215px and height is 188px. The ID of this area is "btn_play"
+	*/
 	set: function(set) {
 		var gridset, gridname, x, y, grid_w, grid_h;
 		for (var id in set) {
@@ -63,6 +71,20 @@ Class.create("Spritesheet", {
 			}
 		}
 	},
+	/**
+		@method draw Draw a Sprite on the element
+		@param {CanvasEngine.Element} el
+		@param {String} id Sprite identifier defined with the method "set" (or the constructor)
+		@param {Object} (optional) dest Positions and dimensions of the final destination :
+			- x {Integer} Position X
+			- y {Integer} Position Y
+			- w {Integer} Width
+			- h {Integer} Height
+		Equivalent to
+			<code>
+				el.drawImage(--, --, --, --, --, x, y, w, h);
+			</code>
+	*/
 	draw: function(el, id, dest) {
 		dest = dest || {};
 		var tile =  this._set[id];
@@ -79,6 +101,44 @@ Class.create("Spritesheet", {
 	}				
 });
 
+/**
+	@class Spritesheet
+	Spritesheet is a Sprites collection in an image. This class aims to crop the image, retrieve each Sprite by assigning an identifier
+	@param {String} image ID image
+	@param {Object} params See the method "set"
+	@example
+	
+	var canvas = CE.defines("canvas_id").
+		extend(Spritesheet).
+		ready(function() {
+			canvas.Scene.call("MyScene");
+		});
+			
+		canvas.Scene.new({
+			name: "MyScene",
+			materials: {
+				images: {
+					my_spritesheet: "path/to/spritesheet.png"
+				}
+			},
+			ready: function(stage) {
+				 var el = this.createElement();
+				 var spritesheet = canvas.Spritesheet.new("my_spritesheet", {
+ 
+					grid: [{
+						size: [4, 5],
+						tile: [107, 107],
+						set: ["play", "player_hover", "zoom_p", "zoom_m"]
+					}],
+					btn_play: [433, 33, 215, 188]
+				 
+				 });
+				 spritesheet.draw("play", el);
+				 stage.append(el);
+			}
+		});
+
+*/
 var Spritesheet = {
 	Spritesheet: {
 		"new": function(image, set) {

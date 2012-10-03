@@ -1,7 +1,5 @@
 /*
-Visit http://rpgjs.com for documentation, updates and examples.
-
-Copyright (C) 2011 by Samuel Ronce
+Copyright (C) 2012 by Samuel Ronce
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,9 +21,87 @@ THE SOFTWARE.
 */
 
 /**
- * @class this Keyboard handling
- * @author Samuel Ronce
- */
+	@class Input Keyboard, Gamepad et accelerometer
+	@example
+		Keyboard:
+		<code>
+		var canvas = 	CE.defines("canvas_id").
+						extend(Input).
+						ready(function() {
+							canvas.Scene.call("Map");
+						});
+						
+		canvas.Scene.new({
+			 name: "Map",
+			 ready: function(stage) {
+
+				canvas.Input.keyDown(Input.Bottom);
+				canvas.Input.keyDown(Input.A, function() {
+					console.log("A pressed");
+				});
+				canvas.Input.keyUp(Input.A, function() {
+					console.log("A released");
+				});
+
+			 },
+			 render: function(stage) {
+			 
+				if (canvas.Input.isPressed(Input.Bottom)) {
+					console.log("Bottom pressed");
+				}
+			 
+				stage.refresh();
+			 }
+		}); 
+		</code>
+		Gamepad :
+		
+		In header (http://www.gamepadjs.com)
+		<code>
+			<script src="extends/gamepad.js"></script>
+		</code>
+		
+		Script :
+		<code>
+			
+		var canvas = 	CE.defines("canvas_id").
+						extend(Input).
+						ready(function() {
+							canvas.Scene.call("Map");
+						});
+						
+		canvas.Scene.new({
+			 name: "Map",
+			 ready: function(stage) {
+
+				this.gamepad = canvas.Input.Gamepad.init(function() {
+				   console.log("Gamepad connected");
+				}, function() {
+				    console.log("Gamepad disconnected");
+				});
+				
+				this.gamepad.addListener("faceButton0", function() {
+				   console.log("A pressed");
+				}, function() {
+				   console.log("A released");
+				});
+				
+				canvas.Input.keyDown(Input.Right, function() {
+				   // Code
+				});
+				this.gamepad.addListener("dpadRight", Input.Right);
+
+			 },
+			 render: function(stage) {
+			 
+				this.gamepad.update();
+			 
+				stage.refresh();
+			 }
+		}); 
+		
+		</code>
+*/
 
 var Input = {Input: {
 
@@ -59,7 +135,6 @@ var Input = {Input: {
 
 	/**
 	 * Calling a function when a key is pressed (only once)
-	 * @static 
 	 * @method press
 	 * @param {Integer|Array} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
 	 * @param {Function} onPressKey Function called when a key is pressed. One parameter: the event of the button (Event Object)
@@ -70,7 +145,6 @@ var Input = {Input: {
 
 	/**
 	 * Clears the functions assigned to keys indicated
-	 * @static 
 	 * @method clearKeys
 	 * @param {Integer|Array} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
 	*/
@@ -80,7 +154,6 @@ var Input = {Input: {
 
 	/**
 	 * Calling a function when a key is down
-	 * @static 
 	 * @method keyDown
 	 * @param {Integer} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
 	 * @param {Function} onPressKey Function called. One parameter: the event of the button (Event Object)
@@ -91,7 +164,6 @@ var Input = {Input: {
 
 	/**
 	 * Calling a function when a key is up
-	 * @static 
 	 * @method keyUp
 	 * @param {Integer} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
 	 * @param {Function} onKeyUp Function called. One parameter: the event of the button (Event Object)
@@ -159,7 +231,6 @@ var Input = {Input: {
 
 	/**
 	 * Resets all keys. You must assign the buttons (press(), keyDown() and keyUp()) to restore movement and actions
-	 * @static 
 	 * @method reset
 	*/
 	reset: function() {
@@ -168,7 +239,6 @@ var Input = {Input: {
 
 	/**
 	 * Lock the keys on the canvas and avoid scrolling of the page
-	 * @static 
 	 * @method lock
 	 * @param {HTMLCanvasElement} canvas Canvas
 	 * @param {Boolean} focus_start (optional) Place the focus on the canvas. false by default
@@ -192,7 +262,6 @@ var Input = {Input: {
 
 	/**
 	 * Whether a key is pressed
-	 * @static 
 	 * @method isPressed
 	 * @param {Integer} key Value of the key. If it's an array, returns true if a key is pressed
 	 * @return Boolean true if pressed
@@ -203,16 +272,17 @@ var Input = {Input: {
 
 	/**
 	 * Add key (constant). Example :<br />
-		<pre>
-			Input.addKey("F", 70);
-			Input.press(Input.F, function(e) {
-				// Code
-			});
-		</pre>
 	 * @static 
 	 * @method addKey
 	 * @param {String} id ID key
 	 * @param {Integer} keycode Key value
+		@example
+			<code>
+				canvas.Input.addKey("F", 70);
+				canvas.Input.press(Input.F, function(e) {
+					// Code
+				});
+			</code>
 	*/
 	addKey: function(id, keycode) {
 		this[id] = keycode;
@@ -220,7 +290,6 @@ var Input = {Input: {
 
 	/**
 	 * Stores the keys pressed
-	 * @static 
 	 * @method memorize
 	*/
 	memorize: function() {
@@ -229,7 +298,6 @@ var Input = {Input: {
 
 	/**
 	 * Reassigns the keys pressed cached (see "Input.memorize()")
-	 * @static 
 	 * @method restore
 	*/
 	restore: function() {
@@ -238,15 +306,18 @@ var Input = {Input: {
 
 	/**
 	 * Simulates the call of a key
-	 * @static 
 	 * @method trigger
 	 * @param {Integer} key Key Code (example: Input.Space)
 	 * @param {String} type Type of event key, "down", "up" or "press". "press" is the touch of a key (pressed and then released)
 	 * @param {HTMLCanvasElement} canvas (optional) Canvas. Allows to restore the focus to the canvas
 	 * @example
-		Input.trigger(Input.A, "press");
+		<code>
+			canvas.Input.trigger(Input.A, "press");
+		</code>
 	 * @example
-		Input.trigger(Input.Enter, "down", rpg.canvas);
+		<code>
+			canvas.Input.trigger(Input.Enter, "down", _canvas);
+		</code>
 	*/
 		trigger: function(key, type, canvas) {
 			var ev, element, dom;
@@ -278,23 +349,61 @@ var Input = {Input: {
 			}
 		},
 
+	  // TODO
 	  addRule: function(name, inputs) {
 		this._rules[name] = inputs;
 	  },
-	  
-	
-	  
+	  /**
+		@class Gamepad
+		Can play with the gamepad
+		@example
+		In method "ready" of the scene :
+		<code>
+			var canvas = CE.defines("canvas_id").
+			extend(Input).
+			ready(function() {
+				canvas.Scene.call("MyScene");
+			});
+				
+			canvas.Scene.new({
+				name: "MyScene",
+				ready: function(stage) {
+					this.gamepad = canvas.Input.Gamepad.init(function() {
+					  console.log("Gamepad connected");
+					}, function() {
+					  console.log("Gamepad disconnected");
+					});
+					
+					this.gamepad.addListener("faceButton0", function() {
+					   console.log("key A down");
+					}, function() {
+					   console.log("key A up");
+					});
+				},
+				render: function(stage) {
+					this.gamepad.update();
+				}
+			});
+		</code>
+	*/
 	  Gamepad: {
 		_listener: {},
 		gamepad: null,
 		_onConnect: null,
 		_onDisconnect: null,
 		_connectState: false,
+		/**
+			@method init Initialize the gamepad
+			@param {Function} onConnect (optional) Callback function when the gamepad is connected
+			@param {Function} onDisconnect (optional) Callback function when the gamepad is disconnected
+			@return {CanvasEngine.Input.Gamepad}
+		*/
 		init: function(onConnect, onDisconnect) {
 			this._onConnect = onConnect;
 			this._onDisconnect = onDisconnect;
 			return this;
 		},
+		// Private
 		getState: function(pos) {
 			this.gamepad = Gamepad.getStates()[pos];
 			if (this.gamepad && !this._connectState) {
@@ -306,6 +415,25 @@ var Input = {Input: {
 				this._connectState = false;
 			}
 		},
+		/**
+			@method addListener Adds a listener when a button is pressed or released
+			@param {String} Id button. See https://github.com/sgraham/gamepad.js
+			@param {Function} onDown Callback function when the button is pressed
+			@param {Function} onUp Callback function when the button is released
+		*/
+		/**
+			@method addListener Execute a function already defined on the keyboard
+			@param {String} Id button. See https://github.com/sgraham/gamepad.js
+			@param {Integer} input Value of the key on the keyboard
+			@example
+				<code>
+					this.gamepad = canvas.Input.Gamepad.init();
+					canvas.Input.keyDown(Input.Right, function() {
+					   // Code
+					});
+					this.gamepad.addListener("dpadRight", Input.Right);
+				</code>
+		*/
 		addListener: function(obj, onDown, onUp) {
 			var _Input = Input.Input;
 			if (typeof onDown != "function") {
@@ -323,6 +451,9 @@ var Input = {Input: {
 				state: false
 			};
 		},
+		/**
+			@method update Updates the inputs of the gamepad
+		*/
 		update: function() {
 			this.getState(0);
 			if (!this.gamepad) return;
@@ -339,6 +470,19 @@ var Input = {Input: {
 		}
 	  },
 	  
+	  /**
+		@method accelerometer Assigns the accelerometer
+		@param {Function} callback Callback function called with "deviceorientation" listener. 3 parameters :
+			- x : Direction side to side
+			- y : Vertically oriented front-back
+			- z : Front and rear horizontal orientation
+		@example
+			<code>
+				canvas.Input.accelerometer(function(x, y, z) {
+				
+				});
+			</code>
+	  */
 	  accelerometer: function(callback) {
 		if (window.DeviceOrientationEvent) {
 			 window.addEventListener('deviceorientation', function(eventData) {

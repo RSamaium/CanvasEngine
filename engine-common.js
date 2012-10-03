@@ -53,19 +53,88 @@ Kernel.prototype = {
 		}
 		return this;
 	},
+	/**
+		@method attr_accessor Defines the properties that can be read and modified
+		@params {Array} Properties names in an array
+		@example
+			<code>
+				Class.create("Foo", {
+				
+					mymethod: function() {
+						this.bar.set(5);
+						console.log(this.bar.get()); // Value of property "bar" is 5
+						console.log(this._bar); // ditto
+					}
+				
+				}).attr_accessor(["bar"]);
+			</code>
+		@return {Object}
+	*/
 	attr_accessor: function(attrs) {
 		return this._attr_accessor(attrs, true, true);
 	},
+	/**
+		@method attr_reader Defines the properties that can be only read
+		@params {Array} Properties names in an array
+		@example
+			<code>
+				Class.create("Foo", {
+				
+					mymethod: function() {
+						console.log(this.bar.get());
+					}
+				
+				}).attr_reader(["bar"]);
+			</code>
+		@return {Object}
+	*/
 	attr_reader: function(attrs) {
 		return this._attr_accessor(attrs, true, false);
 	},
+	/**
+		@method attr_writer Defines the properties that can be only modified
+		@params {Array} Properties names in an array
+		@example
+			<code>
+				Class.create("Foo", {
+				
+					mymethod: function() {
+						this.bar.set(5);
+						console.log(this._bar);
+					}
+				
+				}).attr_writer(["bar"]);
+			</code>
+		@return {Object}
+	*/
 	attr_writer: function(attrs) {
 		return this._attr_accessor(attrs, false, true);
 	},
+	/**
+		@method extend add object in this class
+		@params {Object} object
+		@parmas {Boolean} clone (optional) Makes a clone of the object (false by default)
+		@example
+			<code>
+				Class.create("Foo", {
+				
+					mymethod: function() {
+						
+					}
+				
+				}).extend({
+					othermethod: function() {
+					
+					}
+				});
+			</code>
+		@return {Object}
+	*/
 	extend: function(object, clone) {
 		Kernel._extend(this.class_method, object, clone);
 		return this;
 	},
+	// TODO
 	addIn: function(name) {
 		if (!Class.__class[name]) {
 			return this;
@@ -83,11 +152,33 @@ function Class() {
 Class.__class = {};
 Class.__class_config = {};
 
+/**
+	@method get By retrieve the class name
+	@static
+	@params {String} name Class name
+	@return {Kernel} Core class
+*/
 Class.get = function(name) {
 	return Class.__class[name];
 };
 
-
+/**
+	@method create Creating a class. the constructor is the method "initialize"
+	@static
+	@params {String} name Class name
+	@params {Object} methods Methods and properties of the class
+	@example
+		<code>
+			Class.create("Foo", {
+				bar: null,
+				initialize: function(bar) {
+					this.bar = bar;
+				}
+			});
+			var foo = Class.new("Foo", ["Hello World"]);
+		</code>
+	@return {Kernel} Core class
+*/
 Class.create = function(name, methods, _static) {
 	var p, _class, _tmp_class;
 	
@@ -124,6 +215,13 @@ Class.create = function(name, methods, _static) {
 	return kernel;
 }
 
+/**
+	@method new new class. 
+	@static
+	@params {String} name Class name
+	@params {Array} params Parameters for the constructor
+	@return {Class}
+*/
 Class["new"] = function(name, params) {
 	var _class;
 	params = params || [];
@@ -141,6 +239,27 @@ Class["new"] = function(name, params) {
 }
 
 Class.prototype = {
+	/**
+		@method extend add object in this class
+		@params {Object} object
+		@parmas {Boolean} clone (optional) Makes a clone of the object (false by default)
+		@example
+			<code>
+				Class.create("Foo", {
+				
+					mymethod: function() {
+						
+					}
+				
+				});
+				Class.new("Foo").extend({
+					othermethod: function() {
+					
+					}
+				});
+			</code>
+		@return {Object}
+	*/
 	extend: function(object, clone) {
 		return Kernel._extend(this, object, clone);
 	}
@@ -148,11 +267,22 @@ Class.prototype = {
 
 var CanvasEngine = {};
 
+/**
+	@method uniqid Generating a unique identifier by date
+	@static
+	@return {String}
+*/
 CanvasEngine.uniqid = function() {
    // return new Date().getTime();
    return Math.random();
 };
 
+/**
+	@method Removes an element in an array by value
+	@static
+	@params {Object} val
+	@params {Array} array
+*/
 CanvasEngine.arraySplice = function(val, array) {
 	var i;
 	for (i=0 ; i < array.length ; ++i) {
@@ -163,6 +293,16 @@ CanvasEngine.arraySplice = function(val, array) {
 	}
 };
 
+/**
+	@method ajax Perform an asynchronous HTTP (Ajax) request. System uses wire on Node.js
+	@static
+	@params {Object} options
+			- url {String} File Path
+			- type {String} (optional) "GET" (default) or "POST"
+			- data {Object} (optional) Data key/value
+			- dataType {String} (optional) "text" (default), "json" or "xml"
+			- success {Function}  (optional) Callback if the request was successful
+*/
 CanvasEngine.ajax = function(options) {
 
 	if (!options) options = {};
@@ -203,6 +343,9 @@ CanvasEngine.ajax = function(options) {
 						if (options.dataType == 'json') {
 							ret = CanvasEngine.parseJSON(ret);
 						}
+						else if (options.dataType == 'xml') {
+							ret = xhr.responseXML;
+						}
 						options.success(ret);
 					}
 			  }
@@ -214,6 +357,13 @@ CanvasEngine.ajax = function(options) {
 
 }
 
+/**
+	@method getJSON Load JSON-encoded data from the server using a GET HTTP request.
+	@static
+	@params {String} url File Path
+	@params {String} (optional) data Data key/value
+	@params {Function} (optional) callback Callback if the request was successful
+*/
 CanvasEngine.getJSON = function(url, data, callback) {
 	if (typeof data == "function") {
 		callback = data;
@@ -227,10 +377,37 @@ CanvasEngine.getJSON = function(url, data, callback) {
 	});
 }
 
+/**
+	@method parseJSON Takes a well-formed JSON string and returns the resulting JavaScript object.
+	@static
+	@params {String} json JSON format
+	@return {Object}
+*/
 CanvasEngine.parseJSON = function(json) {
 	return JSON.parse(json);
 }
 
+/**
+	@method each The array is read and sent to a callback function
+	@static
+	@params {Array|Integer} array If the value is an integer, it returns to perform a number of loop iteration
+	@params {Function} callback  two parameters :
+		- index
+		- value
+	@example
+		<code>
+			var foo = ["bar", "test"];
+			CE.each(foo, function(i, val) {
+				console.log(val);
+			});
+		</code>
+		<code>
+			var foo = ["bar", "test"];
+			CE.each(2, function(i) {
+				console.log(foo[i]);
+			});
+		</code>
+*/
 CanvasEngine.each = function(array, callback) {
 	var i, l;
 	if (array instanceof Array) {
@@ -245,6 +422,15 @@ CanvasEngine.each = function(array, callback) {
 	}
 }
 
+/**
+	@method inArray The CE.inArray() method is similar to JavaScript's native .indexOf() method in that it returns -1 when it doesn't find a match. If the first element within the array matches value, CE.inArray() returns 0.
+
+	Because JavaScript treats 0 as loosely equal to false (i.e. 0 == false, but 0 !== false), if we're checking for the presence of value within array, we need to check if it's not equal to (or greater than) -1.
+	@static
+	@params {String} val The value to search for.
+	@params {Array} array An array through which to search.
+	@return {Integer}
+*/
 CanvasEngine.inArray = function(val, array)  {
 	var i;
 	for (i=0 ; i < array.length ; ++i) {
@@ -255,6 +441,12 @@ CanvasEngine.inArray = function(val, array)  {
 	return -1;
 };
 
+/**
+	@method clone Clone an object
+	@static
+	@params {Object} instance
+	@return {Object}
+*/
 CanvasEngine.clone = function(srcInstance) {
 	var i;
 	if(typeof(srcInstance) != 'object' || srcInstance == null) {
@@ -270,6 +462,12 @@ CanvasEngine.clone = function(srcInstance) {
 	return newInstance;
 }
 
+/**
+	@method hexaToRGB Converts the hexadecimal value of a color in RGB. Returns an array with 3 colors : [r, g, b]
+	@static
+	@params {String} hexa Hexadecimal with or without #
+	@return {Array} 
+*/
 CanvasEngine.hexaToRGB = function(hexa) {
 	var r, g, b;
 	

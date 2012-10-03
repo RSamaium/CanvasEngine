@@ -519,13 +519,61 @@
 
 })(Array);
 
-Marshall = {
+/**
+	@class Marshal
+	The marshaling library converts collections of JS objects into a BISON format, allowing them to be stored in localStorage. This data may subsequently be read and the original objects reconstituted.
+	
+	BISON : https://github.com/BonsaiDen/BiSON.js/
+	Inspired of Ruby : http://www.ruby-doc.org/core-1.9.3/Marshal.html
+	
+	@static
+	@example
+	To write :
+	<code>
+		Class.create("Foo", {
+			bar: 2
+		});
+		Class.create("Test", {
+			qux: 5
+		});
+		var foo = Class.new("Foo"),
+			test = Class.new("Test");
+		Marshal.dump(foo, "save_name");
+		test.qux = 10;
+		Marshal.dump(test, "save_name");
+	</code>
+	Read the save from above :
+	<code>
+		Class.create("Foo", {
+			bar: 2
+		});
+		Class.create("Test", {
+			qux: 5
+		});
+		var foo = Class.new("Foo"),
+			test = Class.new("Test");
+		foo = Marshal.load("save_name");
+		test = Marshal.load("save_name");
+		console.log(test.qux); // 10
+	</code>
+*/
+Marshal = {
 	_pointer: 0,
 	_cache: {},
 	_stack_dump: [],
+	/**
+		@method exist Testing the existence of save in localStorage
+		@param {String} name Save name
+		@return Class
+	*/
 	exist: function(file) {
 		return localStorage && localStorage[file];
 	},
+	/**
+		@method load Load data and restores the properties of the class the order of the stack of Marshal
+		@param {String} name Save name
+		@return Class
+	*/
 	load: function(file) {
 		var data, _class, _class_name;
 		if (this._cache[file]) {
@@ -535,7 +583,7 @@ Marshall = {
 			data = BISON.decode(localStorage[file]) || [];
 			this._cache[file] = data;
 		}
-		if (!Marshall.exist(file)) {
+		if (!Marshal.exist(file)) {
 			return false;
 		}
 		if (_class_name = data[this._pointer].__name__) { // not ==. Class name verification
@@ -551,6 +599,11 @@ Marshall = {
 		this._pointer++;
 		return _class;
 	},
+	/**
+		@method dump Saves the properties of a class in localStorage. The order is important for recovery with load method
+		@param {Class} _class Class
+		@param {String} name Save name
+	*/
 	dump: function(_class, file) {
 		var storage = [], new_data = {};
 		if (typeof _class == "number" ||

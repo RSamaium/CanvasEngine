@@ -116,6 +116,8 @@ Class.create("ModelClientClass", {
 
 var Model = Class["new"]("ModelClientClass");
 
+var old;
+
 /**
 	@class CanvasEngine
 	@static
@@ -207,12 +209,50 @@ CanvasEngine.defines = function(canvas, params) {
 			this._noConflict = true;
 		},
 		
+		/**
+		@class Materials
+		@details
+			Resource management game
+			The class is used with the properties "materials" in the scene but you can still use it for loading external resources to the scene
+		@example
+			Using Sound :
+			<code>
+			var canvas = CE.defines("canvas_id").
+				ready(function() {
+					canvas.Scene.call("MyScene");
+				});
+						
+			canvas.Scene.new({
+				name: "MyScene",
+				ready: function(stage) {
+					canvas.Materials.load("images", [
+						{img1: "path/to/img1.png"},
+						{img2: "path/to/im2.png"}
+					], function(img) {
+						console.log("Image is loaded");
+					}, function() {
+						console.log("All images are loaded");
+					});
+				}
+			});
+			</code>
+		*/
 		Materials: {
 			images: {},
 			sounds: {},
 			fonts: {},
-			get: function(img) {
-				return this.images[img];
+			/**
+				@method get Get the picture or sound according to its identifier
+				@param {String} id
+				@return {HTML5Audio|Images}
+			*/
+			get: function(id) {
+				if (this.images[id]) {
+					return this.images[id];
+				}
+				else if (this.sounds[id]) {
+					return this.sounds[id];
+				}
 			},
 			transparentColor: function(img, color) {
 				var canvas =  document.createElement('canvas'), ctx, imageData, data, rgb;
@@ -234,6 +274,27 @@ CanvasEngine.defines = function(canvas, params) {
 				ctx.putImageData(imageData, 0, 0);
 				return canvas;
 			},
+			/**
+				@method load Load a resource
+				@param {String} type Type : "images" or "sounds"
+				@param {Array|Object} path Paths to resources.
+					- If array : Elements are composed of objects where the key is the identifier and value is the path
+					<code>
+						 [
+							{img1: "path/to/img1.png"},
+							{img2: "path/to/im2.png"}
+						]
+					</code>
+					- If object, the key is the identifier and value is the path :
+					<code>
+						{img1: "path/to/img1.png", img2: "path/to/im2.png"}
+					</code>
+					The value can be an object to give several parameters :
+					<code>
+						{img1: {path: "path/to/img1.png", transparentcolor: "#ff0000"}, img2: "path/to/im2.png"}
+					</code>
+					"path" is the path and "transparentcolor" the color that will be transparent image
+			*/
 			load: function(type, path, onLoad, onFinish) {
 				var i=0, self = this, materials, img_data;
 				if (path instanceof Array) {
@@ -347,6 +408,44 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 		},
 		
+		/**
+		@class Sound
+		@details
+			Sound management
+			The class uses HTML5 audio but you can use SoundManager 2 (http://www.schillmania.com/projects/soundmanager2/). 
+			
+			Use :
+			- Insert the JS script : <script src="soundmanager2.js"></script> (http://www.schillmania.com/projects/soundmanager2/doc/getstarted/#basic-inclusion)
+			- Put the swf file to the root of your project. If you want to change the path :
+			<code>
+			var canvas = CE.defines("canvas_id", {
+				swf_sound: 'path/to/swf/'
+			}).ready(function() {
+			
+			});
+			</code>
+			Assign the path with the property "swf_sound"
+		@example
+			Using Sound :
+			<code>
+			var canvas = CE.defines("canvas_id").
+				ready(function() {
+					canvas.Scene.call("MyScene");
+				});
+						
+			canvas.Scene.new({
+				name: "MyScene",
+				materials: {
+					sounds: {
+						sound_id: "path/to/music.mp3"
+					}
+				},
+				ready: function(stage) {
+					canvas.Sound.get("sound_id").play();
+				}
+			});
+			</code>
+		*/
 		Sound: {
 			_fade: {},
 			_manager: false,
@@ -362,6 +461,11 @@ CanvasEngine.defines = function(canvas, params) {
 				}
 				return snd;
 			},
+			/**
+				@method allStop  Stop all music
+				@param {String} sound_id (optional) Except this music (ID)
+				@return  {CanvasEngine.Sound}
+			*/
 			allStop: function(sound) {
 				sound = sound || "";
 				var sounds = CanvasEngine.Materials.sounds;
@@ -372,6 +476,11 @@ CanvasEngine.defines = function(canvas, params) {
 				}
 				return this;
 			},
+			/**
+				@method playOnly Only play a sound (and other stops)
+				@param {Integer} id Identifier of the music
+				@return  {CanvasEngine.Sound}
+			*/
 			playOnly: function(id) {
 				this.allStop(id);
 				this.get(id).play();
@@ -663,6 +772,11 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 			return this.createElement(name);
 		},
+		/**
+			@method getCanvas Get the canvas
+			@param {Integer} id (optional) Position in array
+			@return {HTMLCanvasElement}
+		*/
 		getCanvas: function(id) {
 			if (!id) id = 0;
 			return CanvasEngine.el_canvas[id];
@@ -798,27 +912,51 @@ CanvasEngine.defines = function(canvas, params) {
 			alpha: function(opacity) {
 				this.globalAlpha = opacity;
 			},
+			/**
+				@method fillRect. See http://www.w3schools.com/html5/canvas_fillrect.asp
+			*/
 			fillRect: function(x, y, w, h) {
 				this._addCmd("fillRect", [x, y, w, h], ["fillStyle"]);
 			},
+			/**
+				@method fill. See http://www.w3schools.com/html5/canvas_fill.asp
+			*/
 			fill: function() {
 				this._addCmd("fill", [], ["fillStyle"]);
 			},
+			/**
+				@method fill. See http://www.w3schools.com/html5/canvas_filltext.asp
+			*/
 			fillText: function(text, x, y) {
 				this._addCmd("fillText", [text, x, y], ["fillStyle", "font", "textBaseline"]);
 			},
+			/**
+				@method fill. See http://www.w3schools.com/html5/canvas_stroketext.asp
+			*/
 			strokeText: function(text, x, y) {
 				this._addCmd("strokeText", [text, x, y], ["strokeStyle", "font", "textBaseline"]);
 			},
+			/**
+				@method fill. See http://www.w3schools.com/html5/canvas_strokerect.asp
+			*/
 			strokeRect: function(x, y, w, h) {
 				this._addCmd("strokeRect", [x, y, w, h], ["strokeStyle"]);
 			},
+			/**
+				@method stroke. See http://www.w3schools.com/html5/canvas_stroke.asp
+			*/
 			stroke: function() {
 				this._addCmd("stroke", [], ["strokeStyle"]);
 			},
+			/**
+				@method createLinearGradient. See http://www.w3schools.com/html5/canvas_createlineargradient.asp
+			*/
 			createLinearGradient: function(x0, y0, x1, y1) {
 				this._addCmd("createLinearGradient", [x0, y0, x1, y1]);
 			},
+			/**
+				@method addColorStop. See http://www.w3schools.com/html5/canvas_addcolorstop.asp
+			*/
 			addColorStop: function(i, color) {
 				this._addCmd("addColorStop", [i, color]);
 			},
@@ -854,74 +992,120 @@ CanvasEngine.defines = function(canvas, params) {
 				@link http://www.whatwg.org/specs/web-apps/current-work/multipage/the-canvas-element.html#dom-context-2d-drawimage
 			*/
 			drawImage: function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
-				var array;
+				var array, _img;
 				if (!sx) sx = 0;
 				if (!sy) sy = 0;
 				if (typeof img === "string") {
-					img = CanvasEngine.Materials.images[img];
-					this.img.width = img.width;
-					this.img.height = img.height;
+					_img = CanvasEngine.Materials.images[img];
+					if (!_img) {
+						throw "Cannot to draw the image \"" + img + "\" because it does not exist";
+						return;
+					}
+					this.img.width = _img.width;
+					this.img.height = _img.height;
 				}
 				if (/%$/.test(sw)) {
 					dx = sx;
 					dy = sy;
 					sx = 0;
 					sy = 0;
-					sw = img.width * parseInt(sw) / 100;
-					sh = img.height;
+					sw = _img.width * parseInt(sw) / 100;
+					sh = _img.height;
 					dw = sw;
 					dh = sh;
 				}
 				if (sw !== undefined) {
-					array = [img, sx, sy, sw, sh, dx, dy, dw, dh];
+					array = [_img, sx, sy, sw, sh, dx, dy, dw, dh];
 				}
 				else {
-					array = [img, sx, sy];
+					array = [_img, sx, sy];
 				}
 				this._addCmd("drawImage", array);
 			},
+			/**
+				@method arc. See http://www.w3schools.com/html5/canvas_arc.asp
+			*/
 			arc: function(x, y, w, h, radius, b) {
 				this._addCmd("arc", [x, y, w, h, radius, b]);
 			},
+			/**
+				@method clip. See http://www.w3schools.com/html5/canvas_clip.asp
+			*/
 			clip: function() {
 				this._addCmd("clip");
 			},
+			/**
+				@method beginPath. See http://www.w3schools.com/html5/canvas_beginpath.asp
+			*/
 			beginPath: function() {
 				this._addCmd("beginPath");
 			},
+			/**
+				@method closePath. See http://www.w3schools.com/html5/canvas_closepath.asp
+			*/
 			closePath: function() {
 				this._addCmd("closePath");
 			},
+			/**
+				@method translate. http://www.w3schools.com/html5/canvas_translate.asp
+			*/
 			translate: function(x, y) {
 				this.draw("translate", [x , y]);
 			},
+			/**
+				@method rotate. See http://www.w3schools.com/html5/canvas_rotate.asp
+			*/
 			rotate: function(rad) {
 				this.draw("rotate", [rad]);
 			},
+			/**
+				@method rotateDeg Degree rotation
+				@param {Integer} deg 
+			*/
 			rotateDeg: function(deg) {
 				this.rotate(deg * Math.PI / 180);
 			},
+			/**
+				@method scale. See http://www.w3schools.com/html5/canvas_scale.asp
+			*/
 			scale: function(scaleX, scaleY) {
 				this.draw("scale", [scaleX, scaleY]);
 			},
+			/**
+				@method clear Erases the content of canvas
+			*/
 			clear: function() {
-				//this.save();
 				this.setTransform(1, 0, 0, 1, 0, 0);
 				this.clearRect(0, 0, this._canvas[0].width, this._canvas[0].height);
-				//this.restore();
 			},
+			/**
+				@method clearRect. See http://www.w3schools.com/html5/canvas_clearrect.asp
+			*/
 			clearRect: function(x , y , w , h) {
 				this.draw("clearRect", [x , y , w , h]);
 			},
+			/**
+				@method setTransform. See http://www.w3schools.com/html5/canvas_settransform.asp
+			*/
 			setTransform: function(a, b, c, d, e, f) {
 				this.draw("setTransform", [a, b, c, d, e, f]);
 			},
+			/**
+				@method transform. See http://www.w3schools.com/html5/canvas_transform.asp
+			*/
 			transform: function(a, b, c, d, e, f) {
 				this.draw("transform", [a, b, c, d, e, f]);
 			},
+			/**
+				@method rect. See http://www.w3schools.com/html5/canvas_rect.asp
+			*/
 			rect: function(x, y, w, h) {
 				this._addCmd("rect", [x, y, w, h]);
 			},
+			/**
+				@method save Saves the state of the current context
+				@param {Boolean} cmd (optional) If false, the method applies directly. false by default
+			*/
 			save: function(cmd) {
 				if (cmd) {
 					this._addCmd("save");
@@ -930,6 +1114,10 @@ CanvasEngine.defines = function(canvas, params) {
 					this.draw("save");
 				}
 			},
+			/**
+				@method restore Returns previously saved path state and attributes
+				@param {Boolean} cmd (optional) If false, the method applies directly. false by default
+			*/
 			restore: function(cmd) {
 				if (cmd) {
 					this._addCmd("restore");
@@ -938,6 +1126,9 @@ CanvasEngine.defines = function(canvas, params) {
 					this.draw("restore");
 				}
 			},
+			/**
+				@method clearPropreties Assigned undefined to all properties HTML5 Canvas element
+			*/
 			clearPropreties: function() {
 				var prop = ["shadowColor", "shadowBlur", "shadowOffsetX", "shadowOffsetY", "globalAlpha", "globalCompositeOperation", "lineJoin", "lineWidth", "miterLimit", "fillStyle", "font", "textBaseline", "strokeStyle"];
 				for (var k=0 ; k < prop.length ; k++) {
@@ -1100,8 +1291,25 @@ CanvasEngine.defines = function(canvas, params) {
 			</code>
 		*/
 		height: null,
+		/**
+			Position X of the point of origin.
+			@property regX
+			@type Integer
+			@default 0
+		*/
 		regX: 0,
+		/**
+			Position Y of the point of origin.
+			@property regY
+			@type Integer
+			@default 0
+		*/
 		regY: 0,
+		/**
+			Parent element
+			@property parent
+			@type CanvasEngine.Element
+		*/
 		parent: null,
 		pause: false,
 		index: 0,
@@ -1121,6 +1329,9 @@ CanvasEngine.defines = function(canvas, params) {
 			this.layer = layer;
 			this._canvas = CanvasEngine.el_canvas;
 		},
+		/**
+			@method refresh Refreshes the elements of the scene	
+		*/
 		refresh: function() {
 			this.clear();
 			this._refresh(true);
@@ -1167,11 +1378,33 @@ CanvasEngine.defines = function(canvas, params) {
 				}
 			}
 		},
-		rotateTo: function(deg, counterclockwise) {
-			this.rotation = counterclockwise ? 360 - deg : deg;
+		/**
+			@method rotateTo A rotation element in a direction
+			@param {Integer|String} val In degrees. To select the unit, add the suffix: "deg" or "rad". Example : "10rad" or "90deg"
+			@param {Boolean} counterclockwise (optional) Direction of rotation. true: counterclockwise (false by default)
+			@return CanvasEngine.Element
+		*/
+		rotateTo: function(val, counterclockwise) {
+			var _val = parseInt(val);
+			if (/rad$/.test(val)) {
+				_val = _val * 180 / Math.PI;
+			}
+			
+			this.rotation = counterclockwise ? 360 - _val : _val;
 			this.refresh();
 			return this;
 		},
+		/**
+			@method setOriginPoint Defining the position of the point of origin. This amounts to assign values to properties regX and regY
+			@param {Integer} x position X
+			@param {Integer} y position Y
+			@return CanvasEngine.Element
+		*/
+		/**
+			@method setOriginPoint Designate the placement of the point of origin. By cons, you must define the size of the element
+			@param {String} val Put "middle" position to the midpoint of the element
+			@return CanvasEngine.Element
+		*/
 		setOriginPoint: function(x, y) {
 			if (x == "middle") {
 				if (this.width && this.height) {
@@ -1182,8 +1415,8 @@ CanvasEngine.defines = function(canvas, params) {
 					throw "Width and Height proprieties are not defined";
 				}
 			}
-			if (x !== undefined) this.regX = x;
-			if (y !== undefined) this.regY = y;
+			if (x !== undefined) this.regX = +x;
+			if (y !== undefined) this.regY = +y;
 			return this;
 		},
 		_click: function(e, mouse, type) {
@@ -1227,6 +1460,10 @@ CanvasEngine.defines = function(canvas, params) {
 				}
 			}
 		},
+		/**
+			@method clone Creating a clone element
+			@return CanvasEngine.Element
+		*/
 		clone: function() {
 			var el = this.scene.createElement();
 			for (var key in this) {
@@ -1311,12 +1548,14 @@ CanvasEngine.defines = function(canvas, params) {
 			this._attr[name] = value;
 			return this;
 		},
+		// TODO
 		offset: function() {
 			return {
 				left: this.x,
 				top: this.y
 			};
 		},
+		// TODO
 		position: function() {
 			return {
 				left: this.real_x,
@@ -1334,6 +1573,9 @@ CanvasEngine.defines = function(canvas, params) {
 			this.refresh();
 			return this;
 		},
+		/*
+			TODO
+		*/
 		css: function(prop, val) {
 			var obj = {};
 			var match;

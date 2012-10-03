@@ -34,9 +34,19 @@ Class.create("Tiled", {
 	_ready: null,
 	initialize: function() {
 	},
+	 /**
+		@method ready Calls the function when the layers are drawn
+		@param {Function} callback
+	 */
 	ready: function(callback) {
 		this._ready = callback;
 	},
+	 /**
+		@method load Load JSON file and draw layers in the element of the scene
+		@param {CanvasEngine.Scene} scene
+		@param {CanvasEngine.Element} el The element containing layers of Tiled
+		@param {String} url Path to JSON file of Tiled Map Editor
+	 */
 	load: function(scene, el, url) {
 		var self = this;
 		this.el = el;
@@ -95,28 +105,62 @@ Class.create("Tiled", {
 		this.el.append(this.map);
 		if (this._ready) this._ready.call(this);
 	},
+	 /**
+		@method getLayerObject Retrieves the object layer.
+		@param {Integer} pos (optional) Returns the layer depending on its position in the superposition (0 = very top). 0 by default
+		@return {CanvasEngine.Element}
+	 */
 	getLayerObject: function(pos) {
 		if (!pos) pos = 0;
 		return this.objects[pos];
 	},
+	 /**
+		@method getLayer Retrieves the layer by its identifier.
+		@param {String} id Layer name in Tiled Map Editor
+		@return {CanvasEngine.Element}
+	 */
 	getLayer: function(id) {
 		return this.el_layers[id];
 	},
-	getMap: function(id) {
+	 /**
+		@method getMap Returns the element containing all the layers
+		@return {CanvasEngine.Element}
+	 */
+	getMap: function() {
 		return this.map;
 	},
+	 /**
+		@method getTileWidth Returns the width of the map in tiles 
+		@return {Integer}
+	 */
 	getTileWidth: function() {
 		return this.tile_w;
 	},
+	 /**
+		@method getTileWidth Returns the height of the map in tiles 
+		@return {Integer}
+	 */
 	getTileHeight: function() {
 		return this.tile_h;
 	},
+	 /**
+		@method getTileWidth Returns the width of the map in pixels
+		@return {Integer}
+	 */
 	getWidthPixel: function() {
 		return this.width * this.getTileWidth();
 	},
+	 /**
+		@method getTileWidth Returns the height of the map in pixels
+		@return {Integer}
+	 */
 	getHeightPixel: function() {
 		return this.height * this.getTileHeight();
 	},
+	 /**
+		@method getDataLayers Returns the data for each map
+		@return {Array}
+	 */
 	getDataLayers: function() {
 		var layer = [];
 		for (var i=0 ; i < this.layers.length ; i++) {
@@ -124,12 +168,28 @@ Class.create("Tiled", {
 		}
 		return layer;
 	},
-	getTileInMap: function(x, y, pos) {
-		if (!pos) pos = 0;
-		var tileset = this.tilesets[pos];
-		var tile_pos = this.width * y + x;
-		return tile_pos;
+	 /**
+		@method getTileInMap Retrieves the position of a tile to the Tileset according positions X and Y
+		@params {Integer} x Position X
+		@params {Integer} y Position Y
+		@return {Array}
+	 */
+	getTileInMap: function(x, y) {
+		return this.width * y + x;
 	},
+	 /**
+		@method getTileProperties Gets the properties of a tile depending on its identifier
+		@params {Integer} tile Id of tile
+		@params {String} (optional) layer Layer name
+		@return {Object}
+	 */
+	  /**
+		@method getTileProperties Gets the properties of a tile depending on its positions
+		@params {Integer} tile Id of tile. Put "null"
+		@params {Integer} x Positon X
+		@params {Integer} y Positon Y
+		@return {Object}
+	 */
 	getTileProperties: function(tile, layerOrX, y) {
 		var self = this;
 		var tileset = this.tilesets[0];
@@ -152,6 +212,46 @@ Class.create("Tiled", {
 	}
 });
 
+/**
+	@class Tiled
+	
+	Tiled is a general purpose tile map editor. It's built to be easy to use, yet flexible enough to work with varying game engines, whether your game is an RPG, platformer or Breakout clone. Tiled is free software and written in C++, using the Qt application framework.
+	
+	http://www.mapeditor.org
+	
+	@param {CanvasEngine.Scene} scene
+	@param {CanvasEngine.Element} el The layers are displayed on this element
+	@param {String} url Path to the JSON file of Tiled Map Editor
+	@example
+	
+	var canvas = CE.defines("canvas_id").
+		extend(Tiled).
+		ready(function() {
+			canvas.Scene.call("MyScene");
+		});
+			
+		canvas.Scene.new({
+			name: "MyScene",
+			materials: {
+				images: {
+					mytileset: "path/to/tileset.png"
+				}
+			},
+			ready: function(stage) {
+				 var el = this.createElement();
+				 var tiled = canvas.Tiled.new();
+				tiled.load(this, el, "map/map.json");
+				tiled.ready(function() {
+					 var tile_w = this.getTileWidth(),
+						 tile_h = this.getTileHeight(),
+						 layer_object = this.getLayerObject();
+					 stage.append(el);
+				});
+				
+			}
+		});
+
+*/
 var Tiled = {
 	Tiled: {
 		"new": function(scene, el, url) {

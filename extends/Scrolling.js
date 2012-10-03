@@ -29,19 +29,23 @@ Class.create("Scrolling", {
 		this.tile_h = tile_h;
 		this.tile_w = tile_w;
 	},
+	 /**
+		@method setMainElement Defined the main element that will set the scrolling
+		@params {CanvasEngine.Element} main_el
+	 */
 	setMainElement: function(main_el) {
 		this.main_el = main_el;
 	},
 	/**
-		{
-			element: 
-			speed:
-			block:
-			width:
-			height:
-		}
-	
-	*/
+		@method addScroll Add a layer scroll as the main element
+		@params {Object} params Parameters :
+			- element {CanvasEngine.Element}
+			- speed {Integer} Scrolling speed
+			- block {Boolean} (optional) Block scrolling on the edges of the map
+			- width {Integer} Width of element
+			- height {Integer} Height of element
+		@return {Object}
+	 */
 	addScroll: function(scroll_el) {
 		if (!scroll_el.screen_x) scroll_el.screen_x = 0;
 		if (!scroll_el.screen_y) scroll_el.screen_y = 0;
@@ -50,6 +54,12 @@ Class.create("Scrolling", {
 		this.scroll_el.push(scroll_el);
 		return this.scroll_el[this.scroll_el.length-1];
 	},
+	/**
+		@method setScreen Center the camera on the X and Y positions assigned
+		@params {Object} scroll Scrolling settings. Identical to "addScroll" method
+		@params {Integer} x Position X (pixels)
+		@params {Integer} y Position Y (pixels)
+	 */
 	setScreen: function(scroll, real_x, real_y) {
 		var width, height;
 		if (!real_x && this.main_el) {
@@ -102,6 +112,9 @@ Class.create("Scrolling", {
 		y = Math.floor(y/multiple_h) * multiple_h;
 		return {x: x, y: y};
 	},
+	/**
+		@method update Update scrolling. A call loop
+	*/
 	update: function() {
 		var scroll, container;
 		var canvas = this.scene.getCanvas();
@@ -221,6 +234,48 @@ Class.create("Scrolling", {
 	}
 });
 
+/**
+	@class Scrolling
+	
+	A side-scrolling game or side-scroller is a video game in which the gameplay action is viewed from a side-view camera angle, and the onscreen characters generally move from the left side of the screen to the right
+	
+	http://en.wikipedia.org/wiki/Side-scrolling_video_game
+	
+	@param {CanvasEngine.Scene} scene
+	@param {Integer} tile_h Height of the tile
+	@param {Integer} tile_w width of the tile
+	@example
+	
+	var canvas = CE.defines("canvas_id").
+		extend(Scrolling).
+		ready(function() {
+			canvas.Scene.call("MyScene");
+		});
+			
+		canvas.Scene.new({
+			name: "MyScene",
+			ready: function(stage) {
+				this.scrolling = canvas.Scrolling.new(this, 32, 32);
+				
+				var player = this.createElement();
+				this.scrolling.setMainElement(player);
+
+				var map = this.createElement();
+				this.scrolling.addScroll({
+				   element: map, 
+				   speed: 3,
+				   block: true,
+				   width: 120,
+				   height: 50
+				});
+			},
+			render: function(stage) {
+				this.scrolling.update();
+				stage.refresh();
+			}
+		});
+
+*/
 var Scrolling = {
 	Scrolling: {
 		"new": function(scene, tile_h, tile_w) {
