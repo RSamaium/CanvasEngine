@@ -147,6 +147,7 @@ CanvasEngine.defines = function(canvas, params) {
 	}
 	var CanvasEngine;
 	/**
+		@doc engine
 		@class CanvasEngineClass
 		@details
 			Main class to use Canvas Engine
@@ -166,6 +167,7 @@ CanvasEngine.defines = function(canvas, params) {
 			this.el_canvas = [];
 		},
 		 /**
+			@doc engine/
 			@method ready Calls the function when DOM is ready. The method uses "window.load" or SoundManager callback if it is present
 			@param {Function} callback
 			@return CanvasEngineClass
@@ -210,6 +212,7 @@ CanvasEngine.defines = function(canvas, params) {
 		},
 		
 		/**
+		@doc materials
 		@class Materials
 		@details
 			Resource management game
@@ -242,6 +245,7 @@ CanvasEngine.defines = function(canvas, params) {
 			sounds: {},
 			fonts: {},
 			/**
+				@doc materials/
 				@method get Get the picture or sound according to its identifier
 				@param {String} id
 				@return {HTML5Audio|Images}
@@ -275,6 +279,7 @@ CanvasEngine.defines = function(canvas, params) {
 				return canvas;
 			},
 			/**
+				@doc materials/
 				@method load Load a resource
 				@param {String} type Type : "images" or "sounds"
 				@param {Array|Object} path Paths to resources.
@@ -409,6 +414,7 @@ CanvasEngine.defines = function(canvas, params) {
 		},
 		
 		/**
+		@doc sound
 		@class Sound
 		@details
 			Sound management
@@ -450,9 +456,10 @@ CanvasEngine.defines = function(canvas, params) {
 			_fade: {},
 			_manager: false,
 			/**
+				@doc sound/
 				@method get Get the sound. Use API HTML5 Audio or SoundManager (http://www.schillmania.com/projects/soundmanager2/doc/#smsoundmethods)
 				@param {String} id Identiant of sound in the preloading
-				@return SMSound or HTMLAudioElement
+				@return {SMSound or HTMLAudioElement}
 			*/
 			get: function(id) {
 				var snd = CanvasEngine.Materials.sounds[id];
@@ -462,6 +469,7 @@ CanvasEngine.defines = function(canvas, params) {
 				return snd;
 			},
 			/**
+				@doc sound/
 				@method allStop  Stop all music
 				@param {String} sound_id (optional) Except this music (ID)
 				@return  {CanvasEngine.Sound}
@@ -477,6 +485,7 @@ CanvasEngine.defines = function(canvas, params) {
 				return this;
 			},
 			/**
+				@doc sound/
 				@method playOnly Only play a sound (and other stops)
 				@param {Integer} id Identifier of the music
 				@return  {CanvasEngine.Sound}
@@ -487,6 +496,7 @@ CanvasEngine.defines = function(canvas, params) {
 				return this;
 			},
 			/**
+				@doc sound/
 				@method fadeIn  To fade for unmute
 				@param {String} id Identiant of sound in the preloading
 				@param {Integer} duration frames
@@ -496,6 +506,7 @@ CanvasEngine.defines = function(canvas, params) {
 				this.fadeTo(id, time, 1, callback);
 			},
 			/**
+				@doc sound/
 				@method fadeOut To fade for mute
 				@param {String} id Identiant of sound in the preloading
 				@param {Integer} duration frames
@@ -505,6 +516,7 @@ CanvasEngine.defines = function(canvas, params) {
 				this.fadeTo(id, time, 0, callback);
 			},
 			/**
+				@doc sound/
 				@method fadeTo  Fade to a final value
 				@param {String} id Identiant of sound in the preloading
 				@param {Integer} duration frames
@@ -598,6 +610,7 @@ CanvasEngine.defines = function(canvas, params) {
 					return _class;
 				  },
 				  /**
+					@doc scene/
 					@method call Called a scene. Call the method "exit" of the current scene (if any) and changes of scene
 					@param {String} scene name
 					@example
@@ -707,6 +720,7 @@ CanvasEngine.defines = function(canvas, params) {
 	});
 	
 	/**
+		@doc scene
 		@class Scene
 		@details
 			Scene management. Structure of a scene :
@@ -773,6 +787,7 @@ CanvasEngine.defines = function(canvas, params) {
 			return this.createElement(name);
 		},
 		/**
+			@doc scene/
 			@method getCanvas Get the canvas
 			@param {Integer} id (optional) Position in array
 			@return {HTMLCanvasElement}
@@ -782,6 +797,7 @@ CanvasEngine.defines = function(canvas, params) {
 			return CanvasEngine.el_canvas[id];
 		},
 		/**
+			@doc scene/
 			@method createElement Create an element
 			@param {String} name (optional) 
 			@param {Integer} width (optional) 
@@ -824,14 +840,14 @@ CanvasEngine.defines = function(canvas, params) {
 			for (var i=0 ; i < CanvasEngine.el_canvas.length ; i++) {
 				CanvasEngine.el_canvas[i].stage = this._stage;
 			}
-			
-			if (this.model) {
+			if (this.model) {		
 				if (this._events) {
 					CE.each(this._events, function(i, val) {
 						self.model.on(val, function(data) {
 							self[val].call(self, data);
 						});
 					});
+					
 				}
 			}
 			
@@ -913,54 +929,62 @@ CanvasEngine.defines = function(canvas, params) {
 				this.globalAlpha = opacity;
 			},
 			/**
+				@doc draw/
 				@method fillRect. See http://www.w3schools.com/html5/canvas_fillrect.asp
 			*/
 			fillRect: function(x, y, w, h) {
 				this._addCmd("fillRect", [x, y, w, h], ["fillStyle"]);
 			},
 			/**
-				@method fill. See http://www.w3schools.com/html5/canvas_fill.asp
+				@doc draw/
+				@method fill See http://www.w3schools.com/html5/canvas_fill.asp
 			*/
 			fill: function() {
 				this._addCmd("fill", [], ["fillStyle"]);
 			},
 			/**
-				@method fill. See http://www.w3schools.com/html5/canvas_filltext.asp
+				@doc draw/
+				@method fillText See http://www.w3schools.com/html5/canvas_filltext.asp
 			*/
 			fillText: function(text, x, y) {
 				this._addCmd("fillText", [text, x, y], ["fillStyle", "font", "textBaseline"]);
 			},
 			/**
-				@method fill. See http://www.w3schools.com/html5/canvas_stroketext.asp
+				@doc draw/
+				@method strokeText See http://www.w3schools.com/html5/canvas_stroketext.asp
 			*/
 			strokeText: function(text, x, y) {
 				this._addCmd("strokeText", [text, x, y], ["strokeStyle", "font", "textBaseline"]);
 			},
 			/**
-				@method fill. See http://www.w3schools.com/html5/canvas_strokerect.asp
+				@method strokeRect See http://www.w3schools.com/html5/canvas_strokerect.asp
 			*/
 			strokeRect: function(x, y, w, h) {
 				this._addCmd("strokeRect", [x, y, w, h], ["strokeStyle"]);
 			},
 			/**
-				@method stroke. See http://www.w3schools.com/html5/canvas_stroke.asp
+				@doc draw/
+				@method stroke See http://www.w3schools.com/html5/canvas_stroke.asp
 			*/
 			stroke: function() {
 				this._addCmd("stroke", [], ["strokeStyle"]);
 			},
 			/**
-				@method createLinearGradient. See http://www.w3schools.com/html5/canvas_createlineargradient.asp
+				@doc draw/
+				@method createLinearGradient See http://www.w3schools.com/html5/canvas_createlineargradient.asp
 			*/
 			createLinearGradient: function(x0, y0, x1, y1) {
 				this._addCmd("createLinearGradient", [x0, y0, x1, y1]);
 			},
 			/**
-				@method addColorStop. See http://www.w3schools.com/html5/canvas_addcolorstop.asp
+				@doc draw/
+				@method addColorStop See http://www.w3schools.com/html5/canvas_addcolorstop.asp
 			*/
 			addColorStop: function(i, color) {
 				this._addCmd("addColorStop", [i, color]);
 			},
 			/**
+				@doc draw/
 				@method drawImage Draws the image or part of the image
 				@param {String|Image|Canvas} If this is a string, this is the identifier of the preloaded image
 				@param {Integer} sx (optional) 
@@ -992,7 +1016,7 @@ CanvasEngine.defines = function(canvas, params) {
 				@link http://www.whatwg.org/specs/web-apps/current-work/multipage/the-canvas-element.html#dom-context-2d-drawimage
 			*/
 			drawImage: function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
-				var array, _img;
+				var array, _img = img;
 				if (!sx) sx = 0;
 				if (!sy) sy = 0;
 				if (typeof img === "string") {
@@ -1023,42 +1047,49 @@ CanvasEngine.defines = function(canvas, params) {
 				this._addCmd("drawImage", array);
 			},
 			/**
-				@method arc. See http://www.w3schools.com/html5/canvas_arc.asp
+				@doc draw/
+				@method arc See http://www.w3schools.com/html5/canvas_arc.asp
 			*/
 			arc: function(x, y, w, h, radius, b) {
 				this._addCmd("arc", [x, y, w, h, radius, b]);
 			},
 			/**
-				@method clip. See http://www.w3schools.com/html5/canvas_clip.asp
+				@doc draw/
+				@method clip See http://www.w3schools.com/html5/canvas_clip.asp
 			*/
 			clip: function() {
 				this._addCmd("clip");
 			},
 			/**
-				@method beginPath. See http://www.w3schools.com/html5/canvas_beginpath.asp
+				@doc draw/
+				@method beginPath See http://www.w3schools.com/html5/canvas_beginpath.asp
 			*/
 			beginPath: function() {
 				this._addCmd("beginPath");
 			},
 			/**
-				@method closePath. See http://www.w3schools.com/html5/canvas_closepath.asp
+				@doc draw/
+				@method closePath See http://www.w3schools.com/html5/canvas_closepath.asp
 			*/
 			closePath: function() {
 				this._addCmd("closePath");
 			},
 			/**
-				@method translate. http://www.w3schools.com/html5/canvas_translate.asp
+				@doc draw/
+				@method translate http://www.w3schools.com/html5/canvas_translate.asp
 			*/
 			translate: function(x, y) {
 				this.draw("translate", [x , y]);
 			},
 			/**
-				@method rotate. See http://www.w3schools.com/html5/canvas_rotate.asp
+				@doc draw/
+				@method rotate See http://www.w3schools.com/html5/canvas_rotate.asp
 			*/
 			rotate: function(rad) {
 				this.draw("rotate", [rad]);
 			},
 			/**
+				@doc draw/
 				@method rotateDeg Degree rotation
 				@param {Integer} deg 
 			*/
@@ -1066,12 +1097,14 @@ CanvasEngine.defines = function(canvas, params) {
 				this.rotate(deg * Math.PI / 180);
 			},
 			/**
-				@method scale. See http://www.w3schools.com/html5/canvas_scale.asp
+				@doc draw/
+				@method scale See http://www.w3schools.com/html5/canvas_scale.asp
 			*/
 			scale: function(scaleX, scaleY) {
 				this.draw("scale", [scaleX, scaleY]);
 			},
 			/**
+				@doc draw/
 				@method clear Erases the content of canvas
 			*/
 			clear: function() {
@@ -1079,30 +1112,35 @@ CanvasEngine.defines = function(canvas, params) {
 				this.clearRect(0, 0, this._canvas[0].width, this._canvas[0].height);
 			},
 			/**
-				@method clearRect. See http://www.w3schools.com/html5/canvas_clearrect.asp
+				@doc draw/
+				@method clearRect See http://www.w3schools.com/html5/canvas_clearrect.asp
 			*/
 			clearRect: function(x , y , w , h) {
 				this.draw("clearRect", [x , y , w , h]);
 			},
 			/**
-				@method setTransform. See http://www.w3schools.com/html5/canvas_settransform.asp
+				@doc draw/
+				@method setTransform See http://www.w3schools.com/html5/canvas_settransform.asp
 			*/
 			setTransform: function(a, b, c, d, e, f) {
 				this.draw("setTransform", [a, b, c, d, e, f]);
 			},
 			/**
-				@method transform. See http://www.w3schools.com/html5/canvas_transform.asp
+				@doc draw/
+				@method transform See http://www.w3schools.com/html5/canvas_transform.asp
 			*/
 			transform: function(a, b, c, d, e, f) {
 				this.draw("transform", [a, b, c, d, e, f]);
 			},
 			/**
-				@method rect. See http://www.w3schools.com/html5/canvas_rect.asp
+				@doc draw/
+				@method rect See http://www.w3schools.com/html5/canvas_rect.asp
 			*/
 			rect: function(x, y, w, h) {
 				this._addCmd("rect", [x, y, w, h]);
 			},
 			/**
+				@doc draw/
 				@method save Saves the state of the current context
 				@param {Boolean} cmd (optional) If false, the method applies directly. false by default
 			*/
@@ -1115,6 +1153,7 @@ CanvasEngine.defines = function(canvas, params) {
 				}
 			},
 			/**
+				@doc draw/
 				@method restore Returns previously saved path state and attributes
 				@param {Boolean} cmd (optional) If false, the method applies directly. false by default
 			*/
@@ -1127,6 +1166,7 @@ CanvasEngine.defines = function(canvas, params) {
 				}
 			},
 			/**
+				@doc draw/
 				@method clearPropreties Assigned undefined to all properties HTML5 Canvas element
 			*/
 			clearPropreties: function() {
@@ -1183,6 +1223,7 @@ CanvasEngine.defines = function(canvas, params) {
 	});
 	
 	/**
+		@doc element
 		@class Element
 		@details
 			Manipulate elements on the scene.
@@ -1210,6 +1251,7 @@ CanvasEngine.defines = function(canvas, params) {
 		_children: [],
 		_attr: {},
 		/**
+			@doc manipulate/
 			Position X relative to the parent
 			@property x
 			@type Integer
@@ -1217,6 +1259,7 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		x: 0,
 		/**
+			@doc manipulate/
 			Position Y relative to the parent
 			@property y
 			@type Integer
@@ -1226,6 +1269,7 @@ CanvasEngine.defines = function(canvas, params) {
 		real_x: 0,
 		real_y: 0,
 		/**
+			@doc manipulate/
 			Scale in X. Value 1 equivalent to 100%
 			@property scaleX
 			@type Integer
@@ -1233,6 +1277,7 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		scaleX: 1,
 		/**
+			@doc manipulate/
 			Scale in Y. Value 1 equivalent to 100%
 			@property scaleY
 			@type Integer
@@ -1240,6 +1285,7 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		scaleY: 1,
 		/**
+			@doc manipulate/
 			Shew in X.
 			@property skewX
 			@type Integer
@@ -1247,6 +1293,7 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		skewX: 0,
 		/**
+			@doc manipulate/
 			Shew in Y.
 			@property skewY
 			@type Integer
@@ -1254,6 +1301,7 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		skewY: 0,
 		/**
+			@doc manipulate/
 			Opacity. Value 1 equivalent to 100%
 			@property opacity
 			@type Integer
@@ -1261,6 +1309,7 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		opacity: 1,
 		/**
+			@doc manipulate/
 			Rotation.
 			@property rotation
 			@type Integer
@@ -1268,6 +1317,7 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		rotation: 0,
 		/**
+			@doc manipulate/
 			Width. Only if  value has been assigned to the creation of the element
 			@property width
 			@type Integer
@@ -1280,6 +1330,7 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		width: null,
 		/**
+			@doc manipulate/
 			Height. Only if  value has been assigned to the creation of the element
 			@property height
 			@type Integer
@@ -1292,6 +1343,7 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		height: null,
 		/**
+			@doc manipulate/
 			Position X of the point of origin.
 			@property regX
 			@type Integer
@@ -1299,6 +1351,7 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		regX: 0,
 		/**
+			@doc manipulate/
 			Position Y of the point of origin.
 			@property regY
 			@type Integer
@@ -1306,6 +1359,7 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		regY: 0,
 		/**
+			@doc traversing/
 			Parent element
 			@property parent
 			@type CanvasEngine.Element
@@ -1330,6 +1384,7 @@ CanvasEngine.defines = function(canvas, params) {
 			this._canvas = CanvasEngine.el_canvas;
 		},
 		/**
+			@doc draw/
 			@method refresh Refreshes the elements of the scene	
 		*/
 		refresh: function() {
@@ -1379,6 +1434,7 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 		},
 		/**
+			@doc manipulate/
 			@method rotateTo A rotation element in a direction
 			@param {Integer|String} val In degrees. To select the unit, add the suffix: "deg" or "rad". Example : "10rad" or "90deg"
 			@param {Boolean} counterclockwise (optional) Direction of rotation. true: counterclockwise (false by default)
@@ -1395,6 +1451,7 @@ CanvasEngine.defines = function(canvas, params) {
 			return this;
 		},
 		/**
+			@doc manipulate/
 			@method setOriginPoint Defining the position of the point of origin. This amounts to assign values to properties regX and regY
 			@param {Integer} x position X
 			@param {Integer} y position Y
@@ -1420,7 +1477,6 @@ CanvasEngine.defines = function(canvas, params) {
 			return this;
 		},
 		_click: function(e, mouse, type) {
-			
 			var el, el_real, imgData, find, _trigger, over;
 			for (var i=0 ; i < this._children.length ; i++) {
 				el_real = this._children[i];
@@ -1474,6 +1530,7 @@ CanvasEngine.defines = function(canvas, params) {
 			return el;
 		},
 		/**
+			@doc manipulate/
 			@method inserts the specified content as the last child of each element in the Element collection
 			@param {CanvasEngine.Element} el 
 			@return CanvasEngine.Element
@@ -1486,6 +1543,7 @@ CanvasEngine.defines = function(canvas, params) {
 			return el;
 		},
 		/**
+			@doc manipulate/
 			@method remove Removes element in stage
 			@return {Boolean} "true" if removed
 			@example
@@ -1512,6 +1570,7 @@ CanvasEngine.defines = function(canvas, params) {
 			return false;
 		},
 		/**
+			@doc manipulate/
 			@method emtpy Removes the element's children
 			@return {Element}
 			@example
@@ -1531,6 +1590,7 @@ CanvasEngine.defines = function(canvas, params) {
 			return this;
 		},
 		/**
+			@doc manipulate/
 			@method attr Get the value of an attribute for the element
 			@param  {String} name
 			@return {Object}
@@ -1563,6 +1623,7 @@ CanvasEngine.defines = function(canvas, params) {
 			};
 		},
 		/**
+			@doc manipulate/
 			@method scaleTo Resizes the width and height. Equivalent to scaleX=val and scaleY=val
 			@params {Integer} val Value of 1 represents 100%.
 			@return {Element}
@@ -1613,6 +1674,7 @@ CanvasEngine.defines = function(canvas, params) {
 			return this;
 		},
 		/**
+			@doc manipulate/
 			@method hide hide element and refresh the stage
 		*/
 		hide: function() {
@@ -1620,6 +1682,7 @@ CanvasEngine.defines = function(canvas, params) {
 			this.stage.refresh();
 		},
 		/**
+			@doc manipulate/
 			@method show hide element and refresh the stage
 		*/
 		show: function() {
@@ -1627,6 +1690,7 @@ CanvasEngine.defines = function(canvas, params) {
 			this.stage.refresh();
 		},
 		/**
+			@doc manipulate/
 			@method toggle Hide the element if visible or shown if hidden
 		*/
 		toggle: function() {
@@ -1638,6 +1702,7 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 		},
 		/**
+			@doc events/
 			@method on The .on() method attaches event handlers to the currently selected set of elements in the CanvasEngine object.
 			@param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
 			@param {Function} callback(event) A function to execute when the event is triggered
@@ -1655,6 +1720,7 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 		},
 		/**
+			@doc events/
 			@method trigger Any event handlers attached with .on() or one of its shortcut methods are triggered when the corresponding event occurs. They can be fired manually, however, with the .trigger() method.
 			@param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
 		*/
@@ -1673,6 +1739,7 @@ CanvasEngine.defines = function(canvas, params) {
 			return _trigger;
 		},
 		/**
+			@doc events/
 			@method click Equivalent to the method .on("click", function)
 			@params {Function} callback
 		*/
@@ -1680,6 +1747,7 @@ CanvasEngine.defines = function(canvas, params) {
 			this.on("click", callback);
 		},
 		/**
+			@doc events/
 			@method dblclick Equivalent to the method .on("dblclick", function)
 			@params {Function} callback
 		*/
@@ -1687,6 +1755,7 @@ CanvasEngine.defines = function(canvas, params) {
 			this.on("dblclick", callback);
 		},
 		/**
+			@doc events/
 			@method mouseover Equivalent to the method .on("mouseover", function)
 			@params {Function} callback
 		*/
@@ -1694,6 +1763,7 @@ CanvasEngine.defines = function(canvas, params) {
 			this.on("mouseover", callback);
 		},
 		/**
+			@doc events/
 			@method mouseout Equivalent to the method .on("mouseout", function)
 			@params {Function} callback
 		*/
@@ -1706,6 +1776,7 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 		},
 		/**
+			@doc events/
 			@method addLoopListener Adds a function that executes the loop for rendering the element
 			@param {Function} callback() Callback
 			@example
