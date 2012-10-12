@@ -1,2 +1,9 @@
 - canvasengine.js
 - engine-common.js
+- extends/Animation.js
+- extends/Gleed2d.js
+- extends/Input.js
+- extends/Marshal.js
+- extends/Scrolling.js
+- extends/Spritesheet.js
+- extends/Tiled.js
