@@ -148,9 +148,7 @@ CanvasEngine.defines = function(canvas, params) {
 	var CanvasEngine;
 	/**
 		@doc engine
-		@class CanvasEngineClass
-		@details
-			Main class to use Canvas Engine
+		@class CanvasEngineClass Main class to use Canvas Engine
 			<code>
 				var canvas = CE.defines("canvas_id"); // CanvasEngine object
 			
