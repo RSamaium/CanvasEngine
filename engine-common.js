@@ -3,8 +3,9 @@ if (typeof(require) !== "undefined") {
 	fs = require('fs');
 }
 
-function Kernel(class_method) {
+function Kernel(class_method, name) {
 	this.class_method = class_method;
+	this.class_name = name;
 }
 
 Kernel._extend = function(self, object, clone) {
@@ -29,6 +30,7 @@ Kernel._extend = function(self, object, clone) {
 Kernel.prototype = {
 	"new": function() {
 		this._class = new Class();
+		Class.__class[this.class_name] = this._class;
 		this._construct();
 		return this._class;
 	},
@@ -215,7 +217,7 @@ Class.create = function(name, methods, _static) {
 	else {
 		//p = Class.__class[name].prototype = methods;
 		Class.__class_config[name].methods = methods;
-		var kernel = Class.__class_config[name].kernel = new Kernel(Class.__class_config[name].methods);
+		var kernel = Class.__class_config[name].kernel = new Kernel(Class.__class_config[name].methods, name);
 		//p.extend(methods);
 	}
 	return kernel;

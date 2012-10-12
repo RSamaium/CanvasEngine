@@ -91,6 +91,21 @@ Class.create("Gleed2d", {
 			});
 			gleed.load(this, element, "data");
 		</code>
+		
+		Not allow drawing on the element
+		<code>
+			var gleed = canvas.Gleed2d.new();
+			gleed.ready(function() {
+				
+			});
+			gleed.change(function(el, params) {
+				el.drawImage("other_img");
+				return {
+					draw: false
+				};
+			});
+			gleed.load(this, element, "data");
+		</code>
 	*/
 	change: function(callback) {
 		this._set = callback;
@@ -131,6 +146,7 @@ Class.create("Gleed2d", {
 				var el_item = scene.createElement();
 				var params = {
 					id: asset,
+					draw: true,
 					img: [],
 					regX: origin_x,
 					regY: origin_y,
@@ -148,7 +164,9 @@ Class.create("Gleed2d", {
 						}
 					}
 				}
-				el_item.drawImage(params.id, params.img[0], params.img[1], params.img[2], params.img[3], params.img[4], params.img[5], params.img[6], params.img[7]);
+				if (params.draw) {
+					el_item.drawImage(params.id, params.img[0], params.img[1], params.img[2], params.img[3], params.img[4], params.img[5], params.img[6], params.img[7]);
+				}
 				el_item.setOriginPoint(params.regX, params.regY);
 				el_item.x = params.x;
 				el_item.y = params.y;
