@@ -30,6 +30,7 @@ Class.create("Spritesheet", {
 		if (set) this.set(set);
 	},
 	/**
+		@doc spritesheet/
 		@method set Assigns an identifier to an area of the spritesheet. A grid can be defined to be faster.
 		@param {Object} set : If the key is called "grid", the image is cut from a grid. Set the grid with
 			- size: [Line number, column number]
@@ -72,6 +73,7 @@ Class.create("Spritesheet", {
 		}
 	},
 	/**
+		@doc spritesheet/
 		@method draw Draw a Sprite on the element
 		@param {CanvasEngine.Element} el
 		@param {String} id Sprite identifier defined with the method "set" (or the constructor)
@@ -102,8 +104,8 @@ Class.create("Spritesheet", {
 });
 
 /**
-	@class Spritesheet
-	Spritesheet is a Sprites collection in an image. This class aims to crop the image, retrieve each Sprite by assigning an identifier
+	@doc spritesheet
+	@class Spritesheet Spritesheet is a Sprites collection in an image. This class aims to crop the image, retrieve each Sprite by assigning an identifier
 	@param {String} image ID image
 	@param {Object} params See the method "set"
 	@example

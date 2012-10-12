@@ -35,6 +35,7 @@ Class.create("Tiled", {
 	initialize: function() {
 	},
 	 /**
+		@doc tiled/
 		@method ready Calls the function when the layers are drawn
 		@param {Function} callback
 	 */
@@ -42,6 +43,7 @@ Class.create("Tiled", {
 		this._ready = callback;
 	},
 	 /**
+		@doc tiled/
 		@method load Load JSON file and draw layers in the element of the scene
 		@param {CanvasEngine.Scene} scene
 		@param {CanvasEngine.Element} el The element containing layers of Tiled
@@ -106,6 +108,7 @@ Class.create("Tiled", {
 		if (this._ready) this._ready.call(this);
 	},
 	 /**
+		@doc tiled/
 		@method getLayerObject Retrieves the object layer.
 		@param {Integer} pos (optional) Returns the layer depending on its position in the superposition (0 = very top). 0 by default
 		@return {CanvasEngine.Element}
@@ -115,6 +118,7 @@ Class.create("Tiled", {
 		return this.objects[pos];
 	},
 	 /**
+		@doc tiled/
 		@method getLayer Retrieves the layer by its identifier.
 		@param {String} id Layer name in Tiled Map Editor
 		@return {CanvasEngine.Element}
@@ -123,6 +127,7 @@ Class.create("Tiled", {
 		return this.el_layers[id];
 	},
 	 /**
+		@doc tiled/
 		@method getMap Returns the element containing all the layers
 		@return {CanvasEngine.Element}
 	 */
@@ -130,6 +135,7 @@ Class.create("Tiled", {
 		return this.map;
 	},
 	 /**
+		@doc tiled/
 		@method getTileWidth Returns the width of the map in tiles 
 		@return {Integer}
 	 */
@@ -137,6 +143,7 @@ Class.create("Tiled", {
 		return this.tile_w;
 	},
 	 /**
+		@doc tiled/
 		@method getTileWidth Returns the height of the map in tiles 
 		@return {Integer}
 	 */
@@ -151,6 +158,7 @@ Class.create("Tiled", {
 		return this.width * this.getTileWidth();
 	},
 	 /**
+		@doc tiled/
 		@method getTileWidth Returns the height of the map in pixels
 		@return {Integer}
 	 */
@@ -158,6 +166,7 @@ Class.create("Tiled", {
 		return this.height * this.getTileHeight();
 	},
 	 /**
+		@doc tiled/
 		@method getDataLayers Returns the data for each map
 		@return {Array}
 	 */
@@ -169,6 +178,7 @@ Class.create("Tiled", {
 		return layer;
 	},
 	 /**
+		@doc tiled/
 		@method getTileInMap Retrieves the position of a tile to the Tileset according positions X and Y
 		@params {Integer} x Position X
 		@params {Integer} y Position Y
@@ -178,12 +188,14 @@ Class.create("Tiled", {
 		return this.width * y + x;
 	},
 	 /**
+		@doc tiled/
 		@method getTileProperties Gets the properties of a tile depending on its identifier
 		@params {Integer} tile Id of tile
 		@params {String} (optional) layer Layer name
 		@return {Object}
 	 */
 	  /**
+		@doc tiled/
 		@method getTileProperties Gets the properties of a tile depending on its positions
 		@params {Integer} tile Id of tile. Put "null"
 		@params {Integer} x Positon X
@@ -213,9 +225,8 @@ Class.create("Tiled", {
 });
 
 /**
-	@class Tiled
-	
-	Tiled is a general purpose tile map editor. It's built to be easy to use, yet flexible enough to work with varying game engines, whether your game is an RPG, platformer or Breakout clone. Tiled is free software and written in C++, using the Qt application framework.
+	@doc tiled
+	@class Tiled Tiled is a general purpose tile map editor. It's built to be easy to use, yet flexible enough to work with varying game engines, whether your game is an RPG, platformer or Breakout clone. Tiled is free software and written in C++, using the Qt application framework.
 	
 	http://www.mapeditor.org
 	

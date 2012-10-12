@@ -27,6 +27,7 @@ Class.create("Gleed2d", {
 		
 	},
 	/**
+		@doc gleed2d/
 		@method load Load an XML file and builds layers of the elements. Calls the method "ready" of this clas after the construction of the elements.
 		@param {CanvasEngine.Scene} scene Scene
 		@param {CanvasEngine.Element} el Layers are displayed on this element
@@ -46,6 +47,7 @@ Class.create("Gleed2d", {
 		});
 	},
 	/**
+		@doc gleed2d/
 		@method change Allows you to change the parameters of an element in the construction layers
 		@param {Function} callback Callback function called before the introduction of an element. Returns the same object with different values ??to change the element. Two parameters :
 			- {CanvasEngine.Element} The element is created and ready to be displayed on the layer
@@ -94,6 +96,7 @@ Class.create("Gleed2d", {
 		this._set = callback;
 	},
 	/**
+		@doc gleed2d/
 		@method ready Calls the callback function at the end of the construction elements (loading and layers)
 		@param {Function} callback Callback function. "this" refers to the class Gleed2d
 	*/
@@ -161,6 +164,7 @@ Class.create("Gleed2d", {
 		if (this._onReady) this._onReady.call(this);
 	},
 	/**
+		@doc gleed2d/
 		@method getLayer Retrieve a layer according to its name
 		@param {String} name Layer name
 		@return CanvasEngine.Element
@@ -172,8 +176,8 @@ Class.create("Gleed2d", {
 
 
 /**
-	@class Gleed2d
-	GLEED2D (Generic LEvel EDitor 2D) is a general purpose, non tile-based Level Editor for 2D games of any genre that allows arbitrary placement of textures and other items in 2D space. Levels are saved in XML format. Custom Properties can be added to the items in order to represent game-specific data/events/associations between items etc. 
+	@doc gleed2d
+	@class Gleed2d GLEED2D (Generic LEvel EDitor 2D) is a general purpose, non tile-based Level Editor for 2D games of any genre that allows arbitrary placement of textures and other items in 2D space. Levels are saved in XML format. Custom Properties can be added to the items in order to represent game-specific data/events/associations between items etc. 
 	
 	http://gleed2d.codeplex.com
 	

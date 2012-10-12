@@ -30,6 +30,7 @@ Class.create("Scrolling", {
 		this.tile_w = tile_w;
 	},
 	 /**
+		@doc scrolling/
 		@method setMainElement Defined the main element that will set the scrolling
 		@params {CanvasEngine.Element} main_el
 	 */
@@ -37,6 +38,7 @@ Class.create("Scrolling", {
 		this.main_el = main_el;
 	},
 	/**
+		@doc scrolling/
 		@method addScroll Add a layer scroll as the main element
 		@params {Object} params Parameters :
 			- element {CanvasEngine.Element}
@@ -55,6 +57,7 @@ Class.create("Scrolling", {
 		return this.scroll_el[this.scroll_el.length-1];
 	},
 	/**
+		@doc scrolling/
 		@method setScreen Center the camera on the X and Y positions assigned
 		@params {Object} scroll Scrolling settings. Identical to "addScroll" method
 		@params {Integer} x Position X (pixels)
@@ -113,6 +116,7 @@ Class.create("Scrolling", {
 		return {x: x, y: y};
 	},
 	/**
+		@doc scrolling/
 		@method update Update scrolling. A call loop
 	*/
 	update: function() {
@@ -235,9 +239,8 @@ Class.create("Scrolling", {
 });
 
 /**
-	@class Scrolling
-	
-	A side-scrolling game or side-scroller is a video game in which the gameplay action is viewed from a side-view camera angle, and the onscreen characters generally move from the left side of the screen to the right
+	@doc scrolling
+	@class Scrolling A side-scrolling game or side-scroller is a video game in which the gameplay action is viewed from a side-view camera angle, and the onscreen characters generally move from the left side of the screen to the right
 	
 	http://en.wikipedia.org/wiki/Side-scrolling_video_game
 	

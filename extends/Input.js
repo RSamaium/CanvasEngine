@@ -21,6 +21,7 @@ THE SOFTWARE.
 */
 
 /**
+	@doc input
 	@class Input Keyboard, Gamepad et accelerometer
 	@example
 		Keyboard:
@@ -134,39 +135,39 @@ var Input = {Input: {
 	},
 
 	/**
-	 * Calling a function when a key is pressed (only once)
-	 * @method press
-	 * @param {Integer|Array} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
-	 * @param {Function} onPressKey Function called when a key is pressed. One parameter: the event of the button (Event Object)
+		@doc keyboard/
+	 	@method press Calling a function when a key is pressed (only once)
+		@param {Integer|Array} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
+		@param {Function} onPressKey Function called when a key is pressed. One parameter: the event of the button (Event Object)
 	*/
 	press: function(key, onPressKey) {
 		this._press('keyPress', key, onPressKey);
 	},
 
 	/**
-	 * Clears the functions assigned to keys indicated
-	 * @method clearKeys
-	 * @param {Integer|Array} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
+	  @doc keyboard/
+	  @method clearKeys  Clears the functions assigned to keys indicated
+	  @param {Integer|Array} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
 	*/
 	clearKeys: function(key) {
 		this.press(key, function() {});
 	},
 
 	/**
-	 * Calling a function when a key is down
-	 * @method keyDown
-	 * @param {Integer} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
-	 * @param {Function} onPressKey Function called. One parameter: the event of the button (Event Object)
+	  @doc keyboard/
+	  @method keyDown  Calling a function when a key is down
+	  @param {Integer} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
+	  @param {Function} onPressKey Function called. One parameter: the event of the button (Event Object)
 	*/
 	keyDown: function(key, onPressKey) {
 		this._press('keyDown', key, onPressKey);
 	},
 
 	/**
-	 * Calling a function when a key is up
-	 * @method keyUp
-	 * @param {Integer} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
-	 * @param {Function} onKeyUp Function called. One parameter: the event of the button (Event Object)
+	  @doc keyboard/
+	  @method keyUp  Calling a function when a key is up
+	  @param {Integer} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
+	  @param {Function} onKeyUp Function called. One parameter: the event of the button (Event Object)
 	*/
 	keyUp: function(key, onKeyUp) {
 		var self = this;
@@ -230,20 +231,20 @@ var Input = {Input: {
 	},
 
 	/**
-	 * Resets all keys. You must assign the buttons (press(), keyDown() and keyUp()) to restore movement and actions
-	 * @method reset
+	  @doc keyboard/
+	  @method reset  Resets all keys. You must assign the buttons (press(), keyDown() and keyUp()) to restore movement and actions
 	*/
 	reset: function() {
 		this._keyFunctions = {};
 	},
 
 	/**
-	 * Lock the keys on the canvas and avoid scrolling of the page
-	 * @method lock
-	 * @param {HTMLCanvasElement} canvas Canvas
-	 * @param {Boolean} focus_start (optional) Place the focus on the canvas. false by default
-	 * @param {Function} onFocus (optional) Callback when the canvas is the focus
-	 * @param {Function} onBlur (optional) Callback when the canvas loses the focus
+	  @doc keyboard/
+	  @method lock Lock the keys on the canvas and avoid scrolling of the page
+	  @param {HTMLCanvasElement} canvas Canvas
+	  @param {Boolean} focus_start (optional) Place the focus on the canvas. false by default
+	  @param {Function} onFocus (optional) Callback when the canvas is the focus
+	  @param {Function} onBlur (optional) Callback when the canvas loses the focus
 	*/
 	lock: function(canvas, focus_start, onFocus, onBlur) {
 		var dom = document.getElementById(canvas);
@@ -261,22 +262,21 @@ var Input = {Input: {
 
 
 	/**
-	 * Whether a key is pressed
-	 * @method isPressed
-	 * @param {Integer} key Value of the key. If it's an array, returns true if a key is pressed
-	 * @return Boolean true if pressed
+	  @doc keyboard/
+	  @method isPressed  Whether a key is pressed
+	  @param {Integer} key Value of the key. If it's an array, returns true if a key is pressed
+	  @return Boolean true if pressed
 	*/
 	isPressed: function(key) {
 		return this._keyPressed[key];
 	},
 
 	/**
-	 * Add key (constant). Example :<br />
-	 * @static 
-	 * @method addKey
-	 * @param {String} id ID key
-	 * @param {Integer} keycode Key value
-		@example
+	  @doc keyboard/
+	  @method addKey Add key (constant).
+	  @param {String} id ID key
+	  @param {Integer} keycode Key value
+	  @example
 			<code>
 				canvas.Input.addKey("F", 70);
 				canvas.Input.press(Input.F, function(e) {
@@ -289,32 +289,32 @@ var Input = {Input: {
 	},
 
 	/**
-	 * Stores the keys pressed
-	 * @method memorize
+	  @doc keyboard/
+	  @method memorize  Stores the keys pressed
 	*/
 	memorize: function() {
 		this.cacheKeyBuffer = this.keyBuffer;
 	},
 
 	/**
-	 * Reassigns the keys pressed cached (see "Input.memorize()")
-	 * @method restore
+	  @doc keyboard/
+	  @method restore Reassigns the keys pressed cached (see "Input.memorize()")
 	*/
 	restore: function() {
 		this.keyBuffer = this.cacheKeyBuffer;
 	},
 
 	/**
-	 * Simulates the call of a key
-	 * @method trigger
-	 * @param {Integer} key Key Code (example: Input.Space)
-	 * @param {String} type Type of event key, "down", "up" or "press". "press" is the touch of a key (pressed and then released)
-	 * @param {HTMLCanvasElement} canvas (optional) Canvas. Allows to restore the focus to the canvas
-	 * @example
+	  @doc keyboard/
+	  @method trigger Simulates the call of a key
+	  @param {Integer} key Key Code (example: Input.Space)
+	  @param {String} type Type of event key, "down", "up" or "press". "press" is the touch of a key (pressed and then released)
+	  @param {HTMLCanvasElement} canvas (optional) Canvas. Allows to restore the focus to the canvas
+	  @example
 		<code>
 			canvas.Input.trigger(Input.A, "press");
 		</code>
-	 * @example
+	  @example
 		<code>
 			canvas.Input.trigger(Input.Enter, "down", _canvas);
 		</code>
@@ -354,8 +354,8 @@ var Input = {Input: {
 		this._rules[name] = inputs;
 	  },
 	  /**
-		@class Gamepad
-		Can play with the gamepad
+		@doc gamepad
+		@class Gamepad Can play with the gamepad
 		@example
 		In method "ready" of the scene :
 		<code>
@@ -393,6 +393,7 @@ var Input = {Input: {
 		_onDisconnect: null,
 		_connectState: false,
 		/**
+			@doc gamepad/
 			@method init Initialize the gamepad
 			@param {Function} onConnect (optional) Callback function when the gamepad is connected
 			@param {Function} onDisconnect (optional) Callback function when the gamepad is disconnected
@@ -416,12 +417,14 @@ var Input = {Input: {
 			}
 		},
 		/**
+			@doc gamepad/
 			@method addListener Adds a listener when a button is pressed or released
 			@param {String} Id button. See https://github.com/sgraham/gamepad.js
 			@param {Function} onDown Callback function when the button is pressed
 			@param {Function} onUp Callback function when the button is released
 		*/
 		/**
+			@doc gamepad/
 			@method addListener Execute a function already defined on the keyboard
 			@param {String} Id button. See https://github.com/sgraham/gamepad.js
 			@param {Integer} input Value of the key on the keyboard
@@ -452,6 +455,7 @@ var Input = {Input: {
 			};
 		},
 		/**
+			@doc gamepad/
 			@method update Updates the inputs of the gamepad
 		*/
 		update: function() {
@@ -471,6 +475,7 @@ var Input = {Input: {
 	  },
 	  
 	  /**
+		@doc accelerometer/
 		@method accelerometer Assigns the accelerometer
 		@param {Function} callback Callback function called with "deviceorientation" listener. 3 parameters :
 			- x : Direction side to side
@@ -504,153 +509,153 @@ var Input = {Input: {
 }};
 
 /** 
-* Value of the A button
-* @static
-* @property A
-* @type Integer
+ @doc keyboard/
+ @static
+ @property A Value of the A button
+ @type Integer
 */
 Input.A = 65;
 
 /** 
-* Value of the Z button
-* @static
-* @property Z
-* @type Integer
+ @doc keyboard/
+ @static
+ @property Z  Value of the Z button
+ @type Integer
 */
 Input.Z = 90;
 
 /** 
-* Value of the E button
-* @static
-* @property E
-* @type Integer
+ @doc keyboard/
+ @static
+ @property E Value of the E button
+ @type Integer
 */
 Input.E = 101;
 
 /** 
-* Value of the Q button
-* @static
-* @property Q
-* @type Integer
+ @doc keyboard/
+ @static
+ @property Q  Value of the Q button
+ @type Integer
 */
 Input.Q = 113;
 
 /** 
-* Value of the Escape button
-* @static
-* @property Esc
-* @type Integer
+ @doc keyboard/
+ @static
+ @property Esc Value of the Escape button
+ @type Integer
 */
 Input.Esc = 27;
 
 /** 
-* Value of the Enter button
-* @static
-* @property Enter
-* @type Integer
+ @doc keyboard/
+ @static
+ @property Enter Value of the Enter button
+ @type Integer
 */
 Input.Enter = 13;
 
 /** 
-* Value of the Shift button
-* @static
-* @property Shift
-* @type Integer
+ @doc keyboard/
+ @static
+ @property Shift Value of the Shift button
+ @type Integer
 */
 Input.Shift = 16;
 
 /** 
-* Value of the Ctrl button
-* @static
-* @property Ctrl
-* @type Integer
+ @doc keyboard/
+ @static
+ @property Ctrl  Value of the Ctrl button
+ @type Integer
 */
 Input.Ctrl = 17;
 
 /** 
-* Value of the Alt button
-* @static
-* @property Alt
-* @type Integer
+ @doc keyboard/
+ @static
+ @property Alt  Value of the Alt button
+ @type Integer
 */
 Input.Alt = 18;
 
 /** 
-* Value of the Space button
-* @static
-* @property Space
-* @type Integer
+ @doc keyboard/
+ @static
+ @property Space  Value of the Space button
+ @type Integer
 */
 Input.Space = 32;
 
 /** 
-* Value of the Back button
-* @static
-* @property Back
-* @type Integer
+ @doc keyboard/
+ @static
+ @property Back Value of the Back button
+ @type Integer
 */
 Input.Back = 8;
 
 /** 
-* Value of the F1 button
-* @static
-* @property F1
-* @type Integer
+ @doc keyboard/
+ @static
+ @property F1 Value of the F1 button
+ @type Integer
 */
 Input.F1 = 112;
 
 /** 
-* Value of the F2 button
-* @static
-* @property F2
-* @type Integer
+ @doc keyboard/
+ @static
+ @property F2 Value of the F2 button
+ @type Integer
 */
 Input.F2 = 113;
 
 /** 
-* Value of the F11 button
-* @static
-* @property F11
-* @type Integer
+ @doc keyboard/
+ @static
+ @property F11 Value of the F11 button
+ @type Integer
 */
 Input.F11 = 122;
 
-/** 
-* Value of the F12 button
-* @static
-* @property F12
-* @type Integer
+/**
+ @doc keyboard/
+ @static
+ @property F12  Value of the F12 button
+ @type Integer
 */
 Input.F12 = 123;
 
-/** 
-* Value of the left button
-* @static
-* @property Left
-* @type Integer
+/**
+ @doc keyboard/
+ @static
+ @property Left  Value of the left button
+ @type Integer
 */
 Input.Left = 37;
 
-/** 
-* Value of the Up button
-* @static
-* @property Up
-* @type Integer
+/**
+ @doc keyboard/
+ @static
+ @property Up Value of the Up button
+ @type Integer
 */
 Input.Up = 38;
 
 /** 
-* Value of the Right button
-* @static
-* @property Right
-* @type Integer
+ @doc keyboard/
+ @static
+ @property Right Value of the Right button
+ @type Integer
 */
 Input.Right = 39;
 
 /** 
-* Value of the Bottom button
-* @static
-* @property Bottom
-* @type Integer
+ @doc keyboard/
+ @static
+ @property Bottom Value of the Bottom button
+ @type Integer
 */
 Input.Bottom = 40;

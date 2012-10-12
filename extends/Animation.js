@@ -173,6 +173,7 @@ Class.create("Timeline", {
 		this._loop();
 	},
 	/**
+		@doc timeline/
 		@method to The properties of the elements will change over a predefined period
 		@param  {Object} attr Property values :
 			- opacity 
@@ -207,6 +208,7 @@ Class.create("Timeline", {
 		return this;
 	},
 	/**
+		@doc timeline/
 		@method wait Wait a number of frames before you start the next animation
 		@param {Integer} frames Duration in frames
 		Example
@@ -224,6 +226,7 @@ Class.create("Timeline", {
 		return this;
 	},
 	/**
+		@doc timeline/
 		@method getLastKey Retrieve the properties of the last key
 		@return {Object}
 	*/
@@ -239,6 +242,7 @@ Class.create("Timeline", {
 		return this._timeline[last_time];
 	},
 	/**
+		@doc timeline/
 		@method add Adds values to the properties of a period
 		@param  {Object} attr Property values :
 			- opacity 
@@ -264,6 +268,7 @@ Class.create("Timeline", {
 		return this.to(attr, frames, ease, "add");
 	},
 	/**
+		@doc timeline/
 		@method addProprety Adds properties to changes
 		@param  {String|Array} name Property name
 		@example
@@ -282,6 +287,7 @@ Class.create("Timeline", {
 		}
 	},
 	/**
+		@doc timeline/
 		@method loop Run continuously timeline
 		@example
 		<code>
@@ -449,6 +455,7 @@ Class.create("Timeline", {
 		});
 	},
 	/**
+		@doc timeline/
 		@method call Run timeline
 		@param  {Function} onFinish (optional) Calls the function when the animation is completed
 		@example
@@ -493,6 +500,7 @@ Class.create("Timeline", {
 			}
 		},
 		/**
+			@doc animation/
 			@method add Adds a loop listener in a element to perform an animation (with addLoopListener). From the method call, the loop is started on the animation stop. Use the play method to start the animation
 			@param {CanvasEngine.Element} el
 		*/
@@ -533,7 +541,8 @@ Class.create("Timeline", {
 						
 					}
 					else {
-						var img = canvas.Materials.images[self._images], sx = 0, sy = 0;
+						if (!self.canvas) self.canvas = canvas;
+						var img = self.canvas.Materials.images[self._images], sx = 0, sy = 0;
 						var currentSeq;
 						var nx = img.width / seq.size.width;
 						var ny = img.height / seq.size.height;
@@ -615,12 +624,14 @@ Class.create("Timeline", {
 		
 		},
 		/**
+			@doc animation/
 			@method stop Stop animation
 		*/
 		stop: function() {
 			this._stop = true;
 		},
 		/**
+			@doc animation/
 			@method play Adds a loop listener in a element to perform an animation (with addLoopListener). From the method call, the loop is started on the animation stop. Use the play method to start the animation
 			@param {String} seq Name of the sequence corresponding to the key in the initialization of the class
 			@param {String} type (optional) Choose from :
@@ -640,8 +651,8 @@ Class.create("Timeline", {
  
 var Animation = {
 	/**
-		@class Timeline
-		Create a temporal animation
+		@doc timeline
+		@class Timeline Create a temporal animation
 		@param {Element} el
 		@example
 		<code>
@@ -655,8 +666,8 @@ var Animation = {
 		}
 	},
 	/**
-		@class Animation
-		View an animation from an image
+		@doc animation
+		@class Animation View an animation from an image
 		@param {Object} options
 		@example
 		In method "ready" of the scene :

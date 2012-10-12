@@ -520,8 +520,8 @@
 })(Array);
 
 /**
-	@class Marshal
-	The marshaling library converts collections of JS objects into a BISON format, allowing them to be stored in localStorage. This data may subsequently be read and the original objects reconstituted.
+	@doc save
+	@class Marshal The marshaling library converts collections of JS objects into a BISON format, allowing them to be stored in localStorage. This data may subsequently be read and the original objects reconstituted.
 	
 	BISON : https://github.com/BonsaiDen/BiSON.js/
 	Inspired of Ruby : http://www.ruby-doc.org/core-1.9.3/Marshal.html
@@ -562,6 +562,7 @@ Marshal = {
 	_cache: {},
 	_stack_dump: [],
 	/**
+		@doc save/
 		@method exist Testing the existence of save in localStorage
 		@param {String} name Save name
 		@return Class
@@ -570,6 +571,7 @@ Marshal = {
 		return localStorage && localStorage[file];
 	},
 	/**
+		@doc save/
 		@method load Load data and restores the properties of the class the order of the stack of Marshal
 		@param {String} name Save name
 		@return Class
@@ -600,6 +602,7 @@ Marshal = {
 		return _class;
 	},
 	/**
+		@doc save/
 		@method dump Saves the properties of a class in localStorage. The order is important for recovery with load method
 		@param {Class} _class Class
 		@param {String} name Save name

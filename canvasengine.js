@@ -213,9 +213,7 @@ CanvasEngine.defines = function(canvas, params) {
 		
 		/**
 		@doc materials
-		@class Materials
-		@details
-			Resource management game
+		@class Materials Resource management game
 			The class is used with the properties "materials" in the scene but you can still use it for loading external resources to the scene
 		@example
 			Using Sound :
@@ -415,9 +413,7 @@ CanvasEngine.defines = function(canvas, params) {
 		
 		/**
 		@doc sound
-		@class Sound
-		@details
-			Sound management
+		@class Sound Sound management
 			The class uses HTML5 audio but you can use SoundManager 2 (http://www.schillmania.com/projects/soundmanager2/). 
 			
 			Use :
@@ -721,9 +717,7 @@ CanvasEngine.defines = function(canvas, params) {
 	
 	/**
 		@doc scene
-		@class Scene
-		@details
-			Scene management. Structure of a scene :
+		@class Scene Scene management. Structure of a scene :
 			<code>
 				canvas.Scene.new({
 					name: "MyScene",
@@ -907,9 +901,7 @@ CanvasEngine.defines = function(canvas, params) {
 	
 	/**
 		@class Context
-		@extend Element
-		@details
-			Uses the HTML5 Canvas context of the element. The drawing is stored in an array and is not displayed as the item is not attached to the scene
+		@extend Element Uses the HTML5 Canvas context of the element. The drawing is stored in an array and is not displayed as the item is not attached to the scene
 			<code>
 				canvas.Scene.new({
 					name: "MyScene",
@@ -986,7 +978,7 @@ CanvasEngine.defines = function(canvas, params) {
 			/**
 				@doc draw/
 				@method drawImage Draws the image or part of the image
-				@param {String|Image|Canvas} If this is a string, this is the identifier of the preloaded image
+				@param {String|Image|Canvas} img If this is a string, this is the identifier of the preloaded image
 				@param {Integer} sx (optional) 
 				@param {Integer} sy (optional) 
 				@param {Integer} sw (optional) 
@@ -1224,9 +1216,7 @@ CanvasEngine.defines = function(canvas, params) {
 	
 	/**
 		@doc element
-		@class Element
-		@details
-			Manipulate elements on the scene.
+		@class Element Manipulate elements on the scene.
 			1. Create an element with the createElement method :
 			<code>
 				canvas.Scene.new({
@@ -1252,16 +1242,14 @@ CanvasEngine.defines = function(canvas, params) {
 		_attr: {},
 		/**
 			@doc manipulate/
-			Position X relative to the parent
-			@property x
+			@property x Position X relative to the parent
 			@type Integer
 			@default 0
 		*/
 		x: 0,
 		/**
 			@doc manipulate/
-			Position Y relative to the parent
-			@property y
+			@property y Position Y relative to the parent
 			@type Integer
 			@default 0
 		*/
@@ -1270,56 +1258,49 @@ CanvasEngine.defines = function(canvas, params) {
 		real_y: 0,
 		/**
 			@doc manipulate/
-			Scale in X. Value 1 equivalent to 100%
-			@property scaleX
+			@property scaleX Scale in X. Value 1 equivalent to 100%
 			@type Integer
 			@default 1
 		*/
 		scaleX: 1,
 		/**
 			@doc manipulate/
-			Scale in Y. Value 1 equivalent to 100%
-			@property scaleY
+			@property scaleY Scale in Y. Value 1 equivalent to 100%
 			@type Integer
 			@default 1
 		*/
 		scaleY: 1,
 		/**
 			@doc manipulate/
-			Shew in X.
-			@property skewX
+			@property skewX Shew in X.
 			@type Integer
 			@default 0
 		*/
 		skewX: 0,
 		/**
 			@doc manipulate/
-			Shew in Y.
-			@property skewY
+			@property skewY Shew in Y.
 			@type Integer
 			@default 0
 		*/
 		skewY: 0,
 		/**
 			@doc manipulate/
-			Opacity. Value 1 equivalent to 100%
-			@property opacity
+			@property opacity Opacity. Value 1 equivalent to 100%
 			@type Integer
 			@default 1
 		*/
 		opacity: 1,
 		/**
 			@doc manipulate/
-			Rotation.
-			@property rotation
+			@property rotation Rotation.
 			@type Integer
 			@default 0
 		*/
 		rotation: 0,
 		/**
 			@doc manipulate/
-			Width. Only if  value has been assigned to the creation of the element
-			@property width
+			@property width Width. Only if  value has been assigned to the creation of the element
 			@type Integer
 			@default null
 			@example
@@ -1331,8 +1312,7 @@ CanvasEngine.defines = function(canvas, params) {
 		width: null,
 		/**
 			@doc manipulate/
-			Height. Only if  value has been assigned to the creation of the element
-			@property height
+			@property height Height. Only if  value has been assigned to the creation of the element
 			@type Integer
 			@default null
 			@example
@@ -1344,24 +1324,21 @@ CanvasEngine.defines = function(canvas, params) {
 		height: null,
 		/**
 			@doc manipulate/
-			Position X of the point of origin.
-			@property regX
+			@property regX Position X of the point of origin.
 			@type Integer
 			@default 0
 		*/
 		regX: 0,
 		/**
 			@doc manipulate/
-			Position Y of the point of origin.
-			@property regY
+			@property regY Position Y of the point of origin.
 			@type Integer
 			@default 0
 		*/
 		regY: 0,
 		/**
 			@doc traversing/
-			Parent element
-			@property parent
+			@property parent Parent element
 			@type CanvasEngine.Element
 		*/
 		parent: null,
@@ -1517,6 +1494,7 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 		},
 		/**
+			@doc manipulate/
 			@method clone Creating a clone element
 			@return CanvasEngine.Element
 		*/

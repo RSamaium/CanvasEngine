@@ -117,7 +117,7 @@ Kernel.prototype = {
 		@doc class/
 		@method extend add object in this class
 		@params {Object} object
-		@parmas {Boolean} clone (optional) Makes a clone of the object (false by default)
+		@params {Boolean} clone (optional) Makes a clone of the object (false by default)
 		@example
 			<code>
 				Class.create("Foo", {
