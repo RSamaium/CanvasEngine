@@ -2,18 +2,14 @@
 
 CanvasEngine implements a multiplayer game using NodeJS and Socket.io
 
-1. Install [Node.js](http://nodejs.org)  and [Socket.io](http://socket.io) on the server
-2. Get following CanvasEngine files :
-  * server/ModelServer.js
-  * extends/Marshal.js
-  * engine-common.js
+1. Install [Node.js](http://nodejs.org) and [NPM](https://npmjs.org/)
+2. Open the Shell :
 
-3. And put them in your project to the server. The tree is as follows:
-  * core/Marshal.js
-  * engine-common.js
-  * ModelServer.js
+       npm install canvasengine
 
-> Note : This structure may change and be improved
+3. Create a. Js file in your project for the server
+
+---
 
 Here is an example of a client code :
 
@@ -53,7 +49,8 @@ Here is an example of a client code :
 And server code :
 
 
-    var Rpg = require("./ModelServer").listen(8333).init("Main", ["start"], {
+    var CE = require("canvasengine").listen(8333);
+	CE.Model.init("Main", ["start"], {
 
 	  initialize: function() {
 

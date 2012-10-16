@@ -3,9 +3,8 @@ if (typeof(require) !== "undefined") {
 	fs = require('fs');
 }
 
-function Kernel(class_method, name) {
+function Kernel(class_method) {
 	this.class_method = class_method;
-	this.class_name = name;
 }
 
 Kernel._extend = function(self, object, clone) {
@@ -30,7 +29,6 @@ Kernel._extend = function(self, object, clone) {
 Kernel.prototype = {
 	"new": function() {
 		this._class = new Class();
-		Class.__class[this.class_name] = this._class;
 		this._construct();
 		return this._class;
 	},
@@ -56,7 +54,6 @@ Kernel.prototype = {
 		return this;
 	},
 	/**
-		@doc class/
 		@method attr_accessor Defines the properties that can be read and modified
 		@params {Array} Properties names in an array
 		@example
@@ -77,7 +74,6 @@ Kernel.prototype = {
 		return this._attr_accessor(attrs, true, true);
 	},
 	/**
-		@doc class/
 		@method attr_reader Defines the properties that can be only read
 		@params {Array} Properties names in an array
 		@example
@@ -96,7 +92,6 @@ Kernel.prototype = {
 		return this._attr_accessor(attrs, true, false);
 	},
 	/**
-		@doc class/
 		@method attr_writer Defines the properties that can be only modified
 		@params {Array} Properties names in an array
 		@example
@@ -116,10 +111,9 @@ Kernel.prototype = {
 		return this._attr_accessor(attrs, false, true);
 	},
 	/**
-		@doc class/
 		@method extend add object in this class
 		@params {Object} object
-		@params {Boolean} clone (optional) Makes a clone of the object (false by default)
+		@parmas {Boolean} clone (optional) Makes a clone of the object (false by default)
 		@example
 			<code>
 				Class.create("Foo", {
@@ -159,7 +153,6 @@ Class.__class = {};
 Class.__class_config = {};
 
 /**
-	@doc class/
 	@method get By retrieve the class name
 	@static
 	@params {String} name Class name
@@ -170,7 +163,6 @@ Class.get = function(name) {
 };
 
 /**
-	@doc class/
 	@method create Creating a class. the constructor is the method "initialize"
 	@static
 	@params {String} name Class name
@@ -217,14 +209,13 @@ Class.create = function(name, methods, _static) {
 	else {
 		//p = Class.__class[name].prototype = methods;
 		Class.__class_config[name].methods = methods;
-		var kernel = Class.__class_config[name].kernel = new Kernel(Class.__class_config[name].methods, name);
+		var kernel = Class.__class_config[name].kernel = new Kernel(Class.__class_config[name].methods);
 		//p.extend(methods);
 	}
 	return kernel;
 }
 
 /**
-	@doc class/
 	@method new new class. 
 	@static
 	@params {String} name Class name
@@ -277,7 +268,6 @@ Class.prototype = {
 var CanvasEngine = {};
 
 /**
-	@doc utilities/
 	@method uniqid Generating a unique identifier by date
 	@static
 	@return {String}
@@ -288,8 +278,7 @@ CanvasEngine.uniqid = function() {
 };
 
 /**
-	@doc utilities/
-	@method arraySplice Removes an element in an array by value
+	@method Removes an element in an array by value
 	@static
 	@params {Object} val
 	@params {Array} array
@@ -305,7 +294,6 @@ CanvasEngine.arraySplice = function(val, array) {
 };
 
 /**
-	@doc ajax/
 	@method ajax Perform an asynchronous HTTP (Ajax) request. System uses wire on Node.js
 	@static
 	@params {Object} options
@@ -370,7 +358,6 @@ CanvasEngine.ajax = function(options) {
 }
 
 /**
-	@doc ajax/
 	@method getJSON Load JSON-encoded data from the server using a GET HTTP request.
 	@static
 	@params {String} url File Path
@@ -391,7 +378,6 @@ CanvasEngine.getJSON = function(url, data, callback) {
 }
 
 /**
-	@doc utilities/
 	@method parseJSON Takes a well-formed JSON string and returns the resulting JavaScript object.
 	@static
 	@params {String} json JSON format
@@ -402,7 +388,6 @@ CanvasEngine.parseJSON = function(json) {
 }
 
 /**
-	@doc utilities/
 	@method each The array is read and sent to a callback function
 	@static
 	@params {Array|Integer} array If the value is an integer, it returns to perform a number of loop iteration
@@ -438,7 +423,6 @@ CanvasEngine.each = function(array, callback) {
 }
 
 /**
-	@doc utilities/
 	@method inArray The CE.inArray() method is similar to JavaScript's native .indexOf() method in that it returns -1 when it doesn't find a match. If the first element within the array matches value, CE.inArray() returns 0.
 
 	Because JavaScript treats 0 as loosely equal to false (i.e. 0 == false, but 0 !== false), if we're checking for the presence of value within array, we need to check if it's not equal to (or greater than) -1.
@@ -458,7 +442,6 @@ CanvasEngine.inArray = function(val, array)  {
 };
 
 /**
-	@doc engine/
 	@method clone Clone an object
 	@static
 	@params {Object} instance
@@ -480,7 +463,6 @@ CanvasEngine.clone = function(srcInstance) {
 }
 
 /**
-	@doc utilities/
 	@method hexaToRGB Converts the hexadecimal value of a color in RGB. Returns an array with 3 colors : [r, g, b]
 	@static
 	@params {String} hexa Hexadecimal with or without #

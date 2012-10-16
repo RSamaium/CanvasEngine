@@ -1,5 +1,6 @@
 - canvasengine.js
-- engine-common.js
+- core/engine-common.js
+- core/ModelServer.js
 - extends/Animation.js
 - extends/Gleed2d.js
 - extends/Input.js

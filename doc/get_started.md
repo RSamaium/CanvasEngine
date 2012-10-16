@@ -5,7 +5,7 @@ Follow the steps below to start:
 1. Download the code `canvasengine-X.Y.Z.all.min.js` on Github or this website
 2. Add this code in your page : 
         
-		<canvas id="canvas_id" width="640" height="480"></canva>
+		<canvas id="canvas_id" width="640" height="480"></canvas>
 		<script src="canvasengine-X.Y.Z.all.min.js"></script>
        
 3. Initialize the canvas in your JS file :

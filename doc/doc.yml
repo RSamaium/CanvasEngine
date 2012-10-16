@@ -1,6 +1,7 @@
 core: 
     class:
     engine:
+    server:
     scene:
     element:
      traversing:
