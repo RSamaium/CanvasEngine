@@ -747,6 +747,39 @@ CanvasEngine.defines = function(canvas, params) {
 	Class.create("Scene", {
 		_stage: {},
 		_events: [],
+		/**
+			@doc scene/
+			@property model Model reference. The methods of this property are the same as scoket.io
+			@type Object
+			@default null
+			@example
+			
+			<code><script src="extends/Socket.js"></script>/code>
+			
+			<code>	
+				var Model = io.connect('http://127.0.0.1:8333');
+
+				var canvas = CE.defines("canvas").
+					ready(function() {
+					canvas.Scene.call("MyScene");
+				 });
+
+				canvas.Scene.new({
+				  name: "MyScene",
+				  model: Model,
+				  events: ["load"], 
+				  ready: function(stage) {
+					this.model.emit("start");
+				  },
+				  load: function(text) {
+					 console.log(text);
+				  }
+				});
+			</code>
+			
+			
+		*/
+		model: null,
 		_isExit: false,
 		_global_elements: {},
 		initialize: function(obj) {
@@ -1234,6 +1267,8 @@ CanvasEngine.defines = function(canvas, params) {
 					}
 				});
 			</code>
+		@example
+			<jsfiddle>cUEJ7/1</jsfiddle>
 	*/
 	Class.create("Element", {
 		_children: [],
@@ -1772,4 +1807,8 @@ CanvasEngine.defines = function(canvas, params) {
 	CanvasEngine = Class["new"]("CanvasEngineClass");
 	return CanvasEngine;
 }
+
+CanvasEngine.Core = CanvasEngine;
+CanvasEngine.Class = Class;
+
 var CE = CanvasEngine;

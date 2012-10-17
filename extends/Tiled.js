@@ -234,7 +234,7 @@ Class.create("Tiled", {
 	@param {CanvasEngine.Element} el The layers are displayed on this element
 	@param {String} url Path to the JSON file of Tiled Map Editor
 	@example
-	
+	<code>
 	var canvas = CE.defines("canvas_id").
 		extend(Tiled).
 		ready(function() {
@@ -261,7 +261,7 @@ Class.create("Tiled", {
 				
 			}
 		});
-
+	</code>
 */
 var Tiled = {
 	Tiled: {

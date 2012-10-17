@@ -59,7 +59,7 @@ THE SOFTWARE.
 		
 		In header (http://www.gamepadjs.com)
 		<code>
-			<script src="extends/gamepad.js"></script>
+			&lt;script src="extends/gamepad.js"></script&gt;
 		</code>
 		
 		Script :

@@ -248,7 +248,7 @@ Class.create("Scrolling", {
 	@param {Integer} tile_h Height of the tile
 	@param {Integer} tile_w width of the tile
 	@example
-	
+	<code>
 	var canvas = CE.defines("canvas_id").
 		extend(Scrolling).
 		ready(function() {
@@ -277,7 +277,7 @@ Class.create("Scrolling", {
 				stage.refresh();
 			}
 		});
-
+	</code>
 */
 var Scrolling = {
 	Scrolling: {

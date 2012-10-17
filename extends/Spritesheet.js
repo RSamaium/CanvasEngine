@@ -110,6 +110,7 @@ Class.create("Spritesheet", {
 	@param {Object} params See the method "set"
 	@example
 	
+	<code>
 	var canvas = CE.defines("canvas_id").
 		extend(Spritesheet).
 		ready(function() {
@@ -139,7 +140,7 @@ Class.create("Spritesheet", {
 				 stage.append(el);
 			}
 		});
-
+		</code>
 */
 var Spritesheet = {
 	Spritesheet: {
