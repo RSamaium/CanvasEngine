@@ -485,14 +485,12 @@ Class.create("Timeline", {
 		_loop: false,
 		_els: [],
 		el: null,
-		canvas: null,
-		initialize: function(options, canvas) {
+		initialize: function(options) {
 			this._options = options;
 			this._images = options.images;
 			this._animations = options.animations;
 			this._timeline = options.timeline;
 			this._els = options.addIn;
-			this.canvas = canvas;
 			if (options.addIn) {
 				this.el = this._els.scene.createElement();
 				this._els.append(this.el);
@@ -514,10 +512,20 @@ Class.create("Timeline", {
 			var img_seq = 0;
 			
 			this.stop();
-		
+			
 			this.el.addLoopListener(function() {
 				var t;
 				var seq = self._animations[self._seq], loop = self._loop == "loop";
+				
+				function seqSize(img) {
+					if (seq.size) return seq.size;
+					var data_img = Global_CE.Materials.get(img);
+					seq.size = {
+						width: data_img.width,
+						height: data_img.height
+					};
+				}
+				
 				if (self._stop) {
 					return;
 				}
@@ -525,10 +533,11 @@ Class.create("Timeline", {
 				if (!seq.frequence) seq.frequence = 0;
 
 				if (freq >= seq.frequence) {
-					if (!seq && self._images instanceof Array) {
-						
+					if (self._images instanceof Array) {					
 						var img = self._images[img_seq];
-						this.drawImage(img, 0, 0);
+						seqSize(img);
+						
+						this.drawImage(img, 1);
 						img_seq++;
 						if (img_seq >= self._images.length) {
 							if (loop) {
@@ -541,13 +550,14 @@ Class.create("Timeline", {
 						
 					}
 					else {
-						if (!self.canvas) self.canvas = canvas;
-						var img = self.canvas.Materials.images[self._images], sx = 0, sy = 0;
+						var img = Global_CE.Materials.get(self._images), sx = 0, sy = 0;
+						seqSize(self._images);
 						var currentSeq;
 						var nx = img.width / seq.size.width;
 						var ny = img.height / seq.size.height;
 						var id;
 						var children;
+						
 						
 						
 						function drawImage(_el, id) {
@@ -689,13 +699,34 @@ var Animation = {
 				  }
 			   }
 			});
+			stage.append(el);
 			animation.add(el);
 			animation.play("run", "loop");
 		</code>
+		
+		<jsfiddle>WebCreative5/77wUh/1</jsfiddle>
+		
+		You can also chaining multiple different images:
+		
+		<code>
+		 var el = this.createElement(),
+            animation = canvas.Animation.new({
+                images: ["foo", "bar"],
+                animations: {
+                    _default: {
+                        frequence: 7
+                    }
+                }
+            });
+			animation.add(el);
+			animation.play("_default", "loop");
+		</code>
+		
+		<jsfiddle>WebCreative5/E2vVW</jsfiddle>
 	*/
 	Animation: {
-		"new": function(options, canvas) {
-			return Class["new"]("Animation", [options, canvas]);
+		"new": function(options) {
+			return Class["new"]("Animation", [options]);
 		}
 	}
 };

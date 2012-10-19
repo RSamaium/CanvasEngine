@@ -114,9 +114,8 @@ Class.create("ModelClientClass", {
 	}
 });
 
-var Model = Class["new"]("ModelClientClass");
-
-var old;
+var Model = Class["new"]("ModelClientClass"),
+	Global_CE;
 
 /**
 	@class CanvasEngine
@@ -159,7 +158,7 @@ CanvasEngine.defines = function(canvas, params) {
 			
 	*/
 	Class.create("CanvasEngineClass", {
-		_noConflict: false,
+		_noConflict: false, 
 		initialize: function(element) {
 			this.canvas = canvas;
 			this.el_canvas = [];
@@ -1804,7 +1803,7 @@ CanvasEngine.defines = function(canvas, params) {
 		}
 	});
 	
-	CanvasEngine = Class["new"]("CanvasEngineClass");
+	Global_CE = CanvasEngine = Class["new"]("CanvasEngineClass");
 	return CanvasEngine;
 }
 

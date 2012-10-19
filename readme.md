@@ -30,6 +30,23 @@ Framework to create video games in HTML5 Canvas
 * Text Effects
 * Synchronized multi canvas (local multiplayer)
 
+## Changelog
+
+### v1.0.4
+
+* Fix animated images
+* Improving documentation
+
+### v1.0.3
+--
+### v1.0.2
+--
+### v1.0.1
+--
+### v1.0.0
+
+* Initial Release
+
 ## Demos
 
 Empty
