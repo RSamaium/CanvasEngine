@@ -37,7 +37,7 @@ Framework to create video games in HTML5 Canvas
 
 ## Changelog
 
-### v1.0.21
+### v1.0.5
 
 * Fix restart of animations (Animation Class)
 * Fix children elements opacity

@@ -855,7 +855,7 @@ CanvasEngine.defines = function(canvas, params) {
 		
 		/**
 			@doc canvas/
-			@method createLinearGradient View http://www.w3schools.com/tags/canvas_createradialgradient.asp
+			@method createRadialGradient View http://www.w3schools.com/tags/canvas_createradialgradient.asp
 		*/
 		createRadialGradient: function(x0,y0,r0,x1,y1,r1) {
 			return this.ctx.createRadialGradient(x0, y0, r0, x1, y1, r1);
@@ -863,7 +863,7 @@ CanvasEngine.defines = function(canvas, params) {
 		
 		/**
 			@doc canvas/
-			@method createLinearGradient View http://www.w3schools.com/tags/canvas_addcolorstop.asp
+			@method addColorStop View http://www.w3schools.com/tags/canvas_addcolorstop.asp
 		*/
 		addColorStop: function(stop, color) {
 			return this.ctx.addColorStop(stop, color);
