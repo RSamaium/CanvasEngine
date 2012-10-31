@@ -237,28 +237,85 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		Materials: {
 			images: {},
+			_buffer: {},
 			sounds: {},
 			fonts: {},
 			/**
 				@doc materials/
 				@method get Get the picture or sound according to its identifier
 				@param {String} id
-				@return {HTML5Audio|Images}
+				@param {String} type (optional) If two identical identifier is several types, specify the type: "image" or "sound"
+				@return {HTML5Audio|Image}
 			*/
-			get: function(id) {
+			get: function(id, type) {
+			
+				if (type) {
+					return this[type + "s"][id];
+				}	
+			
 				if (this.images[id]) {
 					return this.images[id];
 				}
 				else if (this.sounds[id]) {
 					return this.sounds[id];
 				}
+				else if (id instanceof Image || id instanceof HTMLCanvasElement) {
+					return id;
+				}
+				throw "Cannot to draw the image or sound \"" + id + "\" because it does not exist";
 			},
-			transparentColor: function(img, color) {
-				var canvas =  document.createElement('canvas'), ctx, imageData, data, rgb;
+			
+			/**
+				@doc materials/
+				@method imageToCanvas Converts an image (Image) in Canvas. The returned object is :
+					{
+						canvas: {HTML5CanvasElement},
+						ctx: {Context2d}
+					}
+				@param {String} id Image id
+				@return {Object}
+			*/
+			imageToCanvas: function(id) {
+				var canvas =  document.createElement('canvas'), ctx,
+					img = this.get(id);
 				canvas.width = img.width;
 				canvas.height = img.height;
 				ctx = canvas.getContext('2d');
 				ctx.drawImage(img, 0, 0);
+				return {
+					canvas: canvas,
+					ctx: ctx
+				};
+			},
+			
+			// Private ?
+			createBuffer: function(id, color) {
+				if (this._buffer[id]) {
+					return this._buffer[id];
+				}
+				var _canvas = this.imageToCanvas(id),
+					canvas = _canvas.canvas,
+					ctx = _canvas.ctx;
+				ctx.globalCompositeOperation = 'source-atop';
+				ctx.fillStyle = color;
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+				this._buffer[id] = canvas;
+				return canvas;
+			},
+			
+			/**
+				@doc materials/
+				@method transparentColor Make a color transparent in the image
+				@param {String} id Image id
+				@param {String} color hexadecimal code
+				@return {HTML5Canvas}
+			*/
+			transparentColor: function(id, color) {
+				var imageData, data, rgb, 
+					_canvas = this.imageToCanvas(id),
+					canvas = _canvas.canvas,
+					ctx = _canvas.ctx
+
 				imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 				data = imageData.data;
 				rgb = _CanvasEngine.hexaToRGB(color);
@@ -273,6 +330,31 @@ CanvasEngine.defines = function(canvas, params) {
 				ctx.putImageData(imageData, 0, 0);
 				return canvas;
 			},
+			
+			
+			
+			/**
+				@doc materials/
+				@method cropImage Can crop an image to use independently. Useful for creating patterns in HTML5
+				@param {String} id Image id
+				@param {Integer} x Position X
+				@param {Integer} y Position Y
+				@param {Integer} w Width
+				@param {Integer} h height
+				@return {HTML5Canvas}
+			*/
+			cropImage: function(id, x, y, w, h) {
+				var imageData, data, rgb, 
+					_canvas = this.imageToCanvas(id),
+					canvas = _canvas.canvas,
+					ctx = _canvas.ctx
+				imageData = ctx.getImageData(x, y, w, h);
+				canvas.width = w;
+				canvas.height = h;
+				ctx.putImageData(imageData, 0, 0);
+				return canvas;
+			},
+			
 			/**
 				@doc materials/
 				@method load Load a resource
@@ -455,10 +537,7 @@ CanvasEngine.defines = function(canvas, params) {
 				@return {SMSound or HTMLAudioElement}
 			*/
 			get: function(id) {
-				var snd = CanvasEngine.Materials.sounds[id];
-				if (!snd) {
-					throw "The sound \"" + id + "\" does not exist";
-				}
+				var snd = CanvasEngine.Materials.get(id, "sound");
 				return snd;
 			},
 			/**
@@ -641,14 +720,31 @@ CanvasEngine.defines = function(canvas, params) {
 				}
 	});
 	
-	
+	/**
+		@doc canvas
+		@class Canvas Manage canvas element
+		@example
+			<jsfiddle>WebCreative5/GkUsE</jsfiddle>
+	*/
 	Class.create("Canvas", {
 		id: null,
 		element: null,
 		stage: null,
 		ctx: null,
 		_ctxMouseEvent: null,
+		/**
+			@doc canvas/
+			@property width canvas width
+			@type Integer
+			@example
+				<jsfiddle>WebCreative5/GkUsE</jsfiddle>
+		*/
 		width: 0,
+		/**
+			@doc canvas/
+			@property height canvas height
+			@type Integer
+		*/
 		height: 0, 
 		mouseEvent: false,
 		initialize: function(id) {
@@ -660,20 +756,19 @@ CanvasEngine.defines = function(canvas, params) {
 			this.ctx = this.element.getContext('2d');
 			old = this.ctx;
 			this._mouseEvent();
-			this.element.addEventListener("click", function(e) {
-				self._onClick.call(self, e, "click");
-			}, false);
-			this.element.addEventListener("dblclick", function(e) {
-				self._onClick.call(self, e, "dblclick");
-			}, false);
-			this.element.addEventListener("mousemove", function(e) {
-				self._onClick.call(self, e, "mousemove");
-			}, false);
-		},
-		_onClick: function(e, type) {
-			this._ctxMouseEvent.clearRect(0, 0, this.width, this.height);
-			var mouse = this.getMousePosition(e);
-			if (this.stage) this.stage._click(e, mouse, type);
+			var events = ["click", "dbclick", "mousemove"];
+			
+			function bindEvent(type) {
+				this.element.addEventListener(type, function(e) {
+					var mouse = self.getMousePosition(e);
+					if (self.stage) self.stage["_" + type](e, mouse);
+				}, false);
+			}
+			
+			for (var i=0 ; i < events.length ; i++) {
+				bindEvent.call(this, events[i]);
+			}
+			
 		},
 		_mouseEvent: function() {
 			var canvas =  document.createElement('canvas');
@@ -685,6 +780,7 @@ CanvasEngine.defines = function(canvas, params) {
 		canvasReady: function() {
 		},
 		/**
+			@doc canvas/
 			@method Get the X and Y position of the mouse in the canvas
 			@param {Event} event
 			@return Object
@@ -709,6 +805,68 @@ CanvasEngine.defines = function(canvas, params) {
 			var mouseX = e.clientX - left + window.pageXOffset;
 			var mouseY = e.clientY - top + window.pageYOffset;
 			return {x: mouseX, y: mouseY};
+		},
+		/**
+			@doc canvas/
+			@method measureText Returns an object that contains the width of the specified text
+			@param {String} txt Text
+			@return Object
+			@example
+				In method "ready" of the scene : 
+				<code>
+					var _canvas = this.getCanvas();
+					_canvas.measureText("Hello World").width;
+				</code>
+		*/
+		measureText: function(txt) {
+			return this.ctx.measureText(txt);
+		},
+		
+		/**
+			@doc canvas/
+			@method createPattern Returns a pattern
+			@param {String|Image|HTML5CanvasElement|HTML5VideoElement} img Identifier of the preloaded image, image, video or canvas
+			@param {Sring} repeatOption (optional) repeat (default), no-repeat, repeat-x or repeat-y
+			@return CanvasPattern
+			@example
+				In method "ready" of the scene : 
+				<code>
+					var _canvas = this.getCanvas(),
+						pattern = _canvas.createPattern("my_img");
+					
+					var el = this.createElement();
+					el.fillStyle = pattern;
+					el.fillRect(0, 0, 100, 100);
+					stage.append(el);
+				</code>
+		*/
+		createPattern: function(img, repeatOption) {
+			repeatOption = repeatOption || "repeat";
+			return this.ctx.createPattern(CanvasEngine.Materials.get(img), repeatOption);
+		},
+		
+		/**
+			@doc canvas/
+			@method createLinearGradient View http://www.w3schools.com/tags/canvas_createlineargradient.asp
+		*/
+		createLinearGradient: function(x0, y0, x1, y1) {
+			return this.ctx.createLinearGradient(x0, y0, x1, y1);
+		},
+		
+		/**
+			@doc canvas/
+			@method createLinearGradient View http://www.w3schools.com/tags/canvas_createradialgradient.asp
+		*/
+		createRadialGradient: function(x0,y0,r0,x1,y1,r1) {
+			return this.ctx.createRadialGradient(x0, y0, r0, x1, y1, r1);
+		},
+		
+		/**
+			@doc canvas/
+			@method createLinearGradient View http://www.w3schools.com/tags/canvas_addcolorstop.asp
+		*/
+		addColorStop: function(stop, color) {
+			return this.ctx.addColorStop(stop, color);
 		}
 	});
 	
@@ -780,7 +938,7 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		model: null,
 		_isExit: false,
-		_global_elements: {},
+		_globalElements: {},
 		initialize: function(obj) {
 			var ev, self = this;
 			this._events = obj.events;
@@ -801,9 +959,11 @@ CanvasEngine.defines = function(canvas, params) {
 			this._loop_id = requestAnimationFrame(loop);
 
 		},
+		// deprecated
 		emit: function(name, data) {
 			this.model.call(name, data);
 		},
+		// deprecated
 		getElement: function(name) {
 			if (this._global_elements[name]) {
 				return this._global_elements[name];
@@ -846,9 +1006,9 @@ CanvasEngine.defines = function(canvas, params) {
 				width = name;
 			}
 			var el = CanvasEngine.Element["new"](this, null, width, height);
-			if (name) {
+			/*if (name) {
 			  this._global_elements[name] = el;
-			}
+			}*/
 			return el;
 		 },
 		_exit: function() {	
@@ -947,9 +1107,14 @@ CanvasEngine.defines = function(canvas, params) {
 	Class.create("Context", {
 			_cmd: {},
 			img: {},
+			globalAlpha: 1,
+			// private ; read only
+			_PROPS: ["shadowColor", "shadowBlur", "shadowOffsetX", "shadowOffsetY", "globalAlpha", "globalCompositeOperation", "lineJoin", "lineWidth", "miterLimit", "fillStyle", "font", "textBaseline", "strokeStyle"],
+			
 			alpha: function(opacity) {
-				this.globalAlpha = opacity;
+				//this.globalAlpha = opacity;
 			},
+			
 			/**
 				@doc draw/
 				@method fillRect. See http://www.w3schools.com/html5/canvas_fillrect.asp
@@ -993,13 +1158,6 @@ CanvasEngine.defines = function(canvas, params) {
 			},
 			/**
 				@doc draw/
-				@method createLinearGradient See http://www.w3schools.com/html5/canvas_createlineargradient.asp
-			*/
-			createLinearGradient: function(x0, y0, x1, y1) {
-				this._addCmd("createLinearGradient", [x0, y0, x1, y1]);
-			},
-			/**
-				@doc draw/
 				@method addColorStop See http://www.w3schools.com/html5/canvas_addcolorstop.asp
 			*/
 			addColorStop: function(i, color) {
@@ -1038,13 +1196,12 @@ CanvasEngine.defines = function(canvas, params) {
 				@link http://www.whatwg.org/specs/web-apps/current-work/multipage/the-canvas-element.html#dom-context-2d-drawimage
 			*/
 			drawImage: function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
-				var array, _img = img;
+				var array, array_buffer, buffer, _img = img;
 				if (!sx) sx = 0;
 				if (!sy) sy = 0;
 				if (typeof img === "string") {
-					_img = CanvasEngine.Materials.images[img];
+					_img = CanvasEngine.Materials.get(img);
 					if (!_img) {
-						throw "Cannot to draw the image \"" + img + "\" because it does not exist";
 						return;
 					}
 					this.img.width = _img.width;
@@ -1060,12 +1217,16 @@ CanvasEngine.defines = function(canvas, params) {
 					dw = sw;
 					dh = sh;
 				}
+				buffer = CanvasEngine.Materials.createBuffer(img, this.color_key)
 				if (sw !== undefined) {
 					array = [_img, sx, sy, sw, sh, dx, dy, dw, dh];
+					array_buffer = [buffer, sx, sy, sw, sh, dx, dy, dw, dh];
 				}
 				else {
 					array = [_img, sx, sy];
+					array_buffer = [buffer, sx, sy];
 				}
+				this._buffer_img = array_buffer;
 				this._addCmd("drawImage", array);
 			},
 			/**
@@ -1192,7 +1353,7 @@ CanvasEngine.defines = function(canvas, params) {
 				@method clearPropreties Assigned undefined to all properties HTML5 Canvas element
 			*/
 			clearPropreties: function() {
-				var prop = ["shadowColor", "shadowBlur", "shadowOffsetX", "shadowOffsetY", "globalAlpha", "globalCompositeOperation", "lineJoin", "lineWidth", "miterLimit", "fillStyle", "font", "textBaseline", "strokeStyle"];
+				var prop = this._PROPS;
 				for (var k=0 ; k < prop.length ; k++) {
 					if (this[prop[k]]) this[prop[k]] = undefined;
 				}
@@ -1206,6 +1367,11 @@ CanvasEngine.defines = function(canvas, params) {
 				var cmd, array_cmd = {};
 				var cmd_propreties = [];
 				var isCmd = true;
+				
+				var bufferEvent = function(name, params) {
+					this._canvas[0]["_ctxMouseEvent"][name].apply(this._canvas[0]["_ctxMouseEvent"], params);
+				};
+				
 				if (name) {
 					array_cmd[name] = {params: params, propreties: propreties};
 					isCmd = false;
@@ -1222,24 +1388,46 @@ CanvasEngine.defines = function(canvas, params) {
 						}
 						if (cmd_propreties) {
 							for (var key in cmd_propreties) {
+								if (key == "globalAlpha") {
+									cmd_propreties[key] = this.real_opacity;
+								}
 								this._canvas[j][layer][key] = cmd_propreties[key];
+								if (cmd_propreties["strokeStyle"]) {
+									this._canvas[0]["_ctxMouseEvent"]["strokeStyle"] = this.color_key;
+								}
+								if (cmd_propreties["fillStyle"]) {
+									this._canvas[0]["_ctxMouseEvent"]["fillStyle"] = this.color_key;
+								}
+								else {
+									this._canvas[0]["_ctxMouseEvent"][key] = cmd_propreties[key];
+								}
 							}
 						}
 						this._canvas[j][layer][name].apply(this._canvas[j][layer], cmd.params);
+						if (name == "drawImage") {
+							bufferEvent.call(this, name, this._buffer_img)
+						}
+						else {
+							bufferEvent.call(this, name, cmd.params)
+						}
+						
+						
 					}
 				}
+				
 
 			},
 			_addCmd: function(name, params, propreties) {
 				params = params || [];
 				propreties = propreties || [];
 				
-				var prop = ["shadowColor", "shadowBlur", "shadowOffsetX", "shadowOffsetY", "globalAlpha", "globalCompositeOperation", "lineJoin", "lineWidth", "miterLimit"];
+				var prop = this._PROPS;
 				propreties = propreties.concat(prop);
 				var obj = {};
 				for (var k=0 ; k < propreties.length ; k++) {
 					if (this[propreties[k]]) obj[propreties[k]] = this[propreties[k]];
-				}
+				};
+				obj["globalAlpha"] = 1;
 				this._cmd[name] = {params: params, propreties: obj};
 			}
 	});
@@ -1381,6 +1569,7 @@ CanvasEngine.defines = function(canvas, params) {
 		_visible: true,
 		_listener: {},
 		_loop_listener: [],
+		_buffer_img: null,
 		_out: 1,
 		_over: 0,
 		initialize: function(scene, layer, width, height) {
@@ -1390,6 +1579,15 @@ CanvasEngine.defines = function(canvas, params) {
 			this.scene = scene;
 			this.stage = scene._stage;
 			this.layer = layer;
+			
+			var key;
+			do {
+				key = _CanvasEngine._getRandomColorKey();
+			}
+			while (key in this.scene._globalElements);
+			
+			this.color_key = key;
+			this.scene._globalElements[key] = this;
 			this._canvas = CanvasEngine.el_canvas;
 		},
 		/**
@@ -1399,8 +1597,15 @@ CanvasEngine.defines = function(canvas, params) {
 		refresh: function() {
 			this.clear();
 			this._refresh(true);
+			this._canvas._event_mouse = null;
 		},
-		_refresh: function(init, children) {
+		/**
+			Private
+			init : is parent ? default : false
+			children : refresh children ? default : true
+		
+		*/
+		_refresh: function(init, children, triggerEvent) {
 			children = children === undefined ? true : children;
 			if (!this._visible) return;
 			
@@ -1409,15 +1614,17 @@ CanvasEngine.defines = function(canvas, params) {
 				this.save();
 					
 				this.setTransform(1, 0, 0, 1, 0, 0);
-				this.real_y = (init ? 0 : this.parent.real_y) + this.y;
-				this.real_x = (init ? 0 : this.parent.real_x) + this.x;
+				
 				this.real_scale_x = (init ? 1 : this.parent.real_scale_x * this.scaleX);
 				this.real_scale_y = (init ? 1 : this.parent.real_scale_y * this.scaleY) ;
+				this.real_y = ((init ? 0 : this.parent.real_y) + this.y) * (init ? 1 : this.parent.real_scale_x);
+				this.real_x = ((init ? 0 : this.parent.real_x) + this.x) * (init ? 1 : this.parent.real_scale_y);
 				this.real_skew_x = (init ? 0 : this.parent.real_skew_x) + this.skewX;
 				this.real_skew_y = (init ? 0 : this.parent.real_skew_y) + this.skewY ;
 				this.real_rotate = (init ? 0 : this.parent.real_rotate) + this.rotation ;
 				this.real_pause = init ? this.pause : this.parent.pause;
-				this.alpha(this.opacity);
+				this.real_opacity = (init ? 1 : this.parent.real_opacity) * this.opacity;
+				this.globalAlpha = this.real_opacity;
 				var regX = this.real_x + this.regX;
 				var regY = this.real_y + this.regY;
 				this.translate(regX, regY);
@@ -1426,7 +1633,7 @@ CanvasEngine.defines = function(canvas, params) {
 				}
 				this.scale(this.real_scale_x, this.real_scale_y);
 				this.transform(1, this.real_skew_x, this.real_skew_y, 1, 0, 0);
-				this.translate( this.real_x,  this.real_y);
+				this.translate(this.real_x,  this.real_y);
 				this.translate(-regX, -regY);
 			}
 			
@@ -1437,7 +1644,6 @@ CanvasEngine.defines = function(canvas, params) {
 			if (children) {
 				if (!this.real_pause) this._loop();
 				for (var i=0 ; i < this._children.length ; i++) {
-					
 					this._children[i]._refresh();
 				}
 			}
@@ -1485,27 +1691,24 @@ CanvasEngine.defines = function(canvas, params) {
 			if (y !== undefined) this.regY = +y;
 			return this;
 		},
-		_click: function(e, mouse, type) {
-			var el, el_real, imgData, find, _trigger, over;
+		/**
+			@doc traversing/
+			@method getScene Get the scene where the element is attached
+			@return Scene
+		*/
+		getScene: function() {
+			return this.scene;
+		},
+		_mousemove: function(e, mouse) {
+			var el_real, over;
 			for (var i=0 ; i < this._children.length ; i++) {
 				el_real = this._children[i];
-				if (self.mouseEvent || type == "click") {
-					el = el_real.clone();
-					el._layer = "_ctxMouseEvent";
-					el._refresh(false, false);
-					imgData = this._canvas[0][el._layer].getImageData(mouse.x, mouse.y, 1, 1);
-					over = imgData.data[3] > 0;
-					
-				}
-				else {	
-					over = mouse.x > el_real.real_x && mouse.x < el_real.real_x + el_real.width &&
+				over = mouse.x > el_real.real_x && mouse.x < el_real.real_x + el_real.width &&
 						mouse.y > el_real.real_y && mouse.y < el_real.real_y + el_real.height;
-				}
+						
 				if (over) {
-					if (type == "click" || type == "dblclick") {
-						_trigger = el_real.trigger(type, e);
-					}
-					else if (type == 'mousemove' && el_real._out == 1) {
+					if (el_real._out == 1) {
+						el_real._out++;
 						el_real._out++;
 						el_real._over = 1;
 						_trigger = el_real.trigger("mouseover", e);
@@ -1513,17 +1716,27 @@ CanvasEngine.defines = function(canvas, params) {
 					if (_trigger) return;
 				}
 				else {
-					if (type == 'mousemove' && el_real._over == 1) {
+					if (el_real._over == 1) {
 						el_real._out = 1;
 						el_real._over++;
 						_trigger = el_real.trigger("mouseout", e);
 					}
 				}
-				if (self.mouseEvent || type == "click") {
-					el.clear();
-					el._click(e, mouse, type);
-				}
+					
 			}
+		},
+		_dblclick: function(e, mouse) {
+		
+		},
+		_click: function(e, mouse, type) {
+			var el_real, imgData;
+			
+			imgData = this._canvas[0]["_ctxMouseEvent"].getImageData(mouse.x, mouse.y, 1, 1).data;
+			if (imgData[3] > 0) {
+				el_real = this.scene._globalElements[_CanvasEngine.rgbToHex(imgData[0], imgData[1], imgData[2])];
+				el_real.trigger("click", e);
+			}
+				
 		},
 		/**
 			@doc manipulate/

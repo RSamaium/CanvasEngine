@@ -3,6 +3,7 @@ core: Core
 editor: Editors
 
 element: Element
+canvas: Canvas
 scene: Scene
 server: Server
 traversing: Traversing

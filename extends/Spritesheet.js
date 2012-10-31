@@ -60,7 +60,7 @@ Class.create("Spritesheet", {
 						gridname = set.grid[i].set[j];
 						gridset = set.grid[i];
 						
-						y = gridset.tile[1] * parseInt(j / Math.round(gridset.size[1]-1));
+						y = gridset.tile[1] * parseInt(j / Math.round(gridset.size[1]));
 						x = gridset.tile[0] * (j % Math.round(gridset.size[0]));
 							
 						this._set[gridname] = [x, y, gridset.tile[0], gridset.tile[1]];
@@ -92,7 +92,6 @@ Class.create("Spritesheet", {
 		var tile =  this._set[id];
 		if (!tile) {
 			throw "Spritesheet " + id + " don't exist";
-			return;
 		}
 		var dest_x = dest.x || "0",
 			dest_y = dest.y || "0",
@@ -100,7 +99,37 @@ Class.create("Spritesheet", {
 			dest_h = dest.h || tile[3];
 		
 		el.drawImage(this.image, tile[0], tile[1], tile[2], tile[3], +dest_x, +dest_y, dest_w, dest_h);
-	}				
+	},
+
+	/**
+		@doc spritesheet/
+		@method pattern Repeat an image of SpriteSheet. Do not forget to draw the pattern with "fillRect" or "fill"
+		@param {CanvasEngine.Element} el
+		@param {String} id Sprite identifier defined with the method "set" (or the constructor)
+		@param {String} (optional) repeatOption Type of repetition (repeat (default), no-repeat, repeat-x, repeat-y)
+		@example
+			In "ready" method of the current scene :
+			<code>
+				var spritesheet = canvas.Spritesheet.new("my_spritesheet"),
+					el = this.createElement();
+				spritesheet.set({
+					grid: [{
+						size: [3, 1],
+						tile: [32, 32],
+						set: ["border", "foo", "bar"]
+					}]
+				});
+				spritesheet.pattern(el, "border");
+				el.fillRect(0, 0, 300, 32);
+				stage.append(el);
+			</code>
+	*/
+	pattern: function(el, id, repeatOption) {
+		var tile =  this._set[id],
+			img = Global_CE.Materials.cropImage(this.image, tile[0], tile[1], tile[2], tile[3]);
+			pattern = el.getScene().getCanvas().createPattern(img, repeatOption);
+		el.fillStyle = pattern;
+	}
 });
 
 /**

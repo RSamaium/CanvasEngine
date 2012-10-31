@@ -3,6 +3,7 @@ core:
     engine:
     server:
     scene:
+    canvas:
     element:
      traversing:
      draw:

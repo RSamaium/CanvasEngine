@@ -24,6 +24,7 @@ Kernel._extend = function(self, object, clone) {
 	for (var key in object) {
 		self[key] = object[key];
 	}
+	
 	return self;
 }
 
@@ -71,6 +72,7 @@ Kernel.prototype = {
 				
 				}).attr_accessor(["bar"]);
 			</code>
+			<jsfiddle>WebCreative5/HzCSm/1</jsfiddle>
 		@return {Object}
 	*/
 	attr_accessor: function(attrs) {
@@ -185,6 +187,7 @@ Class.get = function(name) {
 			});
 			var foo = Class.new("Foo", ["Hello World"]);
 		</code>
+		<jsfiddle>WebCreative5/cbtFk</jsfiddle>
 	@return {Kernel} Core class
 */
 Class.create = function(name, methods, _static) {
@@ -477,7 +480,7 @@ CanvasEngine.clone = function(srcInstance) {
 		newInstance[i] = CanvasEngine.clone(srcInstance[i]);
 	}
 	return newInstance;
-}
+};
 
 /**
 	@doc utilities/
@@ -498,7 +501,28 @@ CanvasEngine.hexaToRGB = function(hexa) {
 	b = parseInt((cutHex(hexa)).substring(4,6),16);
 
 	return [r, g, b];
-}
+};
+
+/**
+	@doc utilities/
+	@method rgbToHex Converts the RGB value of a color in Hexadecimal.
+	@static
+	@params {String} r Red value (0-255)
+	@params {String} g Green value (0-255)
+	@params {String} b Blue value (0-255)
+	@return {String} 
+*/
+CanvasEngine.rgbToHex = function(r, g, b) {
+	return ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+};
+
+// Private
+ CanvasEngine._getRandomColorKey = function() {
+	var r = Math.round(Math.random() * 255),
+		g = Math.round(Math.random() * 255),
+		b = Math.round(Math.random() * 255);
+	return CanvasEngine.rgbToHex(r, g, b);
+};
 
 var _CanvasEngine = CanvasEngine;
 

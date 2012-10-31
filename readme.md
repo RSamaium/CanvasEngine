@@ -21,8 +21,13 @@ Framework to create video games in HTML5 Canvas
 * Mouse Control
 * Elements Manipulation
 
+## Editors
+* Tiled Map Editor (http://www.mapeditor.org)
+* Gleed 2d (http://gleed2d.codeplex.com)
+
 ## Roadmap
 
+* Box2d
 * Windows
 * Transition
 * Overlay scenes
@@ -31,6 +36,27 @@ Framework to create video games in HTML5 Canvas
 * Synchronized multi canvas (local multiplayer)
 
 ## Changelog
+
+### v1.0.21
+
+* Fix restart of animations (Animation Class)
+* Fix children elements opacity
+* Fix reading some element properties
+* Fix positions of a element resized
+* Add rgbToHex method in CanvasEngine object
+* Add pattern method in Spritesheet class
+* Add cropImage method in Materials class
+* Add transparentColor method in Materials class
+* Add imageToCanvas method in Materials class
+* Add getScene method in Element class
+* Add createPattern method in Canvas class
+* Add createLinearGradient method in Canvas class
+* Add createRadialGradient method in Canvas class
+* Add addColorStop method in Canvas class
+* Add measureText method in Canvas class
+* Improving performance click
+* Improving the get method in Materials class
+* Improving documentation
 
 ### v1.0.4
 

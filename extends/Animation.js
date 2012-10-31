@@ -533,17 +533,14 @@ Class.create("Timeline", {
 				if (!seq.frequence) seq.frequence = 0;
 
 				if (freq >= seq.frequence) {
-					if (self._images instanceof Array) {					
+					if (self._images instanceof Array) {	
 						var img = self._images[img_seq];
 						seqSize(img);
-						
-						this.drawImage(img, 1);
+						this.drawImage(img);
 						img_seq++;
 						if (img_seq >= self._images.length) {
-							if (loop) {
-								img_seq = 0;
-							}
-							else {
+							img_seq = 0;
+							if (!loop) {
 								self._stop = true;
 							}
 						}
