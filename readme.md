@@ -37,6 +37,25 @@ Framework to create video games in HTML5 Canvas
 
 ## Changelog
 
+### v1.0.6
+
+* Change addLoopListener method
+* Ignore loading music if the type is not supported
+* Add getExtension method in Materials class
+* Add remove method in Marshal class
+* Add special events defined by a namespace (methods: refresh)
+* Add moveTo, lineTo, quadraticCurveTo, bezierCurveTo in Context
+* Add addMethod method in Context Class
+* Addition to loading the canvas for CocoonJS)
+* Fix save and load (IE9+)
+* Fix reference of image loaded (for CocoonJS)
+* Fix click on element
+* Fix Gamepad (Google Chrome)
+* Fix extend Context Class
+* Fix positions of a element's children resized
+* Fix origin point of element's children
+* Improving documentation
+
 ### v1.0.5
 
 * Fix restart of animations (Animation Class)

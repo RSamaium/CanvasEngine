@@ -501,6 +501,7 @@ Class.create("Timeline", {
 			@doc animation/
 			@method add Adds a loop listener in a element to perform an animation (with addLoopListener). From the method call, the loop is started on the animation stop. Use the play method to start the animation
 			@param {CanvasEngine.Element} el
+			@event animation:draw Call each sequence. Id parameter sequence
 		*/
 		add: function(el) {
 			
@@ -563,7 +564,8 @@ Class.create("Timeline", {
 								
 							var w = seq.size.width * sx,
 								h = seq.size.height * sy;
-						
+							
+							_el.trigger("animation:draw", id);
 							_el.drawImage(self._images, w, h, seq.size.width, seq.size.height, 0, 0, seq.size.width, seq.size.height);
 						}
 						

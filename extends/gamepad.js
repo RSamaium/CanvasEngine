@@ -2,6 +2,10 @@
 */
 (function() {
     var getField = function() {
+		//  navigator.webkitGetGamepads : https://bugs.webkit.org/show_bug.cgi?id=92533
+		if (navigator.webkitGetGamepads) {
+			return navigator.webkitGetGamepads();
+		}
         return navigator.webkitGamepads || navigator.mozGamepads || navigator.gamepads;
     };
 
@@ -67,19 +71,23 @@
     var axisToButton = function(value) {
         return (value + 1.0) / 2.0;
     }
+	
+	
 
     if (isFirefox) {
         // todo; current moz nightly does not define this, so we'll always
         // return true for .supported on that Firefox.
         navigator.mozGamepads = [];
+		
         var mozConnectHandler = function(e) {
+			alert("p");
             navigator.mozGamepads[e.gamepad.index] = e.gamepad;
         }
         var mozDisconnectHandler = function(e) {
             navigator.mozGamepads[e.gamepad.index] = undefined;
         }
-        window.addEventListener("MozGamepadConnected", mozConnectHandler);
-        window.addEventListener("MozGamepadDisconnected", mozDisconnectHandler);
+        window.addEventListener("MozGamepadConnected", mozConnectHandler, false);
+        window.addEventListener("MozGamepadDisconnected", mozDisconnectHandler, false);
     }
 
     var mapPad = function(raw, mapped) {
@@ -126,7 +134,7 @@
         return prevData;
     };
     Gamepad.getStates = function() {
-        var rawPads = getField()
+        var rawPads = getField();
         var len = rawPads.length;
         for (var i = 0; i < len; ++i) {
             mapIndividualPad(rawPads, i);

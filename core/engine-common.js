@@ -239,7 +239,6 @@ Class["new"] = function(name, params) {
 	params = params || [];
 	if (!Class.__class_config[name]) {
 		throw name + " class does not exist. Use method \"create\" for build the structure of this class";
-		return;
 	}
 	_class = Class.__class_config[name].kernel["new"]();
 	if (_class.initialize) {

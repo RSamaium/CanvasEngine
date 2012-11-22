@@ -561,6 +561,25 @@ Marshal = {
 	_pointer: 0,
 	_cache: {},
 	_stack_dump: [],
+	
+	_decode: function(val) {
+		if (navigator.appName == 'Microsoft Internet Explorer') {
+			return JSON.parse(val);
+		}
+		else {
+			return BISON.decode(val);
+		}
+	},
+	
+	_encode: function(val) {
+		if (navigator.appName == 'Microsoft Internet Explorer') {
+			return JSON.stringify(val);
+		}
+		else {
+			return BISON.encode(val);
+		}
+	},
+	
 	/**
 		@doc save/
 		@method exist Testing the existence of save in localStorage
@@ -578,11 +597,12 @@ Marshal = {
 	*/
 	load: function(file) {
 		var data, _class, _class_name;
+		
 		if (this._cache[file]) {
 			data = this._cache[file];
 		}
 		else if (localStorage) {
-			data = BISON.decode(localStorage[file]) || [];
+			data = this._decode(localStorage[file]) || [];
 			this._cache[file] = data;
 		}
 		if (!Marshal.exist(file)) {
@@ -590,7 +610,6 @@ Marshal = {
 		}
 		if (_class_name = data[this._pointer].__name__) { // not ==. Class name verification
 			_class = Class.get(_class_name);
-			console.log(data[this._pointer]);
 			for (var method in data[this._pointer]) {
 				_class[method] = data[this._pointer][method];
 			}
@@ -623,8 +642,21 @@ Marshal = {
 		}
 		this._stack_dump.push(new_data);
 		if (localStorage) {
-			localStorage[file] = BISON.encode(this._stack_dump);
+			localStorage[file] = this_.encode(this._stack_dump);
 		}
 		
+	},
+	
+	/**
+		@doc save/
+		@method remove Remove save
+		@param {String} name Save name
+	*/
+	remove: function(file) {
+		if (localStorage) {
+			localStorage.removeItem(file);
+			return true;
+		}
+		return false;
 	}
 };

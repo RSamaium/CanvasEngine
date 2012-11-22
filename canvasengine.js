@@ -129,6 +129,10 @@ var Model = Class["new"]("ModelClientClass"),
 	@method CanvasEngine.defines Initialize CanvasEngine  by setting the canvas 
 	@param {String} canvas canvas ID
 	@param {Object} params (optional) additional parameters
+		- swf_sound : view Sound class
+		- cocoonjs : Object indicating the size of the canvas. Use this property if you want to compile your project with CocoonJS (http://ludei.com)
+			Example : 
+				<code>{width: 640, height: 480}</code>
 	@return CanvasEngineClass
 	@example
 	"CE"  is equivalent to "CanvasEngine"
@@ -290,16 +294,16 @@ CanvasEngine.defines = function(canvas, params) {
 			
 			// Private ?
 			createBuffer: function(id, color) {
-				if (this._buffer[id]) {
-					return this._buffer[id];
+				if (this._buffer[color]) {
+					return this._buffer[color];
 				}
 				var _canvas = this.imageToCanvas(id),
 					canvas = _canvas.canvas,
 					ctx = _canvas.ctx;
 				ctx.globalCompositeOperation = 'source-atop';
-				ctx.fillStyle = color;
+				ctx.fillStyle = "#" + color;
 				ctx.fillRect(0, 0, canvas.width, canvas.height);
-				this._buffer[id] = canvas;
+				this._buffer[color] = canvas;
 				return canvas;
 			},
 			
@@ -353,6 +357,16 @@ CanvasEngine.defines = function(canvas, params) {
 				canvas.height = h;
 				ctx.putImageData(imageData, 0, 0);
 				return canvas;
+			},
+			
+			/**
+				@doc materials/
+				@method getExtension Gets the file extension
+				@param {String} filename File name
+				@return {String}
+			*/
+			getExtension: function(filename) {
+				return (/[.]/.exec(filename)) ? /[^.]+$/.exec(filename)[0] : undefined;
 			},
 			
 			/**
@@ -420,10 +434,10 @@ CanvasEngine.defines = function(canvas, params) {
 						img.onload = function() {
 							var _img;
 							if (materials[i].transparentcolor) {
-								_img = self.transparentColor(this, materials[i].transparentcolor);
+								_img = self.transparentColor(img, materials[i].transparentcolor);
 							}
 							else {
-								_img = this;
+								_img = img;
 							}
 							self.images[materials[i].id] = _img;
 							i++;
@@ -457,14 +471,21 @@ CanvasEngine.defines = function(canvas, params) {
 							});
 						}
 						else {
-							var snd = new Audio();
-							
-							snd.addEventListener('canplaythrough', function() { 
-								self.sounds[materials[i].id] = this;
+							var snd = new Audio(), 
+								_p = materials[i].path,
+								ext = self.getExtension(_p);
+								
+							if (ext == "mp3" && !snd.canPlayType('audio/mpeg')) {
 								next();
-							}, false);
+							}
+							else {
+								snd.addEventListener('canplaythrough', function() { 
+									self.sounds[materials[i].id] = this;
+									next();
+								}, false);
+							}
 							
-							snd.src = materials[i].path;
+							snd.src = _p;
 						}
 					}
 					else {
@@ -663,7 +684,7 @@ CanvasEngine.defines = function(canvas, params) {
 		
 		Element: {
 			"new": function(scene, layer, width, height) {
-				return Class["new"]("Element", [scene, layer, width, height]).extend("Context");
+				return Class["new"]("Element", [scene, layer, width, height]);
 			}
 		},
 		
@@ -750,7 +771,7 @@ CanvasEngine.defines = function(canvas, params) {
 		initialize: function(id) {
 			var self = this;
 			this.id = id;
-			this.element = document.getElementById(id);
+			this.element = this._getElementById(id);
 			this.width = this.element.width;
 			this.height = this.element.height;
 			this.ctx = this.element.getContext('2d');
@@ -769,6 +790,22 @@ CanvasEngine.defines = function(canvas, params) {
 				bindEvent.call(this, events[i]);
 			}
 			
+		},
+		_getElementById: function(id) {
+			var canvas;
+			
+			if (params.cocoonjs) {
+				canvas = document.createElement("canvas");
+				canvas.width = params.cocoonjs.width;
+				canvas.height = params.cocoonjs.height;
+				canvas.id = id;
+				document.body.appendChild(canvas);
+			}
+			else {
+				canvas = document.getElementById(id)
+			}
+			
+			return canvas;
 		},
 		_mouseEvent: function() {
 			var canvas =  document.createElement('canvas');
@@ -855,7 +892,7 @@ CanvasEngine.defines = function(canvas, params) {
 		
 		/**
 			@doc canvas/
-			@method createRadialGradient View http://www.w3schools.com/tags/canvas_createradialgradient.asp
+			@method createLinearGradient View http://www.w3schools.com/tags/canvas_createradialgradient.asp
 		*/
 		createRadialGradient: function(x0,y0,r0,x1,y1,r1) {
 			return this.ctx.createRadialGradient(x0, y0, r0, x1, y1, r1);
@@ -863,7 +900,7 @@ CanvasEngine.defines = function(canvas, params) {
 		
 		/**
 			@doc canvas/
-			@method addColorStop View http://www.w3schools.com/tags/canvas_addcolorstop.asp
+			@method createLinearGradient View http://www.w3schools.com/tags/canvas_addcolorstop.asp
 		*/
 		addColorStop: function(stop, color) {
 			return this.ctx.addColorStop(stop, color);
@@ -1117,6 +1154,41 @@ CanvasEngine.defines = function(canvas, params) {
 			
 			/**
 				@doc draw/
+				@method addMethod Adds methods for 2d context
+				@param {String|Array} names Method(s) Name(s)
+				@param {String} type (optional) Type of the method:
+					- cmd (by default) : Command that applies after a refresh
+					- draw : The method runs directly
+				@example
+				<code>
+					var el = this.createElement();
+					el.addMedthod("newMethodCanvas");
+					el.newMethodCanvas(foo, bar);
+					stage.append(el);
+				</code>
+			*/
+			addMethod: function(names, type) {
+				var self = this;
+				type = type || "cmd";
+				if (!(names instanceof Array)) {
+					names = [names];
+				}
+				
+				function addCmd(name) {
+					self[name] = function() {
+						var method = type == "cmd" ? "_addCmd" : "draw";
+						self[method](name, arguments);
+					};
+				}
+				
+				for (var i=0 ; i < names.length ; i++) {
+					addCmd(names[i]);
+				}
+				
+			},
+			
+			/**
+				@doc draw/
 				@method fillRect. See http://www.w3schools.com/html5/canvas_fillrect.asp
 			*/
 			fillRect: function(x, y, w, h) {
@@ -1217,7 +1289,7 @@ CanvasEngine.defines = function(canvas, params) {
 					dw = sw;
 					dh = sh;
 				}
-				buffer = CanvasEngine.Materials.createBuffer(img, this.color_key)
+				buffer = CanvasEngine.Materials.createBuffer(img, this.color_key);
 				if (sw !== undefined) {
 					array = [_img, sx, sy, sw, sh, dx, dy, dw, dh];
 					array_buffer = [buffer, sx, sy, sw, sh, dx, dy, dw, dh];
@@ -1240,37 +1312,28 @@ CanvasEngine.defines = function(canvas, params) {
 				@doc draw/
 				@method clip See http://www.w3schools.com/html5/canvas_clip.asp
 			*/
-			clip: function() {
-				this._addCmd("clip");
-			},
 			/**
 				@doc draw/
 				@method beginPath See http://www.w3schools.com/html5/canvas_beginpath.asp
 			*/
-			beginPath: function() {
-				this._addCmd("beginPath");
-			},
+			/**
+				@doc draw/
+				@method moveTo See http://www.w3schools.com/html5/canvas_beginpath.asp
+			*/
 			/**
 				@doc draw/
 				@method closePath See http://www.w3schools.com/html5/canvas_closepath.asp
 			*/
-			closePath: function() {
-				this._addCmd("closePath");
-			},
 			/**
 				@doc draw/
 				@method translate http://www.w3schools.com/html5/canvas_translate.asp
 			*/
-			translate: function(x, y) {
-				this.draw("translate", [x , y]);
-			},
 			/**
 				@doc draw/
 				@method rotate See http://www.w3schools.com/html5/canvas_rotate.asp
 			*/
-			rotate: function(rad) {
-				this.draw("rotate", [rad]);
-			},
+
+
 			/**
 				@doc draw/
 				@method rotateDeg Degree rotation
@@ -1283,9 +1346,6 @@ CanvasEngine.defines = function(canvas, params) {
 				@doc draw/
 				@method scale See http://www.w3schools.com/html5/canvas_scale.asp
 			*/
-			scale: function(scaleX, scaleY) {
-				this.draw("scale", [scaleX, scaleY]);
-			},
 			/**
 				@doc draw/
 				@method clear Erases the content of canvas
@@ -1298,30 +1358,18 @@ CanvasEngine.defines = function(canvas, params) {
 				@doc draw/
 				@method clearRect See http://www.w3schools.com/html5/canvas_clearrect.asp
 			*/
-			clearRect: function(x , y , w , h) {
-				this.draw("clearRect", [x , y , w , h]);
-			},
 			/**
 				@doc draw/
 				@method setTransform See http://www.w3schools.com/html5/canvas_settransform.asp
 			*/
-			setTransform: function(a, b, c, d, e, f) {
-				this.draw("setTransform", [a, b, c, d, e, f]);
-			},
 			/**
 				@doc draw/
 				@method transform See http://www.w3schools.com/html5/canvas_transform.asp
 			*/
-			transform: function(a, b, c, d, e, f) {
-				this.draw("transform", [a, b, c, d, e, f]);
-			},
 			/**
 				@doc draw/
 				@method rect See http://www.w3schools.com/html5/canvas_rect.asp
 			*/
-			rect: function(x, y, w, h) {
-				this._addCmd("rect", [x, y, w, h]);
-			},
 			/**
 				@doc draw/
 				@method save Saves the state of the current context
@@ -1568,7 +1616,6 @@ CanvasEngine.defines = function(canvas, params) {
 		_layer: "ctx",
 		_visible: true,
 		_listener: {},
-		_loop_listener: [],
 		_buffer_img: null,
 		_out: 1,
 		_over: 0,
@@ -1586,6 +1633,26 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 			while (key in this.scene._globalElements);
 			
+			this.addMethod([
+				"moveTo",
+				"lineTo",
+				"quadraticCurveTo",
+				"bezierCurveTo",
+				"clip",
+				"beginPath",
+				"closePath",
+				"rect"
+			], "cmd");
+			
+			this.addMethod([
+				"rotate",
+				"translate",
+				"transform",
+				"setTransform",
+				"scale",
+				"clearRect"
+			], "draw");
+			
 			this.color_key = key;
 			this.scene._globalElements[key] = this;
 			this._canvas = CanvasEngine.el_canvas;
@@ -1593,6 +1660,12 @@ CanvasEngine.defines = function(canvas, params) {
 		/**
 			@doc draw/
 			@method refresh Refreshes the elements of the scene	
+			@event canvas:refresh Calling the event only "stage" to each refresh of an element :
+				<code>
+					stage.on("canvas:refresh", function(el) { // stage is defined in the scene
+						console.log(el);
+					});
+				</code>
 		*/
 		refresh: function() {
 			this.clear();
@@ -1611,20 +1684,45 @@ CanvasEngine.defines = function(canvas, params) {
 			
 			if (!this.real_pause) {
 			
+				if (this.stage.trigger) this.stage.trigger("canvas:refresh", this);
+			
+				if (init || !this.parent) {
+					this.parent = {
+						scaleX: 1,
+						scaleY: 1,
+						real_x: 0,
+						real_y: 0,
+						real_scale_x: 1,
+						real_scale_y: 1,
+						real_rotate: 0,
+						real_skew_x: 0,
+						real_skew_y: 0,
+						real_opacity: 1
+					};
+				}
+			
 				this.save();
 					
 				this.setTransform(1, 0, 0, 1, 0, 0);
 				
-				this.real_scale_x = (init ? 1 : this.parent.real_scale_x * this.scaleX);
-				this.real_scale_y = (init ? 1 : this.parent.real_scale_y * this.scaleY) ;
-				this.real_y = ((init ? 0 : this.parent.real_y) + this.y) * (init ? 1 : this.parent.real_scale_x);
-				this.real_x = ((init ? 0 : this.parent.real_x) + this.x) * (init ? 1 : this.parent.real_scale_y);
-				this.real_skew_x = (init ? 0 : this.parent.real_skew_x) + this.skewX;
-				this.real_skew_y = (init ? 0 : this.parent.real_skew_y) + this.skewY ;
-				this.real_rotate = (init ? 0 : this.parent.real_rotate) + this.rotation ;
+				this.real_scale_x = this.parent.real_scale_x * this.scaleX;
+				this.real_scale_y = this.parent.real_scale_y * this.scaleY;
+				this.real_y = (this.parent.real_y + this.y) * (this.parent.scaleY == 1 ? 1 : this.parent.real_scale_x);
+				this.real_x = (this.parent.real_x + this.x) * (this.parent.scaleX == 1 ? 1 : this.parent.real_scale_y);
+				this.real_skew_x = this.parent.real_skew_x + this.skewX;
+				this.real_skew_y = this.parent.real_skew_y + this.skewY ;
+				this.real_rotate = this.parent.real_rotate + this.rotation ;
 				this.real_pause = init ? this.pause : this.parent.pause;
-				this.real_opacity = (init ? 1 : this.parent.real_opacity) * this.opacity;
+				this.real_opacity = this.parent.real_opacity * this.opacity;
 				this.globalAlpha = this.real_opacity;
+				if (this.parent) {
+					if (this.parent.regX) {
+						this.regX = this.parent.regX;
+					}
+					if (this.parent.regY) {
+						this.regY = this.parent.regY;
+					}
+				}
 				var regX = this.real_x + this.regX;
 				var regY = this.real_y + this.regY;
 				this.translate(regX, regY);
@@ -1662,7 +1760,7 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 			
 			this.rotation = counterclockwise ? 360 - _val : _val;
-			this.refresh();
+			this._stageRefresh();
 			return this;
 		},
 		/**
@@ -1699,6 +1797,11 @@ CanvasEngine.defines = function(canvas, params) {
 		getScene: function() {
 			return this.scene;
 		},
+		
+		_stageRefresh: function() {
+			this.stage.refresh();
+		},
+		
 		_mousemove: function(e, mouse) {
 			var el_real, over;
 			for (var i=0 ; i < this._children.length ; i++) {
@@ -1854,7 +1957,7 @@ CanvasEngine.defines = function(canvas, params) {
 		scaleTo: function(val) {
 			this.scaleX = val;
 			this.scaleY = val;
-			this.refresh();
+			this.stage.refresh();
 			return this;
 		},
 		/*
@@ -1926,7 +2029,14 @@ CanvasEngine.defines = function(canvas, params) {
 		},
 		/**
 			@doc events/
-			@method on The .on() method attaches event handlers to the currently selected set of elements in the CanvasEngine object.
+			@method on The .on() method attaches event handlers to the currently selected set of elements in the CanvasEngine object. 
+			Note that some names are defined as follows: "namespace:eventname". For example, there are the following event in CanvasEngine:
+			<code>
+				stage.on("canvas:refresh", function(el) { // stage is defined in the scene
+					console.log(el);
+				});
+			</code>
+			At each refresh of the scene, to display each element is returned
 			@param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
 			@param {Function} callback(event) A function to execute when the event is triggered
 		*/
@@ -1946,16 +2056,20 @@ CanvasEngine.defines = function(canvas, params) {
 			@doc events/
 			@method trigger Any event handlers attached with .on() or one of its shortcut methods are triggered when the corresponding event occurs. They can be fired manually, however, with the .trigger() method.
 			@param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
+			@param {Object|Array} params Params
 		*/
 		trigger: function(events, e) {
 			var event, _trigger = false;;
 			events = events.split(" ");
+			if (!(e instanceof Array)) {
+				e = [e];
+			}
 			for (var j=0 ; j < events.length ; j++) {
 				event = events[j];
 				if (this._listener[event]) {
 					for (var i=0 ; i < this._listener[event].length ; i++) {
 						 _trigger = true;
-						this._listener[event][i].call(this, e);
+						this._listener[event][i].apply(this, e);
 					}
 				}
 			}
@@ -1994,9 +2108,10 @@ CanvasEngine.defines = function(canvas, params) {
 			this.on("mouseout", callback);
 		},
 		_loop: function() {
-			for (var i=0 ; i < this._loop_listener.length ; i++) {
+			/*for (var i=0 ; i < this._loop_listener.length ; i++) {
 				this._loop_listener[i].call(this);
-			}
+			}*/
+			this.trigger("canvas:render");
 		},
 		/**
 			@doc events/
@@ -2010,11 +2125,19 @@ CanvasEngine.defines = function(canvas, params) {
 					this.x += 3;
 				});
 			</code>
+			or 
+			<code>
+				var el = this.createElement();
+				el.on("canvas:render", (function() {
+					this.x += 3;
+				});
+			</code>
 		*/
 		addLoopListener: function(callback) {
-			this._loop_listener.push(callback);
+			//this._loop_listener.push(callback);
+			this.on("canvas:render", callback);
 		}
-	});
+	}).extend("Context");
 	
 	Global_CE = CanvasEngine = Class["new"]("CanvasEngineClass");
 	return CanvasEngine;
