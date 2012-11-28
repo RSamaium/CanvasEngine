@@ -197,10 +197,8 @@ CanvasEngine.defines = function(canvas, params) {
 				for (var i=0 ; i < self.canvas.length ; i++) {
 					self.el_canvas.push(self.Canvas["new"](self.canvas[i]));
 				}
-				callback();
-				
-				
-				
+				CanvasEngine.Scene._loop(self.el_canvas);
+				callback();	
 			}
 			return this;
 		},
@@ -300,6 +298,7 @@ CanvasEngine.defines = function(canvas, params) {
 				var _canvas = this.imageToCanvas(id),
 					canvas = _canvas.canvas,
 					ctx = _canvas.ctx;
+				canvas.id = color;
 				ctx.globalCompositeOperation = 'source-atop';
 				ctx.fillStyle = "#" + color;
 				ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -668,7 +667,7 @@ CanvasEngine.defines = function(canvas, params) {
 						}
 						if (finish) {
 							if (s.callback) s.callback.call(s.sound);
-							delete this._fade[key];
+								delete this._fade[key];
 							break;
 						}
 					}
@@ -696,7 +695,10 @@ CanvasEngine.defines = function(canvas, params) {
 		
 		Scene: 	{
 				  _scenes: {},
+				  _scenesEnabled: {},
 				  _current: null,
+				  
+				  New: function() { return this["new"].apply(this, arguments); },
 				  "new": function(obj) {
 					var _class = Class["new"]("Scene", [obj]).extend(obj, false);
 					this._scenes[obj.name] = _class;
@@ -712,33 +714,114 @@ CanvasEngine.defines = function(canvas, params) {
 						canvas.Scene.call("SceneName");
 					</code>
 				 */
-				  call: function(name) {
+				  call: function(name, params) {
 					var _class = this._scenes[name];
 					if (_class) {
-						if (this._current) {
-							this._current._exit.call(this._current);
-						}
-						this._current = _class;
+						this.exitAll(name);
+						this._scenesEnabled[name] = _class;
 						_class._load.call(_class);
-						
 					}
 					else {
 						throw "Scene \"" + name + "\" doesn't exist";
 					}
 				  },
+				  /**
+					@doc scene/
+					@method exit Leave a scene
+					@param {String} scene name
+					@example
+					<code>
+						canvas.Scene.exit("SceneName");
+					</code>
+				 */
 				  exit: function(name) {
-					var _class = this._scenes[name];
+					var _class = this._scenesEnabled[name];
 					if (_class) {
 						_class._exit.call(_class);
+						delete this._scenesEnabled[name];
 					}
 				  },
+				   /**
+						@doc scene/
+						@method isEnabled Whether the scene is displayed
+						@param {String} scene name
+						@example
+						<code>
+							if (canvas.Scene.isEnabled("SceneName")) {}
+						</code>
+					*/
+				   isEnabled: function(name) {
+						return this._scenesEnabled[name] ? true : false;
+				   },
+				   
+				    /**
+						@doc scene/
+						@method exitAll Disables all scenes except one or more scene
+						@param {String|Array} scene name or array of scene name
+						@example
+						<code>
+							canvas.Scene.exitAll("SceneName");
+						</code>
+					*/
+				   exitAll: function(exception) {
+						var key;
+						if (!(exception instanceof Array)) {
+							exception = [exception];
+						}
+						for (key in this._scenesEnabled) {
+							if (_CanvasEngine.inArray(key, exception)) {
+								this.exit(key);
+							}
+						}
+				   },
+				   
+				   /**
+					@doc scene/
+					@method exist Return true if the scene exist
+					@param {String} scene name
+					@example
+					<code>
+						if (canvas.Scene.exist("SceneName")) {}
+					</code>
+				 */
 				  exist: function(name) {
 					return this._scenes[name] ? true : false;
 				  },
+				  /**
+					@doc scene/
+					@method get Get scene
+					@param {String} scene name
+					@example
+					<code>
+						var scene = canvas.Scene.get("SceneName");
+						scene.pause(true);
+					</code>
+				 */
 				  get: function(name) {
 					return this._scenes[name];
-				  }
-				}
+				  },
+				 
+				  _loop: function(canvas) {
+						var self = this;
+						 
+						function loop() {	
+							var key,  i=0;
+							
+							CanvasEngine.Sound._loop();
+							
+							canvas[i].clear();
+							canvas[i]._ctxMouseEvent.clearRect(0, 0, canvas[i].width, canvas[i].height);
+							
+							for (key in self._scenesEnabled) {
+								self._scenesEnabled[key]._loop();
+							}
+							
+							requestAnimationFrame(loop);
+						}
+						
+						requestAnimationFrame(loop);
+				 },
+			}
 	});
 	
 	/**
@@ -892,7 +975,7 @@ CanvasEngine.defines = function(canvas, params) {
 		
 		/**
 			@doc canvas/
-			@method createLinearGradient View http://www.w3schools.com/tags/canvas_createradialgradient.asp
+			@method createRadialGradient View http://www.w3schools.com/tags/canvas_createradialgradient.asp
 		*/
 		createRadialGradient: function(x0,y0,r0,x1,y1,r1) {
 			return this.ctx.createRadialGradient(x0, y0, r0, x1, y1, r1);
@@ -900,10 +983,18 @@ CanvasEngine.defines = function(canvas, params) {
 		
 		/**
 			@doc canvas/
-			@method createLinearGradient View http://www.w3schools.com/tags/canvas_addcolorstop.asp
+			@method addColorStop View http://www.w3schools.com/tags/canvas_addcolorstop.asp
 		*/
 		addColorStop: function(stop, color) {
 			return this.ctx.addColorStop(stop, color);
+		},
+		
+		/**
+			@doc canvas/
+			@method clear Erases the content of canvas
+		*/
+		clear: function() {
+			return this.ctx.clearRect(0, 0, this.width, this.height);
 		}
 	});
 	
@@ -941,6 +1032,8 @@ CanvasEngine.defines = function(canvas, params) {
 	Class.create("Scene", {
 		_stage: {},
 		_events: [],
+		_pause: false,
+		_isReady: false,
 		/**
 			@doc scene/
 			@property model Model reference. The methods of this property are the same as scoket.io
@@ -974,27 +1067,26 @@ CanvasEngine.defines = function(canvas, params) {
 			
 		*/
 		model: null,
-		_isExit: false,
+		//_isExit: false,
 		_globalElements: {},
 		initialize: function(obj) {
 			var ev, self = this;
 			this._events = obj.events;
 		},
 		_loop: function() {
-			var self = this;
-			this._isExit = false;
-			
-			function loop() {			
-				if (self._isExit) {
-					return;
+			if (this._isReady) {
+				if (this._pause) {
+					this._stage.refresh();
 				}
-				CanvasEngine.Sound._loop();
-				if (self.render) self.render.call(self, self._stage);
-				requestAnimationFrame(loop);
+				else {
+					if (this.render) {
+						this.render.call(this, this._stage);
+					}
+					else {
+						this._stage.refresh();
+					}
+				}
 			}
-			
-			this._loop_id = requestAnimationFrame(loop);
-
 		},
 		// deprecated
 		emit: function(name, data) {
@@ -1007,6 +1099,43 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 			return this.createElement(name);
 		},
+		
+		/**
+			@doc scene/
+			@method pause Pause the scene. method "render" is not called however, but the scene is refreshed (except the event "canvas: render")
+			@param {Boolean} val (optional) The scene is paused if the value is "true". Put "false" to turn pause off. If the parameter is not specified, the current value is returned.
+			@return {Boolean|Scene}
+			@example
+				In "ready" method of the scene :
+				<code>
+					this.pause(true); // return this Scene Class
+					console.log(this.pause()); // return true
+				</code>
+		*/
+		pause: function(val) {
+			if (val === undefined) {
+				return this._pause;
+			}
+			this._pause = val;
+			return this;
+		},
+		
+		/**
+			@doc scene/
+			@method togglePause Pauses if the game is not paused, and vice versa. View pause method
+			@return {Scene}
+			@example
+				In "ready" method of the scene :
+				<code>
+					console.log(this.pause()); // return false
+					this.togglePause(); // return this Scene Class
+					console.log(this.pause()); // return true
+				</code>
+		*/
+		togglePause: function() {
+			return this.pause(!this._pause);
+		},
+		
 		/**
 			@doc scene/
 			@method getCanvas Get the canvas
@@ -1049,8 +1178,6 @@ CanvasEngine.defines = function(canvas, params) {
 			return el;
 		 },
 		_exit: function() {	
-			this._isExit = true;
-			cancelAnimationFrame(this._loop_id);
 			if (this.exit) this.exit.call(this);
 		},
 		_load: function() {
@@ -1068,7 +1195,6 @@ CanvasEngine.defines = function(canvas, params) {
 							self[val].call(self, data);
 						});
 					});
-					
 				}
 			}
 			
@@ -1121,7 +1247,7 @@ CanvasEngine.defines = function(canvas, params) {
 			function canvasReady() {
 				if (self.ready) self.ready(self._stage, self.getElement);
 				if (self.model && self.model.ready) self.model.ready.call(self.model);
-				self._loop();
+				self._isReady = true;
 			}
 		}
 	});
@@ -1290,14 +1416,23 @@ CanvasEngine.defines = function(canvas, params) {
 					dh = sh;
 				}
 				buffer = CanvasEngine.Materials.createBuffer(img, this.color_key);
+				
+				function f(t) {
+					for (var i=1 ; i < t.length ; i++) {
+						t[i] = Math.round(t[i]);
+					}
+					return t;
+				}
+				
 				if (sw !== undefined) {
 					array = [_img, sx, sy, sw, sh, dx, dy, dw, dh];
-					array_buffer = [buffer, sx, sy, sw, sh, dx, dy, dw, dh];
+					array_buffer = f([buffer, sx, sy, sw, sh, dx, dy, dw, dh]);
 				}
 				else {
 					array = [_img, sx, sy];
-					array_buffer = [buffer, sx, sy];
+					array_buffer = f([buffer, sx, sy]);
 				}
+				
 				this._buffer_img = array_buffer;
 				this._addCmd("drawImage", array);
 			},
@@ -1346,14 +1481,7 @@ CanvasEngine.defines = function(canvas, params) {
 				@doc draw/
 				@method scale See http://www.w3schools.com/html5/canvas_scale.asp
 			*/
-			/**
-				@doc draw/
-				@method clear Erases the content of canvas
-			*/
-			clear: function() {
-				this.setTransform(1, 0, 0, 1, 0, 0);
-				this.clearRect(0, 0, this._canvas[0].width, this._canvas[0].height);
-			},
+			
 			/**
 				@doc draw/
 				@method clearRect See http://www.w3schools.com/html5/canvas_clearrect.asp
@@ -1414,10 +1542,20 @@ CanvasEngine.defines = function(canvas, params) {
 				
 				var cmd, array_cmd = {};
 				var cmd_propreties = [];
-				var isCmd = true;
+				var isCmd = true, applyBuffer = 1;
 				
-				var bufferEvent = function(name, params) {
-					this._canvas[0]["_ctxMouseEvent"][name].apply(this._canvas[0]["_ctxMouseEvent"], params);
+				var bufferEvent = function(name, _params) {
+					if (this.eventExist("click")) {
+						this._canvas[0]["_ctxMouseEvent"][name].apply(this._canvas[0]["_ctxMouseEvent"], _params);
+					}
+				};
+				
+				var bufferProp = function(cmd_propreties, key, value) {
+					if (cmd_propreties[key]) {
+						this._canvas[0]["_ctxMouseEvent"][key] = value;
+						return 0;
+					}
+					return 1;
 				};
 				
 				if (name) {
@@ -1436,30 +1574,29 @@ CanvasEngine.defines = function(canvas, params) {
 						}
 						if (cmd_propreties) {
 							for (var key in cmd_propreties) {
+								applyBuffer = true;
 								if (key == "globalAlpha") {
 									cmd_propreties[key] = this.real_opacity;
 								}
 								this._canvas[j][layer][key] = cmd_propreties[key];
-								if (cmd_propreties["strokeStyle"]) {
-									this._canvas[0]["_ctxMouseEvent"]["strokeStyle"] = this.color_key;
-								}
-								if (cmd_propreties["fillStyle"]) {
-									this._canvas[0]["_ctxMouseEvent"]["fillStyle"] = this.color_key;
-								}
-								else {
-									this._canvas[0]["_ctxMouseEvent"][key] = cmd_propreties[key];
+								
+								applyBuffer &= bufferProp.call(this, "globalAlpha", 1);
+								applyBuffer &= bufferProp.call(this, "strokeStyle", this.color_key);
+								applyBuffer &= bufferProp.call(this, "fillStyle", this.color_key);
+								
+								if (applyBuffer) {
+									bufferProp.call(this, key, cmd_propreties[key]);
 								}
 							}
 						}
 						this._canvas[j][layer][name].apply(this._canvas[j][layer], cmd.params);
-						if (name == "drawImage") {
-							bufferEvent.call(this, name, this._buffer_img)
+						
+						if (this._buffer_img && name == "drawImage") {
+							bufferEvent.call(this, name, this._buffer_img);
 						}
 						else {
-							bufferEvent.call(this, name, cmd.params)
+							bufferEvent.call(this, name, cmd.params);
 						}
-						
-						
 					}
 				}
 				
@@ -1610,6 +1747,7 @@ CanvasEngine.defines = function(canvas, params) {
 			@type CanvasEngine.Element
 		*/
 		parent: null,
+		// TODO
 		pause: false,
 		index: 0,
 		_id: null,
@@ -1632,6 +1770,7 @@ CanvasEngine.defines = function(canvas, params) {
 				key = _CanvasEngine._getRandomColorKey();
 			}
 			while (key in this.scene._globalElements);
+			
 			
 			this.addMethod([
 				"moveTo",
@@ -1668,7 +1807,7 @@ CanvasEngine.defines = function(canvas, params) {
 				</code>
 		*/
 		refresh: function() {
-			this.clear();
+			//this.clear();
 			this._refresh(true);
 			this._canvas._event_mouse = null;
 		},
@@ -1681,6 +1820,7 @@ CanvasEngine.defines = function(canvas, params) {
 		_refresh: function(init, children, triggerEvent) {
 			children = children === undefined ? true : children;
 			if (!this._visible) return;
+			
 			
 			if (!this.real_pause) {
 			
@@ -1712,7 +1852,7 @@ CanvasEngine.defines = function(canvas, params) {
 				this.real_skew_x = this.parent.real_skew_x + this.skewX;
 				this.real_skew_y = this.parent.real_skew_y + this.skewY ;
 				this.real_rotate = this.parent.real_rotate + this.rotation ;
-				this.real_pause = init ? this.pause : this.parent.pause;
+				this.real_pause = init ? this.pause : this.parent.real_pause;
 				this.real_opacity = this.parent.real_opacity * this.opacity;
 				this.globalAlpha = this.real_opacity;
 				if (this.parent) {
@@ -1740,7 +1880,8 @@ CanvasEngine.defines = function(canvas, params) {
 			this.restore();
 			
 			if (children) {
-				if (!this.real_pause) this._loop();
+				// if (!this.real_pause) this._loop();
+				if (!this.getScene()._pause) this._loop();
 				for (var i=0 ; i < this._children.length ; i++) {
 					this._children[i]._refresh();
 				}
@@ -1837,7 +1978,7 @@ CanvasEngine.defines = function(canvas, params) {
 			imgData = this._canvas[0]["_ctxMouseEvent"].getImageData(mouse.x, mouse.y, 1, 1).data;
 			if (imgData[3] > 0) {
 				el_real = this.scene._globalElements[_CanvasEngine.rgbToHex(imgData[0], imgData[1], imgData[2])];
-				el_real.trigger("click", e);
+				if (el_real) el_real.trigger("click", e);
 			}
 				
 		},
@@ -2052,6 +2193,17 @@ CanvasEngine.defines = function(canvas, params) {
 				this._listener[event].push(callback);
 			}
 		},
+		
+		/**
+			@doc events/
+			@method eventExist Test whether an event is present on the element. Return true if exist
+			@param {String} event event name ("click" per example)
+			@param {Boolean}
+		*/
+		eventExist: function(event) {
+			return this._listener[event] && this._listener[event].length > 0;
+		},
+		
 		/**
 			@doc events/
 			@method trigger Any event handlers attached with .on() or one of its shortcut methods are triggered when the corresponding event occurs. They can be fired manually, however, with the .trigger() method.
@@ -2134,7 +2286,6 @@ CanvasEngine.defines = function(canvas, params) {
 			</code>
 		*/
 		addLoopListener: function(callback) {
-			//this._loop_listener.push(callback);
 			this.on("canvas:render", callback);
 		}
 	}).extend("Context");

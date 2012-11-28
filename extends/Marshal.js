@@ -642,7 +642,7 @@ Marshal = {
 		}
 		this._stack_dump.push(new_data);
 		if (localStorage) {
-			localStorage[file] = this_.encode(this._stack_dump);
+			localStorage[file] = this._encode(this._stack_dump);
 		}
 		
 	},

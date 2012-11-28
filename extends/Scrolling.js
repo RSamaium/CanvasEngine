@@ -281,6 +281,7 @@ Class.create("Scrolling", {
 */
 var Scrolling = {
 	Scrolling: {
+		New: function() { return this["new"].apply(this, arguments); },
 		"new": function(scene, tile_h, tile_w) {
 			return Class["new"]("Scrolling", [scene, tile_h, tile_w]);
 		}

@@ -8,17 +8,9 @@ You explanations on the following link : [Documentation](http://wiki.ludei.com/)
 
 Create a file `index.html` including the lastest version of Canvas Engine :
 
-    &lt;!DOCTYPE html&gt;
-    &lt;html&gt;
-	  &lt;head&gt;
-		&lt;script src="js/canvasengine-X.Y.Z.all.min.js"&gt;&lt;/script&gt;	
-		&lt;script src="js/main.js"&gt;&lt;/script&gt;
-	   &lt;/head&gt;
-	   &lt;body&gt;
-		
-	   &lt;/body&gt;
-     &lt;/html&gt;
-
+    <!DOCTYPE html>
+	<script src="js/canvasengine-X.Y.Z.all.min.js"></script>	
+	<script src="js/main.js"></script>
 
 * The main code of your game is in `main.js`
 * It is normal not to have the `canvas` tag in HTML

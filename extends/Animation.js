@@ -670,6 +670,7 @@ var Animation = {
 		</code>
 	*/
 	Timeline: {
+		New: function() { return this["new"].apply(this, arguments); },
 		"new": function(el) {
 			return Class["new"]("Timeline", [el]);
 		}
@@ -724,6 +725,7 @@ var Animation = {
 		<jsfiddle>WebCreative5/E2vVW</jsfiddle>
 	*/
 	Animation: {
+		New: function() { return this["new"].apply(this, arguments); },
 		"new": function(options) {
 			return Class["new"]("Animation", [options]);
 		}

@@ -35,7 +35,30 @@ Framework to create video games in HTML5 Canvas
 * Text Effects
 * Synchronized multi canvas (local multiplayer)
 
+## Test performance
+
+### v1.0.6
+
+* [Native class and CanvasEngine Class 1](http://jsperf.com/native-class-and-canvasengine-class)
+* [Native class and CanvasEngine Class 2](http://jsperf.com/native-class-and-canvasengine-class-test2)
+
 ## Changelog
+
+### v1.0.7
+
+* Move clear method (Context class -> Canvas class)
+* Change exit method in Scene Class
+* Add multi scenes feature.
+* Add togglePause method in Scene Class
+* Add pause method in Scene Class
+* Add isEnabled method in Scene Class
+* Add exitAll method in Scene Class
+* Add eventExist method in Element Class
+* Add alias for new method : New
+* Improves the performance of clicks
+* Fix [Info of tile size](https://github.com/RSamaium/CanvasEngine/issues/2)
+* Fix "this_" in Marshal class
+* Improving documentation
 
 ### v1.0.6
 

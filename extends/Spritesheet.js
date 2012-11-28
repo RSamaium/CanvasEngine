@@ -173,6 +173,7 @@ Class.create("Spritesheet", {
 */
 var Spritesheet = {
 	Spritesheet: {
+		New: function() { return this["new"].apply(this, arguments); },
 		"new": function(image, set) {
 			return Class["new"]("Spritesheet", [image, set]);
 		}

@@ -44,7 +44,7 @@ Class.create("Tiled", {
 	},
 	 /**
 		@doc tiled/
-		@method load Load JSON file and draw layers in the element of the scene
+		@method load Load JSON file and draw layers in the element of the scene. View Tiled class description for more informations (http://canvasengine.net/doc/?p=editor.tiled)
 		@param {CanvasEngine.Scene} scene
 		@param {CanvasEngine.Element} el The element containing layers of Tiled
 		@param {String} url Path to JSON file of Tiled Map Editor
@@ -55,8 +55,8 @@ Class.create("Tiled", {
 		this.url = url;
 		this.scene = scene;
 		CanvasEngine.getJSON(this.url, function(data) {
-			self.tile_w = data.tileheight;
-			self.tile_h = data.tilewidth;
+			self.tile_h = data.tileheight;
+			self.tile_w = data.tilewidth;
 			self.width = data.width;
 			self.height = data.height;
 			self.tilesets = data.tilesets;
@@ -229,6 +229,18 @@ Class.create("Tiled", {
 	@class Tiled Tiled is a general purpose tile map editor. It's built to be easy to use, yet flexible enough to work with varying game engines, whether your game is an RPG, platformer or Breakout clone. Tiled is free software and written in C++, using the Qt application framework.
 	
 	http://www.mapeditor.org
+	
+	 <p>Consider adding inserting Tiled.js</p>
+	 <code>
+		 <script src="extends/Tiled.js"></script>
+		 <script>
+		   var canvas = CE.defines("canvas_id").
+			extend(Tiled).
+			ready(function() {
+				
+			});
+		 </script>
+	 </code>
 	
 	@param {CanvasEngine.Scene} scene
 	@param {CanvasEngine.Element} el The layers are displayed on this element

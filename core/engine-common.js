@@ -29,6 +29,7 @@ Kernel._extend = function(self, object, clone) {
 }
 
 Kernel.prototype = {
+	New: function() { return this["new"].apply(this, arguments) },
 	"new": function() {
 		this._class = new Class();
 		Class.__class[this.class_name] = this._class;
@@ -234,6 +235,7 @@ Class.create = function(name, methods, _static) {
 	@params {Array} params Parameters for the constructor
 	@return {Class}
 */
+Class.New = function() { return Class["new"].apply(this, arguments) };
 Class["new"] = function(name, params) {
 	var _class;
 	params = params || [];
