@@ -28,9 +28,7 @@ Framework to create video games in HTML5 Canvas
 ## Roadmap
 
 * Box2d
-* Windows
 * Transition
-* Overlay scenes
 * Game Effects
 * Text Effects
 * Synchronized multi canvas (local multiplayer)
@@ -43,6 +41,14 @@ Framework to create video games in HTML5 Canvas
 * [Native class and CanvasEngine Class 2](http://jsperf.com/native-class-and-canvasengine-class-test2)
 
 ## Changelog
+
+### v1.1.0
+
+* Add Window Feature
+* Add overlay scenes
+* Add moveArray method in CanvasEngine Object
+* Add zIndex method in Element Class
+* Fix click on element witch opacity < 1
 
 ### v1.0.7
 

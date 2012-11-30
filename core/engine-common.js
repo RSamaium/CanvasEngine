@@ -525,6 +525,45 @@ CanvasEngine.rgbToHex = function(r, g, b) {
 	return CanvasEngine.rgbToHex(r, g, b);
 };
 
+/**
+	@doc utilities/
+	@method moveArray Move one index to another location of an array
+	@static
+	@params {&Array} array Array to handle
+	@params {Integer} pos1 Index of the element to move
+	@params {Integer} pos2 Destination index
+	@return {Array} 
+*/
+// http://jsperf.com/array-prototype-move
+// by Richard Scarrott (http://www.richardscarrott.co.uk)
+CanvasEngine.moveArray = function(array, pos1, pos2) {
+    // local variables
+    var i, tmp;
+    // cast input parameters to integers
+    pos1 = parseInt(pos1, 10);
+    pos2 = parseInt(pos2, 10);
+    // if positions are different and inside array
+    if (pos1 !== pos2 && 0 <= pos1 && pos1 <= array.length && 0 <= pos2 && pos2 <= array.length) {
+      // save element from position 1
+      tmp = array[pos1];
+      // move element down and shift other elements up
+      if (pos1 < pos2) {
+        for (i = pos1; i < pos2; i++) {
+          array[i] = array[i + 1];
+        }
+      }
+      // move element up and shift other elements down
+      else {
+        for (i = pos1; i > pos2; i--) {
+          array[i] = array[i - 1];
+        }
+      }
+      // put element from position 1 to destination
+      array[pos2] = tmp;
+    }
+	return array;
+}
+
 var _CanvasEngine = CanvasEngine;
 
 

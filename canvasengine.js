@@ -145,6 +145,7 @@ var Model = Class["new"]("ModelClientClass"),
  */
 CanvasEngine.defines = function(canvas, params) {
 	params = params || {};
+	if (params.render === undefined) params.render = true;
 	if (typeof canvas == "string") {
 		canvas = [canvas];
 	}
@@ -197,7 +198,7 @@ CanvasEngine.defines = function(canvas, params) {
 				for (var i=0 ; i < self.canvas.length ; i++) {
 					self.el_canvas.push(self.Canvas["new"](self.canvas[i]));
 				}
-				CanvasEngine.Scene._loop(self.el_canvas);
+				if (params.render) CanvasEngine.Scene._loop(self.el_canvas);
 				callback();	
 			}
 			return this;
@@ -355,6 +356,9 @@ CanvasEngine.defines = function(canvas, params) {
 				canvas.width = w;
 				canvas.height = h;
 				ctx.putImageData(imageData, 0, 0);
+				//var img = new Image();
+				//img.src = canvas.toDataURL();
+				
 				return canvas;
 			},
 			
@@ -716,8 +720,9 @@ CanvasEngine.defines = function(canvas, params) {
 				 */
 				  call: function(name, params) {
 					var _class = this._scenes[name];
+					params = params || {};
 					if (_class) {
-						this.exitAll(name);
+						if (!params.overlay) this.exitAll(name);
 						this._scenesEnabled[name] = _class;
 						_class._load.call(_class);
 					}
@@ -1358,9 +1363,6 @@ CanvasEngine.defines = function(canvas, params) {
 				@doc draw/
 				@method addColorStop See http://www.w3schools.com/html5/canvas_addcolorstop.asp
 			*/
-			addColorStop: function(i, color) {
-				this._addCmd("addColorStop", [i, color]);
-			},
 			/**
 				@doc draw/
 				@method drawImage Draws the image or part of the image
@@ -1440,9 +1442,6 @@ CanvasEngine.defines = function(canvas, params) {
 				@doc draw/
 				@method arc See http://www.w3schools.com/html5/canvas_arc.asp
 			*/
-			arc: function(x, y, w, h, radius, b) {
-				this._addCmd("arc", [x, y, w, h, radius, b]);
-			},
 			/**
 				@doc draw/
 				@method clip See http://www.w3schools.com/html5/canvas_clip.asp
@@ -1574,18 +1573,18 @@ CanvasEngine.defines = function(canvas, params) {
 						}
 						if (cmd_propreties) {
 							for (var key in cmd_propreties) {
-								applyBuffer = true;
+								applyBuffer = 1;
 								if (key == "globalAlpha") {
 									cmd_propreties[key] = this.real_opacity;
 								}
 								this._canvas[j][layer][key] = cmd_propreties[key];
 								
-								applyBuffer &= bufferProp.call(this, "globalAlpha", 1);
-								applyBuffer &= bufferProp.call(this, "strokeStyle", this.color_key);
-								applyBuffer &= bufferProp.call(this, "fillStyle", this.color_key);
+								applyBuffer &= bufferProp.call(this, cmd_propreties, "globalAlpha", 1);
+								applyBuffer &= bufferProp.call(this, cmd_propreties, "strokeStyle", this.color_key);
+								applyBuffer &= bufferProp.call(this, cmd_propreties, "fillStyle", this.color_key);
 								
 								if (applyBuffer) {
-									bufferProp.call(this, key, cmd_propreties[key]);
+									bufferProp.call(this, cmd_propreties, key, cmd_propreties[key]);
 								}
 							}
 						}
@@ -1749,7 +1748,7 @@ CanvasEngine.defines = function(canvas, params) {
 		parent: null,
 		// TODO
 		pause: false,
-		index: 0,
+		_index: 0,
 		_id: null,
 		_layer: "ctx",
 		_visible: true,
@@ -1780,7 +1779,9 @@ CanvasEngine.defines = function(canvas, params) {
 				"clip",
 				"beginPath",
 				"closePath",
-				"rect"
+				"rect",
+				"arc",
+				"addColorStop"
 			], "cmd");
 			
 			this.addMethod([
@@ -1998,17 +1999,62 @@ CanvasEngine.defines = function(canvas, params) {
 		},
 		/**
 			@doc manipulate/
-			@method inserts the specified content as the last child of each element in the Element collection
+			@method append inserts the specified content as the last child of each element in the Element collection
 			@param {CanvasEngine.Element} el 
 			@return CanvasEngine.Element
 		*/
 		append: function(el) {
 			this._children.push(el);
 			el.parent = this;
-			el.index++;
+			el._index = this._children.length-1;
 			el._refresh();
 			return el;
 		},
+		
+		// TODO
+		prepend: function(el) {
+			this._children.push(el);
+			el.parent = this;
+			el.zIndex(0);
+			return el;
+		},
+		
+		/**
+			@doc manipulate/
+			@method zIndex Change or get the index of the item. The index used to define the superposition. By default, the first element has index 0. If an item is created at the same level, it will overlay the previous element and its index will be 1
+			@param {Integer} (optional) index If the value is not specified, the current index of the element is returned. If the value is negative, you change the index from the end
+			@example
+				In method ready
+				<code>
+					var el1 = this.createElement(),
+						el2 = this.createElement(),
+						el3 = this.createElement();
+									// Original order : el1 ; el2 ; el3
+					el1.zIndex(1);  // New order : el2 ; el1 ; el3
+					el2.zIndex(-1); // New order : el1 ; el3 ; el2
+					console.log(el3.zIndex()); // return "1"
+				
+				</code>
+			@return {Integer|CanvasEngine.Element}
+		*/
+		zIndex: function(index) {
+			var l;
+			if (index === undefined) {
+				return this._index;
+			}
+			l = this.parent._children.length;
+			if (Math.abs(index) >= l) {
+				index = -1;
+			}
+			if (index < 0) {
+				index = l + index;
+			}
+			_CanvasEngine.moveArray(this.parent._children, this._index, index);
+			this._index = index;
+			this._stageRefresh();
+			return this;
+		},
+		
 		/**
 			@doc manipulate/
 			@method remove Removes element in stage
@@ -2030,7 +2076,7 @@ CanvasEngine.defines = function(canvas, params) {
 				child = this.parent._children[i];
 				if (this._id == child._id) {
 					this.parent._children.splice(i, 1);
-					this.stage.refresh();
+					this._stageRefresh();
 					return true;
 				}
 			}
