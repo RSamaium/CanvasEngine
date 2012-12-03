@@ -38,7 +38,7 @@ Unzip the files (except `thumb.png` and `index.html`). It name is `example.zip`.
 1. Open the `index.html` file in the root
 2. Add in the end of list `<ul class="thumbnails">`
 
-       <li class="span3">
+        <li class="span3">
           <div class="thumbnail">
             <a href="samples/[FOLDER_NAME]">
               <img src="samples/[FOLDER_NAME]/thumb.png" alt="">
@@ -46,7 +46,7 @@ Unzip the files (except `thumb.png` and `index.html`). It name is `example.zip`.
             </a>
             <p>[EXAMPLE_DESCRIPTION]</p>
          </div>
-       </li>
+        </li>
 
 ## Submit your example
 
