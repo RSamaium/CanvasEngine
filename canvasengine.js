@@ -699,12 +699,25 @@ CanvasEngine.defines = function(canvas, params) {
 		
 		Scene: 	{
 				  _scenes: {},
+				  _cacheScene: {},
 				  _scenesEnabled: {},
+				  _scenesNbCall: {},
 				  _current: null,
 				  
 				  New: function() { return this["new"].apply(this, arguments); },
 				  "new": function(obj) {
-					var _class = Class["new"]("Scene", [obj]).extend(obj, false);
+					var _class;
+					if (typeof obj == "string") {
+						if (!this._cacheScene[obj]) {
+							throw "Please initialize '" + obj + "' scene with an object before";
+						}
+						obj = this._cacheScene[obj];
+					}
+					else {
+						this._cacheScene[obj.name] = obj;
+					}
+					_class = Class["new"]("Scene", [obj]).extend(obj, false);
+					this._scenesNbCall[obj.name] = 0;
 					this._scenes[obj.name] = _class;
 					return _class;
 				  },
@@ -712,23 +725,58 @@ CanvasEngine.defines = function(canvas, params) {
 					@doc scene/
 					@method call Called a scene. Call the method "exit" of the current scene (if any) and changes of scene
 					@param {String} scene name
+					@param {Object} (optional) params Display settings of the scene
+						- overlay {Boolean} : Displays the scene over the previous scenes without leave
+						- exitScenes {Object} : Parameter to indicate which scene to leave and when
+							-- allExcept (optional) {Array} : Names of other scenes not to leave
+							-- when (optional) {String} : When should I leave the scenes calling the scene
+								--- "afterPreload" : When the scene is called preloaded
+					@return {CanvasEngine.Scene}
 					@example
 					"canvas" is the variable initialized for CanvasEngine
 					<code>
 						canvas.Scene.call("SceneName");
 					</code>
+					
+					Superimposed scenes
+					<code>
+						canvas.Scene.call("SceneName", {
+							overlay: true
+						});
+					</code>
+					
+					Leaving the other scenes after preloading of the scene called
+					<code>
+						canvas.Scene.call("SceneName", {
+							exitScenes: {
+								when: "afterPreload"
+							}
+						});
+					</code>
 				 */
 				  call: function(name, params) {
-					var _class = this._scenes[name];
+					if (this._scenesNbCall[name] > 0) {
+						this.New(name);
+					}
+					var _class = this._scenes[name], _allExcept = [name];
 					params = params || {};
 					if (_class) {
-						if (!params.overlay) this.exitAll(name);
 						this._scenesEnabled[name] = _class;
-						_class._load.call(_class);
+						if (params.exitScenes) {
+							params.exitScenes.allExcept = params.exitScenes.allExcept || [];
+							params.exitScenes.allExcept = _allExcept.concat(params.exitScenes.allExcept);
+							_class._load.call(_class, params.exitScenes);
+						}
+						else {
+							if (!params.overlay) this.exitAll(_allExcept);
+							_class._load.call(_class);
+						}
+						this._scenesNbCall[name]++;
 					}
 					else {
 						throw "Scene \"" + name + "\" doesn't exist";
 					}
+					return _class;
 				  },
 				  /**
 					@doc scene/
@@ -750,6 +798,7 @@ CanvasEngine.defines = function(canvas, params) {
 						@doc scene/
 						@method isEnabled Whether the scene is displayed
 						@param {String} scene name
+						@return {Boolean}
 						@example
 						<code>
 							if (canvas.Scene.isEnabled("SceneName")) {}
@@ -784,6 +833,7 @@ CanvasEngine.defines = function(canvas, params) {
 					@doc scene/
 					@method exist Return true if the scene exist
 					@param {String} scene name
+					@return {Boolean}
 					@example
 					<code>
 						if (canvas.Scene.exist("SceneName")) {}
@@ -796,6 +846,7 @@ CanvasEngine.defines = function(canvas, params) {
 					@doc scene/
 					@method get Get scene
 					@param {String} scene name
+					@return {CanvasEngine.Scene}
 					@example
 					<code>
 						var scene = canvas.Scene.get("SceneName");
@@ -804,6 +855,22 @@ CanvasEngine.defines = function(canvas, params) {
 				 */
 				  get: function(name) {
 					return this._scenes[name];
+				  },
+				  
+				   /**
+					@doc scene/
+					@method getEnabled Get activated scenes
+					@return {Object}
+					@example
+					<code>
+						var scenes = canvas.Scene.getEnabled();
+						for (var name in scenes) {
+							console.log(name);
+						}
+					</code>
+				 */
+				  getEnabled: function() {
+					return this._scenesEnabled;
 				  },
 				 
 				  _loop: function(canvas) {
@@ -840,6 +907,7 @@ CanvasEngine.defines = function(canvas, params) {
 		element: null,
 		stage: null,
 		ctx: null,
+		_globalElements: {},
 		_ctxMouseEvent: null,
 		/**
 			@doc canvas/
@@ -869,8 +937,11 @@ CanvasEngine.defines = function(canvas, params) {
 			
 			function bindEvent(type) {
 				this.element.addEventListener(type, function(e) {
-					var mouse = self.getMousePosition(e);
-					if (self.stage) self.stage["_" + type](e, mouse);
+					var	mouse = self.getMousePosition(e),
+						scenes = CanvasEngine.Scene.getEnabled();
+					for (var name in scenes) {
+						scenes[name].getStage()["_" + type](e, mouse);
+					}
 				}, false);
 			}
 			
@@ -878,6 +949,16 @@ CanvasEngine.defines = function(canvas, params) {
 				bindEvent.call(this, events[i]);
 			}
 			
+		},
+		_elementsByScene: function(name, key, val) {
+			if (!this._globalElements[name]) this._globalElements[name] = {};
+			if (!val) {
+				if (key) {
+					return this._globalElements[name][key];
+				}
+				return this._globalElements[name];
+			}
+			this._globalElements[name][key] = val;
 		},
 		_getElementById: function(id) {
 			var canvas;
@@ -1073,7 +1154,6 @@ CanvasEngine.defines = function(canvas, params) {
 		*/
 		model: null,
 		//_isExit: false,
-		_globalElements: {},
 		initialize: function(obj) {
 			var ev, self = this;
 			this._events = obj.events;
@@ -1143,6 +1223,15 @@ CanvasEngine.defines = function(canvas, params) {
 		
 		/**
 			@doc scene/
+			@method getStage Return the highest element
+			@return {CanvasEngine.Element}
+		*/
+		getStage: function() {
+			return this._stage;
+		},
+		
+		/**
+			@doc scene/
 			@method getCanvas Get the canvas
 			@param {Integer} id (optional) Position in array
 			@return {HTMLCanvasElement}
@@ -1177,19 +1266,16 @@ CanvasEngine.defines = function(canvas, params) {
 				width = name;
 			}
 			var el = CanvasEngine.Element["new"](this, null, width, height);
-			/*if (name) {
-			  this._global_elements[name] = el;
-			}*/
 			return el;
 		 },
 		_exit: function() {	
+			this.getCanvas()._elementsByScene[this.name] = {};
 			if (this.exit) this.exit.call(this);
 		},
-		_load: function() {
+		_load: function(params) {
 			var self = this;
+			params = params || {};
 			this._stage = CanvasEngine.Element["new"](this);
-
-			
 			for (var i=0 ; i < CanvasEngine.el_canvas.length ; i++) {
 				CanvasEngine.el_canvas[i].stage = this._stage;
 			}
@@ -1250,6 +1336,9 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 			
 			function canvasReady() {
+				if (params.when == "afterPreload") {
+					CanvasEngine.Scene.exitAll(params.allExcept);
+				}
 				if (self.ready) self.ready(self._stage, self.getElement);
 				if (self.model && self.model.ready) self.model.ready.call(self.model);
 				self._isReady = true;
@@ -1764,11 +1853,11 @@ CanvasEngine.defines = function(canvas, params) {
 			this.stage = scene._stage;
 			this.layer = layer;
 			
-			var key;
+			var key, elements = this.scene.getCanvas()._elementsByScene(this.scene.name);
 			do {
 				key = _CanvasEngine._getRandomColorKey();
 			}
-			while (key in this.scene._globalElements);
+			while (key in elements);
 			
 			
 			this.addMethod([
@@ -1794,7 +1883,7 @@ CanvasEngine.defines = function(canvas, params) {
 			], "draw");
 			
 			this.color_key = key;
-			this.scene._globalElements[key] = this;
+			this.scene.getCanvas()._elementsByScene(this.scene.name, key, this);
 			this._canvas = CanvasEngine.el_canvas;
 		},
 		/**
@@ -1975,10 +2064,11 @@ CanvasEngine.defines = function(canvas, params) {
 		},
 		_click: function(e, mouse, type) {
 			var el_real, imgData;
+			var canvas = this.scene.getCanvas();
 			
 			imgData = this._canvas[0]["_ctxMouseEvent"].getImageData(mouse.x, mouse.y, 1, 1).data;
 			if (imgData[3] > 0) {
-				el_real = this.scene._globalElements[_CanvasEngine.rgbToHex(imgData[0], imgData[1], imgData[2])];
+				el_real = canvas._elementsByScene(this.scene.name, _CanvasEngine.rgbToHex(imgData[0], imgData[1], imgData[2]));
 				if (el_real) el_real.trigger("click", e);
 			}
 				

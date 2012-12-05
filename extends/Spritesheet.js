@@ -52,6 +52,7 @@ Class.create("Spritesheet", {
 		Here, there is a grid of rows and 5 columns of 107px width and height. The first box is called "play". We have another area placed at positions (433, 33), width is 215px and height is 188px. The ID of this area is "btn_play"
 	*/
 	set: function(set) {
+
 		var gridset, gridname, x, y, grid_w, grid_h;
 		for (var id in set) {
 			if (id == "grid") {
@@ -60,7 +61,7 @@ Class.create("Spritesheet", {
 						gridname = set.grid[i].set[j];
 						gridset = set.grid[i];
 						
-						y = gridset.tile[1] * parseInt(j / Math.round(gridset.size[1]));
+						y = gridset.tile[1] * parseInt(j / Math.round(gridset.size[0]));
 						x = gridset.tile[0] * (j % Math.round(gridset.size[0]));
 							
 						this._set[gridname] = [x, y, gridset.tile[0], gridset.tile[1]];
@@ -71,6 +72,7 @@ Class.create("Spritesheet", {
 				this._set[id] = set[id];
 			}
 		}
+
 	},
 	/**
 		@doc spritesheet/

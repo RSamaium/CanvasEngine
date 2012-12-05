@@ -44,11 +44,23 @@ Framework to create video games in HTML5 Canvas
 
 ### v1.1.0
 
-* Add Window Feature
+* Add specific image param in animation
+* Add position param in animation
+* Add getStage method in Scene class
+* Add getEnabled method in Scene class
+* Add collision feature
+* Add Window feature
 * Add overlay scenes
 * Add moveArray method in CanvasEngine Object
+* Add prepend method in Element Class
 * Add zIndex method in Element Class
+* Fix set method in Spritesheet class
+* Fix identifiers keys in Input class
+* Fix addKey method in Input class
+* Fix reload scene
+* Fix click on multi scene
 * Fix click on element witch opacity < 1
+* Improving documentation
 
 ### v1.0.7
 
@@ -121,9 +133,9 @@ Framework to create video games in HTML5 Canvas
 
 * Initial Release
 
-## Demos
+## Examples and Demos
 
-Empty
+http://rsamaium.github.com/CanvasEngine
 
 ## License
 

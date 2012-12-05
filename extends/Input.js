@@ -285,7 +285,7 @@ var Input = {Input: {
 			</code>
 	*/
 	addKey: function(id, keycode) {
-		this[id] = keycode;
+		Input[id] = keycode;
 	},
 
 	/**
@@ -530,7 +530,7 @@ Input.Z = 90;
  @property E Value of the E button
  @type Integer
 */
-Input.E = 101;
+Input.E = 69;
 
 /** 
  @doc keyboard/
@@ -538,7 +538,7 @@ Input.E = 101;
  @property Q  Value of the Q button
  @type Integer
 */
-Input.Q = 113;
+Input.Q = 81;
 
 /** 
  @doc keyboard/

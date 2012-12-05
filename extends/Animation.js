@@ -559,6 +559,7 @@ Class.create("Timeline", {
 						
 						
 						function drawImage(_el, id) {
+							var _img = self._images;
 							sy = parseInt(id / Math.round(img.width / seq.size.width));
 							sx = (id % Math.round(img.width / seq.size.width));
 								
@@ -566,7 +567,13 @@ Class.create("Timeline", {
 								h = seq.size.height * sy;
 							
 							_el.trigger("animation:draw", id);
-							_el.drawImage(self._images, w, h, seq.size.width, seq.size.height, 0, 0, seq.size.width, seq.size.height);
+							if (seq.image) {
+								_img = seq.image;
+							}
+							if (!seq.position) seq.position = {};
+							if (!seq.position.left) seq.position.left = 0;
+							if (!seq.position.top) seq.position.top = 0;
+							_el.drawImage(_img, w, h, seq.size.width, seq.size.height, seq.position.left, seq.position.top, seq.size.width, seq.size.height);
 						}
 						
 						function finish() {
@@ -679,6 +686,14 @@ var Animation = {
 		@doc animation
 		@class Animation View an animation from an image
 		@param {Object} options
+			- images {String|Array} : identifying the image. If the value is an array. The different images are chained
+			- animations {Object} : Includes all animations. The key is the identifier of the animation. The value parameters (view example)
+				-- frames {Array} : Array with two elements: the first is to play the first frame, the second frame is the arrival
+				-- size {Object} : Set the width and height of the sequence ("width" and "height" keys )
+				-- frequence {integer} : Frequency display. The higher the value the more high frequency is low
+				-- finish {Function} : Callback when the animation is finished
+				-- image {String} :  identifying the image specific to this animation
+				-- position {Object} : offset of the animation display ("left" and "top" keys)
 		@example
 		In method "ready" of the scene :
 		<code>
