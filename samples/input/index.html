@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<title>Keyboard - Canvas Engine</title>
+<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet">
+
+<link href="../../main.css" rel="stylesheet">
+
+<body onload="prettyPrint()">
+
+<header class="header">
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+            
+          <ul class="nav">
+            <li><a href="//canvasengine.net"><i class="icon-home icon-white"></i> Home</a></li>
+            <li class="divider-vertical"></li>
+            <li><a href="//canvasengine.net/doc">Documentation</a></li>
+            <li class="divider-vertical"></li>
+            <li class="active"><a href="../../">Examples List</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </header>
+
+<div role="main" class="container demo" style="margin-top: 50px">
+    
+    <div class="page-header">
+        <h1>Keyboard</h1>
+    </div>
+	<div class="span12">
+	   <!-- If ZIP file exist -->
+	  <a href="example.zip" class="btn btn-primary">Download ZIP</a>
+
+       <a href="http://canvasengine.net/doc/?p=extends.input.keyboard" class="btn">View documentation</a>
+       <a href="https://github.com/RSamaium/CanvasEngine/tree/gh-pages/samples/input" class="btn">View in Github</a>
+    </div>
+	<br>
+	<br>
+    <h2>Result</h2>
+    <div class="span12">
+        <iframe src="example.html" width="500" height="100"></iframe>
+    </div>
+    <h2>Code</h2>
+    <div class="span12">
+        <pre class="prettyprint">var canvas = CE.defines("canvas_id").
+            extend(Input).
+            ready(function() {
+                canvas.Scene.call("MyScene");
+            });
+       
+    
+canvas.Scene.new({
+    name: "MyScene",
+    ready: function(stage) {
+    
+        var el = this.createElement();
+        el.fillStyle = "black";
+        el.font = "20px Arial";
+        el.textBaseline = "top";
+        el.fillText("Press button A here", 0, 0);
+        
+        canvas.Input.keyDown(Input.A, function(e) {
+            el.fillText("A pressed", 0, 0);
+        });
+        canvas.Input.keyUp(Input.A, function(e) {
+            el.fillText("A released", 0, 0);
+        });
+        
+        
+        stage.append(el);
+        
+    },
+    render: function(stage) {
+        stage.refresh();
+    }
+});</pre>
+    </div>
+</div>
+
+<script src="../../prettify.js"></script>
+<script src="//code.jquery.com/jquery-1.8.3.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/js/bootstrap.min.js"></script>
