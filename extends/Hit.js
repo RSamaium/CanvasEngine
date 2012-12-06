@@ -20,6 +20,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+/*
+	http://www.amphibian.com/blogstuff/collision.html
+*/
+
 
 /*
  *  This is the Point constructor. Polygon uses this object, but it is
@@ -308,6 +312,28 @@ Class.create("EntityModel", {
 	},
 });
 
+/**
+	@doc hit
+	@class Entity Create an entity. An entity is an abstract element. It allows to define its position, its hitbox without display on the screen. This class is linked to a model for the calculation of positions and an element (`el` property) to display
+	@param {CanvasEngine.Element} stage Stage element
+	@example
+
+In `ready` method
+	
+     this.entity = Class.New("Entity", [stage]);
+     this.entity.rect(100);
+     this.entity.position(10, 10);
+     this.entity.el.fillStyle = "red";
+     this.entity.el.fillRect(0, 0, 100, 100);
+	 stage.append(this.entity.el);
+	 
+In `render` method
+
+     this.entity.move(5, null);
+	 this.entity.hit("over", [this.other_entity], function(el) {  // other_entity is another instance of the Entity class
+		el.opacity = .5;
+	});
+*/
 Class.create("Entity", {
 	stage: null,
 	params: {},
@@ -318,23 +344,92 @@ Class.create("Entity", {
 		this.stage = stage;
 		this.params = params;
 		this.el = this.stage.getScene().createElement();
+		
 		this.model = Class.New("EntityModel");
 		this.testHit();
 	},
+/**
+	@doc hit/
+	@method position Change the position of the entity and the element
+	@param {Integer} x Position X
+	@param {Integer} y Position Y
+	@example
+
+In `ready` method
+	
+     var entity = Class.New("Entity", [stage]);
+     entity.position(10, 50);
+
+*/
 	position: function(x, y) {
 		var pos = this.model.position(x, y);
 		this.el.x = pos.x;
 		this.el.y = pos.y;
 	},
+	
+/**
+	@doc hit/
+	@method move Move the position of the entity and the element
+	@param {Integer} x Add position X
+	@param {Integer} y (optional) add position Y
+	@example
+
+In `ready` method
+	
+     var entity = Class.New("Entity", [stage]);
+     entity.move(10, null); // Current position X + 10
+     entity.move(null, 10); // Current position Y + 10
+
+*/	
 	move: function(x, y) {
 		var pos = this.model.position();
 		if (!x) x = 0;
 		if (!y) y = 0;
 		this.position(x + pos.x, y + pos.y);
 	},
+	
+/**
+	@doc hit/
+	@method polygon Polygons define the entity
+	@param {Array} array The array contains two tables including the positions of point polygons. The order of elements define the shape of polygons.
+	@example
+
+In `ready` method
+	
+     var entity = Class.New("Entity", [stage]);
+     entity.polygon([
+		[0, 0],
+		[50, 40],
+		[0, 40]
+	 ]);
+
+*/	
 	polygon: function(array) {
 		this.model.polygon(array);
 	},
+	
+/**
+	@doc hit/
+	@method rect Define the polygon as a rectangle. The element will take up his new dimensions (`width` and `height` properties). If `x` and `y` are undefined, they will default 0. If only one parameter is defined, the shape is a square with the given width
+	@param {Integer} x Position X
+	@param {Integer} y (optional) Position Y
+	@param {Integer} w (optional) Width
+	@param {Integer} h (optional) Height
+	@example
+
+In `ready` method
+	
+     var entity = Class.New("Entity", [stage]);
+     entity.rect(0, 0, 100, 100);
+	 // entity.rect(100, 100); 	=> equivalent
+	 // entity.rect(100); 		=> equivalent
+	 
+Other example
+
+	 var entity = Class.New("Entity", [stage]);
+     entity.rect(100, 300);
+	 // entity.rect(0, 0, 100, 300); => equivalent
+*/	
 	rect: function(x, y, w, h) {
 		if (!w && !h) {
 			w = x;

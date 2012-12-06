@@ -8,11 +8,14 @@ Framework to create video games in HTML5 Canvas
 ## Features
 
 * Scene Structure
+* Overlay scenes
 * Multiplayer model
 * Preloading
 * Animations
 * Timeline
+* Collision
 * Keyboard and Gamepad
+* Windows
 * Sound
 * Scrolling
 * Level Design
@@ -52,14 +55,21 @@ Framework to create video games in HTML5 Canvas
 * Add Window feature
 * Add overlay scenes
 * Add moveArray method in CanvasEngine Object
+* Add pack method in Element Class
+* Add unpack method in Element Class
+* Add detach method in Element Class
+* Add children method in Element Class
+* Add removeAttr method in Element Class
 * Add prepend method in Element Class
 * Add zIndex method in Element Class
+* Add zIndexBefore method in Element Class
 * Fix set method in Spritesheet class
 * Fix identifiers keys in Input class
 * Fix addKey method in Input class
 * Fix reload scene
 * Fix click on multi scene
 * Fix click on element witch opacity < 1
+* Improving draw performance 
 * Improving documentation
 
 ### v1.0.7

@@ -241,6 +241,7 @@ CanvasEngine.defines = function(canvas, params) {
 		Materials: {
 			images: {},
 			_buffer: {},
+			_cache_canvas: {},
 			sounds: {},
 			fonts: {},
 			/**
@@ -279,23 +280,34 @@ CanvasEngine.defines = function(canvas, params) {
 				@return {Object}
 			*/
 			imageToCanvas: function(id) {
-				var canvas =  document.createElement('canvas'), ctx,
-					img = this.get(id);
+				if (this._cache_canvas[id]) {
+					return this._cache_canvas[id];
+				}
+				var img = this.get(id), canvas, ctx;
+				
+				canvas =  document.createElement('canvas');		
 				canvas.width = img.width;
 				canvas.height = img.height;
 				ctx = canvas.getContext('2d');
-				ctx.drawImage(img, 0, 0);
-				return {
+				
+				this._cache_canvas[id] = {
 					canvas: canvas,
 					ctx: ctx
 				};
+				
+				return this._cache_canvas[id];
 			},
 			
 			// Private ?
 			createBuffer: function(id, color) {
+				
 				if (this._buffer[color]) {
 					return this._buffer[color];
 				}
+				canvas =  this.get(id) ;
+				this._buffer[color] = canvas;
+				return canvas;
+				
 				var _canvas = this.imageToCanvas(id),
 					canvas = _canvas.canvas,
 					ctx = _canvas.ctx;
@@ -303,7 +315,9 @@ CanvasEngine.defines = function(canvas, params) {
 				ctx.globalCompositeOperation = 'source-atop';
 				ctx.fillStyle = "#" + color;
 				ctx.fillRect(0, 0, canvas.width, canvas.height);
+				
 				this._buffer[color] = canvas;
+				
 				return canvas;
 			},
 			
@@ -908,6 +922,7 @@ CanvasEngine.defines = function(canvas, params) {
 		stage: null,
 		ctx: null,
 		_globalElements: {},
+		_ctxTmp: null,
 		_ctxMouseEvent: null,
 		/**
 			@doc canvas/
@@ -971,7 +986,22 @@ CanvasEngine.defines = function(canvas, params) {
 				document.body.appendChild(canvas);
 			}
 			else {
-				canvas = document.getElementById(id)
+			
+				/* Disable Highlight Color
+				if (!document.head) document.head = document.getElementsByTagName('head')[0];
+				var style = document.createElement("style");
+				document.head.appendChild(style);
+				var sheet = style.sheet ? style.sheet : style.styleSheet[0];
+
+				
+				sheet.insertRule("#" + id + "{-webkit-user-select: none;}", 0);
+				
+				 //-webkit-user-drag: none;-webkit-tap-highlight-color: rgba(0, 0, 0, 0);}
+				 
+				 */
+
+				canvas = document.getElementById(id);
+
 			}
 			
 			return canvas;
@@ -1506,7 +1536,10 @@ CanvasEngine.defines = function(canvas, params) {
 					dw = sw;
 					dh = sh;
 				}
-				buffer = CanvasEngine.Materials.createBuffer(img, this.color_key);
+				
+				
+				//buffer = CanvasEngine.Materials.createBuffer(img, this.color_key);
+		
 				
 				function f(t) {
 					for (var i=1 ; i < t.length ; i++) {
@@ -1517,14 +1550,26 @@ CanvasEngine.defines = function(canvas, params) {
 				
 				if (sw !== undefined) {
 					array = [_img, sx, sy, sw, sh, dx, dy, dw, dh];
-					array_buffer = f([buffer, sx, sy, sw, sh, dx, dy, dw, dh]);
+					this._buffer_img = {
+						x: dx,
+						y: dy,
+						width: dw,
+						height: dh
+					};
+					//array_buffer = f([buffer, sx, sy, sw, sh, dx, dy, dw, dh]);
 				}
 				else {
 					array = [_img, sx, sy];
-					array_buffer = f([buffer, sx, sy]);
+					this._buffer_img = {
+						x: sx,
+						y: sy,
+						width: _img.width,
+						height: _img.height
+					};
+					
+					//array_buffer = f([buffer, sx, sy]);
 				}
 				
-				this._buffer_img = array_buffer;
 				this._addCmd("drawImage", array);
 			},
 			/**
@@ -1624,17 +1669,26 @@ CanvasEngine.defines = function(canvas, params) {
 				
 			},
 			draw: function(name, params, propreties) {
-				layer = this._layer || "ctx";
+			
+				//CE.benchmark("draw method");
+				layer =  "ctx";
 				params = params || [];
 				propreties = propreties || {};
 				
+				var ctx = this.getScene().getCanvas()._ctxTmp;
 				var cmd, array_cmd = {};
 				var cmd_propreties = [];
 				var isCmd = true, applyBuffer = 1;
 				
 				var bufferEvent = function(name, _params) {
+					var ctx_mouse = this._canvas[0]["_ctxMouseEvent"];
 					if (this.eventExist("click")) {
-						this._canvas[0]["_ctxMouseEvent"][name].apply(this._canvas[0]["_ctxMouseEvent"], _params);
+						ctx_mouse[name].apply(this._canvas[0]["_ctxMouseEvent"], _params);
+						if (name == "drawImage") {
+							ctx_mouse.globalCompositeOperation = 'source-atop';
+							ctx_mouse.fillStyle = '#' + this.color_key;
+							ctx_mouse.fillRect(this._buffer_img.x, this._buffer_img.y, this._buffer_img.width, this._buffer_img.height);
+						}
 					}
 				};
 				
@@ -1646,6 +1700,10 @@ CanvasEngine.defines = function(canvas, params) {
 					return 1;
 				};
 				
+				if (name && typeof name != "string") {
+					ctx = name;
+					name = null;
+				}
 				if (name) {
 					array_cmd[name] = {params: params, propreties: propreties};
 					isCmd = false;
@@ -1666,28 +1724,35 @@ CanvasEngine.defines = function(canvas, params) {
 								if (key == "globalAlpha") {
 									cmd_propreties[key] = this.real_opacity;
 								}
-								this._canvas[j][layer][key] = cmd_propreties[key];
+								
+								if (ctx) {
+									ctx[key] = cmd_propreties[key];
+								}
+								else {
+									this._canvas[j][layer][key] = cmd_propreties[key];
+								}
+								
 								
 								applyBuffer &= bufferProp.call(this, cmd_propreties, "globalAlpha", 1);
-								applyBuffer &= bufferProp.call(this, cmd_propreties, "strokeStyle", this.color_key);
-								applyBuffer &= bufferProp.call(this, cmd_propreties, "fillStyle", this.color_key);
+								applyBuffer &= bufferProp.call(this, cmd_propreties, "strokeStyle", '#' + this.color_key);
+								applyBuffer &= bufferProp.call(this, cmd_propreties, "fillStyle", '#' + this.color_key);
 								
 								if (applyBuffer) {
 									bufferProp.call(this, cmd_propreties, key, cmd_propreties[key]);
 								}
+								
 							}
 						}
-						this._canvas[j][layer][name].apply(this._canvas[j][layer], cmd.params);
-						
-						if (this._buffer_img && name == "drawImage") {
-							bufferEvent.call(this, name, this._buffer_img);
+						if (ctx) {
+							ctx[name].apply(ctx, cmd.params);
 						}
 						else {
+							this._canvas[j][layer][name].apply(this._canvas[j][layer], cmd.params);
 							bufferEvent.call(this, name, cmd.params);
 						}
 					}
 				}
-				
+				//CE.benchmark("draw method");
 
 			},
 			_addCmd: function(name, params, propreties) {
@@ -1839,12 +1904,12 @@ CanvasEngine.defines = function(canvas, params) {
 		pause: false,
 		_index: 0,
 		_id: null,
-		_layer: "ctx",
 		_visible: true,
 		_listener: {},
 		_buffer_img: null,
 		_out: 1,
 		_over: 0,
+		_pack: null,
 		initialize: function(scene, layer, width, height) {
 			this._id = _CanvasEngine.uniqid();
 			this.width = width;
@@ -1907,10 +1972,9 @@ CanvasEngine.defines = function(canvas, params) {
 			children : refresh children ? default : true
 		
 		*/
-		_refresh: function(init, children, triggerEvent) {
+		_refresh: function(init, children, ctx) {
 			children = children === undefined ? true : children;
 			if (!this._visible) return;
-			
 			
 			if (!this.real_pause) {
 			
@@ -1965,7 +2029,8 @@ CanvasEngine.defines = function(canvas, params) {
 				this.translate(-regX, -regY);
 			}
 			
-			this.draw();
+			
+			this.draw(ctx);
 			
 			this.restore();
 			
@@ -1973,7 +2038,7 @@ CanvasEngine.defines = function(canvas, params) {
 				// if (!this.real_pause) this._loop();
 				if (!this.getScene()._pause) this._loop();
 				for (var i=0 ; i < this._children.length ; i++) {
-					this._children[i]._refresh();
+					this._children[i]._refresh(false, true, ctx);
 				}
 			}
 		},
@@ -2087,12 +2152,12 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 			return el;
 		},
-		/**
-			@doc manipulate/
-			@method append inserts the specified content as the last child of each element in the Element collection
-			@param {CanvasEngine.Element} el 
-			@return CanvasEngine.Element
-		*/
+/**
+	@doc manipulate/
+	@method append inserts the specified content as the last child of each element in the Element collection
+	@param {CanvasEngine.Element} el 
+	@return CanvasEngine.Element
+*/
 		append: function(el) {
 			this._children.push(el);
 			el.parent = this;
@@ -2101,7 +2166,18 @@ CanvasEngine.defines = function(canvas, params) {
 			return el;
 		},
 		
-		// TODO
+/**
+	@doc manipulate/
+	@method prepend inserts the specified content as the first child of each element in the Element collection
+	@example
+In method ready
+
+			var el = this.createElement();
+			stage.prepend(el); // zIndex == 0
+			
+	@param {CanvasEngine.Element} el 
+	@return CanvasEngine.Element
+*/
 		prepend: function(el) {
 			this._children.push(el);
 			el.parent = this;
@@ -2110,27 +2186,145 @@ CanvasEngine.defines = function(canvas, params) {
 		},
 		
 		/**
-			@doc manipulate/
-			@method zIndex Change or get the index of the item. The index used to define the superposition. By default, the first element has index 0. If an item is created at the same level, it will overlay the previous element and its index will be 1
-			@param {Integer} (optional) index If the value is not specified, the current index of the element is returned. If the value is negative, you change the index from the end
-			@example
-				In method ready
-				<code>
-					var el1 = this.createElement(),
-						el2 = this.createElement(),
-						el3 = this.createElement();
-									// Original order : el1 ; el2 ; el3
-					el1.zIndex(1);  // New order : el2 ; el1 ; el3
-					el2.zIndex(-1); // New order : el1 ; el3 ; el2
-					console.log(el3.zIndex()); // return "1"
-				
-				</code>
-			@return {Integer|CanvasEngine.Element}
+			var el1 = this.createElement();
+			var el2 = this.createElement();
+			el.insertAfter(stage);
 		*/
+		insertAfter: function(el) {
+			var children = el.parent.children();
+			children.push(this);
+			this._index = children.length-1;
+			return this;
+		},
+		
+/**
+	@doc traversing/
+	@method children Retrieves an array of elements
+	@return {Array}
+*/
+		children: function() {
+			return this._children;
+		},
+
+/**
+	@doc manipulate/
+	@method detach The .detach() method is the same as .remove(). This method is useful when removed elements are to be reinserted into the stage at a later time.
+	@example
+In method ready
+
+			var el = this.createElement();
+			stage.append(el);
+			
+			el = el.detach(); // element is removed
+			stage.append(el); 
+			
+	@return {CanvasEngine.Element}
+*/		
+		detach: function() {
+			this.remove();
+			return this;
+		},
+		
+/**
+	@doc manipulate/
+	@method pack Compress all children in an HTML5Canvas
+	@param {Integer} w Width of the compressed child
+	@param {Height} h Height of the compressed child
+	@param {Boolean} free_memory (optional) Do not keep the array in memory of the children if true. Unpack method can no longer be used out. (false by default)
+	@example
+In method ready
+
+			var el = this.createElement(), child;
+			for (var i=0 ; i < 1000 ; i++) {
+				child = this.createElement();
+				child.x = i;
+				el.append(child);
+			}
+			el.pack(10, 1000);
+			stage.append(el);
+		
+	@return {CanvasEngine.Element}
+*/
+		pack: function(w, h, free_memory) {
+			var children = this.children(),
+				canvas = document.createElement("canvas"),
+				ctx = canvas.getContext('2d'),
+				scene = this.getScene(),
+				el;
+			
+			canvas.width = w;
+			canvas.height = h;
+			
+			this.scene.getCanvas()._ctxTmp = ctx;
+			for (var i=0 ; i < children.length ; i++) {
+				this._children[i]._refresh();
+			}
+			this.scene.getCanvas()._ctxTmp = null;
+			if (!free_memory) this._pack = children;
+			this.empty();
+			el = scene.createElement();
+			el.drawImage(canvas);
+			this.append(el);
+			return this;
+		},
+
+/**
+	@doc manipulate/
+	@method unpack Decompress a compressed element with `pack` method
+	@example
+In method ready
+
+			var el = this.createElement(), child;
+			for (var i=0 ; i < 1000 ; i++) {
+				child = this.createElement();
+				child.x = i;
+				el.append(child);
+			}
+			el.pack(10, 1000); 	// transform all children to Canvas element
+			el.unpack(); 		// reset as before 
+			stage.append(el);
+		
+	@return {CanvasEngine.Element}
+*/		
+		unpack: function() {
+			if (!this._pack) {
+				throw "Use the method pack before or impossible because you release the memory with method pack";
+			}
+			this._children = this._pack;
+			this._pack = null;
+			return this;
+		},
+		
+		replaceWith: function(newEl) {
+			var children = this.parent.children();			
+		},
+		
+/**
+@doc manipulate/
+@method zIndex Change or get the index of the item. The index used to define the superposition. By default, the first element has index 0. If an item is created at the same level, it will overlay the previous element and its index will be 1
+@param {Integer|Element}  index (optional) If the value is not specified, the current index of the element is returned. If the value is negative, you change the index from the end. If the value is an element, that element is placed after the element indicated
+@example
+In method ready
+
+		var el1 = this.createElement(),
+			el2 = this.createElement(),
+			el3 = this.createElement();
+						// Original order : el1 ; el2 ; el3
+		el1.zIndex(1);  // New order : el2 ; el1 ; el3
+		el2.zIndex(-1); // New order : el1 ; el3 ; el2
+		console.log(el3.zIndex()); // return "1"
+		
+		el1.zIndex(el2); // New order : el3 ; el2 ; el1
+	
+@return {Integer|CanvasEngine.Element}
+*/
 		zIndex: function(index) {
 			var l;
 			if (index === undefined) {
 				return this._index;
+			}
+			if (index instanceof Class) {
+				index = index.zIndex();
 			}
 			l = this.parent._children.length;
 			if (Math.abs(index) >= l) {
@@ -2142,6 +2336,17 @@ CanvasEngine.defines = function(canvas, params) {
 			_CanvasEngine.moveArray(this.parent._children, this._index, index);
 			this._index = index;
 			this._stageRefresh();
+			return this;
+		},
+		
+/**
+@doc manipulate/
+@method zIndexBefore Place this element before another element
+@param {Element} element
+@return {CanvasEngine.Element}
+*/
+		zIndexBefore: function(el) {
+			this.zIndex(el.zIndex()-1);
 			return this;
 		},
 		
@@ -2202,7 +2407,7 @@ CanvasEngine.defines = function(canvas, params) {
 			@method attr Set the value of an attribute for the element
 			@param  {String} name
 			@param  {Object} value
-			@return {Element}
+			@return {CanvasEngine.Element}
 		*/
 		attr: function(name, value) {
 			if (value === undefined) {
@@ -2211,6 +2416,18 @@ CanvasEngine.defines = function(canvas, params) {
 			this._attr[name] = value;
 			return this;
 		},
+		
+		/**
+			@doc manipulate/
+			@method removeAttr Removes an attribute
+			@param  {String} name
+			@return {CanvasEngine.Element}
+		*/
+		removeAttr: function(name) {
+			if (this._attr[name]) delete this._attr[name];
+			return this;
+		},
+		
 		// TODO
 		offset: function() {
 			return {
