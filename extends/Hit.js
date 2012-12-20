@@ -37,11 +37,9 @@ function Point(px, py) {
 /*
  *  This is the Polygon constructor. All points are center-relative.
  */
-function Polygon(c, clr) {
-
+function Polygon(c) {
 	this.points = new Array();
 	this.center = c;
-	this.color = clr;  // used when drawing
 	
 }
 
@@ -289,6 +287,23 @@ Class.create("EntityModel", {
 			}
 		}
 	},
+	rect: function(x, y, w, h) {
+		if (!w && !h) {
+			w = x;
+			h = y;
+			x = 0;
+			y = 0;
+		}
+		if (!h) {
+			h = w;
+		}
+		this.polygon([
+			[x, y],
+			[x+w, y],
+			[x+w, y+h],
+			[x, y+h]
+		]);
+	},
 	hit: function(entity_model) {
 		if (this._polygon[this._frame].intersectsWith(entity_model._polygon[entity_model._frame])) {
 			this.hitState.out = 0;
@@ -303,6 +318,14 @@ Class.create("EntityModel", {
 			this.hitState.over = 0;
 		}
 		return this.hitState;
+	},
+	getPoints: function(frame) {
+		frame = frame || this._frame;
+		return this._polygon[frame].points;
+	},
+	getPolygonReg: function(frame) {
+		frame = frame || this._frame;
+		return this._polygon[frame].center;
 	},
 	frame: function(frame) {
 		if (frame) {
@@ -340,19 +363,28 @@ Class.create("Entity", {
 	el: null,
 	mode: null,
 	hit_entities: [],
-	initialize: function(stage, params) {
+	initialize: function(stage, params, model) {
+		
+		if (model === undefined) model = true;
+		
 		this.stage = stage;
 		this.params = params;
 		this.el = this.stage.getScene().createElement();
-		
-		this.model = Class.New("EntityModel");
+		if (model){
+			this.setModel(Class.New("EntityModel"));
+		}
 		this.testHit();
+	},
+	
+	setModel: function(_class) {
+		this.model = _class;
 	},
 /**
 	@doc hit/
-	@method position Change the position of the entity and the element
+	@method position Change the position of the entity and the element. Returns object {x: , y: }
 	@param {Integer} x Position X
 	@param {Integer} y Position Y
+	@return {Object}
 	@example
 
 In `ready` method
@@ -363,15 +395,19 @@ In `ready` method
 */
 	position: function(x, y) {
 		var pos = this.model.position(x, y);
-		this.el.x = pos.x;
-		this.el.y = pos.y;
+		if (x !== undefined) {
+			this.el.x = pos.x;
+			this.el.y = pos.y;
+		}
+		return {x: pos.y,  y: pos.y};
 	},
 	
 /**
 	@doc hit/
-	@method move Move the position of the entity and the element
+	@method move Move the position of the entity and the element. Returns object {x: , y: }
 	@param {Integer} x Add position X
 	@param {Integer} y (optional) add position Y
+	@return {Object}
 	@example
 
 In `ready` method
@@ -385,8 +421,10 @@ In `ready` method
 		var pos = this.model.position();
 		if (!x) x = 0;
 		if (!y) y = 0;
-		this.position(x + pos.x, y + pos.y);
+		return this.position(x + pos.x, y + pos.y);
 	},
+	
+
 	
 /**
 	@doc hit/
@@ -431,21 +469,7 @@ Other example
 	 // entity.rect(0, 0, 100, 300); => equivalent
 */	
 	rect: function(x, y, w, h) {
-		if (!w && !h) {
-			w = x;
-			h = y;
-			x = 0;
-			y = 0;
-		}
-		if (!h) {
-			h = w;
-		}
-		this.polygon([
-			[x, y],
-			[x+w, y],
-			[x+w, y+h],
-			[x, y+h]
-		]);
+		this.model.rect(x, y, w, h);
 		this.el.width = w;
 		this.el.height = h;
 	},
@@ -469,6 +493,26 @@ Other example
 			
 		});
 	},
+/**
+	@doc hit/
+	@method hit Calls the function when two or more entities come into colision
+	@param {Array} entities Array containing elements of type `Entity`
+	@param {Function} callback (optional) Callback function when the collision occurs
+	@example
+
+In `ready` method
+	
+     this.entity1 = Class.New("Entity", [stage]);
+	 this.entity2 = Class.New("Entity", [stage]);
+     this.entity1.rect(100);
+     this.entity2.rect(100);
+	 
+In `render` method
+
+	 this.entity1.hit([this.entity2], function(el) {
+		el.opacity = 0.5;
+	 });
+*/	
 	hit: function(entities, callback) {
 		var state, self = this;
 		
@@ -489,14 +533,43 @@ Other example
 	}
 });
 
+var Matrix = {
+
+	/*isometric: function() {
+		[a, b, c, d, e, f]
+		[scaleX, skewX, skewY, scaleY, translateX, translateY]
+	},
+	*/
+};
+
+/**
+	@doc grid
+	@class Grid reate a virtual grid and the location of an entity in the grid and properties of a cell
+	@param {Integer} rows Number of rows
+	@param {Integer} cols Number of columns
+	@example
+
+In `ready` method
+
+	var entity = Class.New("Entity", [stage]),
+		pos = entity.position(),
+		grid = Class.New("Grid", [10, 5]);
+		
+	grid.setCellSize(32, 32);
+		
+    console.log(grid.getCellByPos(pos.x, pos.y)); // {col: 0, row: 0}
+*/
 var Grid, _prototype = {
 	_rows: 0,
 	_cols: 0,
 	cell: {
 		width: 0,
-		height: 0
+		height: 0,
+		prop: [],
 	},
 	_matrix: null,
+	_transform: null,
+	_func: null,
 	initialize: function(rows, cols) {
 		if (rows instanceof Array) {
 			this._matrix = rows;
@@ -506,15 +579,200 @@ var Grid, _prototype = {
 		this._rows = rows;
 		this._cols = cols;
 	},
+
+	// TODO
+	transform: function(func) {
+		this._func = func;
+	},
+	
+	// TODO
+	convert: function(x, y) {
+		if (!this._func) {
+			return {x: x, y: y};
+		}
+		return this._func.call(this, x, y);
+	},
+	
+/**
+	@doc grid/
+	@method setPropertyCell Assign properties to the cells (two-dimensional arrays)
+	1. Abscissa
+	2. 0rdered
+	@param {Array} prop Two-dimensional arrays. The second array contains a value (integer, object, etc.)
+	@example
+	
+In `ready` method
+
+	var grid = Class.New("Grid", [2, 2]);
+	grid.setPropertyCell(
+		[
+			[0, 0], 
+			[1, 0]
+		]
+	);
+*/	
+	setPropertyCell: function(prop) {
+		this.cell.prop = prop;
+	},
+	
+/**
+	@doc grid/
+	@method getPropertyByCell Gets the properties of a cell
+	@param {Integer} col Column
+	@param {Integer} row Row
+	@return {Object}
+	@example
+	
+In `ready` method
+
+	var grid = Class.New("Grid", [2, 2]);
+	grid.setPropertyCell(
+		[
+			[0, 0], 
+			[1, 0]
+		]
+	);
+	grid.getPropertyByCell(1, 0); // return 1
+*/	
+	getPropertyByCell: function(col, row) {
+		if (!this.cell.prop[col]) {
+			throw "Column " + col + " does not exist";
+		}
+		return this.cell.prop[col][row];
+	},
+
+/**
+	@doc grid/
+	@method getPropertyByPos Obtain the properties of a cell according to positions
+	@param {Integer} x Position X
+	@param {Integer} y Position Y
+	@return {Object}
+	@example
+	
+In `ready` method
+
+	var grid = Class.New("Grid", [2, 2]);
+	grid.setPropertyCell(
+		[
+			[0, 0], 
+			[1, 0]
+		]
+	);
+	grid.setCellSize(32, 32);
+	grid.getPropertyByPos(53, 24); // return 1
+*/		
+	getPropertyByPos: function(x, y) {
+		var cell = this.getCellByPos(x, y);
+		return this.getPropertyByCell(cell.col, cell.row);
+	},
+	
+	getEntityCells: function(entity) {
+		var i, j, p, points, reg, px, py, 
+			cells = [],
+			ep = { // extreme points
+				min_x: 99999999,
+				max_x: 0,
+				min_y: 99999999,
+				max_y: 0
+			};
+		if (entity.model) {
+			points = entity.model.getPoints();
+			reg = entity.model.getPolygonReg();
+		}
+		else {
+			points = entity.getPoints();
+			reg = entity.getPolygonReg();
+		}
+		for (i=0 ; i < points.length ; i++) {
+			p = points[i];
+			px = p.x + reg.x;
+			py = p.y + reg.y;
+			if (px < ep.min_x) {
+				ep.min_x = px;
+			}
+			if (px > ep.max_x) {
+				ep.max_x = px;
+			}
+			if (py < ep.min_y) {
+				ep.min_y = py;
+			}
+			if (py > ep.max_y) {
+				ep.max_y = py;
+			}
+		}
+		
+		var nbrows = (ep.max_x - ep.min_x) / this.cell.width, 
+			nbcols = (ep.max_y - ep.min_y) / this.cell.height,
+			x, y;
+		for (i=0 ; i <= nbcols ; i++) {
+			x = ep.min_x + this.cell.width * i;
+			for (j=0 ; j <= nbrows ; j++) {
+				y = ep.min_y + this.cell.height * j;
+				cells.push(this.getCellByPos(x, y));
+			}
+		}
+		return cells;
+	},
+	
+/**
+	@doc grid/
+	@method getCellByPos Retrieve the column and row in the grid according to the positions. Returns this object : {col: , row: }
+	@param {Integer} x Position X
+	@param {Integer} y Position Y
+	@return {Object}
+	@example
+	
+In `ready` method
+
+	var grid = Class.New("Grid", [2, 2]);
+	grid.setCellSize(32, 32);
+	grid.getCellByPos(53, 35); // return {col: 1, row: 1}
+*/	
+	getCellByPos: function(x, y) {
+		if (this.cell.width == 0 || this.cell.height == 0) {
+			throw "Set the size of the cell prior with setCellSize method";
+		}
+		var col = Math.floor(this.convert(x, y).x / this.cell.width),
+			row = Math.floor(this.convert(x, y).y / this.cell.height);
+		return {col: col, row: row};
+	},
+	
+/**
+	@doc grid/
+	@method setCellSize Set the size of a cell
+	@param {Integer} w Width (pixels)
+	@param {Integer} h Height (pixels)
+*/	
 	setCellSize: function(w, h) {
 		this.cell.width = w;
 		this.cell.height = h;
 	},
+
+/**
+	@doc grid/
+	@method getRows Get the number of rows
+	@return {Integer}
+*/	
 	getRows: function() {
 		return this._rows;
 	},
+
+/**
+	@doc grid/
+	@method getCols Get the number of columns
+	@return {Integer}
+*/	
 	getCols: function() {
 		return this._cols;
+	},
+
+/**
+	@doc grid/
+	@method getNbCell Get the total number of cell (rows * columns)
+	@return {Integer}
+*/	
+	getNbCell: function() {
+		return this.getRows() * this.getCols();
 	}
 },
 _return =  function(CE) {
