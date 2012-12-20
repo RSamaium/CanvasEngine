@@ -61,13 +61,22 @@ Class.create("Tiled", {
 			self.height = data.height;
 			self.tilesets = data.tilesets;
 			self.layers = data.layers;
-			var props = self.tilesets[0].tileproperties,
-				new_props = {};
-			if (props) {
-				for (var key in props) {
-					new_props[+key+1] = props[key];
+			self.tilesetsIndexed = [];
+			for (var i=0 ; i < self.tilesets.length ; i++) {
+				var props = self.tilesets[i].tileproperties,
+					new_props = {};
+				if (props) {
+					for (var key in props) {
+						new_props[+key+1] = props[key];
+					}
+					self.tilesets[i].tileproperties = new_props;
 				}
-				self.tilesets[0].tileproperties = new_props;
+				self.tilesetsIndexed[self.tilesets[i].firstgid] = self.tilesets[i];
+			}
+			var _id, length = self.tilesetsIndexed.length + (Math.round(self.tilesets[self.tilesets.length-1].imagewidth / self.tile_h) * (Math.round(self.tilesets[self.tilesets.length-1].imagewidth / self.tile_w)));
+			for (var m=1; m < length; m++) {
+				_id = self.tilesetsIndexed[m] ? m : _id;
+				self.tilesetsIndexed[m] = self.tilesetsIndexed[_id];
 			}
 			self._draw();
 		});
@@ -80,16 +89,15 @@ Class.create("Tiled", {
 		for (var i=0 ; i < this.layers.length ; i++) {
 			id = 0;
 			this.el_layers[i] = this.scene.createElement();
-			tileset = this.tilesets[0];
 			if (this.layers[i].data) {
 				for (var k=0 ; k < this.layers[i].height ; k++) {
 					for (var j=0 ; j < this.layers[i].width ; j++) {
 						_tile = this.scene.createElement();
-						
 						_id = this.layers[i].data[id];
 						if (_id != 0) {
-							_id--;
-							y = this.tile_h * parseInt(_id / (Math.round(tileset.imagewidth / this.tile_h)));
+							tileset = this.tilesetsIndexed[_id];
+							_id -= tileset.firstgid;
+							y = this.tile_h * Math.floor(_id / (Math.round(tileset.imagewidth / this.tile_h)));
 							x = this.tile_w * (_id % Math.round(tileset.imagewidth / this.tile_w));
 							
 							_tile.drawImage(tileset.name, x, y, this.tile_w, this.tile_h, j * this.tile_w, k * this.tile_h, this.tile_w, this.tile_h);

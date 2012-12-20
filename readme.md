@@ -5,6 +5,26 @@ http://canvasengine.net
 
 Framework to create video games in HTML5 Canvas
 
+# Get Started
+
+Follow the steps below to start:
+
+1. Download the code `canvasengine-X.Y.Z.all.min.js` on Github or this website
+2. Add this code in your page : 
+        
+		<!DOCTYPE html>
+		<script src="canvasengine-X.Y.Z.all.min.js"></script>
+		<canvas id="canvas_id" width="640" height="480"></canvas>
+		
+       
+3. Initialize the canvas in your JS file :
+
+        var canvas = CE.defines("canvas_id").ready(function() {	
+         
+        });
+
+Method `ready` is called when the canvas is ready (DOM loaded)
+
 ## Features
 
 * Scene Structure
@@ -13,7 +33,7 @@ Framework to create video games in HTML5 Canvas
 * Preloading
 * Animations
 * Timeline
-* Collision
+* Collision (beetween entities and grid)
 * Keyboard and Gamepad
 * Windows
 * Sound
@@ -43,6 +63,10 @@ Framework to create video games in HTML5 Canvas
 * [Native class and CanvasEngine Class 1](http://jsperf.com/native-class-and-canvasengine-class)
 * [Native class and CanvasEngine Class 2](http://jsperf.com/native-class-and-canvasengine-class-test2)
 
+# Contributors
+
+* [robwalch](https://github.com/robwalch) - [commit](https://github.com/robwalch/CanvasEngine/commit/e55909952c26ba1ec3e3d5bd6f733ddfffc4b647)
+
 ## Changelog
 
 ### v1.1.0
@@ -55,6 +79,8 @@ Framework to create video games in HTML5 Canvas
 * Add Window feature
 * Add overlay scenes
 * Add moveArray method in CanvasEngine Object
+* Add offset method in Element Class
+* Add position method in Element Class
 * Add pack method in Element Class
 * Add unpack method in Element Class
 * Add detach method in Element Class
@@ -63,6 +89,8 @@ Framework to create video games in HTML5 Canvas
 * Add prepend method in Element Class
 * Add zIndex method in Element Class
 * Add zIndexBefore method in Element Class
+* Add multi-tilemap in Tiled Class (robwalch)
+* Add origin points in Spritesheet Class (robwalch)
 * Fix set method in Spritesheet class
 * Fix identifiers keys in Input class
 * Fix addKey method in Input class
