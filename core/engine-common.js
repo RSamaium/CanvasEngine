@@ -525,26 +525,6 @@ CanvasEngine.rgbToHex = function(r, g, b) {
 	return CanvasEngine.rgbToHex(r, g, b);
 };
 
-CanvasEngine._benchmark = {};
-CanvasEngine._interval_benchmark = 60;
-CanvasEngine._freq_benchmark = {};
-CanvasEngine.microtime = function() {
-  var now = new Date().getTime() / 1000;
-  var s = parseInt(now, 10);
-
-  return now * 1000;
-};
-CanvasEngine.benchmark = function(id) {
-	var m = this.microtime();
-	if (this._benchmark[id]) {
-		console.log("Performance " + id + " : " + (m - this._benchmark[id]) + "ms");
-	}
-	this._benchmark[id] = m;
-	
-};
-
-
-
 /**
 	@doc utilities/
 	@method moveArray Move one index to another location of an array

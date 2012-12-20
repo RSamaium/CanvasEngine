@@ -2428,51 +2428,14 @@ In method ready
 			return this;
 		},
 		
-/**
-	@doc manipulate/
-	@method offset Relative positions of the parent. Returns an object with `left` and `top` properties
-	@return {Object}
-	@example
-In method ready
-
-		var el = this.createElement();
-			el2 = this.createElement();
-			
-		el1.x = 50;
-		el2.x = 100
-			
-		el1.append(el2);
-		stage.append(el2);
-			
-		console.log(el2.offset()); // {left: 100, top: 0}
-	
-*/
+		// TODO
 		offset: function() {
 			return {
 				left: this.x,
 				top: this.y
 			};
 		},
-
-/**
-	@doc manipulate/
-	@method position Absolute positions. Returns an object with `left` and `top` properties
-	@return {Object}
-	@example
-In method ready
-
-		var el = this.createElement();
-			el2 = this.createElement();
-			
-		el1.x = 50;
-		el2.x = 100
-			
-		el1.append(el2);
-		stage.append(el2);
-			
-		console.log(el2.position()); // {left: 150, top: 0}
-	
-*/
+		// TODO
 		position: function() {
 			return {
 				left: this.real_x,
