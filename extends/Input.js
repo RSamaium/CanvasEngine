@@ -171,7 +171,16 @@ var Input = {Input: {
 	*/
 	keyUp: function(key, onKeyUp) {
 		var self = this;
-		self._keyUp[key] = onKeyUp;
+		
+		if (key instanceof Array) {
+			for (var i=0 ; i < key.length ; i++) {
+				self._keyUp[key[i]] = onKeyUp;
+			}
+		}
+		else {
+			self._keyUp[key] = onKeyUp;
+		}
+		
 		document.onkeyup = function(e) {
 			if (self._keyUp[e.which]) {
 				self._keyUp[e.which](e);
@@ -285,7 +294,7 @@ var Input = {Input: {
 			</code>
 	*/
 	addKey: function(id, keycode) {
-		this[id] = keycode;
+		Input[id] = keycode;
 	},
 
 	/**
@@ -530,7 +539,7 @@ Input.Z = 90;
  @property E Value of the E button
  @type Integer
 */
-Input.E = 101;
+Input.E = 69;
 
 /** 
  @doc keyboard/
@@ -538,7 +547,7 @@ Input.E = 101;
  @property Q  Value of the Q button
  @type Integer
 */
-Input.Q = 113;
+Input.Q = 81;
 
 /** 
  @doc keyboard/

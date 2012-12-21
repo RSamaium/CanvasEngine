@@ -1,10 +1,8 @@
 {
     "name": "canvasengine",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Use a model for handling server-side events and develop a multiplayer game.",
-    "preferGlobal": "true",
     "main": "index.js",
-    "bin": { "canvasengine": "index.js" },
     "author": "WebCreative5",
     "keywords": ["html5", "canvas", "game", "model"],
     "repository" : {
@@ -13,6 +11,5 @@
     },
     "dependencies": {
         "socket.io": "0.9.0"
-    },
-    "engines": { "node": "*" }
+    }
 }
