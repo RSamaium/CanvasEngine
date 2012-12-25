@@ -914,7 +914,7 @@ Leaving the other scenes after preloading of the scene called
 	@class Canvas Manage canvas element
 	@example
 		
-		<jsfiddle>WebCreative5/GkUsE</jsfiddle>
+<jsfiddle>WebCreative5/GkUsE</jsfiddle>
 */
 	Class.create("Canvas", {
 		id: null,
@@ -930,7 +930,7 @@ Leaving the other scenes after preloading of the scene called
 @type Integer
 @example
 
-	<jsfiddle>WebCreative5/GkUsE</jsfiddle>
+<jsfiddle>WebCreative5/GkUsE</jsfiddle>
 */
 		width: 0,
 /**
@@ -1803,7 +1803,7 @@ In the method "ready" in the scene class :
 	});
 	
 @example
-	<jsfiddle>cUEJ7/1</jsfiddle>
+<jsfiddle>cUEJ7/1</jsfiddle>
 */
 	Class.create("Element", {
 		_children: [],

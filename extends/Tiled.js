@@ -255,11 +255,11 @@ Consider adding inserting Tiled.js
 @param {String} url Path to the JSON file of Tiled Map Editor
 @example
 
-var canvas = CE.defines("canvas_id").
-	extend(Tiled).
-	ready(function() {
-		canvas.Scene.call("MyScene");
-	});
+	var canvas = CE.defines("canvas_id").
+		extend(Tiled).
+		ready(function() {
+			canvas.Scene.call("MyScene");
+		});
 		
 	canvas.Scene.new({
 		name: "MyScene",

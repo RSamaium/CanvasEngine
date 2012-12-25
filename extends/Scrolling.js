@@ -251,11 +251,11 @@ http://en.wikipedia.org/wiki/Side-scrolling_video_game
 @param {Integer} tile_w width of the tile
 @example
 
-var canvas = CE.defines("canvas_id").
-	extend(Scrolling).
-	ready(function() {
-		canvas.Scene.call("MyScene");
-	});
+	var canvas = CE.defines("canvas_id").
+		extend(Scrolling).
+		ready(function() {
+			canvas.Scene.call("MyScene");
+		});
 		
 	canvas.Scene.new({
 		name: "MyScene",

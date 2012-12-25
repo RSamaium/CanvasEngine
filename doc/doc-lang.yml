@@ -23,6 +23,11 @@ timeline: Timeline
 scrolling: Scrolling
 save: Save/Load
 input: Input
+collision: Collision
+window: Window
+
+hit: Entity
+grid: Grid
 
 keyboard: Keyboard
 gamepad: Gamepad

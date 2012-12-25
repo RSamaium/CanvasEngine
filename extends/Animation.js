@@ -687,7 +687,9 @@ var Animation = {
 			return Class["new"]("Timeline", [el]);
 		}
 	},
+
 /**
+
 @doc animation
 @class Animation View an animation from an image
 @param {Object} options
@@ -700,6 +702,7 @@ var Animation = {
 	* finish {Function} : Callback when the animation is finished
 	* image {String} :  identifying the image specific to this animation
 	* position {Object} : offset of the animation display ("left" and "top" keys)
+	
 @example
 In method "ready" of the scene :
 
