@@ -5,7 +5,7 @@ http://canvasengine.net
 
 Framework to create video games in HTML5 Canvas
 
-# Get Started
+## Get Started
 
 Follow the steps below to start:
 
@@ -48,12 +48,14 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Tiled Map Editor (http://www.mapeditor.org)
 * Gleed 2d (http://gleed2d.codeplex.com)
 
-## Roadmap
+## Roadmap (in order)
 
-* Box2d
-* Transition
+* Multi touch
 * Game Effects
 * Text Effects
+* Transition
+* UI
+* Box2d
 * Synchronized multi canvas (local multiplayer)
 
 ## Test performance
@@ -63,7 +65,7 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * [Native class and CanvasEngine Class 1](http://jsperf.com/native-class-and-canvasengine-class)
 * [Native class and CanvasEngine Class 2](http://jsperf.com/native-class-and-canvasengine-class-test2)
 
-# Contributors
+## Contributors
 
 * [robwalch](https://github.com/robwalch) - [commit](https://github.com/robwalch/CanvasEngine/commit/e55909952c26ba1ec3e3d5bd6f733ddfffc4b647)
 
@@ -89,16 +91,21 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Add prepend method in Element Class
 * Add zIndex method in Element Class
 * Add zIndexBefore method in Element Class
-* Add multi-tilemap in Tiled Class (robwalch)
-* Add origin points in Spritesheet Class (robwalch)
-* Fix set method in Spritesheet class
-* Fix identifiers keys in Input class
-* Fix addKey method in Input class
 * Fix reload scene
 * Fix click on multi scene
 * Fix click on element witch opacity < 1
 * Improving draw performance 
-* Improving documentation
+* Improving documentation (markdown)
+
+### v1.0.8
+
+* Add multi-tilemap in Tiled Class (robwalch)
+* Add origin points in Spritesheet Class (robwalch)
+* Fix keyUp method in Input Class (https://github.com/RSamaium/CanvasEngine/issues/4)
+* Fix NPM problem (https://github.com/RSamaium/CanvasEngine/issues/7)
+* Fix identifiers keys in Input class
+* Fix addKey method in Input class
+* Fix set method in Spritesheet class
 
 ### v1.0.7
 
@@ -162,11 +169,11 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Improving documentation
 
 ### v1.0.3
---
+Not indicated
 ### v1.0.2
---
+Not indicated
 ### v1.0.1
---
+Not indicated
 ### v1.0.0
 
 * Initial Release

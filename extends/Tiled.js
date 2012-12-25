@@ -233,55 +233,55 @@ Class.create("Tiled", {
 });
 
 /**
-	@doc tiled
-	@class Tiled Tiled is a general purpose tile map editor. It's built to be easy to use, yet flexible enough to work with varying game engines, whether your game is an RPG, platformer or Breakout clone. Tiled is free software and written in C++, using the Qt application framework.
-	
-	http://www.mapeditor.org
-	
-	 <p>Consider adding inserting Tiled.js</p>
-	 <code>
-		 <script src="extends/Tiled.js"></script>
-		 <script>
-		   var canvas = CE.defines("canvas_id").
-			extend(Tiled).
-			ready(function() {
-				
-			});
-		 </script>
-	 </code>
-	
-	@param {CanvasEngine.Scene} scene
-	@param {CanvasEngine.Element} el The layers are displayed on this element
-	@param {String} url Path to the JSON file of Tiled Map Editor
-	@example
-	<code>
-	var canvas = CE.defines("canvas_id").
+@doc tiled
+@class Tiled Tiled is a general purpose tile map editor. It's built to be easy to use, yet flexible enough to work with varying game engines, whether your game is an RPG, platformer or Breakout clone. Tiled is free software and written in C++, using the Qt application framework.
+
+http://www.mapeditor.org
+
+Consider adding inserting Tiled.js
+
+	 <script src="extends/Tiled.js"></script>
+	 <script>
+	   var canvas = CE.defines("canvas_id").
 		extend(Tiled).
 		ready(function() {
-			canvas.Scene.call("MyScene");
-		});
 			
-		canvas.Scene.new({
-			name: "MyScene",
-			materials: {
-				images: {
-					mytileset: "path/to/tileset.png"
-				}
-			},
-			ready: function(stage) {
-				 var el = this.createElement();
-				 var tiled = canvas.Tiled.new();
-				tiled.load(this, el, "map/map.json");
-				tiled.ready(function() {
-					 var tile_w = this.getTileWidth(),
-						 tile_h = this.getTileHeight(),
-						 layer_object = this.getLayerObject();
-					 stage.append(el);
-				});
-				
-			}
 		});
-	</code>
+	 </script>
+
+
+@param {CanvasEngine.Scene} scene
+@param {CanvasEngine.Element} el The layers are displayed on this element
+@param {String} url Path to the JSON file of Tiled Map Editor
+@example
+
+var canvas = CE.defines("canvas_id").
+	extend(Tiled).
+	ready(function() {
+		canvas.Scene.call("MyScene");
+	});
+		
+	canvas.Scene.new({
+		name: "MyScene",
+		materials: {
+			images: {
+				mytileset: "path/to/tileset.png"
+			}
+		},
+		ready: function(stage) {
+			 var el = this.createElement();
+			 var tiled = canvas.Tiled.new();
+			tiled.load(this, el, "map/map.json");
+			tiled.ready(function() {
+				 var tile_w = this.getTileWidth(),
+					 tile_h = this.getTileHeight(),
+					 layer_object = this.getLayerObject();
+				 stage.append(el);
+			});
+			
+		}
+	});
+
 */
 var Tiled = {
 	Tiled: {

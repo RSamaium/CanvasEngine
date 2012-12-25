@@ -21,35 +21,35 @@ THE SOFTWARE.
 */
 
 /**
-    @doc window
-    @class Window Displays a dialog box
-    @param {CanvasEngine.Scene} scene Current scene
-    @param {Integer} width Width
-    @param {Integer} height Height
-    @param {String} border Identifier of the image to the border. The image must contain the four corners and four sides to have 9 tiles. The width and height should be divisible by three
-    @example
+@doc window
+@class Window Displays a dialog box
+@param {CanvasEngine.Scene} scene Current scene
+@param {Integer} width Width
+@param {Integer} height Height
+@param {String} border Identifier of the image to the border. The image must contain the four corners and four sides to have 9 tiles. The width and height should be divisible by three
+@example
 
-        canvas.Scene['new']({
-            name: "MyScene",
+	canvas.Scene.New({
+		name: "MyScene",
 
-            materials: {
-                images: {
-                    "border": "images/window.png"
-                }
-            },
-            
-            ready: function(stage) {
-				var box;
-                this.window = canvas.Window.new(this, 230, 200, "border");
-               
-                box =  this.window.getBox();
-                box.x = 50;
-                box.y = 50;
-				
-				this.window.open(stage);
-        
-            }
-        });
+		materials: {
+			images: {
+				"border": "images/window.png"
+			}
+		},
+		
+		ready: function(stage) {
+			var box;
+			this.window = canvas.Window.new(this, 230, 200, "border");
+		   
+			box =  this.window.getBox();
+			box.x = 50;
+			box.y = 50;
+			
+			this.window.open(stage);
+	
+		}
+	});
 */
 Class.create("Window", {
     border: null,
@@ -154,24 +154,26 @@ Class.create("Window", {
     },
 
 /**
-	@doc window/
-	@method position Sets position to the window. If no parameter is assigned, the method returns the current position of the element in an object : {x: , y:}
-	@param {String|Integer} x (optional) Position X. If the parameter is a string, the window is positioned at a specific location :
-		* middle : The window is centered
-	@param {Integer} y (optional) Position Y
-	@example
+@doc window/
+@method position Sets position to the window. If no parameter is assigned, the method returns the current position of the element in an object : {x: , y:}
+@param {String|Integer} x (optional) Position X. If the parameter is a string, the window is positioned at a specific location :
+
+* middle : The window is centered
+
+@param {Integer} y (optional) Position Y
+@example
 
 In `ready` method
 
-		var _window = canvas.Window.new(this, 230, 200, "border");
-               
-		_window.position(50, 100);
-		_window.position(); // returns {x: 50, y: 100}
-		_window.position("middle"); // Center of the window
-		
-		_window.open(stage);
+	var _window = canvas.Window.new(this, 230, 200, "border");
+		   
+	_window.position(50, 100);
+	_window.position(); // returns {x: 50, y: 100}
+	_window.position("middle"); // Center of the window
 	
-	@return {CanvasEngine.Window}
+	_window.open(stage);
+
+@return {CanvasEngine.Window}
 */	
     position: function(typeOrX, y) {
         var canvas = this.scene.getCanvas();
@@ -195,22 +197,22 @@ In `ready` method
     },
     
 /**
-	@doc window/
-	@method setBackground Sets the color and opacity of the background
-	@param {String} color Background color in hexadecimal
-	@param {Integer} padding (optional) Inner margin below border (0 by default)
-	@param {Integer} opacity (optional) Opacity (1 by default)
-	@example
+@doc window/
+@method setBackground Sets the color and opacity of the background
+@param {String} color Background color in hexadecimal
+@param {Integer} padding (optional) Inner margin below border (0 by default)
+@param {Integer} opacity (optional) Opacity (1 by default)
+@example
 
 In `ready` method
 
-		var _window = canvas.Window.new(this, 230, 200, "border");
-               
-		_window.setBackground("#ff0000", 10, .5);
-		
-		_window.open(stage);
+	var _window = canvas.Window.new(this, 230, 200, "border");
+		   
+	_window.setBackground("#ff0000", 10, .5);
 	
-	@return {CanvasEngine.Window}
+	_window.open(stage);
+
+@return {CanvasEngine.Window}
 */	
     setBackground: function(color, padding, opacity) {
         var background;

@@ -126,22 +126,23 @@ var Model = Class["new"]("ModelClientClass"),
 			
 */
  /**
-	@method CanvasEngine.defines Initialize CanvasEngine  by setting the canvas 
-	@param {String} canvas canvas ID
-	@param {Object} params (optional) additional parameters
-		- swf_sound : view Sound class
-		- cocoonjs : Object indicating the size of the canvas. Use this property if you want to compile your project with CocoonJS (http://ludei.com)
-			Example : 
-				<code>{width: 640, height: 480}</code>
-	@return CanvasEngineClass
-	@example
-	"CE"  is equivalent to "CanvasEngine"
-	<code>
-		var canvas = CE.defines("canvas_id").
-					 ready(function() {
-						// DOM is ready
-					 });
-	</code>
+@method CanvasEngine.defines Initialize CanvasEngine  by setting the canvas 
+@param {String} canvas canvas ID
+@param {Object} params (optional) additional parameters
+
+* swf_sound : view Sound class
+* cocoonjs : Object indicating the size of the canvas. Use this property if you want to compile your project with CocoonJS (http://ludei.com)
+
+Example : 
+		{width: 640, height: 480}
+@return CanvasEngineClass
+@example
+"CE"  is equivalent to "CanvasEngine"
+
+	var canvas = CE.defines("canvas_id").
+				 ready(function() {
+					// DOM is ready
+				 });
  */
 CanvasEngine.defines = function(canvas, params) {
 	params = params || {};
@@ -150,37 +151,35 @@ CanvasEngine.defines = function(canvas, params) {
 		canvas = [canvas];
 	}
 	var CanvasEngine;
-	/**
-		@doc engine
-		@class CanvasEngineClass Main class to use Canvas Engine
-			<code>
-				var canvas = CE.defines("canvas_id"); // CanvasEngine object
-			
-				canvas.ready(function(ctx) {
-					canvas.Scene.call("MyScene");
-				});
-			</code>
-			
-	*/
+/**
+@doc engine
+@class CanvasEngineClass Main class to use Canvas Engine
+		
+	var canvas = CE.defines("canvas_id"); // CanvasEngine object
+
+	canvas.ready(function(ctx) {
+		canvas.Scene.call("MyScene");
+	});
+		
+*/
 	Class.create("CanvasEngineClass", {
 		_noConflict: false, 
 		initialize: function(element) {
 			this.canvas = canvas;
 			this.el_canvas = [];
 		},
-		 /**
-			@doc engine/
-			@method ready Calls the function when DOM is ready. The method uses "window.load" or SoundManager callback if it is present
-			@param {Function} callback
-			@return CanvasEngineClass
-			@example
-			<code>
-				var canvas = CE.defines("canvas_id").
-							 ready(function() {
-								// DOM is ready
-							 });
-			</code>
-		 */
+/**
+@doc engine/
+@method ready Calls the function when DOM is ready. The method uses "window.load" or SoundManager callback if it is present
+@param {Function} callback
+@return CanvasEngineClass
+@example
+
+	var canvas = CE.defines("canvas_id").
+				 ready(function() {
+					// DOM is ready
+				 });
+*/
 		ready: function(callback) {
 			var self = this;
 			CanvasEngine.Sound._manager = typeof(soundManager) !== "undefined";
@@ -211,46 +210,44 @@ CanvasEngine.defines = function(canvas, params) {
 			this._noConflict = true;
 		},
 		
-		/**
-		@doc materials
-		@class Materials Resource management game
-			The class is used with the properties "materials" in the scene but you can still use it for loading external resources to the scene
-		@example
-			Using Sound :
-			<code>
-			var canvas = CE.defines("canvas_id").
-				ready(function() {
-					canvas.Scene.call("MyScene");
-				});
-						
-			canvas.Scene.new({
-				name: "MyScene",
-				ready: function(stage) {
-					canvas.Materials.load("images", [
-						{img1: "path/to/img1.png"},
-						{img2: "path/to/im2.png"}
-					], function(img) {
-						console.log("Image is loaded");
-					}, function() {
-						console.log("All images are loaded");
-					});
-				}
+/**
+@doc materials
+@class Materials Resource management game. The class is used with the properties "materials" in the scene but you can still use it for loading external resources to the scene
+@example
+Using Sound :
+
+	var canvas = CE.defines("canvas_id").
+		ready(function() {
+			canvas.Scene.call("MyScene");
+		});
+				
+	canvas.Scene.new({
+		name: "MyScene",
+		ready: function(stage) {
+			canvas.Materials.load("images", [
+				{img1: "path/to/img1.png"},
+				{img2: "path/to/im2.png"}
+			], function(img) {
+				console.log("Image is loaded");
+			}, function() {
+				console.log("All images are loaded");
 			});
-			</code>
-		*/
+		}
+	});
+*/
 		Materials: {
 			images: {},
 			_buffer: {},
 			_cache_canvas: {},
 			sounds: {},
 			fonts: {},
-			/**
-				@doc materials/
-				@method get Get the picture or sound according to its identifier
-				@param {String} id
-				@param {String} type (optional) If two identical identifier is several types, specify the type: "image" or "sound"
-				@return {HTML5Audio|Image}
-			*/
+/**
+@doc materials/
+@method get Get the picture or sound according to its identifier
+@param {String} id
+@param {String} type (optional) If two identical identifier is several types, specify the type: "image" or "sound"
+@return {HTML5Audio|Image}
+*/
 			get: function(id, type) {
 			
 				if (type) {
@@ -269,16 +266,16 @@ CanvasEngine.defines = function(canvas, params) {
 				throw "Cannot to draw the image or sound \"" + id + "\" because it does not exist";
 			},
 			
-			/**
-				@doc materials/
-				@method imageToCanvas Converts an image (Image) in Canvas. The returned object is :
-					{
-						canvas: {HTML5CanvasElement},
-						ctx: {Context2d}
-					}
-				@param {String} id Image id
-				@return {Object}
-			*/
+/**
+@doc materials/
+@method imageToCanvas Converts an image (Image) in Canvas. The returned object is :
+	{
+		canvas: {HTML5CanvasElement},
+		ctx: {Context2d}
+	}
+@param {String} id Image id
+@return {Object}
+*/
 			imageToCanvas: function(id) {
 				if (this._cache_canvas[id]) {
 					return this._cache_canvas[id];
@@ -321,13 +318,13 @@ CanvasEngine.defines = function(canvas, params) {
 				return canvas;
 			},
 			
-			/**
-				@doc materials/
-				@method transparentColor Make a color transparent in the image
-				@param {String} id Image id
-				@param {String} color hexadecimal code
-				@return {HTML5Canvas}
-			*/
+/**
+@doc materials/
+@method transparentColor Make a color transparent in the image
+@param {String} id Image id
+@param {String} color hexadecimal code
+@return {HTML5Canvas}
+*/
 			transparentColor: function(id, color) {
 				var imageData, data, rgb, 
 					_canvas = this.imageToCanvas(id),
@@ -351,16 +348,16 @@ CanvasEngine.defines = function(canvas, params) {
 			
 			
 			
-			/**
-				@doc materials/
-				@method cropImage Can crop an image to use independently. Useful for creating patterns in HTML5
-				@param {String} id Image id
-				@param {Integer} x Position X
-				@param {Integer} y Position Y
-				@param {Integer} w Width
-				@param {Integer} h height
-				@return {HTML5Canvas}
-			*/
+/**
+@doc materials/
+@method cropImage Can crop an image to use independently. Useful for creating patterns in HTML5
+@param {String} id Image id
+@param {Integer} x Position X
+@param {Integer} y Position Y
+@param {Integer} w Width
+@param {Integer} h height
+@return {HTML5Canvas}
+*/
 			cropImage: function(id, x, y, w, h) {
 				var imageData, data, rgb, 
 					_canvas = this.imageToCanvas(id),
@@ -376,38 +373,38 @@ CanvasEngine.defines = function(canvas, params) {
 				return canvas;
 			},
 			
-			/**
-				@doc materials/
-				@method getExtension Gets the file extension
-				@param {String} filename File name
-				@return {String}
-			*/
+/**
+@doc materials/
+@method getExtension Gets the file extension
+@param {String} filename File name
+@return {String}
+*/
 			getExtension: function(filename) {
 				return (/[.]/.exec(filename)) ? /[^.]+$/.exec(filename)[0] : undefined;
 			},
 			
-			/**
-				@doc materials/
-				@method load Load a resource
-				@param {String} type Type : "images" or "sounds"
-				@param {Array|Object} path Paths to resources.
-					- If array : Elements are composed of objects where the key is the identifier and value is the path
-					<code>
-						 [
-							{img1: "path/to/img1.png"},
-							{img2: "path/to/im2.png"}
-						]
-					</code>
-					- If object, the key is the identifier and value is the path :
-					<code>
-						{img1: "path/to/img1.png", img2: "path/to/im2.png"}
-					</code>
-					The value can be an object to give several parameters :
-					<code>
-						{img1: {path: "path/to/img1.png", transparentcolor: "#ff0000"}, img2: "path/to/im2.png"}
-					</code>
-					"path" is the path and "transparentcolor" the color that will be transparent image
-			*/
+/**
+@doc materials/
+@method load Load a resource
+@param {String} type Type : "images" or "sounds"
+@param {Array|Object} path Paths to resources.
+* If array : Elements are composed of objects where the key is the identifier and value is the path
+	
+		[
+			{img1: "path/to/img1.png"},
+			{img2: "path/to/im2.png"}
+		]
+	
+* If object, the key is the identifier and value is the path :
+	
+	{img1: "path/to/img1.png", img2: "path/to/im2.png"}
+	
+The value can be an object to give several parameters :
+	
+	{img1: {path: "path/to/img1.png", transparentcolor: "#ff0000"}, img2: "path/to/im2.png"}
+	
+"path" is the path and "transparentcolor" the color that will be transparent image
+*/
 			load: function(type, path, onLoad, onFinish) {
 				var i=0, self = this, materials, img_data;
 				if (path instanceof Array) {
@@ -528,62 +525,62 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 		},
 		
-		/**
-		@doc sound
-		@class Sound Sound management
-			The class uses HTML5 audio but you can use SoundManager 2 (http://www.schillmania.com/projects/soundmanager2/). 
-			
-			Use :
-			- Insert the JS script : <script src="soundmanager2.js"></script> (http://www.schillmania.com/projects/soundmanager2/doc/getstarted/#basic-inclusion)
-			- Put the swf file to the root of your project. If you want to change the path :
-			<code>
-			var canvas = CE.defines("canvas_id", {
-				swf_sound: 'path/to/swf/'
-			}).ready(function() {
-			
-			});
-			</code>
-			Assign the path with the property "swf_sound"
-		@example
-			Using Sound :
-			<code>
-			var canvas = CE.defines("canvas_id").
-				ready(function() {
-					canvas.Scene.call("MyScene");
-				});
-						
-			canvas.Scene.new({
-				name: "MyScene",
-				materials: {
-					sounds: {
-						sound_id: "path/to/music.mp3"
-					}
-				},
-				ready: function(stage) {
-					canvas.Sound.get("sound_id").play();
-				}
-			});
-			</code>
-		*/
+/**
+@doc sound
+@class Sound Sound management
+The class uses HTML5 audio but you can use SoundManager 2 (http://www.schillmania.com/projects/soundmanager2/). 
+
+Use :
+* Insert the JS script : <script src="soundmanager2.js"></script> (http://www.schillmania.com/projects/soundmanager2/doc/getstarted/#basic-inclusion)
+* Put the swf file to the root of your project. If you want to change the path :
+
+	var canvas = CE.defines("canvas_id", {
+		swf_sound: 'path/to/swf/'
+	}).ready(function() {
+
+	});
+
+Assign the path with the property "swf_sound"
+@example
+Using Sound :
+	
+	var canvas = CE.defines("canvas_id").
+		ready(function() {
+			canvas.Scene.call("MyScene");
+		});
+				
+	canvas.Scene.new({
+		name: "MyScene",
+		materials: {
+			sounds: {
+				sound_id: "path/to/music.mp3"
+			}
+		},
+		ready: function(stage) {
+			canvas.Sound.get("sound_id").play();
+		}
+	});
+	
+*/
 		Sound: {
 			_fade: {},
 			_manager: false,
-			/**
-				@doc sound/
-				@method get Get the sound. Use API HTML5 Audio or SoundManager (http://www.schillmania.com/projects/soundmanager2/doc/#smsoundmethods)
-				@param {String} id Identiant of sound in the preloading
-				@return {SMSound or HTMLAudioElement}
-			*/
+/**
+@doc sound/
+@method get Get the sound. Use API HTML5 Audio or SoundManager (http://www.schillmania.com/projects/soundmanager2/doc/#smsoundmethods)
+@param {String} id Identiant of sound in the preloading
+@return {SMSound or HTMLAudioElement}
+*/
 			get: function(id) {
 				var snd = CanvasEngine.Materials.get(id, "sound");
 				return snd;
 			},
-			/**
-				@doc sound/
-				@method allStop  Stop all music
-				@param {String} sound_id (optional) Except this music (ID)
-				@return  {CanvasEngine.Sound}
-			*/
+/**
+@doc sound/
+@method allStop  Stop all music
+@param {String} sound_id (optional) Except this music (ID)
+@return  {CanvasEngine.Sound}
+*/
 			allStop: function(sound) {
 				sound = sound || "";
 				var sounds = CanvasEngine.Materials.sounds;
@@ -594,45 +591,45 @@ CanvasEngine.defines = function(canvas, params) {
 				}
 				return this;
 			},
-			/**
-				@doc sound/
-				@method playOnly Only play a sound (and other stops)
-				@param {Integer} id Identifier of the music
-				@return  {CanvasEngine.Sound}
-			*/
+/**
+@doc sound/
+@method playOnly Only play a sound (and other stops)
+@param {Integer} id Identifier of the music
+@return  {CanvasEngine.Sound}
+*/
 			playOnly: function(id) {
 				this.allStop(id);
 				this.get(id).play();
 				return this;
 			},
-			/**
-				@doc sound/
-				@method fadeIn  To fade for unmute
-				@param {String} id Identiant of sound in the preloading
-				@param {Integer} duration frames
-				@param {Function} callback (optional) Callback function when the fade is complete
-			*/
+/**
+@doc sound/
+@method fadeIn  To fade for unmute
+@param {String} id Identiant of sound in the preloading
+@param {Integer} duration frames
+@param {Function} callback (optional) Callback function when the fade is complete
+*/
 			fadeIn: function(id, time, callback) {
 				this.fadeTo(id, time, 1, callback);
 			},
-			/**
-				@doc sound/
-				@method fadeOut To fade for mute
-				@param {String} id Identiant of sound in the preloading
-				@param {Integer} duration frames
-				@param {Function} callback (optional) Callback function when the fade is complete
-			*/
+/**
+@doc sound/
+@method fadeOut To fade for mute
+@param {String} id Identiant of sound in the preloading
+@param {Integer} duration frames
+@param {Function} callback (optional) Callback function when the fade is complete
+*/
 			fadeOut: function(id, time, callback) {
 				this.fadeTo(id, time, 0, callback);
 			},
-			/**
-				@doc sound/
-				@method fadeTo  Fade to a final value
-				@param {String} id Identiant of sound in the preloading
-				@param {Integer} duration frames
-				@param {Integer} to End value between 0 and 1
-				@param {Function} callback (optional) Callback function when the fade is complete
-			*/
+/**
+@doc sound/
+@method fadeTo  Fade to a final value
+@param {String} id Identiant of sound in the preloading
+@param {Integer} duration frames
+@param {Integer} to End value between 0 and 1
+@param {Function} callback (optional) Callback function when the fade is complete
+*/
 			fadeTo: function(id, time, to, callback) {
 				var sound = this.get(id), 
 					volume = this._manager ? sound.volume / 100 : sound.volume;
@@ -735,39 +732,41 @@ CanvasEngine.defines = function(canvas, params) {
 					this._scenes[obj.name] = _class;
 					return _class;
 				  },
-				  /**
-					@doc scene/
-					@method call Called a scene. Call the method "exit" of the current scene (if any) and changes of scene
-					@param {String} scene name
-					@param {Object} (optional) params Display settings of the scene
-						- overlay {Boolean} : Displays the scene over the previous scenes without leave
-						- exitScenes {Object} : Parameter to indicate which scene to leave and when
-							-- allExcept (optional) {Array} : Names of other scenes not to leave
-							-- when (optional) {String} : When should I leave the scenes calling the scene
-								--- "afterPreload" : When the scene is called preloaded
-					@return {CanvasEngine.Scene}
-					@example
-					"canvas" is the variable initialized for CanvasEngine
-					<code>
-						canvas.Scene.call("SceneName");
-					</code>
-					
-					Superimposed scenes
-					<code>
-						canvas.Scene.call("SceneName", {
-							overlay: true
-						});
-					</code>
-					
-					Leaving the other scenes after preloading of the scene called
-					<code>
-						canvas.Scene.call("SceneName", {
-							exitScenes: {
-								when: "afterPreload"
-							}
-						});
-					</code>
-				 */
+/**
+@doc scene/
+@method call Called a scene. Call the method "exit" of the current scene (if any) and changes of scene
+@param {String} scene name
+@param {Object} (optional) params Display settings of the scene
+
+* overlay {Boolean} : Displays the scene over the previous scenes without leave
+* exitScenes {Object} : Parameter to indicate which scene to leave and when
+	* allExcept (optional) {Array} : Names of other scenes not to leave
+	* when (optional) {String} : When should I leave the scenes calling the scene
+		* "afterPreload" : When the scene is called preloaded
+@return {CanvasEngine.Scene}
+@example
+
+"canvas" is the variable initialized for CanvasEngine
+
+	canvas.Scene.call("SceneName");
+
+
+Superimposed scenes
+
+	canvas.Scene.call("SceneName", {
+		overlay: true
+	});
+
+
+Leaving the other scenes after preloading of the scene called
+
+	canvas.Scene.call("SceneName", {
+		exitScenes: {
+			when: "afterPreload"
+		}
+	});
+
+*/
 				  call: function(name, params) {
 					if (this._scenesNbCall[name] > 0) {
 						this.New(name);
@@ -792,15 +791,15 @@ CanvasEngine.defines = function(canvas, params) {
 					}
 					return _class;
 				  },
-				  /**
-					@doc scene/
-					@method exit Leave a scene
-					@param {String} scene name
-					@example
-					<code>
-						canvas.Scene.exit("SceneName");
-					</code>
-				 */
+/**
+@doc scene/
+@method exit Leave a scene
+@param {String} scene name
+@example
+
+	canvas.Scene.exit("SceneName");
+
+*/
 				  exit: function(name) {
 					var _class = this._scenesEnabled[name];
 					if (_class) {
@@ -808,29 +807,29 @@ CanvasEngine.defines = function(canvas, params) {
 						delete this._scenesEnabled[name];
 					}
 				  },
-				   /**
-						@doc scene/
-						@method isEnabled Whether the scene is displayed
-						@param {String} scene name
-						@return {Boolean}
-						@example
-						<code>
-							if (canvas.Scene.isEnabled("SceneName")) {}
-						</code>
-					*/
+/**
+@doc scene/
+@method isEnabled Whether the scene is displayed
+@param {String} scene name
+@return {Boolean}
+@example
+
+	if (canvas.Scene.isEnabled("SceneName")) {}
+
+*/
 				   isEnabled: function(name) {
 						return this._scenesEnabled[name] ? true : false;
 				   },
 				   
-				    /**
-						@doc scene/
-						@method exitAll Disables all scenes except one or more scene
-						@param {String|Array} scene name or array of scene name
-						@example
-						<code>
-							canvas.Scene.exitAll("SceneName");
-						</code>
-					*/
+/**
+@doc scene/
+@method exitAll Disables all scenes except one or more scene
+@param {String|Array} scene name or array of scene name
+@example
+
+	canvas.Scene.exitAll("SceneName");
+
+*/
 				   exitAll: function(exception) {
 						var key;
 						if (!(exception instanceof Array)) {
@@ -843,46 +842,46 @@ CanvasEngine.defines = function(canvas, params) {
 						}
 				   },
 				   
-				   /**
-					@doc scene/
-					@method exist Return true if the scene exist
-					@param {String} scene name
-					@return {Boolean}
-					@example
-					<code>
-						if (canvas.Scene.exist("SceneName")) {}
-					</code>
-				 */
+/**
+@doc scene/
+@method exist Return true if the scene exist
+@param {String} scene name
+@return {Boolean}
+@example
+
+	if (canvas.Scene.exist("SceneName")) {}
+
+*/
 				  exist: function(name) {
 					return this._scenes[name] ? true : false;
 				  },
-				  /**
-					@doc scene/
-					@method get Get scene
-					@param {String} scene name
-					@return {CanvasEngine.Scene}
-					@example
-					<code>
-						var scene = canvas.Scene.get("SceneName");
-						scene.pause(true);
-					</code>
-				 */
+/**
+@doc scene/
+@method get Get scene
+@param {String} scene name
+@return {CanvasEngine.Scene}
+@example
+
+	var scene = canvas.Scene.get("SceneName");
+	scene.pause(true);
+
+*/
 				  get: function(name) {
 					return this._scenes[name];
 				  },
 				  
-				   /**
-					@doc scene/
-					@method getEnabled Get activated scenes
-					@return {Object}
-					@example
-					<code>
-						var scenes = canvas.Scene.getEnabled();
-						for (var name in scenes) {
-							console.log(name);
-						}
-					</code>
-				 */
+/**
+@doc scene/
+@method getEnabled Get activated scenes
+@return {Object}
+@example
+
+	var scenes = canvas.Scene.getEnabled();
+	for (var name in scenes) {
+		console.log(name);
+	}
+
+*/
 				  getEnabled: function() {
 					return this._scenesEnabled;
 				  },
@@ -910,12 +909,13 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 	});
 	
-	/**
-		@doc canvas
-		@class Canvas Manage canvas element
-		@example
-			<jsfiddle>WebCreative5/GkUsE</jsfiddle>
-	*/
+/**
+	@doc canvas
+	@class Canvas Manage canvas element
+	@example
+		
+		<jsfiddle>WebCreative5/GkUsE</jsfiddle>
+*/
 	Class.create("Canvas", {
 		id: null,
 		element: null,
@@ -924,19 +924,20 @@ CanvasEngine.defines = function(canvas, params) {
 		_globalElements: {},
 		_ctxTmp: null,
 		_ctxMouseEvent: null,
-		/**
-			@doc canvas/
-			@property width canvas width
-			@type Integer
-			@example
-				<jsfiddle>WebCreative5/GkUsE</jsfiddle>
-		*/
+/**
+@doc canvas/
+@property width canvas width
+@type Integer
+@example
+
+	<jsfiddle>WebCreative5/GkUsE</jsfiddle>
+*/
 		width: 0,
-		/**
-			@doc canvas/
-			@property height canvas height
-			@type Integer
-		*/
+/**
+@doc canvas/
+@property height canvas height
+@type Integer
+*/
 		height: 0, 
 		mouseEvent: false,
 		initialize: function(id) {
@@ -1015,20 +1016,20 @@ CanvasEngine.defines = function(canvas, params) {
 		},
 		canvasReady: function() {
 		},
-		/**
-			@doc canvas/
-			@method Get the X and Y position of the mouse in the canvas
-			@param {Event} event
-			@return Object
-			@example
-			<code>
-				var el = this.createElement(), self = this;
-				el.on("click", function(e) {
-					var pos = self.getCanvas().getMousePosition(e);
-					console.log(pos.x, pos.y);
-				});
-			</code>
-		*/
+/**
+@doc canvas/
+@method Get the X and Y position of the mouse in the canvas
+@param {Event} event
+@return Object
+@example
+
+	var el = this.createElement(), self = this;
+	el.on("click", function(e) {
+		var pos = self.getCanvas().getMousePosition(e);
+		console.log(pos.x, pos.y);
+	});
+
+*/
 		getMousePosition: function(e) {
 			var obj = this.element;
 			var top = 0;
@@ -1042,146 +1043,148 @@ CanvasEngine.defines = function(canvas, params) {
 			var mouseY = e.clientY - top + window.pageYOffset;
 			return {x: mouseX, y: mouseY};
 		},
-		/**
-			@doc canvas/
-			@method measureText Returns an object that contains the width of the specified text
-			@param {String} txt Text
-			@return Object
-			@example
-				In method "ready" of the scene : 
-				<code>
-					var _canvas = this.getCanvas();
-					_canvas.measureText("Hello World").width;
-				</code>
-		*/
+/**
+@doc canvas/
+@method measureText Returns an object that contains the width of the specified text
+@param {String} txt Text
+@return Object
+@example
+	
+In method "ready" of the scene : 
+	
+		var _canvas = this.getCanvas();
+		_canvas.measureText("Hello World").width;
+	
+*/
 		measureText: function(txt) {
 			return this.ctx.measureText(txt);
 		},
 		
-		/**
-			@doc canvas/
-			@method createPattern Returns a pattern
-			@param {String|Image|HTML5CanvasElement|HTML5VideoElement} img Identifier of the preloaded image, image, video or canvas
-			@param {Sring} repeatOption (optional) repeat (default), no-repeat, repeat-x or repeat-y
-			@return CanvasPattern
-			@example
-				In method "ready" of the scene : 
-				<code>
-					var _canvas = this.getCanvas(),
-						pattern = _canvas.createPattern("my_img");
-					
-					var el = this.createElement();
-					el.fillStyle = pattern;
-					el.fillRect(0, 0, 100, 100);
-					stage.append(el);
-				</code>
-		*/
+/**
+@doc canvas/
+@method createPattern Returns a pattern
+@param {String|Image|HTML5CanvasElement|HTML5VideoElement} img Identifier of the preloaded image, image, video or canvas
+@param {Sring} repeatOption (optional) repeat (default), no-repeat, repeat-x or repeat-y
+@return CanvasPattern
+@example
+	
+In method "ready" of the scene : 
+	
+		var _canvas = this.getCanvas(),
+			pattern = _canvas.createPattern("my_img");
+		
+		var el = this.createElement();
+		el.fillStyle = pattern;
+		el.fillRect(0, 0, 100, 100);
+		stage.append(el);
+	
+*/
 		createPattern: function(img, repeatOption) {
 			repeatOption = repeatOption || "repeat";
 			return this.ctx.createPattern(CanvasEngine.Materials.get(img), repeatOption);
 		},
 		
-		/**
-			@doc canvas/
-			@method createLinearGradient View http://www.w3schools.com/tags/canvas_createlineargradient.asp
-		*/
+/**
+	@doc canvas/
+	@method createLinearGradient View http://www.w3schools.com/tags/canvas_createlineargradient.asp
+*/
 		createLinearGradient: function(x0, y0, x1, y1) {
 			return this.ctx.createLinearGradient(x0, y0, x1, y1);
 		},
 		
-		/**
-			@doc canvas/
-			@method createRadialGradient View http://www.w3schools.com/tags/canvas_createradialgradient.asp
-		*/
+/**
+	@doc canvas/
+	@method createRadialGradient View http://www.w3schools.com/tags/canvas_createradialgradient.asp
+*/
 		createRadialGradient: function(x0,y0,r0,x1,y1,r1) {
 			return this.ctx.createRadialGradient(x0, y0, r0, x1, y1, r1);
 		},
 		
-		/**
-			@doc canvas/
-			@method addColorStop View http://www.w3schools.com/tags/canvas_addcolorstop.asp
-		*/
+/**
+	@doc canvas/
+	@method addColorStop View http://www.w3schools.com/tags/canvas_addcolorstop.asp
+*/
 		addColorStop: function(stop, color) {
 			return this.ctx.addColorStop(stop, color);
 		},
 		
-		/**
-			@doc canvas/
-			@method clear Erases the content of canvas
-		*/
+/**
+	@doc canvas/
+	@method clear Erases the content of canvas
+*/
 		clear: function() {
 			return this.ctx.clearRect(0, 0, this.width, this.height);
 		}
 	});
 	
-	/**
-		@doc scene
-		@class Scene Scene management. Structure of a scene :
-			<code>
-				canvas.Scene.new({
-					name: "MyScene",
-					materials: {
-						images: {},
-						sounds: {}
-					},
-					preload: function(stage, pourcent) {
-					
-					},
-					ready: function(stage) {
-						
-					},
-					render: function(stage) {
-					
-					},
-					exit: function(stage) {
-					
-					}
-				});
-			</code>
-			All parameters except "name" are optional. The "new" method created a scene but does not run. To execute:
-			<code>
-				canvas.Scene.call("MyScene");
-			</code>
-			The resources defined in "Materials" are loaded and regularly calls the method "preload" with the current percentage. When charging is completed, the method "ready" is executed only once. When the method "ready" is complete, the method "render" is called loop. If you call another scene, the method "exit" of the current scene is triggered
-			"stage" is an object of type "Element". This is the main element of the scene containing all child elements to create.
-	*/
+/**
+@doc scene
+@class Scene Scene management. Structure of a scene :
+
+	canvas.Scene.new({
+		name: "MyScene",
+		materials: {
+			images: {},
+			sounds: {}
+		},
+		preload: function(stage, pourcent) {
+		
+		},
+		ready: function(stage) {
+			
+		},
+		render: function(stage) {
+		
+		},
+		exit: function(stage) {
+		
+		}
+	});
+
+All parameters except "name" are optional. The "new" method created a scene but does not run. To execute:
+
+	canvas.Scene.call("MyScene");
+
+The resources defined in "Materials" are loaded and regularly calls the method "preload" with the current percentage. When charging is completed, the method "ready" is executed only once. When the method "ready" is complete, the method "render" is called loop. If you call another scene, the method "exit" of the current scene is triggered
+"stage" is an object of type "Element". This is the main element of the scene containing all child elements to create.
+*/
 	Class.create("Scene", {
 		_stage: {},
 		_events: [],
 		_pause: false,
 		_isReady: false,
-		/**
-			@doc scene/
-			@property model Model reference. The methods of this property are the same as scoket.io
-			@type Object
-			@default null
-			@example
-			
-			<code><script src="extends/Socket.js"></script>/code>
-			
-			<code>	
-				var Model = io.connect('http://127.0.0.1:8333');
+/**
+@doc scene/
+@property model Model reference. The methods of this property are the same as scoket.io
+@type Object
+@default null
+@example
 
-				var canvas = CE.defines("canvas").
-					ready(function() {
-					canvas.Scene.call("MyScene");
-				 });
+<script src="extends/Socket.js"></script>/code>
 
-				canvas.Scene.new({
-				  name: "MyScene",
-				  model: Model,
-				  events: ["load"], 
-				  ready: function(stage) {
-					this.model.emit("start");
-				  },
-				  load: function(text) {
-					 console.log(text);
-				  }
-				});
-			</code>
-			
-			
-		*/
+	
+	var Model = io.connect('http://127.0.0.1:8333');
+
+	var canvas = CE.defines("canvas").
+		ready(function() {
+		canvas.Scene.call("MyScene");
+	 });
+
+	canvas.Scene.new({
+	  name: "MyScene",
+	  model: Model,
+	  events: ["load"], 
+	  ready: function(stage) {
+		this.model.emit("start");
+	  },
+	  load: function(text) {
+		 console.log(text);
+	  }
+	});
+
+
+
+*/
 		model: null,
 		//_isExit: false,
 		initialize: function(obj) {
@@ -1215,18 +1218,19 @@ CanvasEngine.defines = function(canvas, params) {
 			return this.createElement(name);
 		},
 		
-		/**
-			@doc scene/
-			@method pause Pause the scene. method "render" is not called however, but the scene is refreshed (except the event "canvas: render")
-			@param {Boolean} val (optional) The scene is paused if the value is "true". Put "false" to turn pause off. If the parameter is not specified, the current value is returned.
-			@return {Boolean|Scene}
-			@example
-				In "ready" method of the scene :
-				<code>
-					this.pause(true); // return this Scene Class
-					console.log(this.pause()); // return true
-				</code>
-		*/
+/**
+@doc scene/
+@method pause Pause the scene. method "render" is not called however, but the scene is refreshed (except the event "canvas: render")
+@param {Boolean} val (optional) The scene is paused if the value is "true". Put "false" to turn pause off. If the parameter is not specified, the current value is returned.
+@return {Boolean|Scene}
+@example
+	
+	In "ready" method of the scene :
+	
+		this.pause(true); // return this Scene Class
+		console.log(this.pause()); // return true
+	
+*/
 		pause: function(val) {
 			if (val === undefined) {
 				return this._pause;
@@ -1235,61 +1239,63 @@ CanvasEngine.defines = function(canvas, params) {
 			return this;
 		},
 		
-		/**
-			@doc scene/
-			@method togglePause Pauses if the game is not paused, and vice versa. View pause method
-			@return {Scene}
-			@example
-				In "ready" method of the scene :
-				<code>
-					console.log(this.pause()); // return false
-					this.togglePause(); // return this Scene Class
-					console.log(this.pause()); // return true
-				</code>
-		*/
+/**
+@doc scene/
+@method togglePause Pauses if the game is not paused, and vice versa. View pause method
+@return {Scene}
+@example
+	
+	In "ready" method of the scene :
+	
+		console.log(this.pause()); // return false
+		this.togglePause(); // return this Scene Class
+		console.log(this.pause()); // return true
+	
+*/
 		togglePause: function() {
 			return this.pause(!this._pause);
 		},
 		
-		/**
-			@doc scene/
-			@method getStage Return the highest element
-			@return {CanvasEngine.Element}
-		*/
+/**
+	@doc scene/
+	@method getStage Return the highest element
+	@return {CanvasEngine.Element}
+*/
 		getStage: function() {
 			return this._stage;
 		},
 		
-		/**
-			@doc scene/
-			@method getCanvas Get the canvas
-			@param {Integer} id (optional) Position in array
-			@return {HTMLCanvasElement}
-		*/
+/**
+	@doc scene/
+	@method getCanvas Get the canvas
+	@param {Integer} id (optional) Position in array
+	@return {HTMLCanvasElement}
+*/
 		getCanvas: function(id) {
 			if (!id) id = 0;
 			return CanvasEngine.el_canvas[id];
 		},
-		/**
-			@doc scene/
-			@method createElement Create an element
-			@param {String} name (optional) 
-			@param {Integer} width (optional) 
-			@param {Integer} height (optional) 
-			@example
-			In the method "ready" in the scene class :
-			<code>
-				var el = this.createElement();
-			</code>
-			--
-			<code>
-				var el = this.createElement("foo");
-			</code>
-			--
-			<code>
-				var el = this.createElement(100, 100);
-			</code>
-		*/
+/**
+@doc scene/
+@method createElement Create an element
+@param {String} name (optional) 
+@param {Integer} width (optional) 
+@param {Integer} height (optional) 
+@example
+
+In the method "ready" in the scene class :
+
+	var el = this.createElement();
+
+--
+
+	var el = this.createElement("foo");
+
+--
+
+	var el = this.createElement(100, 100);
+
+*/
 		 createElement: function(name, width, height) {
 			if (typeof name != "string") {
 				height = width;
@@ -1376,21 +1382,21 @@ CanvasEngine.defines = function(canvas, params) {
 		}
 	});
 	
-	/**
-		@class Context
-		@extend Element Uses the HTML5 Canvas context of the element. The drawing is stored in an array and is not displayed as the item is not attached to the scene
-			<code>
-				canvas.Scene.new({
-					name: "MyScene",
-					ready: function(stage) {
-						var element = this.createElement();
-						element.fillStyle = #ff0000;
-						element.fillRect(20, 20, 100, 100);
-						stage.append(element);
-					}
-				});
-			</code>
-	*/
+/**
+@class Context
+@extend Element Uses the HTML5 Canvas context of the element. The drawing is stored in an array and is not displayed as the item is not attached to the scene
+
+	canvas.Scene.new({
+		name: "MyScene",
+		ready: function(stage) {
+			var element = this.createElement();
+			element.fillStyle = #ff0000;
+			element.fillRect(20, 20, 100, 100);
+			stage.append(element);
+		}
+	});
+
+*/
 	Class.create("Context", {
 			_cmd: {},
 			img: {},
@@ -1402,21 +1408,23 @@ CanvasEngine.defines = function(canvas, params) {
 				//this.globalAlpha = opacity;
 			},
 			
-			/**
-				@doc draw/
-				@method addMethod Adds methods for 2d context
-				@param {String|Array} names Method(s) Name(s)
-				@param {String} type (optional) Type of the method:
-					- cmd (by default) : Command that applies after a refresh
-					- draw : The method runs directly
-				@example
-				<code>
-					var el = this.createElement();
-					el.addMedthod("newMethodCanvas");
-					el.newMethodCanvas(foo, bar);
-					stage.append(el);
-				</code>
-			*/
+/**
+@doc draw/
+@method addMethod Adds methods for 2d context
+@param {String|Array} names Method(s) Name(s)
+@param {String} type (optional) Type of the method:
+
+* cmd (by default) : Command that applies after a refresh
+* draw : The method runs directly
+
+@example
+
+	var el = this.createElement();
+	el.addMedthod("newMethodCanvas");
+	el.newMethodCanvas(foo, bar);
+	stage.append(el);
+
+*/
 			addMethod: function(names, type) {
 				var self = this;
 				type = type || "cmd";
@@ -1437,17 +1445,17 @@ CanvasEngine.defines = function(canvas, params) {
 				
 			},
 			
-			/**
-				@doc draw/
-				@method fillRect. See http://www.w3schools.com/html5/canvas_fillrect.asp
-			*/
+/**
+	@doc draw/
+	@method fillRect. See http://www.w3schools.com/html5/canvas_fillrect.asp
+*/
 			fillRect: function(x, y, w, h) {
 				this._addCmd("fillRect", [x, y, w, h], ["fillStyle"]);
 			},
-			/**
-				@doc draw/
-				@method fill See http://www.w3schools.com/html5/canvas_fill.asp
-			*/
+/**
+	@doc draw/
+	@method fill See http://www.w3schools.com/html5/canvas_fill.asp
+*/
 			fill: function() {
 				this._addCmd("fill", [], ["fillStyle"]);
 			},
@@ -1482,38 +1490,39 @@ CanvasEngine.defines = function(canvas, params) {
 				@doc draw/
 				@method addColorStop See http://www.w3schools.com/html5/canvas_addcolorstop.asp
 			*/
-			/**
-				@doc draw/
-				@method drawImage Draws the image or part of the image
-				@param {String|Image|Canvas} img If this is a string, this is the identifier of the preloaded image
-				@param {Integer} sx (optional) 
-				@param {Integer} sy (optional) 
-				@param {Integer} sw (optional) 
-				@param {Integer} sh (optional) 
-				@param {Integer} dx (optional) 
-				@param {Integer} dy (optional) 
-				@param {Integer} dw (optional) 
-				@param {Integer} dh (optional) 
-				@example
-				In the method "ready" in the scene class :
-				<code>
-					var el = this.createElement();
-					el.drawImage("img");
-				</code>
-				--
-				<code>
-					el.drawImage("img", 10, 30);
-				</code>
-				--
-				<code>
-					el.drawImage("img", 10, 30, 100, 100, 0, 0, 100, 100);
-				</code>
-				--
-				<code>
-					el.drawImage("img", 0, 0, "30%");
-				</code>
-				@link http://www.whatwg.org/specs/web-apps/current-work/multipage/the-canvas-element.html#dom-context-2d-drawimage
-			*/
+/**
+@doc draw/
+@method drawImage Draws the image or part of the image
+@param {String|Image|Canvas} img If this is a string, this is the identifier of the preloaded image
+@param {Integer} sx (optional) 
+@param {Integer} sy (optional) 
+@param {Integer} sw (optional) 
+@param {Integer} sh (optional) 
+@param {Integer} dx (optional) 
+@param {Integer} dy (optional) 
+@param {Integer} dw (optional) 
+@param {Integer} dh (optional) 
+@example
+
+In the method "ready" in the scene class :
+
+	var el = this.createElement();
+	el.drawImage("img");
+
+--
+
+	el.drawImage("img", 10, 30);
+
+--
+
+	el.drawImage("img", 10, 30, 100, 100, 0, 0, 100, 100);
+
+--
+
+	el.drawImage("img", 0, 0, "30%");
+
+@link http://www.whatwg.org/specs/web-apps/current-work/multipage/the-canvas-element.html#dom-context-2d-drawimage
+*/
 			drawImage: function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
 				var array, array_buffer, buffer, _img = img;
 				if (!sx) sx = 0;
@@ -1770,31 +1779,32 @@ CanvasEngine.defines = function(canvas, params) {
 			}
 	});
 	
-	/**
-		@doc element
-		@class Element Manipulate elements on the scene.
-			1. Create an element with the createElement method :
-			<code>
-				canvas.Scene.new({
-					name: "MyScene",
-					ready: function(stage) {
-						var element = this.createElement(); // new Element object
-					}
-				});
-			</code>
-			2. Add this element in the stage :
-			<code>
-				canvas.Scene.new({
-					name: "MyScene",
-					ready: function(stage) {
-						var element = this.createElement();
-						stage.append(element); // add in the stage
-					}
-				});
-			</code>
-		@example
-			<jsfiddle>cUEJ7/1</jsfiddle>
-	*/
+/**
+@doc element
+@class Element Manipulate elements on the scene.
+
+1. Create an element with the createElement method :
+
+	canvas.Scene.new({
+		name: "MyScene",
+		ready: function(stage) {
+			var element = this.createElement(); // new Element object
+		}
+	});
+
+2. Add this element in the stage :
+
+	canvas.Scene.new({
+		name: "MyScene",
+		ready: function(stage) {
+			var element = this.createElement();
+			stage.append(element); // add in the stage
+		}
+	});
+	
+@example
+	<jsfiddle>cUEJ7/1</jsfiddle>
+*/
 	Class.create("Element", {
 		_children: [],
 		_attr: {},
@@ -1856,29 +1866,29 @@ CanvasEngine.defines = function(canvas, params) {
 			@default 0
 		*/
 		rotation: 0,
-		/**
-			@doc manipulate/
-			@property width Width. Only if  value has been assigned to the creation of the element
-			@type Integer
-			@default null
-			@example
-			<code>
-				var foo = this.createElement(10, 20);
-					console.log(foo.width) // 10
-			</code>
-		*/
+/**
+@doc manipulate/
+@property width Width. Only if  value has been assigned to the creation of the element
+@type Integer
+@default null
+@example
+
+	var foo = this.createElement(10, 20);
+		console.log(foo.width) // 10
+
+*/
 		width: null,
-		/**
-			@doc manipulate/
-			@property height Height. Only if  value has been assigned to the creation of the element
-			@type Integer
-			@default null
-			@example
-			<code>
-				var foo = this.createElement(10, 20);
-					console.log(foo.height) // 20
-			</code>
-		*/
+/**
+@doc manipulate/
+@property height Height. Only if  value has been assigned to the creation of the element
+@type Integer
+@default null
+@example
+
+	var foo = this.createElement(10, 20);
+		console.log(foo.height) // 20
+
+*/
 		height: null,
 		/**
 			@doc manipulate/
@@ -1951,16 +1961,16 @@ CanvasEngine.defines = function(canvas, params) {
 			this.scene.getCanvas()._elementsByScene(this.scene.name, key, this);
 			this._canvas = CanvasEngine.el_canvas;
 		},
-		/**
-			@doc draw/
-			@method refresh Refreshes the elements of the scene	
-			@event canvas:refresh Calling the event only "stage" to each refresh of an element :
-				<code>
-					stage.on("canvas:refresh", function(el) { // stage is defined in the scene
-						console.log(el);
-					});
-				</code>
-		*/
+/**
+@doc draw/
+@method refresh Refreshes the elements of the scene	
+@event canvas:refresh Calling the event only "stage" to each refresh of an element :
+
+	stage.on("canvas:refresh", function(el) { // stage is defined in the scene
+		console.log(el);
+	});
+
+*/
 		refresh: function() {
 			//this.clear();
 			this._refresh(true);
@@ -2167,16 +2177,17 @@ CanvasEngine.defines = function(canvas, params) {
 		},
 		
 /**
-	@doc manipulate/
-	@method prepend inserts the specified content as the first child of each element in the Element collection
-	@example
+@doc manipulate/
+@method prepend inserts the specified content as the first child of each element in the Element collection
+@example
+
 In method ready
 
-			var el = this.createElement();
-			stage.prepend(el); // zIndex == 0
-			
-	@param {CanvasEngine.Element} el 
-	@return CanvasEngine.Element
+	var el = this.createElement();
+	stage.prepend(el); // zIndex == 0
+	
+@param {CanvasEngine.Element} el 
+@return CanvasEngine.Element
 */
 		prepend: function(el) {
 			this._children.push(el);
@@ -2185,6 +2196,7 @@ In method ready
 			return el;
 		},
 		
+		// TODO
 		/**
 			var el1 = this.createElement();
 			var el2 = this.createElement();
@@ -2207,18 +2219,18 @@ In method ready
 		},
 
 /**
-	@doc manipulate/
-	@method detach The .detach() method is the same as .remove(). This method is useful when removed elements are to be reinserted into the stage at a later time.
-	@example
+@doc manipulate/
+@method detach The .detach() method is the same as .remove(). This method is useful when removed elements are to be reinserted into the stage at a later time.
+@example
 In method ready
 
-			var el = this.createElement();
-			stage.append(el);
-			
-			el = el.detach(); // element is removed
-			stage.append(el); 
-			
-	@return {CanvasEngine.Element}
+	var el = this.createElement();
+	stage.append(el);
+	
+	el = el.detach(); // element is removed
+	stage.append(el); 
+	
+@return {CanvasEngine.Element}
 */		
 		detach: function() {
 			this.remove();
@@ -2226,24 +2238,24 @@ In method ready
 		},
 		
 /**
-	@doc manipulate/
-	@method pack Compress all children in an HTML5Canvas
-	@param {Integer} w Width of the compressed child
-	@param {Height} h Height of the compressed child
-	@param {Boolean} free_memory (optional) Do not keep the array in memory of the children if true. Unpack method can no longer be used out. (false by default)
-	@example
+@doc manipulate/
+@method pack Compress all children in an HTML5Canvas
+@param {Integer} w Width of the compressed child
+@param {Height} h Height of the compressed child
+@param {Boolean} free_memory (optional) Do not keep the array in memory of the children if true. Unpack method can no longer be used out. (false by default)
+@example
 In method ready
 
-			var el = this.createElement(), child;
-			for (var i=0 ; i < 1000 ; i++) {
-				child = this.createElement();
-				child.x = i;
-				el.append(child);
-			}
-			el.pack(10, 1000);
-			stage.append(el);
-		
-	@return {CanvasEngine.Element}
+	var el = this.createElement(), child;
+	for (var i=0 ; i < 1000 ; i++) {
+		child = this.createElement();
+		child.x = i;
+		el.append(child);
+	}
+	el.pack(10, 1000);
+	stage.append(el);
+
+@return {CanvasEngine.Element}
 */
 		pack: function(w, h, free_memory) {
 			var children = this.children(),
@@ -2269,22 +2281,22 @@ In method ready
 		},
 
 /**
-	@doc manipulate/
-	@method unpack Decompress a compressed element with `pack` method
-	@example
+@doc manipulate/
+@method unpack Decompress a compressed element with `pack` method
+@example
 In method ready
 
-			var el = this.createElement(), child;
-			for (var i=0 ; i < 1000 ; i++) {
-				child = this.createElement();
-				child.x = i;
-				el.append(child);
-			}
-			el.pack(10, 1000); 	// transform all children to Canvas element
-			el.unpack(); 		// reset as before 
-			stage.append(el);
-		
-	@return {CanvasEngine.Element}
+	var el = this.createElement(), child;
+	for (var i=0 ; i < 1000 ; i++) {
+		child = this.createElement();
+		child.x = i;
+		el.append(child);
+	}
+	el.pack(10, 1000); 	// transform all children to Canvas element
+	el.unpack(); 		// reset as before 
+	stage.append(el);
+
+@return {CanvasEngine.Element}
 */		
 		unpack: function() {
 			if (!this._pack) {
@@ -2304,18 +2316,19 @@ In method ready
 @method zIndex Change or get the index of the item. The index used to define the superposition. By default, the first element has index 0. If an item is created at the same level, it will overlay the previous element and its index will be 1
 @param {Integer|Element}  index (optional) If the value is not specified, the current index of the element is returned. If the value is negative, you change the index from the end. If the value is an element, that element is placed after the element indicated
 @example
+
 In method ready
 
-		var el1 = this.createElement(),
-			el2 = this.createElement(),
-			el3 = this.createElement();
-						// Original order : el1 ; el2 ; el3
-		el1.zIndex(1);  // New order : el2 ; el1 ; el3
-		el2.zIndex(-1); // New order : el1 ; el3 ; el2
-		console.log(el3.zIndex()); // return "1"
-		
-		el1.zIndex(el2); // New order : el3 ; el2 ; el1
+	var el1 = this.createElement(),
+		el2 = this.createElement(),
+		el3 = this.createElement();
+					// Original order : el1 ; el2 ; el3
+	el1.zIndex(1);  // New order : el2 ; el1 ; el3
+	el2.zIndex(-1); // New order : el1 ; el3 ; el2
+	console.log(el3.zIndex()); // return "1"
 	
+	el1.zIndex(el2); // New order : el3 ; el2 ; el1
+
 @return {Integer|CanvasEngine.Element}
 */
 		zIndex: function(index) {
@@ -2350,21 +2363,21 @@ In method ready
 			return this;
 		},
 		
-		/**
-			@doc manipulate/
-			@method remove Removes element in stage
-			@return {Boolean} "true" if removed
-			@example
-				<code>
-					var foo = this.createElement(),
-						bar = this.createElement();
-						
-					foo.append(bar);
-					stage.append(foo);
-					foo.remove();
-					// stage is empty
-				</code>
-		*/
+/**
+@doc manipulate/
+@method remove Removes element in stage
+@return {Boolean} "true" if removed
+@example
+
+	var foo = this.createElement(),
+		bar = this.createElement();
+		
+	foo.append(bar);
+	stage.append(foo);
+	foo.remove();
+	// stage is empty
+
+*/
 		remove: function() {
 			var child;
 			for (var i=0 ; i < this.parent._children.length ; i++) {
@@ -2377,21 +2390,21 @@ In method ready
 			}
 			return false;
 		},
-		/**
-			@doc manipulate/
-			@method emtpy Removes the element's children
-			@return {Element}
-			@example
-				<code>
-					var foo = this.createElement(),
-						bar = this.createElement();
-						
-					foo.append(bar);
-					stage.append(foo);
-					foo.empty();
-					// "bar" no longer exists
-				</code>
-		*/
+/**
+@doc manipulate/
+@method emtpy Removes the element's children
+@return {Element}
+@example
+
+	var foo = this.createElement(),
+		bar = this.createElement();
+		
+	foo.append(bar);
+	stage.append(foo);
+	foo.empty();
+	// "bar" no longer exists
+
+*/
 		empty: function() {
 			this._children = [];
 			//this.stage.refresh();
@@ -2429,23 +2442,24 @@ In method ready
 		},
 		
 /**
-	@doc manipulate/
-	@method offset Relative positions of the parent. Returns an object with `left` and `top` properties
-	@return {Object}
-	@example
+@doc manipulate/
+@method offset Relative positions of the parent. Returns an object with `left` and `top` properties
+@return {Object}
+@example
+
 In method ready
 
-		var el = this.createElement();
-			el2 = this.createElement();
-			
-		el1.x = 50;
-		el2.x = 100
-			
-		el1.append(el2);
-		stage.append(el2);
-			
-		console.log(el2.offset()); // {left: 100, top: 0}
-	
+	var el = this.createElement();
+		el2 = this.createElement();
+		
+	el1.x = 50;
+	el2.x = 100
+		
+	el1.append(el2);
+	stage.append(el2);
+		
+	console.log(el2.offset()); // {left: 100, top: 0}
+
 */
 		offset: function() {
 			return {
@@ -2455,23 +2469,24 @@ In method ready
 		},
 
 /**
-	@doc manipulate/
-	@method position Absolute positions. Returns an object with `left` and `top` properties
-	@return {Object}
-	@example
+@doc manipulate/
+@method position Absolute positions. Returns an object with `left` and `top` properties
+@return {Object}
+@example
+
 In method ready
 
-		var el = this.createElement();
-			el2 = this.createElement();
-			
-		el1.x = 50;
-		el2.x = 100
-			
-		el1.append(el2);
-		stage.append(el2);
-			
-		console.log(el2.position()); // {left: 150, top: 0}
-	
+	var el = this.createElement();
+		el2 = this.createElement();
+		
+	el1.x = 50;
+	el2.x = 100
+		
+	el1.append(el2);
+	stage.append(el2);
+		
+	console.log(el2.position()); // {left: 150, top: 0}
+
 */
 		position: function() {
 			return {
@@ -2558,19 +2573,19 @@ In method ready
 				this.show();
 			}
 		},
-		/**
-			@doc events/
-			@method on The .on() method attaches event handlers to the currently selected set of elements in the CanvasEngine object. 
-			Note that some names are defined as follows: "namespace:eventname". For example, there are the following event in CanvasEngine:
-			<code>
-				stage.on("canvas:refresh", function(el) { // stage is defined in the scene
-					console.log(el);
-				});
-			</code>
-			At each refresh of the scene, to display each element is returned
-			@param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
-			@param {Function} callback(event) A function to execute when the event is triggered
-		*/
+/**
+@doc events/
+@method on The .on() method attaches event handlers to the currently selected set of elements in the CanvasEngine object. 
+Note that some names are defined as follows: "namespace:eventname". For example, there are the following event in CanvasEngine:
+
+	stage.on("canvas:refresh", function(el) { // stage is defined in the scene
+		console.log(el);
+	});
+
+At each refresh of the scene, to display each element is returned
+@param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
+@param {Function} callback(event) A function to execute when the event is triggered
+*/
 		bind: function(event, callback) { this.on(event, callback); },
 		on: function(events, callback) {
 			var event;
@@ -2655,26 +2670,26 @@ In method ready
 			}*/
 			this.trigger("canvas:render");
 		},
-		/**
-			@doc events/
-			@method addLoopListener Adds a function that executes the loop for rendering the element
-			@param {Function} callback() Callback
-			@example
-			In the method "ready" in the scene class :
-			<code>
-				var el = this.createElement();
-				el.addLoopListener(function() {
-					this.x += 3;
-				});
-			</code>
-			or 
-			<code>
-				var el = this.createElement();
-				el.on("canvas:render", (function() {
-					this.x += 3;
-				});
-			</code>
-		*/
+/**
+@doc events/
+@method addLoopListener Adds a function that executes the loop for rendering the element
+@param {Function} callback() Callback
+@example
+In the method "ready" in the scene class :
+
+	var el = this.createElement();
+	el.addLoopListener(function() {
+		this.x += 3;
+	});
+
+or 
+
+	var el = this.createElement();
+	el.on("canvas:render", (function() {
+		this.x += 3;
+	});
+
+*/
 		addLoopListener: function(callback) {
 			this.on("canvas:render", callback);
 		}
