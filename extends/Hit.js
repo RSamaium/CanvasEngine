@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+
 /*
 	http://www.amphibian.com/blogstuff/collision.html
 */
@@ -181,11 +182,12 @@ Polygon.prototype.intersectsWith = function(other) {
 			var o = (maxA > minB ? maxA - minB : maxB - minA);
 			if (o < overlap) {
 				overlap = o;
+				
 				smallest = {x: axis.x, y: axis.y};
 			}
 		}
 	}
-
+	
 	/* test polygon B's sides */
 	for (side = 0; side < other.getNumberOfSides(); side++)
 	{
@@ -243,24 +245,132 @@ Polygon.prototype.intersectsWith = function(other) {
 			var o = (maxA > minB ? maxA - minB : maxB - minA);
 			if (o < overlap) {
 				overlap = o;
+				
 				smallest = {x: axis.x, y: axis.y};
 			}
 		}
 	}
-
-	return {"overlap": overlap + 0.001, "axis": smallest};
+	
+	function offset(poly, pt) {
+		return {
+			x: pt.x + poly.center.x,
+			y: pt.y + poly.center.y
+		};
+	}
+	
+	var a1, a2, b1, b2, lines = [], k=0, result, coincident = [];
+	for (i = 0; i < this.getNumberOfSides(); i++) {
+		lines[k] = [];
+		for (j = 0; j < other.getNumberOfSides(); j++) {
+			a1 = offset(this, this.points[i]);
+			a2 = offset(this, this.points[i+1] ? this.points[i+1] : this.points[0]);
+			b1 = offset(other, other.points[j]);
+			b2 = offset(other, other.points[j+1] ? other.points[j+1] : other.points[0]);
+			result = Polygon.intersectLineLine(a1, a2, b1, b2);
+			if (result == "Coincident") {
+				coincident.push([i, j]);
+			}
+			lines[k].push(result);
+		}
+		k++;
+	}
+	return {
+		overlap: overlap + 0.001, 
+		axis: smallest, 
+		lines: lines, 
+		coincident: coincident
+	};
 	
 }
 
+Polygon.intersectLineLine = function(a1, a2, b1, b2) {
+
+    var ua_t = (b2.x - b1.x) * (a1.y - b1.y) - (b2.y - b1.y) * (a1.x - b1.x);
+    var ub_t = (a2.x - a1.x) * (a1.y - b1.y) - (a2.y - a1.y) * (a1.x - b1.x);
+    var u_b  = (b2.y - b1.y) * (a2.x - a1.x) - (b2.x - b1.x) * (a2.y - a1.y);
+
+    if ( u_b != 0 ) {
+        var ua = ua_t / u_b;
+        var ub = ub_t / u_b;
+
+        if ( 0 <= ua && ua <= 1 && 0 <= ub && ub <= 1 ) {
+            return {
+				x: a1.x + ua * (a2.x - a1.x),
+				y: a1.y + ua * (a2.y - a1.y)
+			};
+        } else {
+           return false;
+        }
+    } else {
+        if ( ua_t == 0 || ub_t == 0 ) {
+           return "Coincident";
+        } else {
+           return "Parallel";
+        }
+    }
+};
+
+/**
+@doc entity
+@class EntityModel Model entities. Inherit a class to assign a polygon and positions your class
+@example
+
+	Class.create("Character", {
+
+		initialize: function() {
+		
+		},
+		
+		passable: function(x, y, other_entity) {
+			var state;
+		
+			this.savePosition(); // save positions
+			this.position(x, y); // test new positions
+			state = this.hit(other_entity); // test collision for new positions
+			
+			if (state.over >= 1) { 
+				this.restorePosition(); // If collision, restores the initial positions
+				return false;
+			}
+			
+			return true;
+		}
+
+	}).extend("EntityModel");
+	
+*/
 Class.create("EntityModel", {
+/**
+	@doc entity/
+	@property x Position X
+	@type Integer
+	@default 0
+*/
 	x: 0,
+/**
+	@doc entity/
+	@property y Position Y
+	@type Integer
+	@default 0
+*/
 	y: 0,
+	_memorize: {
+		x: 0,
+		y:0
+	},
 	hitState: {
 		over: 0,
 		out: 0
 	},
 	_polygon: {},
 	_frame: "0",
+/**
+	@doc entity/
+	@method position Change the position of the entity and the element. Returns object {x: , y: }
+	@param {Integer} x Position X
+	@param {Integer} y Position Y
+	@return {Object}
+*/
 	position: function(x, y) {
 		if (x !== undefined && y !== undefined) {
 			this.x = x;
@@ -276,17 +386,55 @@ Class.create("EntityModel", {
 			y: this.y
 		};
 	},
+/**
+	@doc entity/
+	@method savePosition Saves the current positions
+*/
+	savePosition: function() {
+		this._memorize.x = this.x;
+		this._memorize.y = this.y;
+	},
+	
+/**
+	@doc entity/
+	@method restorePosition Restores the current positions
+*/
+	restorePosition: function() {
+		this.x = this._memorize.x;
+		this.y = this._memorize.y;
+	},
+/**
+	@doc entity/
+	@method polygon Polygons define the entity
+	@param {Array} array The array contains two tables including the positions of point polygons. The order of elements define the shape of polygons.
+	@example
+	
+View Hit class
+*/
 	polygon: function(array) {
 		if (array instanceof Array) {
 			array = {"0": array};
 		}
 		for (var key in array) {
 			this._polygon[key] = new Polygon({x: array[key][0][0], y: array[key][0][1] });
-			for (var i=1 ; i < array[key].length ; i++) {
+			for (var i=0 ; i < array[key].length ; i++) {
 				this._polygon[key].addPoint({x: array[key][i][0], y: array[key][i][1]});
 			}
+			
 		}
 	},
+	
+/**
+	@doc entity/
+	@method rect Define the polygon as a rectangle. The element will take up his new dimensions (`width` and `height` properties). If `x` and `y` are undefined, they will default 0. If only one parameter is defined, the shape is a square with the given width
+	@param {Integer} x Position X
+	@param {Integer} y (optional) Position Y
+	@param {Integer} w (optional) Width
+	@param {Integer} h (optional) Height
+	@example
+	
+View Hit class
+*/
 	rect: function(x, y, w, h) {
 		if (!w && !h) {
 			w = x;
@@ -304,8 +452,17 @@ Class.create("EntityModel", {
 			[x, y+h]
 		]);
 	},
+	
+/**
+	@doc entity/
+	@method hit Calls the function when two or more entities come into colision
+	@param {EntityModel} entity_model Other entity
+	@return
+*/	
 	hit: function(entity_model) {
-		if (this._polygon[this._frame].intersectsWith(entity_model._polygon[entity_model._frame])) {
+		var result = this._polygon[this._frame].intersectsWith(entity_model._polygon[entity_model._frame]);
+		this.hitState.result = result;
+		if (result) {
 			this.hitState.out = 0;
 			this.hitState.over++;
 		}
@@ -319,14 +476,56 @@ Class.create("EntityModel", {
 		}
 		return this.hitState;
 	},
+/**
+	@doc entity/
+	@method getPoints Retrieves points of the polygon. Returns an array of objects :
+	
+	[
+		{x: , y: },
+		{x: , y: },
+		{x: , y: }
+		...
+	]
+	
+	@params {Integer} frame (optional) Get a polygon frame precise (for animations). If nothing is specified, the current frame is the entity
+	@return {Array}
+*/	
 	getPoints: function(frame) {
 		frame = frame || this._frame;
 		return this._polygon[frame].points;
 	},
+	
+/**
+	@doc entity/
+	@method getPolygonReg Find the origin point of the polygon. Returns an object :
+	
+	{x: , y: }
+	
+	@params {Integer} frame (optional) Get a polygon frame precise (for animations). If nothing is specified, the current frame is the entity
+	@return {Object}
+*/	
 	getPolygonReg: function(frame) {
 		frame = frame || this._frame;
 		return this._polygon[frame].center;
 	},
+	
+/**
+	@doc entity/
+	@method getPolygon Retrieves the polygon
+	@params {Integer} frame (optional) Get a polygon frame precise (for animations). If nothing is specified, the current frame is the entity
+	@return {Polygon}
+*/	
+	getPolygon: function(frame) {
+		frame = frame || this._frame;
+		return this._polygon[frame];
+	},
+	
+/**
+	@doc entity/
+	@method frame Sets or retrieves a frame
+	@params {Integer} frame (optional) An entity may be composed of several different polygons (eg for an animation). Each frame corresponds to a polygon. Change frame by assigning an integer. Notice that the first frame is 0
+	@return {Integer}
+*/	
 	frame: function(frame) {
 		if (frame) {
 			this._frame = frame;
@@ -660,28 +859,92 @@ In `ready` method
 	);
 	grid.setCellSize(32, 32);
 	grid.getPropertyByPos(53, 24); // return 1
-*/		
+*/	
 	getPropertyByPos: function(x, y) {
 		var cell = this.getCellByPos(x, y);
 		return this.getPropertyByCell(cell.col, cell.row);
 	},
 	
-	getEntityCells: function(entity) {
-		var i, j, p, points, reg, px, py, 
-			cells = [],
+/**
+	@doc grid/
+	@method getEntityCells Obtain the cells where the entity. Return this object (example) :
+	
+	{
+		cells: [{
+			col: 1,
+			row: 1
+		}],
+		coincident: [
+			[{"horizontal": [0, 2]}]
+		]
+	}	
+	
+`coincide` sends lines of polygons of the entity which coincide with the grid lines. 0 corresponds to the first line from the first point of the polygon. The number of rows is equal to the order (n) of the polygon - 1. The key of the object indicates whether the line is horizontal or vertical
+	
+	@param {Entity|EntityModel} entity
+	@param {Object} params (optional)Params
+
+* ignoreTypeLine : Send do not type lines in addition to interactions. Example
+
+	{
+		cells: [{
+			col: 1,
+			row: 1
+		}],
+		coincident: [
+			[[0, 2]],
+			[[2]],
+		]
+	}	
+
+	@return {Object}
+	@example
+	
+In `ready` method
+
+	var entity = Class.New("Entity", [stage]),
+		pos = entity.position();
+
+	var grid = Class.New("Grid", [2, 2]);
+	
+	grid.setCellSize(32, 32);
+	
+	grid.getEntityCells(entity); 
+	
+	// => returns 
+	/*
+	{
+		cells: [{
+			col: 0,
+			row: 0
+		}],
+		coincident: [
+			[{"horizontal": [0]}],
+			[{"vertical": [0]}]
+		]
+	}	
+*/	
+	getEntityCells: function(entity, params) {
+		var i, j, p, points, reg, poly, px, py, 
+			_cells = [],
 			ep = { // extreme points
 				min_x: 99999999,
 				max_x: 0,
 				min_y: 99999999,
 				max_y: 0
 			};
+			
+		params = params || {};
+			
 		if (entity.model) {
 			points = entity.model.getPoints();
 			reg = entity.model.getPolygonReg();
+			poly = entity.model.getPolygon();
 		}
 		else {
 			points = entity.getPoints();
 			reg = entity.getPolygonReg();
+			poly = entity.getPolygon();
 		}
 		for (i=0 ; i < points.length ; i++) {
 			p = points[i];
@@ -701,17 +964,66 @@ In `ready` method
 			}
 		}
 		
+		function offset(poly, pt) {
+			return {
+				x: pt.x + poly.center.x,
+				y: pt.y + poly.center.y
+			};
+		}
+		
+		function testInteraction(type, a1, a2, poly) {
+			var j, b1, b2, lines = [], k=0, result, coincident = [], obj = {};
+			for (j = 0; j < poly.getNumberOfSides(); j++) {
+				b1 = offset(poly, poly.points[j]);
+				b2 = offset(poly, poly.points[j+1] ? poly.points[j+1] : poly.points[0]);
+				result = Polygon.intersectLineLine(a1, a2, b1, b2);
+				if (result == "Coincident") {
+					coincident.push(j);
+				}
+			}
+			if (params.ignoreTypeLine) {
+				return coincident;
+			}
+			else {
+				obj[type] = coincident;
+				return obj;
+			}
+			
+		}
+		
 		var nbrows = (ep.max_x - ep.min_x) / this.cell.width, 
 			nbcols = (ep.max_y - ep.min_y) / this.cell.height,
-			x, y;
+			x, y, cells, result = [];
 		for (i=0 ; i <= nbcols ; i++) {
 			x = ep.min_x + this.cell.width * i;
 			for (j=0 ; j <= nbrows ; j++) {
 				y = ep.min_y + this.cell.height * j;
-				cells.push(this.getCellByPos(x, y));
+				cells = this.getCellByPos(x, y);
+				if (i == 0) {
+					result.push(testInteraction("horizontal",{
+						y: cells.row * this.cell.width,
+						x: cells.col * this.cell.height
+					}, {
+						y: cells.row * this.cell.width,
+						x: cells.col * this.cell.height + nbrows * this.cell.width
+					}, poly));
+				}
+				if (j == 0) {
+					result.push(testInteraction("vertical", {
+						y: cells.row * this.cell.width,
+						x: cells.col * this.cell.height
+					}, {
+						y: cells.row * this.cell.width + nbcols * this.cell.height,
+						x: cells.col * this.cell.height 
+					}, poly));
+				}
+				_cells.push(cells);
 			}
 		}
-		return cells;
+		return {
+			cells: _cells,
+			coincident: result
+		};
 	},
 	
 /**
