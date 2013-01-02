@@ -71,8 +71,7 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 
 ## Changelog
 
-<<<<<<< HEAD
-=======
+
 ### v1.1.0
 
 * Add specific image param in animation
@@ -99,7 +98,6 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Improving draw performance 
 * Improving documentation (markdown)
 
->>>>>>> origin/1.1.0
 ### v1.0.8
 
 * Add multi-tilemap in Tiled Class (robwalch)

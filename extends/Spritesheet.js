@@ -30,27 +30,6 @@ Class.create("Spritesheet", {
 		if (set) this.set(set);
 	},
 /**
-<<<<<<< HEAD
-	@doc spritesheet/
-	@method set Assigns an identifier to an area of the spritesheet. A grid can be defined to be faster.
-	@param {Object} set : If the key is called `grid`, the image is cut from a grid. Set the grid with
-		* size: [Line number, column number]
-		* tile : [Width of the box, Height of the box]
-		* set : Each identifier in array starting from the firt case in top left of the grid
-	If the key is not "grid", we assign a zone identifier: [x, y, width, height, 0, regX (optional), regY (optional)]
-	regX and regY are origin points
-	@example :
-		var spritesheet = canvas.Spritesheet.new("my_spritesheet");
-		spritesheet.set({
-			grid: [{
-				size: [4, 5],
-				tile: [107, 107],
-				set: ["play", "player_hover", "zoom_p", "zoom_m"]
-			}],
-			btn_play: [433, 33, 215, 188]
-		});
-	Here, there is a grid of rows and 5 columns of 107px width and height. The first box is called "play". We have another area placed at positions (433, 33), width is 215px and height is 188px. The ID of this area is "btn_play"
-=======
 @doc spritesheet/
 @method set Assigns an identifier to an area of the spritesheet. A grid can be defined to be faster.
 @param {Object} set : If the key is called `grid`, the image is cut from a grid. Set the grid with
@@ -72,7 +51,6 @@ regX and regY are origin points
 		btn_play: [433, 33, 215, 188]
 	});
 Here, there is a grid of rows and 5 columns of 107px width and height. The first box is called "play". We have another area placed at positions (433, 33), width is 215px and height is 188px. The ID of this area is "btn_play"
->>>>>>> origin/1.1.0
 */
 	set: function(set) {
 		var gridset, gridname, x, y;
@@ -159,42 +137,6 @@ In "ready" method of the current scene :
 });
 
 /**
-<<<<<<< HEAD
-	@doc spritesheet
-	@class Spritesheet Spritesheet is a Sprites collection in an image. This class aims to crop the image, retrieve each Sprite by assigning an identifier
-	@param {String} image ID image
-	@param {Object} params See the method "set"
-	@example
-	
-	<code>
-	var canvas = CE.defines("canvas_id").
-		extend(Spritesheet).
-		ready(function() {
-			canvas.Scene.call("MyScene");
-		});
-			
-		canvas.Scene.new({
-			name: "MyScene",
-			materials: {
-				images: {
-					my_spritesheet: "path/to/spritesheet.png"
-				}
-			},
-			ready: function(stage) {
-				 var el = this.createElement();
-				 var spritesheet = canvas.Spritesheet.new("my_spritesheet", {
- 
-					grid: [{
-						size: [4, 5],
-						tile: [107, 107],
-						set: ["play", "player_hover", "zoom_p", "zoom_m"]
-					}],
-					btn_play: [433, 33, 215, 188]
-				 
-				 });
-				 spritesheet.draw(el, "play");
-				 stage.append(el);
-=======
 @doc spritesheet
 @class Spritesheet Spritesheet is a Sprites collection in an image. This class aims to crop the image, retrieve each Sprite by assigning an identifier
 @param {String} image ID image
@@ -202,18 +144,17 @@ In "ready" method of the current scene :
 @example
 
 
-var canvas = CE.defines("canvas_id").
-	extend(Spritesheet).
-	ready(function() {
-		canvas.Scene.call("MyScene");
-	});
+	var canvas = CE.defines("canvas_id").
+		extend(Spritesheet).
+		ready(function() {
+			canvas.Scene.call("MyScene");
+		});
 		
 	canvas.Scene.new({
 		name: "MyScene",
 		materials: {
 			images: {
 				my_spritesheet: "path/to/spritesheet.png"
->>>>>>> origin/1.1.0
 			}
 		},
 		ready: function(stage) {
