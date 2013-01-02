@@ -28,11 +28,14 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 ## Features
 
 * Scene Structure
+* Overlay scenes
 * Multiplayer model
 * Preloading
 * Animations
 * Timeline
+* Collision (beetween entities and grid)
 * Keyboard and Gamepad
+* Windows
 * Sound
 * Scrolling
 * Level Design
@@ -45,14 +48,14 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Tiled Map Editor (http://www.mapeditor.org)
 * Gleed 2d (http://gleed2d.codeplex.com)
 
-## Roadmap
+## Roadmap (in order)
 
-* Box2d
-* Windows
-* Transition
-* Overlay scenes
+* Multi touch
 * Game Effects
 * Text Effects
+* Transition
+* UI
+* Box2d
 * Synchronized multi canvas (local multiplayer)
 
 ## Test performance
@@ -68,6 +71,35 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 
 ## Changelog
 
+<<<<<<< HEAD
+=======
+### v1.1.0
+
+* Add specific image param in animation
+* Add position param in animation
+* Add getStage method in Scene class
+* Add getEnabled method in Scene class
+* Add collision feature
+* Add Window feature
+* Add overlay scenes
+* Add moveArray method in CanvasEngine Object
+* Add offset method in Element Class
+* Add position method in Element Class
+* Add pack method in Element Class
+* Add unpack method in Element Class
+* Add detach method in Element Class
+* Add children method in Element Class
+* Add removeAttr method in Element Class
+* Add prepend method in Element Class
+* Add zIndex method in Element Class
+* Add zIndexBefore method in Element Class
+* Fix reload scene
+* Fix click on multi scene
+* Fix click on element witch opacity < 1
+* Improving draw performance 
+* Improving documentation (markdown)
+
+>>>>>>> origin/1.1.0
 ### v1.0.8
 
 * Add multi-tilemap in Tiled Class (robwalch)
@@ -140,18 +172,18 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Improving documentation
 
 ### v1.0.3
---
+Not indicated
 ### v1.0.2
---
+Not indicated
 ### v1.0.1
---
+Not indicated
 ### v1.0.0
 
 * Initial Release
 
-## Demos
+## Examples and Demos
 
-Empty
+http://rsamaium.github.com/CanvasEngine
 
 ## License
 

@@ -37,17 +37,19 @@ Class.create("Scrolling", {
 	setMainElement: function(main_el) {
 		this.main_el = main_el;
 	},
-	/**
-		@doc scrolling/
-		@method addScroll Add a layer scroll as the main element
-		@params {Object} params Parameters :
-			- element {CanvasEngine.Element}
-			- speed {Integer} Scrolling speed
-			- block {Boolean} (optional) Block scrolling on the edges of the map
-			- width {Integer} Width of element
-			- height {Integer} Height of element
-		@return {Object}
-	 */
+/**
+@doc scrolling/
+@method addScroll Add a layer scroll as the main element
+@params {Object} params Parameters :
+
+* element {CanvasEngine.Element}
+* speed {Integer} Scrolling speed
+* block {Boolean} (optional) Block scrolling on the edges of the map
+* width {Integer} Width of element
+* height {Integer} Height of element
+
+@return {Object}
+*/
 	addScroll: function(scroll_el) {
 		if (!scroll_el.screen_x) scroll_el.screen_x = 0;
 		if (!scroll_el.screen_y) scroll_el.screen_y = 0;
@@ -239,45 +241,45 @@ Class.create("Scrolling", {
 });
 
 /**
-	@doc scrolling
-	@class Scrolling A side-scrolling game or side-scroller is a video game in which the gameplay action is viewed from a side-view camera angle, and the onscreen characters generally move from the left side of the screen to the right
-	
-	http://en.wikipedia.org/wiki/Side-scrolling_video_game
-	
-	@param {CanvasEngine.Scene} scene
-	@param {Integer} tile_h Height of the tile
-	@param {Integer} tile_w width of the tile
-	@example
-	<code>
+@doc scrolling
+@class Scrolling A side-scrolling game or side-scroller is a video game in which the gameplay action is viewed from a side-view camera angle, and the onscreen characters generally move from the left side of the screen to the right
+
+http://en.wikipedia.org/wiki/Side-scrolling_video_game
+
+@param {CanvasEngine.Scene} scene
+@param {Integer} tile_h Height of the tile
+@param {Integer} tile_w width of the tile
+@example
+
 	var canvas = CE.defines("canvas_id").
 		extend(Scrolling).
 		ready(function() {
 			canvas.Scene.call("MyScene");
 		});
+		
+	canvas.Scene.new({
+		name: "MyScene",
+		ready: function(stage) {
+			this.scrolling = canvas.Scrolling.new(this, 32, 32);
 			
-		canvas.Scene.new({
-			name: "MyScene",
-			ready: function(stage) {
-				this.scrolling = canvas.Scrolling.new(this, 32, 32);
-				
-				var player = this.createElement();
-				this.scrolling.setMainElement(player);
+			var player = this.createElement();
+			this.scrolling.setMainElement(player);
 
-				var map = this.createElement();
-				this.scrolling.addScroll({
-				   element: map, 
-				   speed: 3,
-				   block: true,
-				   width: 120,
-				   height: 50
-				});
-			},
-			render: function(stage) {
-				this.scrolling.update();
-				stage.refresh();
-			}
-		});
-	</code>
+			var map = this.createElement();
+			this.scrolling.addScroll({
+			   element: map, 
+			   speed: 3,
+			   block: true,
+			   width: 120,
+			   height: 50
+			});
+		},
+		render: function(stage) {
+			this.scrolling.update();
+			stage.refresh();
+		}
+	});
+
 */
 var Scrolling = {
 	Scrolling: {

@@ -520,42 +520,42 @@
 })(Array);
 
 /**
-	@doc save
-	@class Marshal The marshaling library converts collections of JS objects into a BISON format, allowing them to be stored in localStorage. This data may subsequently be read and the original objects reconstituted.
-	
-	BISON : https://github.com/BonsaiDen/BiSON.js/
-	Inspired of Ruby : http://www.ruby-doc.org/core-1.9.3/Marshal.html
-	
-	@static
-	@example
-	To write :
-	<code>
-		Class.create("Foo", {
-			bar: 2
-		});
-		Class.create("Test", {
-			qux: 5
-		});
-		var foo = Class.new("Foo"),
-			test = Class.new("Test");
-		Marshal.dump(foo, "save_name");
-		test.qux = 10;
-		Marshal.dump(test, "save_name");
-	</code>
-	Read the save from above :
-	<code>
-		Class.create("Foo", {
-			bar: 2
-		});
-		Class.create("Test", {
-			qux: 5
-		});
-		var foo = Class.new("Foo"),
-			test = Class.new("Test");
-		foo = Marshal.load("save_name");
-		test = Marshal.load("save_name");
-		console.log(test.qux); // 10
-	</code>
+@doc save
+@class Marshal The marshaling library converts collections of JS objects into a BISON format, allowing them to be stored in localStorage. This data may subsequently be read and the original objects reconstituted.
+
+BISON : https://github.com/BonsaiDen/BiSON.js/
+Inspired of Ruby : http://www.ruby-doc.org/core-1.9.3/Marshal.html
+
+@static
+@example
+To write :
+
+	Class.create("Foo", {
+		bar: 2
+	});
+	Class.create("Test", {
+		qux: 5
+	});
+	var foo = Class.new("Foo"),
+		test = Class.new("Test");
+	Marshal.dump(foo, "save_name");
+	test.qux = 10;
+	Marshal.dump(test, "save_name");
+
+Read the save from above :
+
+	Class.create("Foo", {
+		bar: 2
+	});
+	Class.create("Test", {
+		qux: 5
+	});
+	var foo = Class.new("Foo"),
+		test = Class.new("Test");
+	foo = Marshal.load("save_name");
+	test = Marshal.load("save_name");
+	console.log(test.qux); // 10
+
 */
 Marshal = {
 	_pointer: 0,

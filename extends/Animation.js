@@ -172,29 +172,31 @@ Class.create("Timeline", {
 		this.addProprety(["opacity", "x", "y", "scaleX", "scaleY", "rotation"]);	
 		this._loop();
 	},
-	/**
-		@doc timeline/
-		@method to The properties of the elements will change over a predefined period
-		@param  {Object} attr Property values :
-			- opacity 
-			- x
-			- y
-			- scaleX
-			- scaleY
-			- rotation
-		Example : 
-		<code>
-			{x: 200, scaleX: 2}
-		</code>
-		@param {Integer} frames Duration in frames
-		@param {Function} ease Effect. See http://gsgd.co.uk/sandbox/jquery/easing/
-		Example
-		<code>
-			var timeline = canvas.Timeline.new(el);
-			timeline.to({x: 100}, 70,  Ease.easeOutElastic).call();
-		</code>
-		@return {CanvasEngine.Timeline}
-	*/
+/**
+@doc timeline/
+@method to The properties of the elements will change over a predefined period
+@param  {Object} attr Property values :
+
+* opacity 
+* x
+* y
+* scaleX
+* scaleY
+* rotation
+
+Example : 
+
+	{x: 200, scaleX: 2}
+
+@param {Integer} frames Duration in frames
+@param {Function} ease Effect. See http://gsgd.co.uk/sandbox/jquery/easing/
+Example
+
+	var timeline = canvas.Timeline.new(el);
+	timeline.to({x: 100}, 70,  Ease.easeOutElastic).call();
+
+@return {CanvasEngine.Timeline}
+*/
 	to: function(attr, frames, ease, _cal) {
 		if (ease) {
 			attr._ease_ = ease;
@@ -207,19 +209,19 @@ Class.create("Timeline", {
 		this._timeline[frames]._cal = _cal;
 		return this;
 	},
-	/**
-		@doc timeline/
-		@method wait Wait a number of frames before you start the next animation
-		@param {Integer} frames Duration in frames
-		Example
-		<code>
-			var timeline = canvas.Timeline.new(el);
-			timeline.wait(10)
-					.to({x: 100}, 70,  Ease.easeOutElastic)
-					.call();
-		</code>
-		@return {CanvasEngine.Timeline}
-	*/
+/**
+@doc timeline/
+@method wait Wait a number of frames before you start the next animation
+@param {Integer} frames Duration in frames
+Example
+
+	var timeline = canvas.Timeline.new(el);
+	timeline.wait(10)
+			.to({x: 100}, 70,  Ease.easeOutElastic)
+			.call();
+
+@return {CanvasEngine.Timeline}
+*/
 	wait: function(frame) {
 		var last_key = this.getLastKey();
 		this.to(last_key, frame, false, "wait");
@@ -241,43 +243,45 @@ Class.create("Timeline", {
 		}
 		return this._timeline[last_time];
 	},
-	/**
-		@doc timeline/
-		@method add Adds values to the properties of a period
-		@param  {Object} attr Property values :
-			- opacity 
-			- x
-			- y
-			- scaleX
-			- scaleY
-			- rotation
-		Example : 
-		<code>
-			{x: 200, scaleX: 2}
-		</code>
-		@param {Integer} frames Duration in frames
-		@param {Function} ease Effect. See http://gsgd.co.uk/sandbox/jquery/easing/
-		Example
-		<code>
-			var timeline = canvas.Timeline.new(el);
-			timeline.add({x: 100}, 70,  Ease.easeOutElastic).call();
-		</code>
-		@return {CanvasEngine.Timeline}
-	*/
+/**
+@doc timeline/
+@method add Adds values to the properties of a period
+@param  {Object} attr Property values :
+	
+* opacity 
+* x
+* y
+* scaleX
+* scaleY
+* rotation
+
+Example : 
+
+	{x: 200, scaleX: 2}
+
+@param {Integer} frames Duration in frames
+@param {Function} ease Effect. See http://gsgd.co.uk/sandbox/jquery/easing/
+Example
+
+	var timeline = canvas.Timeline.new(el);
+	timeline.add({x: 100}, 70,  Ease.easeOutElastic).call();
+
+@return {CanvasEngine.Timeline}
+*/
 	add: function(attr, frames, ease) {
 		return this.to(attr, frames, ease, "add");
 	},
-	/**
-		@doc timeline/
-		@method addProprety Adds properties to changes
-		@param  {String|Array} name Property name
-		@example
-		<code>
-			var timeline = canvas.Timeline.new(el);
-			tileline.addProprety("foo");
-			timeline.to({foo: 100}, 70).call();
-		</code>
-	*/
+/**
+@doc timeline/
+@method addProprety Adds properties to changes
+@param  {String|Array} name Property name
+@example
+
+	var timeline = canvas.Timeline.new(el);
+	tileline.addProprety("foo");
+	timeline.to({foo: 100}, 70).call();
+
+*/
 	addProprety: function(name) {
 		if (!(name instanceof Array)) {
 			name = [name];
@@ -286,15 +290,15 @@ Class.create("Timeline", {
 			this._propreties.push(name[i]);
 		}
 	},
-	/**
-		@doc timeline/
-		@method loop Run continuously timeline
-		@example
-		<code>
-			var timeline = canvas.Timeline.new(el);
-			timeline.add({x: 2}, 60).loop();
-		</code>
-	*/
+/**
+@doc timeline/
+@method loop Run continuously timeline
+@example
+
+	var timeline = canvas.Timeline.new(el);
+	timeline.add({x: 2}, 60).loop();
+
+*/
 	loop: function() {
 		var self = this;
 		this.call(function() {
@@ -454,18 +458,18 @@ Class.create("Timeline", {
 			
 		});
 	},
-	/**
-		@doc timeline/
-		@method call Run timeline
-		@param  {Function} onFinish (optional) Calls the function when the animation is completed
-		@example
-		<code>
-			var timeline = canvas.Timeline.new(el);
-			timeline.to({x: 20}, 60).call(function() {
-				console.log("finish !");
-			});
-		</code>
-	*/
+/**
+@doc timeline/
+@method call Run timeline
+@param  {Function} onFinish (optional) Calls the function when the animation is completed
+@example
+
+	var timeline = canvas.Timeline.new(el);
+	timeline.to({x: 20}, 60).call(function() {
+		console.log("finish !");
+	});
+
+*/
 	call: function(onFinish) {
 		this._initVar();
 		this._onFinish = onFinish;	
@@ -497,12 +501,12 @@ Class.create("Timeline", {
 				this.add();
 			}
 		},
-		/**
-			@doc animation/
-			@method add Adds a loop listener in a element to perform an animation (with addLoopListener). From the method call, the loop is started on the animation stop. Use the play method to start the animation
-			@param {CanvasEngine.Element} el
-			@event animation:draw Call each sequence. Id parameter sequence
-		*/
+/**
+@doc animation/
+@method add Adds a loop listener in a element to perform an animation (with addLoopListener). From the method call, the loop is started on the animation stop. Use the play method to start the animation
+@param {CanvasEngine.Element} el
+@event animation:draw Call each sequence. Id parameter sequence
+*/
 		add: function(el) {
 			
 			if (el) this.el = el;
@@ -559,6 +563,7 @@ Class.create("Timeline", {
 						
 						
 						function drawImage(_el, id) {
+							var _img = self._images;
 							sy = parseInt(id / Math.round(img.width / seq.size.width));
 							sx = (id % Math.round(img.width / seq.size.width));
 								
@@ -566,7 +571,13 @@ Class.create("Timeline", {
 								h = seq.size.height * sy;
 							
 							_el.trigger("animation:draw", id);
-							_el.drawImage(self._images, w, h, seq.size.width, seq.size.height, 0, 0, seq.size.width, seq.size.height);
+							if (seq.image) {
+								_img = seq.image;
+							}
+							if (!seq.position) seq.position = {};
+							if (!seq.position.left) seq.position.left = 0;
+							if (!seq.position.top) seq.position.top = 0;
+							_el.drawImage(_img, w, h, seq.size.width, seq.size.height, seq.position.left, seq.position.top, seq.size.width, seq.size.height);
 						}
 						
 						function finish() {
@@ -632,22 +643,23 @@ Class.create("Timeline", {
 		
 		
 		},
-		/**
-			@doc animation/
-			@method stop Stop animation
-		*/
+/**
+@doc animation/
+@method stop Stop animation
+*/
 		stop: function() {
 			this._stop = true;
 		},
-		/**
-			@doc animation/
-			@method play Adds a loop listener in a element to perform an animation (with addLoopListener). From the method call, the loop is started on the animation stop. Use the play method to start the animation
-			@param {String} seq Name of the sequence corresponding to the key in the initialization of the class
-			@param {String} type (optional) Choose from :
-			- loop : Animation loop
-			- stop : The animation is done once and stops
-			- remove : The animation is done once and removed at the end
-		*/
+/**
+@doc animation/
+@method play Adds a loop listener in a element to perform an animation (with addLoopListener). From the method call, the loop is started on the animation stop. Use the play method to start the animation
+@param {String} seq Name of the sequence corresponding to the key in the initialization of the class
+@param {String} type (optional) Choose from :
+
+* loop : Animation loop
+* stop : The animation is done once and stops
+* remove : The animation is done once and removed at the end
+*/
 		play: function(seq, type) {
 			this._loop = type;
 			this._seq = seq;
@@ -659,71 +671,83 @@ Class.create("Timeline", {
 		
  
 var Animation = {
-	/**
-		@doc timeline
-		@class Timeline Create a temporal animation
-		@param {Element} el
-		@example
-		<code>
-			var timeline = canvas.Timeline.new(el);
-			timeline.to({x: 100}, 70,  Ease.easeOutElastic).call();
-		</code>
-	*/
+/**
+@doc timeline
+@class Timeline Create a temporal animation
+@param {Element} el
+@example
+
+	var timeline = canvas.Timeline.new(el);
+	timeline.to({x: 100}, 70,  Ease.easeOutElastic).call();
+
+*/
 	Timeline: {
 		New: function() { return this["new"].apply(this, arguments); },
 		"new": function(el) {
 			return Class["new"]("Timeline", [el]);
 		}
 	},
-	/**
-		@doc animation
-		@class Animation View an animation from an image
-		@param {Object} options
-		@example
-		In method "ready" of the scene :
-		<code>
-			var el = this.createElement();
-			var animation = canvas.Animation.new({
-			   images: "chara",
-			   animations: {
-				run: {
-					frames : [0, 5],
-					 size: {
-						width: 42,
-						height: 42
-					  },
-					 frequence: 3,
-					 finish: function() {
-					 
-					 }
-				  }
-			   }
-			});
-			stage.append(el);
-			animation.add(el);
-			animation.play("run", "loop");
-		</code>
-		
-		<jsfiddle>WebCreative5/77wUh/1</jsfiddle>
-		
-		You can also chaining multiple different images:
-		
-		<code>
-		 var el = this.createElement(),
-            animation = canvas.Animation.new({
-                images: ["foo", "bar"],
-                animations: {
-                    _default: {
-                        frequence: 7
-                    }
-                }
-            });
-			animation.add(el);
-			animation.play("_default", "loop");
-		</code>
-		
-		<jsfiddle>WebCreative5/E2vVW</jsfiddle>
-	*/
+
+/**
+
+@doc animation
+@class Animation View an animation from an image
+@param {Object} options
+
+* images {String|Array} : identifying the image. If the value is an array. The different images are chained
+* animations {Object} : Includes all animations. The key is the identifier of the animation. The value parameters (view example)
+	* frames {Array} : Array with two elements: the first is to play the first frame, the second frame is the arrival
+	* size {Object} : Set the width and height of the sequence ("width" and "height" keys )
+	* frequence {integer} : Frequency display. The higher the value the more high frequency is low
+	* finish {Function} : Callback when the animation is finished
+	* image {String} :  identifying the image specific to this animation
+	* position {Object} : offset of the animation display ("left" and "top" keys)
+	
+@example
+In method "ready" of the scene :
+
+	var el = this.createElement();
+	var animation = canvas.Animation.new({
+	   images: "chara",
+	   animations: {
+		run: {
+			frames : [0, 5],
+			 size: {
+				width: 42,
+				height: 42
+			  },
+			 frequence: 3,
+			 finish: function() {
+			 
+			 }
+		  }
+	   }
+	});
+	stage.append(el);
+	animation.add(el);
+	animation.play("run", "loop");
+
+
+<jsfiddle>WebCreative5/77wUh/1</jsfiddle>
+
+You can also chaining multiple different images:
+
+
+ var el = this.createElement(),
+	animation = canvas.Animation.new({
+		images: ["foo", "bar"],
+		animations: {
+			_default: {
+				frequence: 7
+			}
+		}
+	});
+	animation.add(el);
+	animation.play("_default", "loop");
+
+
+<jsfiddle>WebCreative5/E2vVW</jsfiddle>
+*/
 	Animation: {
 		New: function() { return this["new"].apply(this, arguments); },
 		"new": function(options) {

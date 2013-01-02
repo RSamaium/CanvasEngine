@@ -19,11 +19,16 @@ extends:
    timeline:
    spritesheet:
    scrolling:
+   collision:
+    hit:
+    entity:
+    grid:
    save:
    input:
     keyboard:
     gamepad:
     accelerometer:
+   window:
 
 editor: 
    tiled:

@@ -57,88 +57,88 @@ Kernel.prototype = {
 		}
 		return this;
 	},
-	/**
-		@doc class/
-		@method attr_accessor Defines the properties that can be read and modified
-		@params {Array} Properties names in an array
-		@example
-			<code>
-				Class.create("Foo", {
-				
-					mymethod: function() {
-						this.bar.set(5);
-						console.log(this.bar.get()); // Value of property "bar" is 5
-						console.log(this._bar); // ditto
-					}
-				
-				}).attr_accessor(["bar"]);
-			</code>
-			<jsfiddle>WebCreative5/HzCSm/1</jsfiddle>
-		@return {Object}
-	*/
+/**
+@doc class/
+@method attr_accessor Defines the properties that can be read and modified
+@params {Array} Properties names in an array
+@example
+
+	Class.create("Foo", {
+	
+		mymethod: function() {
+			this.bar.set(5);
+			console.log(this.bar.get()); // Value of property "bar" is 5
+			console.log(this._bar); // ditto
+		}
+	
+	}).attr_accessor(["bar"]);
+
+<jsfiddle>WebCreative5/HzCSm/1</jsfiddle>
+@return {Object}
+*/
 	attr_accessor: function(attrs) {
 		return this._attr_accessor(attrs, true, true);
 	},
-	/**
-		@doc class/
-		@method attr_reader Defines the properties that can be only read
-		@params {Array} Properties names in an array
-		@example
-			<code>
-				Class.create("Foo", {
-				
-					mymethod: function() {
-						console.log(this.bar.get());
-					}
-				
-				}).attr_reader(["bar"]);
-			</code>
-		@return {Object}
-	*/
+/**
+@doc class/
+@method attr_reader Defines the properties that can be only read
+@params {Array} Properties names in an array
+@example
+
+	Class.create("Foo", {
+	
+		mymethod: function() {
+			console.log(this.bar.get());
+		}
+	
+	}).attr_reader(["bar"]);
+
+@return {Object}
+*/
 	attr_reader: function(attrs) {
 		return this._attr_accessor(attrs, true, false);
 	},
-	/**
-		@doc class/
-		@method attr_writer Defines the properties that can be only modified
-		@params {Array} Properties names in an array
-		@example
-			<code>
-				Class.create("Foo", {
-				
-					mymethod: function() {
-						this.bar.set(5);
-						console.log(this._bar);
-					}
-				
-				}).attr_writer(["bar"]);
-			</code>
-		@return {Object}
-	*/
+/**
+@doc class/
+@method attr_writer Defines the properties that can be only modified
+@params {Array} Properties names in an array
+@example
+
+	Class.create("Foo", {
+	
+		mymethod: function() {
+			this.bar.set(5);
+			console.log(this._bar);
+		}
+	
+	}).attr_writer(["bar"]);
+
+@return {Object}
+*/
 	attr_writer: function(attrs) {
 		return this._attr_accessor(attrs, false, true);
 	},
-	/**
-		@doc class/
-		@method extend add object in this class
-		@params {Object} object
-		@params {Boolean} clone (optional) Makes a clone of the object (false by default)
-		@example
-			<code>
-				Class.create("Foo", {
-				
-					mymethod: function() {
-						
-					}
-				
-				}).extend({
-					othermethod: function() {
-					
-					}
-				});
-			</code>
-		@return {Object}
-	*/
+/**
+@doc class/
+@method extend add object in this class
+@params {Object} object
+@params {Boolean} clone (optional) Makes a clone of the object (false by default)
+@example
+
+	Class.create("Foo", {
+	
+		mymethod: function() {
+			
+		}
+	
+	}).extend({
+		othermethod: function() {
+		
+		}
+	});
+
+@return {Object}
+*/
 	extend: function(object, clone) {
 		Kernel._extend(this.class_method, object, clone);
 		return this;
@@ -173,23 +173,23 @@ Class.get = function(name) {
 };
 
 /**
-	@doc class/
-	@method create Creating a class. the constructor is the method "initialize"
-	@static
-	@params {String} name Class name
-	@params {Object} methods Methods and properties of the class
-	@example
-		<code>
-			Class.create("Foo", {
-				bar: null,
-				initialize: function(bar) {
-					this.bar = bar;
-				}
-			});
-			var foo = Class.new("Foo", ["Hello World"]);
-		</code>
-		<jsfiddle>WebCreative5/cbtFk</jsfiddle>
-	@return {Kernel} Core class
+@doc class/
+@method create Creating a class. the constructor is the method "initialize"
+@static
+@params {String} name Class name
+@params {Object} methods Methods and properties of the class
+@example
+
+	Class.create("Foo", {
+		bar: null,
+		initialize: function(bar) {
+			this.bar = bar;
+		}
+	});
+	var foo = Class.new("Foo", ["Hello World"]);
+
+<jsfiddle>WebCreative5/cbtFk</jsfiddle>
+@return {Kernel} Core class
 */
 Class.create = function(name, methods, _static) {
 	var p, _class, _tmp_class;
@@ -252,27 +252,27 @@ Class["new"] = function(name, params) {
 }
 
 Class.prototype = {
-	/**
-		@method extend add object in this class
-		@params {Object} object
-		@parmas {Boolean} clone (optional) Makes a clone of the object (false by default)
-		@example
-			<code>
-				Class.create("Foo", {
-				
-					mymethod: function() {
-						
-					}
-				
-				});
-				Class.new("Foo").extend({
-					othermethod: function() {
-					
-					}
-				});
-			</code>
-		@return {Object}
-	*/
+/**
+@method extend add object in this class
+@params {Object} object
+@parmas {Boolean} clone (optional) Makes a clone of the object (false by default)
+@example
+
+	Class.create("Foo", {
+	
+		mymethod: function() {
+			
+		}
+	
+	});
+	Class.new("Foo").extend({
+		othermethod: function() {
+		
+		}
+	});
+
+@return {Object}
+*/
 	extend: function(object, clone) {
 		return Kernel._extend(this, object, clone);
 	}
@@ -309,15 +309,16 @@ CanvasEngine.arraySplice = function(val, array) {
 };
 
 /**
-	@doc ajax/
-	@method ajax Perform an asynchronous HTTP (Ajax) request. System uses wire on Node.js
-	@static
-	@params {Object} options
-			- url {String} File Path
-			- type {String} (optional) "GET" (default) or "POST"
-			- data {Object} (optional) Data key/value
-			- dataType {String} (optional) "text" (default), "json" or "xml"
-			- success {Function}  (optional) Callback if the request was successful
+@doc ajax/
+@method ajax Perform an asynchronous HTTP (Ajax) request. System uses wire on Node.js
+@static
+@params {Object} options
+
+* url {String} File Path
+* type {String} (optional) "GET" (default) or "POST"
+* data {Object} (optional) Data key/value
+* dataType {String} (optional) "text" (default), "json" or "xml"
+* success {Function}  (optional) Callback if the request was successful
 */
 CanvasEngine.ajax = function(options) {
 
@@ -406,26 +407,28 @@ CanvasEngine.parseJSON = function(json) {
 }
 
 /**
-	@doc utilities/
-	@method each The array is read and sent to a callback function
-	@static
-	@params {Array|Integer} array If the value is an integer, it returns to perform a number of loop iteration
-	@params {Function} callback  two parameters :
-		- index
-		- value
-	@example
-		<code>
-			var foo = ["bar", "test"];
-			CE.each(foo, function(i, val) {
-				console.log(val);
-			});
-		</code>
-		<code>
-			var foo = ["bar", "test"];
-			CE.each(2, function(i) {
-				console.log(foo[i]);
-			});
-		</code>
+@doc utilities/
+@method each The array is read and sent to a callback function
+@static
+@params {Array|Integer} array If the value is an integer, it returns to perform a number of loop iteration
+@params {Function} callback  two parameters :
+
+* index
+* value
+
+@example
+
+	var foo = ["bar", "test"];
+	CE.each(foo, function(i, val) {
+		console.log(val);
+	});
+
+
+	var foo = ["bar", "test"];
+	CE.each(2, function(i) {
+		console.log(foo[i]);
+	});
+
 */
 CanvasEngine.each = function(array, callback) {
 	var i, l;
@@ -524,6 +527,65 @@ CanvasEngine.rgbToHex = function(r, g, b) {
 		b = Math.round(Math.random() * 255);
 	return CanvasEngine.rgbToHex(r, g, b);
 };
+
+CanvasEngine._benchmark = {};
+CanvasEngine._interval_benchmark = 60;
+CanvasEngine._freq_benchmark = {};
+CanvasEngine.microtime = function() {
+  var now = new Date().getTime() / 1000;
+  var s = parseInt(now, 10);
+
+  return now * 1000;
+};
+CanvasEngine.benchmark = function(id) {
+	var m = this.microtime();
+	if (this._benchmark[id]) {
+		console.log("Performance " + id + " : " + (m - this._benchmark[id]) + "ms");
+	}
+	this._benchmark[id] = m;
+	
+};
+
+
+
+/**
+	@doc utilities/
+	@method moveArray Move one index to another location of an array
+	@static
+	@params {&Array} array Array to handle
+	@params {Integer} pos1 Index of the element to move
+	@params {Integer} pos2 Destination index
+	@return {Array} 
+*/
+// http://jsperf.com/array-prototype-move
+// by Richard Scarrott (http://www.richardscarrott.co.uk)
+CanvasEngine.moveArray = function(array, pos1, pos2) {
+    // local variables
+    var i, tmp;
+    // cast input parameters to integers
+    pos1 = parseInt(pos1, 10);
+    pos2 = parseInt(pos2, 10);
+    // if positions are different and inside array
+    if (pos1 !== pos2 && 0 <= pos1 && pos1 <= array.length && 0 <= pos2 && pos2 <= array.length) {
+      // save element from position 1
+      tmp = array[pos1];
+      // move element down and shift other elements up
+      if (pos1 < pos2) {
+        for (i = pos1; i < pos2; i++) {
+          array[i] = array[i + 1];
+        }
+      }
+      // move element up and shift other elements down
+      else {
+        for (i = pos1; i > pos2; i--) {
+          array[i] = array[i - 1];
+        }
+      }
+      // put element from position 1 to destination
+      array[pos2] = tmp;
+    }
+	return array;
+}
 
 var _CanvasEngine = CanvasEngine;
 

@@ -8,3 +8,5 @@
 - extends/Scrolling.js
 - extends/Spritesheet.js
 - extends/Tiled.js
+- extends/Hit.js
+- extends/Window.js

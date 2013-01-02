@@ -2,5 +2,6 @@
 - scene: Create Scene
 - element: Create Element
 - extend: Extend Features
+- entity: Collision and Entities
 - nodejs: Multiplayer Model
 - cocoonjs: Export natively
