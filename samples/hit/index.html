@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<title>Collision - Canvas Engine</title>
+<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet">
+
+<link href="../../main.css" rel="stylesheet">
+
+<body onload="prettyPrint()">
+
+<header class="header">
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+            
+          <ul class="nav">
+            <li><a href="//canvasengine.net"><i class="icon-home icon-white"></i> Home</a></li>
+            <li class="divider-vertical"></li>
+            <li><a href="//canvasengine.net/doc">Documentation</a></li>
+            <li class="divider-vertical"></li>
+            <li class="active"><a href="../../">Examples List</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </header>
+
+<div role="main" class="container demo" style="margin-top: 50px">
+    
+    <div class="page-header">
+        <h1>Collision</h1>
+    </div>
+	<div class="span12">
+	   <!-- If ZIP file exist -->
+	  <a href="example.zip" class="btn btn-primary">Download ZIP</a>
+
+       <a href="http://canvasengine.net/doc/?p=extends.collision.hit" class="btn">View documentation</a>
+       <a href="https://github.com/RSamaium/CanvasEngine/tree/gh-pages/hit" class="btn">View in Github</a>
+    </div>
+	<br>
+	<br>
+    <h2>Result</h2>
+    <div class="span12">
+        <iframe src="example.html" width="800" height="330"></iframe>
+    </div>
+    <h2>Code</h2>
+    <div class="span12">
+        <pre class="prettyprint">var canvas = CE.defines("canvas_id").
+        extend(Hit).
+        ready(function() {
+            canvas.Scene.call("MyScene");
+        });
+            
+canvas.Scene.New({
+    name: "MyScene",
+
+    materials: {
+        images: {
+            "box": "images/crate.jpg"
+        }
+    },
+    
+    ready: function(stage) {
+        var self = this;
+        
+        function _entity(x, y) {
+            var entity = Class.New("Entity", [stage]);
+            entity.rect(128);
+            entity.position(x, y);
+            entity.el.drawImage("box");
+            stage.append(entity.el);
+            return entity;
+        }
+        
+        this.box1 = _entity(0, 50);
+        this.box2 = _entity(200, 50);
+        
+    },
+    render: function(stage) {
+
+        this.box1.move(2); // Position X + 2
+        
+        this.box2.hit([this.box1], function(state, el) {
+            if (state == "over") {
+                el.opacity = 0.5;
+            }
+            else {
+                el.opacity = 1;
+            }
+        });
+        stage.refresh();
+    }
+});</pre>
+    </div>
+</div>
+
+<script src="../../prettify.js"></script>
+<script src="//code.jquery.com/jquery-1.8.3.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/js/bootstrap.min.js"></script>
