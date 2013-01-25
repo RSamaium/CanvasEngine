@@ -274,12 +274,13 @@ Using Sound :
 		ctx: {Context2d}
 	}
 @param {String} id Image id
+@param {Boolean} cache Image id
 @return {Object}
 */
-			imageToCanvas: function(id) {
-				if (this._cache_canvas[id]) {
+			imageToCanvas: function(id, cache) {
+				if (this._cache_canvas[id] && cache) {
 					return this._cache_canvas[id];
-				}
+				} 
 				var img = this.get(id), canvas, ctx;
 				
 				canvas =  document.createElement('canvas');		
@@ -287,6 +288,8 @@ Using Sound :
 				canvas.height = img.height;
 				ctx = canvas.getContext('2d');
 				
+				ctx.drawImage(img, 0, 0);
+
 				this._cache_canvas[id] = {
 					canvas: canvas,
 					ctx: ctx
@@ -295,7 +298,7 @@ Using Sound :
 				return this._cache_canvas[id];
 			},
 			
-			// Private ?
+			// obsolete
 			createBuffer: function(id, color) {
 				
 				if (this._buffer[color]) {
@@ -314,7 +317,7 @@ Using Sound :
 				ctx.fillRect(0, 0, canvas.width, canvas.height);
 				
 				this._buffer[color] = canvas;
-				
+
 				return canvas;
 			},
 			
@@ -367,9 +370,6 @@ Using Sound :
 				canvas.width = w;
 				canvas.height = h;
 				ctx.putImageData(imageData, 0, 0);
-				//var img = new Image();
-				//img.src = canvas.toDataURL();
-				
 				return canvas;
 			},
 			
@@ -1776,6 +1776,24 @@ In the method "ready" in the scene class :
 				};
 				obj["globalAlpha"] = 1;
 				this._cmd[name] = {params: params, propreties: obj};
+			},
+/**
+@doc draw/
+@method removeCmd Deletes a saved command element
+@param {String} name Name of the drawing method
+@example
+
+In `ready` method :
+
+	var el = this.createElement();
+	el.drawImage("foo");
+		
+	el.removeCmd("drawImage");
+	stage.append(el); // Image "foo" is not displayed
+
+*/
+			removeCmd: function(name) {
+				delete this._cmd[name];
 			}
 	});
 	
@@ -1985,6 +2003,7 @@ In the method "ready" in the scene class :
 		_refresh: function(init, children, ctx) {
 			children = children === undefined ? true : children;
 			if (!this._visible) return;
+		
 			
 			if (!this.real_pause) {
 			
@@ -2162,6 +2181,7 @@ In the method "ready" in the scene class :
 			}
 			return el;
 		},
+		
 /**
 	@doc manipulate/
 	@method append inserts the specified content as the last child of each element in the Element collection

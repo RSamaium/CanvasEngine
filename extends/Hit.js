@@ -454,10 +454,46 @@ View Hit class
 	},
 	
 /**
-	@doc entity/
-	@method hit Calls the function when two or more entities come into colision
-	@param {EntityModel} entity_model Other entity
-	@return
+@doc entity/
+@method hit Calls the function when two or more entities come into colision. Return this object :
+
+	{
+		over:
+		out:
+		result: {
+			coincident: []
+			lines: []
+		}
+	}
+	
+* over : The number of times that the entity hit the other entity
+* out : it is 1 if the entity does not affect other entity
+* result
+  * coincident : Array containing the lines coinciding with the lines of the other entity. 0 corresponds to the first line from the first point of the polygon.
+  * lines : Values in each line with other lines. Example
+  
+	[
+		false,
+		false, 
+		{x: 32, y: 32},
+		"Coincident"
+	]
+	
+Here, it is testing the first line of the polygon entity A. We test the line with 4 sides polygon entity B :
+
+1. The first line of entity A does not intersect with the first line of entity B
+2. The first line of entity A does not intersect with the second line of entity B
+3. The first line of Entity A has an intersection at positions (32,32) with the third line entity B
+4. The first line of entity A coincides with the fourth line entity B
+
+> In this example, `coincident` object is :
+
+	coincident: [3]
+	
+The number of lines is equal to the order (n) of the polygon - 1.
+
+@param {EntityModel} entity_model Other entity
+@return {Object}
 */	
 	hit: function(entity_model) {
 		var result = this._polygon[this._frame].intersectsWith(entity_model._polygon[entity_model._frame]);
@@ -832,10 +868,12 @@ In `ready` method
 		]
 	);
 	grid.getPropertyByCell(1, 0); // return 1
+	
+Returns `undefined` if column or row doesn't exist
 */	
 	getPropertyByCell: function(col, row) {
 		if (!this.cell.prop[col]) {
-			throw "Column " + col + " does not exist";
+			return undefined;
 		}
 		return this.cell.prop[col][row];
 	},
@@ -865,6 +903,161 @@ In `ready` method
 		return this.getPropertyByCell(cell.col, cell.row);
 	},
 	
+
+/**
+	@doc grid/
+	@method testCell Test cell lines which coincide with the lines of the polygons of the entity
+	
+	[
+		[
+			{
+				points: {
+					x: 5, y: 5
+				},
+				sides: 2
+			}
+		],
+		
+	]
+	
+`sides` sends lines of polygons of the entity which coincide with the grid lines. 0 corresponds to the first line from the first point of the polygon. The number of lines is equal to the order (n) of the polygon - 1.
+	
+	@param {Object} cell The cell defined by the object {col: Integer, row: Integer}
+	@param {Entity|EntityModel} entity
+	@return {Array}
+	@example
+	
+In `ready` method
+
+	var entity = Class.New("Entity", [stage]), pos;
+	entity.rect(10);
+	pos = entity.position();
+
+	var grid = Class.New("Grid", [2, 2]);
+	
+	grid.setCellSize(32, 32);
+	
+	grid.testCell({
+		col: 0,
+		row: 0
+	}, entity)
+	
+	// => returns 
+	/*
+	[
+		[
+			{
+				points: {
+					x: 0, y: 0
+				},
+				sides: 0
+			}
+		],
+		[],
+		[],
+		[	
+			{
+				points: {
+					x: 0, y: 0
+				},
+				sides: 3
+			}
+		]
+	]
+*/	
+	testCell: function(cell, entity, params) {
+		params = params || {};
+		
+		if (!entity.getPolygon) {
+			entity = entity.model;
+		}
+	
+		var result = [],
+			poly = entity.getPolygon(),
+			self = this;
+	
+		function offset(poly, pt) {
+			return {
+				x: pt.x + poly.center.x,
+				y: pt.y + poly.center.y
+			};
+		}
+		
+		function testInteraction(type, a1, a2, poly) {
+			var j, b1, b2, lines = [], k=0, result, coincident = [], coincident_points = null, obj = {};
+			
+			for (j = 0; j < poly.getNumberOfSides(); j++) {
+				b1 = offset(poly, poly.points[j]);
+				b2 = offset(poly, poly.points[j+1] ? poly.points[j+1] : poly.points[0]);
+				result = Polygon.intersectLineLine(a1, a2, b1, b2);
+				
+				if (result == "Coincident") {
+
+					if (a1.x == b1.x && a1.y == b1.y) {
+						coincident_points = {
+							x: a1.x,
+							y: a1.y
+						};
+					}
+					else if (a2.x == b2.x && a2.y == b2.y) {
+						coincident_points = {
+							x: a2.x,
+							y: a2.y
+						};
+					}
+					else if (a1.x == b2.x && a1.y == b2.y) {
+						coincident_points = {
+							x: a1.x,
+							y: a1.y
+						};
+					}
+					else if (a2.x == b1.x && a2.y == b1.y) {
+						coincident_points = {
+							x: a2.x,
+							y: a2.y
+						};
+					}
+					coincident.push({
+						sides: j,
+						points: coincident_points
+					});
+				}
+			}
+			if (true /*params.ignoreTypeLine */) {
+				return coincident;
+			}
+			else {
+				obj[type] = coincident;
+				return obj;
+			}
+			
+			
+		}
+		
+		function real(cell) {
+			return {
+				x: cell.x * self.cell.width,
+				y: cell.y * self.cell.height 
+			};
+		}
+		
+		var points_cell = [
+			{y: cell.row, x: cell.col},
+			{y: cell.row, x: cell.col+1},
+			{y: cell.row+1, x: cell.col+1},
+			{y: cell.row+1, x: cell.col}
+		];
+		var a1, a2;
+		for (j = 0; j < points_cell.length; j++) {
+			a1 = real(points_cell[j]);
+			a2 = real(points_cell[j+1] ? points_cell[j+1] : points_cell[0]);
+			result.push(testInteraction(null, a1, a2, poly));
+		}
+
+		return result;
+	
+	},
+
 /**
 	@doc grid/
 	@method getEntityCells Obtain the cells where the entity. Return this object (example) :
@@ -873,30 +1066,10 @@ In `ready` method
 		cells: [{
 			col: 1,
 			row: 1
-		}],
-		coincident: [
-			[{"horizontal": [0, 2]}]
-		]
+		}]
 	}	
-	
-`coincide` sends lines of polygons of the entity which coincide with the grid lines. 0 corresponds to the first line from the first point of the polygon. The number of rows is equal to the order (n) of the polygon - 1. The key of the object indicates whether the line is horizontal or vertical
 	
 	@param {Entity|EntityModel} entity
-	@param {Object} params (optional)Params
-
-* ignoreTypeLine : Send do not type lines in addition to interactions. Example
-
-	{
-		cells: [{
-			col: 1,
-			row: 1
-		}],
-		coincident: [
-			[[0, 2]],
-			[[2]],
-		]
-	}	
-
 	@return {Object}
 	@example
 	
@@ -917,13 +1090,10 @@ In `ready` method
 		cells: [{
 			col: 0,
 			row: 0
-		}],
-		coincident: [
-			[{"horizontal": [0]}],
-			[{"vertical": [0]}]
-		]
+		}]
 	}	
 */	
+	
 	getEntityCells: function(entity, params) {
 		var i, j, p, points, reg, poly, px, py, 
 			_cells = [],
@@ -964,65 +1134,22 @@ In `ready` method
 			}
 		}
 		
-		function offset(poly, pt) {
-			return {
-				x: pt.x + poly.center.x,
-				y: pt.y + poly.center.y
-			};
-		}
 		
-		function testInteraction(type, a1, a2, poly) {
-			var j, b1, b2, lines = [], k=0, result, coincident = [], obj = {};
-			for (j = 0; j < poly.getNumberOfSides(); j++) {
-				b1 = offset(poly, poly.points[j]);
-				b2 = offset(poly, poly.points[j+1] ? poly.points[j+1] : poly.points[0]);
-				result = Polygon.intersectLineLine(a1, a2, b1, b2);
-				if (result == "Coincident") {
-					coincident.push(j);
-				}
-			}
-			if (params.ignoreTypeLine) {
-				return coincident;
-			}
-			else {
-				obj[type] = coincident;
-				return obj;
-			}
-			
-		}
 		
 		var nbrows = (ep.max_x - ep.min_x) / this.cell.width, 
 			nbcols = (ep.max_y - ep.min_y) / this.cell.height,
-			x, y, cells, result = [];
+			x, y, cells;
 		for (i=0 ; i <= nbcols ; i++) {
 			x = ep.min_x + this.cell.width * i;
 			for (j=0 ; j <= nbrows ; j++) {
 				y = ep.min_y + this.cell.height * j;
 				cells = this.getCellByPos(x, y);
-				if (i == 0) {
-					result.push(testInteraction("horizontal",{
-						y: cells.row * this.cell.width,
-						x: cells.col * this.cell.height
-					}, {
-						y: cells.row * this.cell.width,
-						x: cells.col * this.cell.height + nbrows * this.cell.width
-					}, poly));
-				}
-				if (j == 0) {
-					result.push(testInteraction("vertical", {
-						y: cells.row * this.cell.width,
-						x: cells.col * this.cell.height
-					}, {
-						y: cells.row * this.cell.width + nbcols * this.cell.height,
-						x: cells.col * this.cell.height 
-					}, poly));
-				}
+				
 				_cells.push(cells);
 			}
 		}
 		return {
-			cells: _cells,
-			coincident: result
+			cells: _cells
 		};
 	},
 	

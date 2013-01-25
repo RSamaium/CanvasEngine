@@ -71,6 +71,17 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 
 ## Changelog
 
+### v1.1.1
+
+* Add testCell method in Grid class
+* Add removeCmd method in Element class
+* Add origin points in parameters in set method in SpriteSheet class
+* Changing getEntityCells method in Grid Class
+* Fix imageToCanvas method in Materials class
+* Fix frequence in Animation class
+* Fix set method in SpriteSheet class for windows
+* getPropertyByCell method in Hit class returns undefined if column or row doesn't exist
+
 
 ### v1.1.0
 
