@@ -546,7 +546,13 @@ CanvasEngine.benchmark = function(id) {
 	
 };
 
-
+CanvasEngine.objectSize = function(obj) {
+    var size = 0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+};
 
 /**
 	@doc utilities/
@@ -575,6 +581,7 @@ CanvasEngine.moveArray = function(array, pos1, pos2) {
           array[i] = array[i + 1];
         }
       }
+	 
       // move element up and shift other elements down
       else {
         for (i = pos1; i > pos2; i--) {
@@ -582,8 +589,12 @@ CanvasEngine.moveArray = function(array, pos1, pos2) {
         }
       }
       // put element from position 1 to destination
+	 
       array[pos2] = tmp;
     }
+	
+	
+	
 	return array;
 }
 

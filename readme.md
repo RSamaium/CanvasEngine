@@ -42,7 +42,7 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Level Design
 * Save & Load
 * Spritesheet Management
-* Mouse Control
+* Mouse Control & Multi Touch
 * Elements Manipulation
 
 ## Editors
@@ -51,7 +51,6 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 
 ## Roadmap (in order)
 
-* Multi touch
 * Transition
 * UI
 * Box2d
@@ -75,6 +74,7 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Add Text feature
 * Add Effect feature
 * Add off method in Element Class
+* Merge Hammer.js in CanvasEngine for multi touch feature
 
 ### v1.1.1
 
