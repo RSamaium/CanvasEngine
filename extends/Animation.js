@@ -513,7 +513,7 @@ Example
 			
 			var self = this;
 			var i = 0;
-			var freq = 0;
+			var freq = null;
 			var img_seq = 0;
 			
 			this.stop();
@@ -530,8 +530,11 @@ Example
 						height: data_img.height
 					};
 				}
-				
+				if (freq == null && seq) {
+					freq = seq.frequence;
+				}
 				if (self._stop) {
+					if (seq) freq = seq.frequence;
 					return;
 				}
 				freq++;

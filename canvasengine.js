@@ -274,12 +274,13 @@ Using Sound :
 		ctx: {Context2d}
 	}
 @param {String} id Image id
+@param {Boolean} cache Image id
 @return {Object}
 */
-			imageToCanvas: function(id) {
-				if (this._cache_canvas[id]) {
+			imageToCanvas: function(id, cache) {
+				if (this._cache_canvas[id] && cache) {
 					return this._cache_canvas[id];
-				}
+				} 
 				var img = this.get(id), canvas, ctx;
 				
 				canvas =  document.createElement('canvas');		
@@ -287,6 +288,8 @@ Using Sound :
 				canvas.height = img.height;
 				ctx = canvas.getContext('2d');
 				
+				ctx.drawImage(img, 0, 0);
+
 				this._cache_canvas[id] = {
 					canvas: canvas,
 					ctx: ctx
@@ -295,7 +298,7 @@ Using Sound :
 				return this._cache_canvas[id];
 			},
 			
-			// Private ?
+			// obsolete
 			createBuffer: function(id, color) {
 				
 				if (this._buffer[color]) {
@@ -314,7 +317,7 @@ Using Sound :
 				ctx.fillRect(0, 0, canvas.width, canvas.height);
 				
 				this._buffer[color] = canvas;
-				
+
 				return canvas;
 			},
 			
@@ -367,9 +370,6 @@ Using Sound :
 				canvas.width = w;
 				canvas.height = h;
 				ctx.putImageData(imageData, 0, 0);
-				//var img = new Image();
-				//img.src = canvas.toDataURL();
-				
 				return canvas;
 			},
 			
@@ -1376,6 +1376,7 @@ In the method "ready" in the scene class :
 					CanvasEngine.Scene.exitAll(params.allExcept);
 				}
 				if (self.ready) self.ready(self._stage, self.getElement);
+				self._stage.trigger("canvas:readyEnd");
 				if (self.model && self.model.ready) self.model.ready.call(self.model);
 				self._isReady = true;
 			}
@@ -1773,9 +1774,27 @@ In the method "ready" in the scene class :
 				var obj = {};
 				for (var k=0 ; k < propreties.length ; k++) {
 					if (this[propreties[k]]) obj[propreties[k]] = this[propreties[k]];
-				};
+				}
 				obj["globalAlpha"] = 1;
 				this._cmd[name] = {params: params, propreties: obj};
+			},
+/**
+@doc draw/
+@method removeCmd Deletes a saved command element
+@param {String} name Name of the drawing method
+@example
+
+In `ready` method :
+
+	var el = this.createElement();
+	el.drawImage("foo");
+		
+	el.removeCmd("drawImage");
+	stage.append(el); // Image "foo" is not displayed
+
+*/
+			removeCmd: function(name) {
+				delete this._cmd[name];
 			}
 	});
 	
@@ -1985,6 +2004,7 @@ In the method "ready" in the scene class :
 		_refresh: function(init, children, ctx) {
 			children = children === undefined ? true : children;
 			if (!this._visible) return;
+		
 			
 			if (!this.real_pause) {
 			
@@ -2162,6 +2182,7 @@ In the method "ready" in the scene class :
 			}
 			return el;
 		},
+		
 /**
 	@doc manipulate/
 	@method append inserts the specified content as the last child of each element in the Element collection
@@ -2311,6 +2332,10 @@ In method ready
 			var children = this.parent.children();			
 		},
 		
+		isAppend: function() {
+			return this in this.parent.children();
+		},
+		
 /**
 @doc manipulate/
 @method zIndex Change or get the index of the item. The index used to define the superposition. By default, the first element has index 0. If an item is created at the same level, it will overlay the previous element and its index will be 1
@@ -2344,7 +2369,7 @@ In method ready
 				index = -1;
 			}
 			if (index < 0) {
-				index = l + index;
+				index = l + index;	
 			}
 			_CanvasEngine.moveArray(this.parent._children, this._index, index);
 			this._index = index;
@@ -2599,6 +2624,34 @@ At each refresh of the scene, to display each element is returned
 			}
 		},
 		
+/**
+@doc events/
+@method off The off() method removes event handlers that were attached with .on()
+@param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
+@param {Function} callback (optional) function which was attached in this event
+*/
+		unbind: function(events, callback) { this.off(events, callback); },
+		off: function(events, callback) {
+			var event;
+			events = events.split(" ");
+			for (var i=0 ; i < events.length ; i++) {
+				event = events[i];
+				if (callback) {
+					for (var i=0 ; i < this._listener[event].length ; i++) {
+						if (this._listener[event][i] == callback) {
+							delete this._listener[event][i];
+							break;
+						}
+					}
+				}
+				else {
+					if (this._listener[event]) {
+						this._listener[event] = [];
+					}
+				}
+			}
+		},
+		
 		/**
 			@doc events/
 			@method eventExist Test whether an event is present on the element. Return true if exist
@@ -2626,7 +2679,7 @@ At each refresh of the scene, to display each element is returned
 				if (this._listener[event]) {
 					for (var i=0 ; i < this._listener[event].length ; i++) {
 						 _trigger = true;
-						this._listener[event][i].apply(this, e);
+						if (this._listener[event][i]) this._listener[event][i].apply(this, e);
 					}
 				}
 			}

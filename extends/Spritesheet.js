@@ -37,6 +37,7 @@ Class.create("Spritesheet", {
 * size: [Line number, column number]
 * tile : [Width of the box, Height of the box]
 * set : Each identifier in array starting from the firt case in top left of the grid
+* reg : [Position X of origin point, Position Y of origin point]
 
 If the key is not "grid", we assign a zone identifier: [x, y, width, height, 0, regX (optional), regY (optional)]
 regX and regY are origin points
@@ -53,7 +54,7 @@ regX and regY are origin points
 Here, there is a grid of rows and 5 columns of 107px width and height. The first box is called "play". We have another area placed at positions (433, 33), width is 215px and height is 188px. The ID of this area is "btn_play"
 */
 	set: function(set) {
-		var gridset, gridname, x, y;
+		var gridset, gridname, x, y, regX, regY;
 		for (var id in set) {
 			if (id == "grid") {
 				for (var i=0 ; i < set.grid.length ; i++) {
@@ -61,10 +62,18 @@ Here, there is a grid of rows and 5 columns of 107px width and height. The first
 						gridname = set.grid[i].set[j];
 						gridset = set.grid[i];
 						
-						y = gridset.tile[1] * (j / Math.round(gridset.size[0]));
+						y = gridset.tile[1] * parseInt(j / Math.round(gridset.size[0]));
+						//y = gridset.tile[1] * parseInt(j / Math.round(gridset.size[1]));
 						x = gridset.tile[0] * (j % Math.round(gridset.size[0]));
-							
-						this._set[gridname] = [x, y, gridset.tile[0], gridset.tile[1], 0, 0, 0];
+						
+						if (!gridset.reg) {
+							gridset.reg = [0, 0];
+						}
+						
+						regX = gridset.reg[0];
+						regY = gridset.reg[1];
+											
+						this._set[gridname] = [x, y, gridset.tile[0], gridset.tile[1], 0, regX, regY];
 					}
 				}
 			}
@@ -132,6 +141,7 @@ In "ready" method of the current scene :
 		var tile =  this._set[id],
 			img = Global_CE.Materials.cropImage(this.image, tile[0], tile[1], tile[2], tile[3]);
 			pattern = el.getScene().getCanvas().createPattern(img, repeatOption);
+			
 		el.fillStyle = pattern;
 	}
 });
@@ -144,11 +154,11 @@ In "ready" method of the current scene :
 @example
 
 
-var canvas = CE.defines("canvas_id").
-	extend(Spritesheet).
-	ready(function() {
-		canvas.Scene.call("MyScene");
-	});
+	var canvas = CE.defines("canvas_id").
+		extend(Spritesheet).
+		ready(function() {
+			canvas.Scene.call("MyScene");
+		});
 		
 	canvas.Scene.new({
 		name: "MyScene",
