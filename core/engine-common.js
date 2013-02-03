@@ -9,22 +9,28 @@ function Kernel(class_method, name) {
 }
 
 Kernel._extend = function(self, object, clone) {
-	clone = clone === undefined ? true : clone;
-	if (typeof object == "string") {
-		if (Class.__class_config[object]) {
-			object = Class.__class_config[object].methods;
+	var o;
+	if (!(object instanceof Array)) {
+		object = [object];
+	}
+	for (var i=0 ; i < object.length ; i++) {
+		clone = clone === undefined ? true : clone;
+		o = object[i];
+		if (typeof o == "string") {
+			if (Class.__class_config[o]) {
+				o = Class.__class_config[o].methods;
+			}
+			else {
+				return self;
+			}
 		}
-		else {
-			return self;
+		
+		if (clone) o = CanvasEngine.clone(o);
+		
+		for (var key in o) {
+			self[key] = o[key];
 		}
 	}
-	
-	if (clone) object = CanvasEngine.clone(object);
-	
-	for (var key in object) {
-		self[key] = object[key];
-	}
-	
 	return self;
 }
 
@@ -485,6 +491,8 @@ CanvasEngine.clone = function(srcInstance) {
 	}
 	return newInstance;
 };
+
+
 
 /**
 	@doc utilities/

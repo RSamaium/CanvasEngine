@@ -73,7 +73,14 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 
 * Add Text feature
 * Add Effect feature
-* Add off method in Element Class
+* Add off method in Element class
+* Add scroll method in Window class
+* Add invertColor method in Materials class
+* Add forceEvent property in Element class
+* Add hasCmd method in Context class
+* Fix clip method in Context class
+* Improve children method in Element class
+* Improve position method in Window class
 * Merge Hammer.js in CanvasEngine for multi touch feature
 
 ### v1.1.1

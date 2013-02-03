@@ -64,6 +64,8 @@ Class.create("Text", {
 		if (effect && !Global_CE.Timeline) {
 			throw "Add Timeline class to use effects";
 		}
+		
+		if (!effect) effect = {};
 	
 		if (!x) x = 0;
 		if (!y) y = 0;
@@ -127,8 +129,7 @@ Class.create("Text", {
 
 			setProperties(i_line, el, _char);
 			
-			console.log(width);
-			
+
 			el.x = i_char * width;
 			el.opacity = 0;
 			this.el.append(el);
@@ -153,7 +154,6 @@ Class.create("Text", {
 				return;
 			}
 			el = this.lines[i_line].el;
-			
 			if (effect.line) {
 				this.el.append(el);
 				Global_CE.Timeline['new'](el).to({opacity: 1}, effect.line.frames).call(function() {
@@ -166,24 +166,35 @@ Class.create("Text", {
 					displayLines.call(self, i_line+1);
 				});
 			}
+			else {
+				el.opacity = 1;
+				this.el.append(el);
+				displayLines.call(this, i_line+1);
+			}
 		}
-		
+		var metrics, testLine, testWidth, words, pos = 0;
 		for (var i=0 ; i < this.text.length ; i++) {
 			text = this.text[i];
 			if (s.lineWidth) {
-				var words = text.split(" "), pos = 0;
-				for(var n = 0; n < words.length; n++) {
-				  var testLine = text_line + words[n] + " ";
-				  var metrics = canvas.measureText(testLine);
-				  var testWidth = metrics.width;
-				  if (testWidth > s.lineWidth) {
-					drawLine(pos, text_line);
-					text_line = words[n] + " ";
-					pos++;
-				  }
-				  else {
-					text_line = testLine;
-				  }
+				testWidth = canvas.measureText(text).width;
+				if (testWidth < s.lineWidth) {
+					drawLine(pos, text);
+				}
+				else {
+					words = text.split(" "), pos = 0;
+					for(var n = 0; n < words.length; n++) {
+					  testLine = text_line + words[n] + " ";
+					  metrics = canvas.measureText(testLine);
+					  testWidth = metrics.width;
+					  if (testWidth > s.lineWidth) {
+						drawLine(pos, text_line);
+						text_line = words[n] + " ";
+						pos++;
+					  }
+					  else {
+						text_line = testLine;
+					  }
+					}
 				}
 			}
 			else {
@@ -195,9 +206,6 @@ Class.create("Text", {
 		
 		parent.append(this.el);
 		return this;
-	},
-	getMeasuredWidth: function() {
-		
 	},
 	getNumberLines: function() {
 		return this.lines.length;

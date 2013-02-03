@@ -326,13 +326,14 @@ Using Sound :
 @method transparentColor Make a color transparent in the image
 @param {String} id Image id
 @param {String} color hexadecimal code
+@param {Boolean} cache (optional) Puts the canvas generated in cache (false by default)
 @return {HTML5Canvas}
 */
-			transparentColor: function(id, color) {
+			transparentColor: function(id, color, cache) {
 				var imageData, data, rgb, 
-					_canvas = this.imageToCanvas(id),
+					_canvas = this.imageToCanvas(id, cache),
 					canvas = _canvas.canvas,
-					ctx = _canvas.ctx
+					ctx = _canvas.ctx;
 
 				imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 				data = imageData.data;
@@ -348,8 +349,31 @@ Using Sound :
 				ctx.putImageData(imageData, 0, 0);
 				return canvas;
 			},
-			
-			
+	
+/**
+@doc materials/
+// @method invertColor Inverts the colors of the image
+@param {String} id Image id
+@param {Boolean} cache (optional) Puts the canvas generated in cache (false by default)
+@return {HTML5Canvas}
+*/	
+			invertColor: function(id, cache) {
+				var imageData, data, 
+					_canvas = this.imageToCanvas(id),
+					canvas = _canvas.canvas,
+					ctx = _canvas.ctx;
+					
+				data = imageData.data;
+
+				for(var i = 0; i < data.length; i += 4) {
+				  data[i] = 255 - data[i];
+				  data[i + 1] = 255 - data[i + 1];
+				  data[i + 2] = 255 - data[i + 2];
+				}
+				
+				ctx.putImageData(imageData, 0, 0);
+				return canvas;
+			},
 			
 /**
 @doc materials/
@@ -951,7 +975,7 @@ Leaving the other scenes after preloading of the scene called
 			old = this.ctx;
 			this._mouseEvent();
 			var events = ["click", "dbclick", "mousemove"],
-				hammer_events = ["dragstart", "drag", "dragsend", "swipe", "tap", "doubletap", "hold", "transformstart", "transform", "transformend", "release"];
+				hammer_events = ["dragstart", "drag", "dragend", "swipe", "tap", "doubletap", "hold", "transformstart", "transform", "transformend", "release"];
 			
 			var hammer = null;
 			if (this.hammerExist) {
@@ -971,14 +995,22 @@ Leaving the other scenes after preloading of the scene called
 			}
 			
 			function callback(e, type) {
-				var	mouse = self.getMousePosition(e.originalEvent ? e.originalEvent : e),
-					scenes = CanvasEngine.Scene.getEnabled(),
-					stage;
+				var touches, mouse, scenes = CanvasEngine.Scene.getEnabled(), stage;
+				if (e.originalEvent) {
+					touches = e.touches;
+				}
+				else {
+					touches = [self.getMousePosition(e)];
+				}
+
 				for (var name in scenes) {
 					stage = scenes[name].getStage();
-					stage._select(mouse, function(el_real) {
-						 el_real.trigger(type, e, mouse);
-					});
+					
+					for(var t=0; t < touches.length; t++) {
+						stage._select(touches[t], function(el_real) {
+							 el_real.trigger(type, e, touches[t]);
+						});
+					}
 				}
 			}
 			
@@ -1013,22 +1045,7 @@ Leaving the other scenes after preloading of the scene called
 				document.body.appendChild(canvas);
 			}
 			else {
-			
-				/* Disable Highlight Color
-				if (!document.head) document.head = document.getElementsByTagName('head')[0];
-				var style = document.createElement("style");
-				document.head.appendChild(style);
-				var sheet = style.sheet ? style.sheet : style.styleSheet[0];
-
-				
-				sheet.insertRule("#" + id + "{-webkit-user-select: none;}", 0);
-				
-				 //-webkit-user-drag: none;-webkit-tap-highlight-color: rgba(0, 0, 0, 0);}
-				 
-				 */
-
 				canvas = document.getElementById(id);
-
 			}
 			
 			return canvas;
@@ -1710,7 +1727,7 @@ In the method "ready" in the scene class :
 				layer =  "ctx";
 				params = params || [];
 				propreties = propreties || {};
-				
+
 				var ctx = this.getScene().getCanvas()._ctxTmp;
 				var cmd, array_cmd = {};
 				var cmd_propreties = [];
@@ -1718,7 +1735,7 @@ In the method "ready" in the scene class :
 				
 				var bufferEvent = function(name, _params) {
 					var ctx_mouse = this._canvas[0]["_ctxMouseEvent"];
-					if (this.hasEvent()) {
+					if (this.hasEvent() || this.hasCmd("clip")) {
 						ctx_mouse[name].apply(this._canvas[0]["_ctxMouseEvent"], _params);
 						if (name == "drawImage") {
 							ctx_mouse.globalCompositeOperation = 'source-atop';
@@ -1729,7 +1746,7 @@ In the method "ready" in the scene class :
 				};
 				
 				var bufferProp = function(cmd_propreties, key, value) {
-					if (cmd_propreties[key]) {
+					if (cmd_propreties[key] || this.forceEvent) {
 						this._canvas[0]["_ctxMouseEvent"][key] = value;
 						return 0;
 					}
@@ -1757,6 +1774,7 @@ In the method "ready" in the scene class :
 						if (cmd_propreties) {
 							for (var key in cmd_propreties) {
 								applyBuffer = 1;
+								
 								if (key == "globalAlpha") {
 									cmd_propreties[key] = this.real_opacity;
 								}
@@ -1784,6 +1802,14 @@ In the method "ready" in the scene class :
 						}
 						else {
 							this._canvas[j][layer][name].apply(this._canvas[j][layer], cmd.params);
+							if (this.forceEvent) {
+								if (name == "rect") {
+									bufferEvent.call(this, "fillRect", cmd.params);
+								}
+								else if (this.width && this.height) {
+									bufferEvent.call(this, "fillRect", [0, 0, this.width, this.height]);
+								}
+							}
 							bufferEvent.call(this, name, cmd.params);
 						}
 					}
@@ -1803,6 +1829,10 @@ In the method "ready" in the scene class :
 				}
 				obj["globalAlpha"] = 1;
 				this._cmd[name] = {params: params, propreties: obj};
+			},
+			
+			hasCmd: function(name) {
+				return this._cmd[name];
 			},
 /**
 @doc draw/
@@ -1965,6 +1995,7 @@ In `ready` method :
 		_out: 1,
 		_over: 0,
 		_pack: null,
+		forceEvent: false,
 		initialize: function(scene, layer, width, height) {
 			this._id = _CanvasEngine.uniqid();
 			this.width = width;
@@ -1998,6 +2029,7 @@ In `ready` method :
 				"translate",
 				"transform",
 				"setTransform",
+				"resetTransform",
 				"scale",
 				"clearRect"
 			], "draw");
@@ -2088,7 +2120,10 @@ In `ready` method :
 			
 			this.draw(ctx);
 			
-			this.restore();
+			if (!this.hasCmd("clip")) {
+				this.restore();
+			}
+		
 			
 			if (children) {
 				// if (!this.real_pause) this._loop();
@@ -2096,6 +2131,10 @@ In `ready` method :
 				for (var i=0 ; i < this._children.length ; i++) {
 					this._children[i]._refresh(false, true, ctx);
 				}
+			}
+			
+			if (this.hasCmd("clip")) {
+				this.restore();
 			}
 		},
 		/**
@@ -2186,11 +2225,10 @@ In `ready` method :
 			var canvas = this.scene.getCanvas();
 			
 			imgData = this._canvas[0]["_ctxMouseEvent"].getImageData(mouse.x, mouse.y, 1, 1).data;
-			if (imgData[3] > 0) {
+			//if (imgData[3] > 0) {
 				el_real = canvas._elementsByScene(this.scene.name, _CanvasEngine.rgbToHex(imgData[0], imgData[1], imgData[2]));
 				if (el_real) callback(el_real);
-				
-			}
+			//}
 		},
 		
 		_click: function(e, mouse, type) {
@@ -2263,9 +2301,20 @@ In method ready
 /**
 	@doc traversing/
 	@method children Retrieves an array of elements
+	@param children (optional) {Array|Element} If the parameter exists, a new array of elements is assigned. You can copy the child of another element.
 	@return {Array}
 */
-		children: function() {
+		children: function(children) {
+			var _children = [], new_children = [];
+			if (children) {
+				if (children instanceof Array) _children = children;
+				if (children instanceof Class) _children = children.children();
+				for (var i=0 ; i < _children.length ; i++) {
+					new_children[i] = _children[i].clone();
+					new_children[i].parent = this;
+				}
+				this._children = new_children;
+			}
 			return this._children;
 		},
 
@@ -2358,12 +2407,13 @@ In method ready
 			return this;
 		},
 		
-		replaceWith: function(newEl) {
-			var children = this.parent.children();			
-		},
 		
 		isAppend: function() {
 			return this in this.parent.children();
+		},
+		
+		first: function() {
+			return this.children()[0];
 		},
 		
 /**

@@ -159,6 +159,10 @@ Class.create("Window", {
 @param {String|Integer} x (optional) Position X. If the parameter is a string, the window is positioned at a specific location :
 
 * middle : The window is centered
+* bottom : The position of window is in bottom with 3% margin
+* top : The position of window is in top with 3% margin
+* bottom-X : The position of window is in bottom with X margin (px) (eq: "bottom-20")
+* top+X : The position of window is in top with X margin (px) (eq: "top+20")
 
 @param {Integer} y (optional) Position Y
 @example
@@ -176,7 +180,7 @@ In `ready` method
 @return {CanvasEngine.Window}
 */	
     position: function(typeOrX, y) {
-        var canvas = this.scene.getCanvas();
+        var canvas = this.scene.getCanvas(), margin;
         if (typeOrX === undefined) {
             return {
                 x: this.el.x,
@@ -188,6 +192,18 @@ In `ready` method
                 this.el.x = canvas.width / 2 - this.width / 2;
                 this.el.y = canvas.height / 2 - this.height / 2;
             }
+			else if (typeOrX == "bottom") {
+                this.el.x = canvas.width / 2 - this.width / 2;
+                this.el.y = canvas.height - this.height - (canvas.height * 0.03);
+            }
+			else if (typeOrX == "top") {
+                this.el.x = canvas.width / 2 - this.width / 2;
+                this.el.y = canvas.height * 0.03;
+            }
+			else if (margin = typeOrX.match(/top+([0-9]+)/)) {
+				this.el.x = canvas.width / 2 - this.width / 2;
+                this.el.y = margin[1];
+			}
         }
         else {
             this.el.x = typeOrX;
@@ -254,7 +270,69 @@ In `ready` method
     open: function(parent) {
         parent.append(this.el);
 		return this;
-    }
+    },
+	
+	scroll: function(_content, width, height, callbacks) {
+	
+		callbacks = callbacks || {};
+	
+		var content = this.getContent(), scroll_start = {};
+		var self = this;
+		
+		var el = this.scene.createElement();
+		 el.forceEvent = true;
+		 el.beginPath();
+		 el.width = width, 
+		 el.height = height;
+		 
+		_content.beginPath();
+		_content.rect(0, 0, _content.width, _content.height);
+		_content.clip();
+		_content.closePath();
+
+		el.children(_content);
+		_content.empty();
+		_content.append(el);
+	
+		
+		 el.on("dragstart", function(ev) {
+            scroll_start = this.offset();
+            scroll_start.time = new Date().getTime();
+			if (callbacks.dragstart) callbacks.dragstart.call(this, ev);
+         });
+
+
+         el.on("drag", function(ev) {
+
+            if(ev.direction == 'up' || ev.direction == 'left') {
+                ev.distance = -ev.distance;
+            }
+
+            var delta = 1, y;
+            y = scroll_start.top + ev.distance * delta;
+			
+			if (y >= 0) {
+                y = 0;
+				if (callbacks.onTop) callbacks.onTop.call(this, ev);
+            }
+            else if (_content.height >= (y + this.height)) {
+                y = -this.height + _content.height;
+				if (callbacks.onBottom) callbacks.onBottom.call(this, ev);
+            } 
+			
+			this.y = y;
+			
+			if (callbacks.drag) callbacks.drag.call(this, ev);
+        });
+
+
+        el.on("dragend", function(ev) {
+            if (callbacks.dragend) callbacks.dragend.call(this, ev);
+        });
+		
+		return el;
+		
+	}
 }); 
     
 var Window = {
