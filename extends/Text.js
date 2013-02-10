@@ -35,10 +35,13 @@ Class.create("Text", {
 		"decoration": "none",
 		"border": "none",
 		"lineHeight": 25,
+		"shadow": null,
+		"textBaseline": "alphabetic",
 		"lineWidth": null
 	},
 	lines: [],
 	initialize: function(scene, text) {
+		text = ""+text;
 		this.scene = scene;
 		this.el = this.scene.createElement();
 		this.text = text.split("\n");
@@ -70,7 +73,7 @@ Class.create("Text", {
 		if (!x) x = 0;
 		if (!y) y = 0;
 	
-		var s =  this._style, border, text, metrics, line_y = 0, line_h, text_line = "";
+		var s =  this._style, border, text, metrics, line_y = 0, line_h, text_line = "", shadow;
 		var canvas = this.scene.getCanvas(), self = this;
 		this.el.x = x;
 		this.el.y = y;
@@ -81,8 +84,20 @@ Class.create("Text", {
 			line_y = line_h * pos;
 			line.font = s.style + " " + s.weight + " " + s.variant + " " + s.size + " " + s.family;
 			line.fillStyle = s.color;
+			line.textBaseline = s.textBaseline;
+			
+			if (s.shadow) {
+				shadow = s.shadow.match(/(-?[0-9]+) (-?[0-9]+) ([0-9]+) ([#a-zA-Z0-9]+)/);
+				if (shadow) {
+					line.shadowOffsetX = shadow[1];
+					line.shadowOffsetY = shadow[2];
+					line.shadowBlur = shadow[3];
+					line.shadowColor = shadow[4];
+				}
+			}
 			
 			line.fillText(text, 0, line_y);
+		
 			if (s.border != "none") {
 				border = s.border.match(/([0-9]+)px ([#a-zA-Z0-9]+)/);
 				line.font = s.style + " " + s.weight + " " + s.variant + " " + (s.size + border[1]) + " " + s.family;

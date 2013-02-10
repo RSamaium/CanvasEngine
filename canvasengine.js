@@ -1005,7 +1005,6 @@ Leaving the other scenes after preloading of the scene called
 
 				for (var name in scenes) {
 					stage = scenes[name].getStage();
-					
 					for(var t=0; t < touches.length; t++) {
 						stage._select(touches[t], function(el_real) {
 							 el_real.trigger(type, e, touches[t]);
@@ -1337,16 +1336,31 @@ In the method "ready" in the scene class :
 --
 
 	var el = this.createElement(100, 100);
+	
+--
+Create two elements : 
+
+	var els = this.createElement(["foo", "bar"]);
+	stage.append(els.foo, els.bar);
 
 */
 		 createElement: function(name, width, height) {
+			if (name instanceof Array) {
+				var obj = {};
+				for (var i=0 ; i < name.length ; i++) {
+					obj[name[i]] = this.createElement(name[i]);
+				}
+				return obj;
+			}
 			if (typeof name != "string") {
 				height = width;
 				width = name;
 			}
 			var el = CanvasEngine.Element["new"](this, null, width, height);
+			el.name = name;
 			return el;
 		 },
+		 
 		_exit: function() {	
 			this.getCanvas()._elementsByScene[this.name] = {};
 			if (this.exit) this.exit.call(this);
@@ -1731,7 +1745,7 @@ In the method "ready" in the scene class :
 				var ctx = this.getScene().getCanvas()._ctxTmp;
 				var cmd, array_cmd = {};
 				var cmd_propreties = [];
-				var isCmd = true, applyBuffer = 1;
+				var isCmd = true, applyBuffer = 1, bufferEventForce = false;
 				
 				var bufferEvent = function(name, _params) {
 					var ctx_mouse = this._canvas[0]["_ctxMouseEvent"];
@@ -1786,7 +1800,6 @@ In the method "ready" in the scene class :
 									this._canvas[j][layer][key] = cmd_propreties[key];
 								}
 								
-								
 								applyBuffer &= bufferProp.call(this, cmd_propreties, "globalAlpha", 1);
 								applyBuffer &= bufferProp.call(this, cmd_propreties, "strokeStyle", '#' + this.color_key);
 								applyBuffer &= bufferProp.call(this, cmd_propreties, "fillStyle", '#' + this.color_key);
@@ -1805,9 +1818,6 @@ In the method "ready" in the scene class :
 							if (this.forceEvent) {
 								if (name == "rect") {
 									bufferEvent.call(this, "fillRect", cmd.params);
-								}
-								else if (this.width && this.height) {
-									bufferEvent.call(this, "fillRect", [0, 0, this.width, this.height]);
 								}
 							}
 							bufferEvent.call(this, name, cmd.params);
@@ -1853,6 +1863,7 @@ In `ready` method :
 				delete this._cmd[name];
 			}
 	});
+	
 	
 /**
 @doc element
@@ -1995,7 +2006,20 @@ In `ready` method :
 		_out: 1,
 		_over: 0,
 		_pack: null,
+/**
+	@doc manipulate/
+	@property forceEvent Force applying an event on the element even if it is invisible. Assign the height and width or use the rect method before
+	@type Boolean
+	@default false
+*/
 		forceEvent: false,
+/**
+	@doc manipulate/
+	@property propagationOpacity If false, does not take into account the opacity of parent elements
+	@type Boolean
+	@default true
+*/
+		propagationOpacity: null,
 		initialize: function(scene, layer, width, height) {
 			this._id = _CanvasEngine.uniqid();
 			this.width = width;
@@ -2079,9 +2103,12 @@ In `ready` method :
 						real_rotate: 0,
 						real_skew_x: 0,
 						real_skew_y: 0,
-						real_opacity: 1
+						real_opacity: 1,
+						real_propagation: true
 					};
 				}
+				
+				this.real_propagation = this.parent.propagationOpacity == null ? true : this.parent.propagationOpacity;
 			
 				this.save();
 					
@@ -2091,11 +2118,19 @@ In `ready` method :
 				this.real_scale_y = this.parent.real_scale_y * this.scaleY;
 				this.real_y = (this.parent.real_y + this.y) * (this.parent.scaleY == 1 ? 1 : this.parent.real_scale_x);
 				this.real_x = (this.parent.real_x + this.x) * (this.parent.scaleX == 1 ? 1 : this.parent.real_scale_y);
+				
 				this.real_skew_x = this.parent.real_skew_x + this.skewX;
 				this.real_skew_y = this.parent.real_skew_y + this.skewY ;
 				this.real_rotate = this.parent.real_rotate + this.rotation ;
+				if (this.real_propagation) {	
+					this.real_opacity = this.parent.real_opacity * this.opacity;
+				}
+				else {
+					this.real_opacity = this.opacity;
+				}
+				
 				this.real_pause = init ? this.pause : this.parent.real_pause;
-				this.real_opacity = this.parent.real_opacity * this.opacity;
+				
 				this.globalAlpha = this.real_opacity;
 				if (this.parent) {
 					if (this.parent.regX) {
@@ -2225,16 +2260,35 @@ In `ready` method :
 			var canvas = this.scene.getCanvas();
 			
 			imgData = this._canvas[0]["_ctxMouseEvent"].getImageData(mouse.x, mouse.y, 1, 1).data;
-			//if (imgData[3] > 0) {
+			if (imgData[3] > 0) {
 				el_real = canvas._elementsByScene(this.scene.name, _CanvasEngine.rgbToHex(imgData[0], imgData[1], imgData[2]));
 				if (el_real) callback(el_real);
-			//}
+			}
 		},
 		
 		_click: function(e, mouse, type) {
 			this._select(mouse, function(el_real) {
 				 el_real.trigger("click", e, mouse);
 			});
+		},
+		
+		_cloneRecursive: function(el) {
+			var sub_el, new_el;
+			if (el._children.length > 0) {
+				for (var i=0 ; i < el._children.length ; i++) {
+					sub_el = el._children[i];
+					new_el = this.scene.createElement();
+					for (var key in sub_el) {
+						if (typeof key != "function") {
+							new_el[key] = sub_el[key];
+						}
+					}
+					new_el.parent = el;
+					this._cloneRecursive(sub_el);
+				
+					el._children[i] = new_el;
+				}
+			}
 		},
 		/**
 			@doc manipulate/
@@ -2248,6 +2302,7 @@ In `ready` method :
 					el[key] = this[key];
 				}
 			}
+			this._cloneRecursive(el);
 			return el;
 		},
 		
@@ -2256,13 +2311,35 @@ In `ready` method :
 	@method append inserts the specified content as the last child of each element in the Element collection
 	@param {CanvasEngine.Element} el 
 	@return CanvasEngine.Element
+	@example
+
+In method ready :
+
+	var el = this.createElement();
+	stage.append(el);
+	
+--
+
+	var el1 = this.createElement(),
+		el2 = this.createElement(),
+		el3 = this.createElement();
+	stage.append(el1, el2, el3);
+	
+--
+	
+	var el = this.createElement(["a", "b", "c"]);
+	stage.append(el.a, el.b, el.c);
 */
-		append: function(el) {
-			this._children.push(el);
-			el.parent = this;
-			el._index = this._children.length-1;
-			el._refresh();
-			return el;
+		append: function() {
+			var el;
+			for (var i=0 ; i < arguments.length ; i++) {
+				el = arguments[i];
+				this._children.push(el);
+				el.parent = this;
+				el._index = this._children.length-1;
+				el._refresh();				
+			}
+			return arguments;
 		},
 		
 /**
@@ -2414,6 +2491,39 @@ In method ready
 		
 		first: function() {
 			return this.children()[0];
+		},
+		
+		find: function(name) {
+			var children = this.children(),
+				_find = [];
+			for (var i=0 ; i < children.length ; i++) {	
+				c = children[i];
+				if (name == c.name) {
+					_find.push(c);
+				}
+			}
+			return _find;
+		},
+		
+		findAttr: function(attr, val) {
+			var children = this.children(),
+				c, attr_val;
+			for (var i=0 ; i < children.length ; i++) {
+				c = children[i];
+				console.log(attr, c.attr(attr));
+				attr_val = c.attr(attr);
+				if (attr_val) {
+					if (val != undefined) {
+						if (attr_val == val) {
+							return c;
+						}
+					}
+					else {
+						return c;
+					}
+				}
+			}
+			return false;
 		},
 		
 /**

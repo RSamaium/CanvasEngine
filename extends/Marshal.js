@@ -589,6 +589,44 @@ Marshal = {
 	exist: function(file) {
 		return localStorage && localStorage[file];
 	},
+	
+	_recursiveLoad: function(data) {
+		var _class_name, _class = {}, new_class = {}, val;
+		
+		if (data instanceof Object) {
+			for (var method in data) {
+				val = data[method];
+				if (val instanceof Array) {
+					new_class[method] = [];
+					for (var i=0 ; i < val.length ; i++) {
+						new_class[method][i] = this._recursiveLoad(val[i]);
+					}
+				}
+				else if (val instanceof Object) {
+					new_class[method] = this._recursiveLoad(val);
+				}
+				else {
+					new_class = data;
+				}
+			}
+		}
+		else {
+			return data;
+		}
+		
+		if (new_class.__name__) {
+			_class = Class.New(data.__name__);
+			for (var method in new_class) {
+				_class[method] = new_class[method];
+			}	
+		}
+		else {
+			_class = new_class;
+		}
+		
+		return _class;
+	},
+	
 	/**
 		@doc save/
 		@method load Load data and restores the properties of the class the order of the stack of Marshal
@@ -605,18 +643,11 @@ Marshal = {
 			data = this._decode(localStorage[file]) || [];
 			this._cache[file] = data;
 		}
+		_class = this._recursiveLoad(data[this._pointer]);
 		if (!Marshal.exist(file)) {
 			return false;
 		}
-		if (_class_name = data[this._pointer].__name__) { // not ==. Class name verification
-			_class = Class.get(_class_name);
-			for (var method in data[this._pointer]) {
-				_class[method] = data[this._pointer][method];
-			}
-		}
-		else {
-			_class = data[this._pointer];
-		}
+		
 		this._pointer++;
 		return _class;
 	},

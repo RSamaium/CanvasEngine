@@ -342,7 +342,7 @@ Example
 				
 				function endValue(type) {
 					var _cal, result_val;
-					if (!self._timeline[next_t][type]) {
+					if (self._timeline[next_t][type] === undefined) {
 						return this[type];
 					}
 					_cal = self._timeline[next_t]._cal;
@@ -357,7 +357,7 @@ Example
 				
 				function newValue(type) {
 					var ease, value, _cal, next_val, result_val;
-					if (!self._timeline[next_t][type]) {
+					if (self._timeline[next_t][type] === undefined) {
 						return this[type];
 					}
 					ease = self._timeline[next_t]._ease_;
@@ -404,9 +404,7 @@ Example
 							break;
 						}
 					}
-					
-					
-					
+
 					if (!find_next) {
 						self._stop = true;
 						time = 0;
@@ -424,9 +422,7 @@ Example
 						}
 					}
 				}
-				
-					
-				
+
 				time_tmp = next_t - time;
 				if (time_tmp != 0) {
 					if (self._timeline[next_t]._cal != "wait") {

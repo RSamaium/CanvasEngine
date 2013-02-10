@@ -26,7 +26,7 @@ THE SOFTWARE.
 @param {CanvasEngine.Scene} scene Current scene
 @param {Integer} width Width
 @param {Integer} height Height
-@param {String} border Identifier of the image to the border. The image must contain the four corners and four sides to have 9 tiles. The width and height should be divisible by three
+@param {String} border (optional) Identifier of the image to the border. The image must contain the four corners and four sides to have 9 tiles. The width and height should be divisible by three
 @example
 
 	canvas.Scene.New({
@@ -68,8 +68,15 @@ Class.create("Window", {
         this.height = height;
         this.border = border;
         this.scene = scene;
-        this.border_img = Global_CE.Materials.get(border);
-        this._construct();
+		if (border) {
+			this.border_img = Global_CE.Materials.get(border);
+			this._construct();
+		}
+		else {
+			this.el = this.scene.createElement(this.width, this.height);
+			this._content = this.scene.createElement();
+			this.el.append(this._content);
+		}
     },
     _construct: function() {
         if (!Global_CE.Spritesheet) {
@@ -272,66 +279,220 @@ In `ready` method
 		return this;
     },
 	
-	scroll: function(_content, width, height, callbacks) {
+/**
+	@doc cursor/
+	@class cursor Adds the cursor in the window
+*/
+	cursor: {
 	
-		callbacks = callbacks || {};
+		array_elements: null,
+		el: null,
+		index: 0,
+		params: {},
+		_enable: true,
 	
-		var content = this.getContent(), scroll_start = {};
-		var self = this;
-		
-		var el = this.scene.createElement();
-		 el.forceEvent = true;
-		 el.beginPath();
-		 el.width = width, 
-		 el.height = height;
-		 
-		_content.beginPath();
-		_content.rect(0, 0, _content.width, _content.height);
-		_content.clip();
-		_content.closePath();
+/**
+@doc cursor/
+@method init Initializes functionality cursors.
+@param {CanvasEngine.Element} element (optional) Element corresponding to the cursor
+@param {Array} array_elements Array containing all the elements that can be selected by the cursor
+@param {Object} params (optional) Additional parameters for the cursor
 
-		el.children(_content);
-		_content.empty();
-		_content.append(el);
+* reverse (Boolean) When the cursor reaches an extreme, it goes through the extreme opposite
+
+@return {CanvasEngine.Window.Cursor}
+*/
+		init: function(element, array_elements, params) {
+			if (element instanceof Array) {
+				array_elements = element;
+				element = null;
+			}
+			this.params = params || {};
+			this.array_elements = array_elements;
+			this.el = element;
+			this.update();
+			return this;
+		},
 	
+/**
+@doc cursor/
+@method refresh Refreshes the table containing the items that can be selected. Updated visual cursor
+@param {Array} array_elements Array containing all the elements that can be selected by the cursor
+@param {Boolean} change (optional) Calls the callback method assigned with the "change"
+@return {CanvasEngine.Window.Cursor}
+*/	
+		refresh: function(array_elements, change) {
+			this.array_elements = array_elements;
+			this.setIndex(this.index, change);
+			this.update();
+			return this;
+		},
 		
-		 el.on("dragstart", function(ev) {
-            scroll_start = this.offset();
-            scroll_start.time = new Date().getTime();
-			if (callbacks.dragstart) callbacks.dragstart.call(this, ev);
-         });
+/**
+@doc cursor/
+@method remove Removes the cursor visually
+@param {Array} array_elements Array containing all the elements that can be selected by the cursor
+@param {Boolean} change (optional) Calls the callback method assigned with the "change"
+@return {CanvasEngine.Window.Cursor}
+*/	
+		remove: function() {
+			this.el.remove();
+			return this;
+		},
 
-
-         el.on("drag", function(ev) {
-
-            if(ev.direction == 'up' || ev.direction == 'left') {
-                ev.distance = -ev.distance;
-            }
-
-            var delta = 1, y;
-            y = scroll_start.top + ev.distance * delta;
+/**
+@doc cursor/
+@method assignKeys Assigns keyboard events : Up, Bottom and Enter. Also assigns the click on elements for touch and mouse. Elements must, in this case, have values set for the width and height attributesr
+@param {Boolean} reset (optional) Resets all keys
+@return {CanvasEngine.Window.Cursor}
+*/			
+		assignKeys: function(reset) {
+			var self = this;
+			if (reset) {
+				Global_CE.Input.reset();
+			}
+			Global_CE.Input.press([Input.Up], function() {
+				if (!self._enable) {
+					return;
+				}
+				self.setIndex(self.index-1);
+			});
+			Global_CE.Input.press([Input.Bottom], function() {
+				if (!self._enable) {
+					return;
+				}
+				self.setIndex(self.index+1);
+			});
 			
-			if (y >= 0) {
-                y = 0;
-				if (callbacks.onTop) callbacks.onTop.call(this, ev);
-            }
-            else if (_content.height >= (y + this.height)) {
-                y = -this.height + _content.height;
-				if (callbacks.onBottom) callbacks.onBottom.call(this, ev);
-            } 
 			
-			this.y = y;
+			function enter() {
+				if (!self._enable) {
+					return;
+				}
+				var el = self.array_elements[self.index];
+				if (self._select && el) self._select.call(self, el);
+			}
 			
-			if (callbacks.drag) callbacks.drag.call(this, ev);
-        });
-
-
-        el.on("dragend", function(ev) {
-            if (callbacks.dragend) callbacks.dragend.call(this, ev);
-        });
+			Global_CE.Input.press([Input.Enter], enter);
+			
+			function assignTap(index) {
+				var el = this.array_elements[index];
+				if (el.width && el.height && this._enable) {
+					el.forceEvent = true;
+					el.beginPath();
+					el.rect(0, 0, el.width, el.height);
+					el.closePath();
+					el.on("tap", function() {
+						self.setIndex(index);
+						self.update();
+						enter();
+					});
+				}
+			}
+			for (var i=0 ; i < this.array_elements.length ; i++) {
+				assignTap.call(this, i);
+			}
+			return this;
+		},
 		
-		return el;
+/**
+@doc cursor/
+@method getCurrentElement Fetches the current element where the cursor is positioned
+@return {CanvasEngine.Element}
+*/	
+		getCurrentElement: function() {
+			return this.array_elements[this.index];
+		},
+	
+/**
+@doc cursor/
+@method setIndex Sets the index of the cursor on an element. The index starts at 0. The cursor is updated visually
+@param {Integer} index new index of cursor
+@param {Boolean} change (optional) Calls the callback method assigned with the "change"
+@return {CanvasEngine.Window.Cursor}
+*/		
+		setIndex: function(index, change) {
+			var h = this.array_elements.length;
+			if (index < 0) {
+				index = this.params.reverse ? h-1 : 0;
+			}
+			else if (index >= h) {
+				index = this.params.reverse ? 0 : h-1;
+			}
+			this.index = index;
+			this.update(true);
+			return true;
+		},
+	
+/**
+@doc cursor/
+@method update The cursor is updated visually. If there is any item, the cursor is hidden
+@param {Boolean} change (optional) Calls the callback method assigned with the `change`
+@return {CanvasEngine.Window.Cursor}
+*/	
+		update: function(call_onchange) {
+			if (this.el) {
+				if (this.array_elements.length == 0) {
+					this.el.hide();
+					return;
+				}
+				else {
+					this.el.show();
+				}
+			}
+			var el = this.getCurrentElement(),
+				pos;
+			if (el) {
+				pos = el.position();
+				if (this.el) {
+					this.el.x = pos.left;
+					this.el.y = pos.top;
+				}
+				if (call_onchange && this._onchange && this.array_elements.length > 0) this._onchange.call(this, el);
+			}	
+		},
 		
+/**
+@doc cursor/
+@method enable Active cursor or not. If it is off, pressing Up, Bottom and Enter are reset. If it is enabled, the method `assignKeys` is called
+@param {Boolean} enable (optional) Enable or disable the cursor. If no value, the current `enable` value is sent
+@return {Boolean}
+*/	
+		enable: function(enable) {
+			if (enable != undefined) {
+				this._enable = enable;
+				if (enable) {
+					this.assignKeys();
+				}
+				else {
+					Global_CE.Input.reset([Input.Enter, Input.Up, Input.bottom]);
+				}
+			}
+			return this._enable;
+		},
+
+/**
+@doc cursor/
+@method change Assigns a callback function when the cursor changes element
+@param {Function} callback Callback
+@return {CanvasEngine.Window.Cursor}
+*/			
+		change: function(_onchange) {
+			this._onchange = _onchange;
+			return this;
+		},
+
+/**
+@doc cursor/
+@method select Assigns a callback when the element is selected (Enter key pressed)
+@param {Function} callback Callback
+@return {CanvasEngine.Window.Cursor}
+*/			
+		select: function(_select) {
+			this._select = _select;
+			return this;
+		}
+	
 	}
 }); 
     
