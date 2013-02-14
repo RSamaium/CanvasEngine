@@ -483,17 +483,16 @@ Example
 		_onFinish: null,
 		_seq: null,
 		_loop: false,
-		_els: [],
+		_els: null,
 		el: null,
 		initialize: function(options) {
 			this._options = options;
 			this._images = options.images;
 			this._animations = options.animations;
 			this._timeline = options.timeline;
-			this._els = options.addIn;
 			if (options.addIn) {
-				this.el = this._els.scene.createElement();
-				this._els.append(this.el);
+				this.el = options.addIn.scene.createElement();
+				options.addIn.append(this.el);
 				this.add();
 			}
 		},
@@ -526,6 +525,9 @@ Example
 						height: data_img.height
 					};
 				}
+				
+				if (seq && !seq.frequence) seq.frequence = 0;
+				
 				if (freq == null && seq) {
 					freq = seq.frequence;
 				}
@@ -534,7 +536,7 @@ Example
 					return;
 				}
 				freq++;
-				if (!seq.frequence) seq.frequence = 0;
+				
 
 				if (freq >= seq.frequence) {
 					if (self._images instanceof Array) {	
@@ -599,13 +601,22 @@ Example
 							return false;
 						}
 						
-						
+				
 						if (seq.frames[0] instanceof Array) {
+
 							if (seq.frames[i] === undefined) {
 								i = -1;
 								if (finish.call(this)) return;
 							}
 							this.empty();
+							
+							seq.framesDefault = seq.framesDefault || {};
+							if (!seq.framesDefault.x) seq.framesDefault.x = 0;
+							if (!seq.framesDefault.y) seq.framesDefault.y = 0;
+							if (!seq.framesDefault.zoom) seq.framesDefault.zoom = 100;
+							if (!seq.framesDefault.opacity) seq.framesDefault.opacity = 255;
+							if (!seq.framesDefault.rotation) seq.framesDefault.rotation = 0;
+							
 							for (var j=0 ; j < seq.frames[i].length ; j++) {
 								currentSeq =  seq.frames[i][j];
 								if (currentSeq) {

@@ -91,11 +91,11 @@ Class.create("Effect", {
 	
 Other example :
 
-	rpg.screenShake(3, 5, 24, "xy");
+	effect.screenShake(3, 5, 24, "xy");
 	
 or :
 
-	rpg.screenShake(3, 5, 24, "xy", function() { // You can omit the parameter "axis" if you do a shake on the X axis
+	effect.screenShake(3, 5, 24, "xy", function() { // You can omit the parameter "axis" if you do a shake on the X axis
 		alert("finish"); 
 	});
 */
@@ -137,6 +137,8 @@ or :
 					this.off("canvas:render", render);
 					if (callback) callback();
 				}
+				
+				console.log(delta);
 			
 		};
 		

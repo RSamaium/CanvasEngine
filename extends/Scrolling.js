@@ -24,6 +24,7 @@ Class.create("Scrolling", {
 	main_el: null,
 	scroll_el: [],
 	scene: null,
+	freeze: false,
 	initialize: function(scene, tile_h, tile_w) {
 		this.scene = scene;
 		this.tile_h = tile_h;
@@ -122,8 +123,13 @@ Class.create("Scrolling", {
 		@method update Update scrolling. A call loop
 	*/
 	update: function() {
+		
 		var scroll, container;
 		var canvas = this.scene.getCanvas();
+		
+		if (this.freeze) {
+			return;
+		}
 		
 		if (!this.main_el) {
 			return;

@@ -238,18 +238,30 @@ Class.create = function(name, methods, _static) {
 	@method new new class. 
 	@static
 	@params {String} name Class name
-	@params {Array} params Parameters for the constructor
+	@params {Array} params (optional) Parameters for the constructor
+	@params {Boolean} initialize (optional) Calls the constructor "initialize" (true by default)
 	@return {Class}
 */
 Class.New = function() { return Class["new"].apply(this, arguments) };
-Class["new"] = function(name, params) {
+Class["new"] = function(name, params, initialize) {
 	var _class;
+	
+	if (typeof params == "boolean") {
+		initialize = params;
+		params = [];
+	}
+	
+	if (initialize == undefined) {
+		initialize = true;
+	}
+	
 	params = params || [];
+	
 	if (!Class.__class_config[name]) {
 		throw name + " class does not exist. Use method \"create\" for build the structure of this class";
 	}
 	_class = Class.__class_config[name].kernel["new"]();
-	if (_class.initialize) {
+	if (initialize && _class.initialize) {
 		_class.initialize.apply(_class, params);
 	}
 
@@ -534,6 +546,10 @@ CanvasEngine.rgbToHex = function(r, g, b) {
 		g = Math.round(Math.random() * 255),
 		b = Math.round(Math.random() * 255);
 	return CanvasEngine.rgbToHex(r, g, b);
+};
+
+CanvasEngine.random = function(min, max) {
+	return Math.floor((Math.random() * max) + min);
 };
 
 CanvasEngine._benchmark = {};

@@ -558,13 +558,18 @@ Read the save from above :
 
 */
 Marshal = {
-	_pointer: 0,
+	_pointer: {},
 	_cache: {},
 	_stack_dump: [],
 	
 	_decode: function(val) {
 		if (navigator.appName == 'Microsoft Internet Explorer') {
-			return JSON.parse(val);
+			try {
+				return JSON.parse(val);
+			}
+			catch (e) {
+			
+			}
 		}
 		else {
 			return BISON.decode(val);
@@ -573,7 +578,12 @@ Marshal = {
 	
 	_encode: function(val) {
 		if (navigator.appName == 'Microsoft Internet Explorer') {
-			return JSON.stringify(val);
+			try {
+				return JSON.stringify(val);
+			}
+			catch (e) {
+			
+			}
 		}
 		else {
 			return BISON.encode(val);
@@ -590,35 +600,46 @@ Marshal = {
 		return localStorage && localStorage[file];
 	},
 	
-	_recursiveLoad: function(data) {
+	_recursiveData: function(data, type) {
 		var _class_name, _class = {}, new_class = {}, val;
-		
+
 		if (data instanceof Object) {
 			for (var method in data) {
 				val = data[method];
-				if (val instanceof Array) {
-					new_class[method] = [];
-					for (var i=0 ; i < val.length ; i++) {
-						new_class[method][i] = this._recursiveLoad(val[i]);
+				if (typeof val != "function") {
+					if (val instanceof Array) {
+						new_class[method] = [];
+						for (var i=0 ; i < val.length ; i++) {
+							new_class[method][i] = this._recursiveData(val[i], type);
+						}
 					}
-				}
-				else if (val instanceof Object) {
-					new_class[method] = this._recursiveLoad(val);
-				}
-				else {
-					new_class = data;
+					else if (val instanceof Object) {
+						new_class[method] = this._recursiveData(val, type);
+					}
+					else {
+						new_class[method] = val;
+					}
 				}
 			}
 		}
 		else {
-			return data;
+			if (typeof data != "function") {
+				return data;
+			}
 		}
 		
-		if (new_class.__name__) {
-			_class = Class.New(data.__name__);
-			for (var method in new_class) {
-				_class[method] = new_class[method];
-			}	
+		if (type == "load") {
+			if (new_class.__name__) {
+				_class = Class.New(data.__name__, false);
+				for (var method in new_class) {
+					if (typeof _class[method] != "function") {
+						_class[method] = new_class[method];
+					}
+				}	
+			}
+			else {
+				_class = new_class;
+			}
 		}
 		else {
 			_class = new_class;
@@ -626,6 +647,7 @@ Marshal = {
 		
 		return _class;
 	},
+	
 	
 	/**
 		@doc save/
@@ -636,6 +658,10 @@ Marshal = {
 	load: function(file) {
 		var data, _class, _class_name;
 		
+		if (this._pointer[file] === undefined) {
+			this._pointer[file] = 0;
+		}
+		
 		if (this._cache[file]) {
 			data = this._cache[file];
 		}
@@ -643,12 +669,12 @@ Marshal = {
 			data = this._decode(localStorage[file]) || [];
 			this._cache[file] = data;
 		}
-		_class = this._recursiveLoad(data[this._pointer]);
+		_class = this._recursiveData(data[this._pointer[file]], "load");
 		if (!Marshal.exist(file)) {
 			return false;
 		}
 		
-		this._pointer++;
+		this._pointer[file]++;
 		return _class;
 	},
 	/**
@@ -665,11 +691,7 @@ Marshal = {
 			new_data = _class;
 		}
 		else {
-			for (var method in _class) {
-				if (typeof _class[method] != "function") {
-					new_data[method] = _class[method];
-				}
-			}
+			new_data = this._recursiveData(_class, "save");
 		}
 		this._stack_dump.push(new_data);
 		if (localStorage) {

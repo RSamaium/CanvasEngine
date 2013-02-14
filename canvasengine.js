@@ -397,6 +397,9 @@ Using Sound :
 				return canvas;
 			},
 			
+			// TODO
+			// Nearest-neighbor
+			
 /**
 @doc materials/
 @method getExtension Gets the file extension
@@ -430,20 +433,22 @@ The value can be an object to give several parameters :
 "path" is the path and "transparentcolor" the color that will be transparent image
 */
 			load: function(type, path, onLoad, onFinish) {
-				var i=0, self = this, materials, img_data;
-				if (path instanceof Array) {
-					materials = path;
+				var i=0, p, self = this, materials = [], img_data;
+				
+				if (!(path instanceof Array)) {
+					path = [path]
 				}
-				else {
-					materials = [];
-					for (var key in path) {
+				
+				for (var j=0 ; j < path.length ; j++) {
+					p = path[j];
+					for (var key in p) {
 						img_data = {};
-						if (typeof path[key] == "string") {
-							img_data.path = path[key];
+						if (typeof p[key] == "string") {
+							img_data.path = p[key];
 						}
 						else {
-							img_data.path = path[key].path;
-							img_data.transparentcolor = path[key].transparentcolor;
+							img_data.path = p[key].path;
+							img_data.transparentcolor = p[key].transparentcolor;
 						}
 						materials.push({
 							id: key,
@@ -453,6 +458,7 @@ The value can be an object to give several parameters :
 						
 					}
 				}
+				
 				switch (type) {
 					case "images":
 						load();
@@ -520,6 +526,9 @@ The value can be an object to give several parameters :
 								snd.addEventListener('canplaythrough', function() { 
 									self.sounds[materials[i].id] = this;
 									next();
+								}, false);
+								snd.addEventListener('error', function (e) { 
+									throw e;
 								}, false);
 							}
 							
@@ -802,11 +811,11 @@ Leaving the other scenes after preloading of the scene called
 						if (params.exitScenes) {
 							params.exitScenes.allExcept = params.exitScenes.allExcept || [];
 							params.exitScenes.allExcept = _allExcept.concat(params.exitScenes.allExcept);
-							_class._load.call(_class, params.exitScenes);
+							_class._load.call(_class, params.exitScenes, params.params);
 						}
 						else {
 							if (!params.overlay) this.exitAll(_allExcept);
-							_class._load.call(_class);
+							_class._load.call(_class, {}, params.params);
 						}
 						this._scenesNbCall[name]++;
 					}
@@ -1365,9 +1374,10 @@ Create two elements :
 			this.getCanvas()._elementsByScene[this.name] = {};
 			if (this.exit) this.exit.call(this);
 		},
-		_load: function(params) {
+		_load: function(params, options) {
 			var self = this;
 			params = params || {};
+			options = options || {};
 			this._stage = CanvasEngine.Element["new"](this);
 			for (var i=0 ; i < CanvasEngine.el_canvas.length ; i++) {
 				CanvasEngine.el_canvas[i].stage = this._stage;
@@ -1387,7 +1397,7 @@ Create two elements :
 				font_length = materialLength("fonts"),
 				total = images_length + sound_length + font_length,
 				current = 0;
-			
+				
 			if (images_length > 0) {
 				materialLoad("images");
 			}
@@ -1432,7 +1442,7 @@ Create two elements :
 				if (params.when == "afterPreload") {
 					CanvasEngine.Scene.exitAll(params.allExcept);
 				}
-				if (self.ready) self.ready(self._stage, self.getElement);
+				if (self.ready) self.ready(self._stage, self.getElement, options);
 				self._stage.trigger("canvas:readyEnd");
 				if (self.model && self.model.ready) self.model.ready.call(self.model);
 				self._isReady = true;
