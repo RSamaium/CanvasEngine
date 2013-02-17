@@ -530,6 +530,8 @@ The value can be an object to give several parameters :
 								snd.addEventListener('error', function (e) { 
 									throw e;
 								}, false);
+								snd.load();
+								snd.pause();
 							}
 							
 							snd.src = _p;

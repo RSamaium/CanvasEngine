@@ -548,6 +548,14 @@ CanvasEngine.rgbToHex = function(r, g, b) {
 	return CanvasEngine.rgbToHex(r, g, b);
 };
 
+/**
+	@doc utilities/
+	@method random Random value between `min`	and `max`
+	@static
+	@params {Integer} min
+	@params {Integer} max
+	@return {Integer} 
+*/
 CanvasEngine.random = function(min, max) {
 	return Math.floor((Math.random() * max) + min);
 };

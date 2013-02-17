@@ -46,6 +46,30 @@ Class.create("Text", {
 		this.el = this.scene.createElement();
 		this.text = text.split("\n");
 	},
+	
+/**
+@doc text/
+@method style Applies a style to the text
+@param {Object} params Styles parameters
+
+Style: default value
+
+* size: "20px"
+* family: "Arial"
+* weight: "normal"
+* style: "normal"
+* variant: "normal"
+* color: "#000"
+* transform: "none"
+* decoration: "none"
+* border: "none"
+* lineHeight: 25
+* shadow: null
+* textBaseline: "alphabetic"
+* lineWidth: null
+
+@return {CanvasEngine.Text}
+*/	
 	style: function(params) {
 		if (params.size & !params.lineHeight) {
 			params.lineHeight = params.size;
@@ -55,13 +79,51 @@ Class.create("Text", {
 		}
 		return this;
 	},
+
 /**
-	effect : 
-	
-	{
-		line: "fade"
-	}
-*/
+@doc text/
+@method draw Draws the text given by the style. If an effect is assigned, consider integrating extension Timelines
+@param {CanvasEngine.Element} parent Element parent where the text will be displayed
+@param {Integer} x (optional) Position X (0 by default)
+@param {Integer} y (optional) Position Y (0 by default)
+@param {Object} effect (optional) Effect to apply on line or text letters
+
+* line: {}
+	* frames : Duration in frames before the line is displayed
+	* onFinish : Call the function when the lines were displayed
+	* onEffect : Call function when a line has been displayed. Two parameters:
+		* text_line {String} The text line
+		* el_line {CanvasEngine.Element} the corresponding element in line
+* _char: {}
+	* frames : Duration in frames before the character is displayed
+	* onFinish : Call the function when the characters were displayed
+	* onEffect : Call function when a character has been displayed. Two parameters:
+		* text_char {String} The text character
+		* el_char {CanvasEngine.Element} the corresponding element in character
+		
+@example
+
+In `ready` method :
+
+	var text = RPGJS.Text.new(this, "Hello World");
+		text.style({
+			size: "18px",
+			lineWidth: 300,
+			color: "white"
+		}).draw(content, 20, 20, {
+			line: {	// Animation
+				frames: 20,
+				onFinish: function() {
+					console.log("Effect is finished");
+				},
+				onEffect: function(text_line, el_line) {
+					console.log(text_line);
+				}
+			}
+		});
+
+@return {CanvasEngine.Text}
+*/	
 	draw: function(parent, x, y, effect) {
 	
 		if (effect && !Global_CE.Timeline) {
@@ -227,6 +289,42 @@ Class.create("Text", {
 	}
 }); 
 	
+
+/**
+@doc text
+@class Text
+
+
+	var canvas = CE.defines("canvas_id").
+		extend(Text).
+		ready(function() {
+			canvas.Scene.call("MyScene");
+		});
+		
+	canvas.Scene.new({
+		name: "MyScene",
+
+		ready: function(stage) {
+		
+			var content = this.createElement();
+			
+			var text = RPGJS.Text.new(this, "Hello World");
+			text.style({
+				size: "18px",
+				lineWidth: 300,
+				color: "white"
+			}).draw(content, 20, 20, {
+				line: {	// Animation
+					frames: 20
+				}
+			});
+			
+			stage.append(content);
+			
+		}
+	});
+
+*/
 var Text = {
 	Text: {
 		"new": function(scene, text) {

@@ -638,6 +638,7 @@ Marshal = {
 				}	
 			}
 			else {
+				
 				_class = new_class;
 			}
 		}

@@ -143,7 +143,9 @@ Class.create("Scrolling", {
 			scroll.screen_x = this.main_el.x - canvas.width/2 + (canvas.width/2 % this.tile_w);
 			scroll.screen_y = this.main_el.y - canvas.height/2 + (canvas.height/2 % this.tile_h);
 			
-			container.y -= Math.abs(container.y) == scroll.screen_y ? 0 : Math.floor((scroll.screen_y < Math.abs(container.y) ? -this.tile_h : this.tile_h) / scroll.speed);
+			//container.y -= Math.abs(container.y) == scroll.screen_y ? 0 : Math.floor((scroll.screen_y < Math.abs(container.y) ? -this.tile_h : this.tile_h) / scroll.speed);
+			
+			
 
 			var absx = Math.abs(container.x);
 			var absy = Math.abs(container.y);

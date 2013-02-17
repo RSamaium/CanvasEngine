@@ -89,6 +89,8 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Fix press method in Input class
 * Fix load method in Materials class
 * Fix animation construct in Animation class
+* Fix load sound in cache
+* Fix scrolling
 * Improve children method in Element class
 * Improve position method in Window class
 * Improve append method in Element class
@@ -96,6 +98,7 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Improve reset method in Input class
 * Improve load and dump methods in Marshal class
 * Improve new method in CanvasEngine class
+* Improve classes in Hit class
 * Merge Hammer.js in CanvasEngine for multi touch feature
 
 ### v1.1.1
