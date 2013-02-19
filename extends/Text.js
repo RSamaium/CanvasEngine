@@ -24,6 +24,7 @@ Class.create("Text", {
 	scene: null,
 	text: "",
 	el: null,
+	_family: null,
 	_style: {
 		"size": "20px",
 		"family": "Arial",
@@ -46,6 +47,28 @@ Class.create("Text", {
 		this.el = this.scene.createElement();
 		this.text = text.split("\n");
 	},
+	
+	setImageText: function(img_id, letters, size, rowsAndCols) {
+		 var el = this.scene.createElement();
+		
+		if (!Global_CE.Spritesheet) {
+            throw "Add Spritesheet class to use setImageText method";
+        }
+		
+		rowsAndCols = rowsAndCols || {rows: 1, cols: 1};
+		 
+		 
+		 var spritesheet = Global_CE.Spritesheet.New(img_id, {
+
+			grid: [{
+				size: rowsAndCols,
+				tile: [size.width, size.height],
+				set: letters
+			}]
+		 
+		 });
+		 this._family = spritesheet;
+},
 	
 /**
 @doc text/

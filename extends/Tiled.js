@@ -73,7 +73,7 @@ Class.create("Tiled", {
 				}
 				self.tilesetsIndexed[self.tilesets[i].firstgid] = self.tilesets[i];
 			}
-			var _id, length = self.tilesetsIndexed.length + (Math.round(self.tilesets[self.tilesets.length-1].imagewidth / self.tile_h) * (Math.round(self.tilesets[self.tilesets.length-1].imagewidth / self.tile_w)));
+			var _id, length = self.tilesetsIndexed.length + (Math.round(self.tilesets[self.tilesets.length-1].imageheight / self.tile_h) * (Math.round(self.tilesets[self.tilesets.length-1].imagewidth / self.tile_w)));
 			for (var m=1; m < length; m++) {
 				_id = self.tilesetsIndexed[m] ? m : _id;
 				self.tilesetsIndexed[m] = self.tilesetsIndexed[_id];

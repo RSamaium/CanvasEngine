@@ -1100,6 +1100,8 @@ Leaving the other scenes after preloading of the scene called
 @doc canvas/
 @method measureText Returns an object that contains the width of the specified text
 @param {String} txt Text
+@param {String} font_size (optional) Font Size (default 12px);
+@param {String} font_family (optional) Font Family (default Arial);
 @return Object
 @example
 	
@@ -1109,8 +1111,14 @@ In method "ready" of the scene :
 		_canvas.measureText("Hello World").width;
 	
 */
-		measureText: function(txt) {
-			return this.ctx.measureText(txt);
+		measureText: function(txt, font_size, font_family) {
+			var val;
+			font_family = font_family || "Arial";
+			font_size = font_size || "12px";
+			this.ctx.font = "normal " + font_size + " " + font_family;
+			val = this.ctx.measureText(txt);
+			this.ctx.font = null;
+			return val;
 		},
 		
 /**
