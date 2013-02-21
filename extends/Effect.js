@@ -31,6 +31,7 @@ Class.create("Effect", {
 		if (!Global_CE.Timeline) {
 			throw "Add Timeline class to use effects";
 		}
+		return this;
 	},
 
 /**
@@ -57,6 +58,39 @@ Class.create("Effect", {
 			if (callback) callback();
 		});
 
+	},
+
+/**
+@method blink Blink element on a period with a specified frequency
+@param {Integer} duration Duration in frames
+@param {Integer} frequence Blinking frequency (the higher the frequency is High, more the blinking is low)
+@param {Function} callback (optional) Callback when the blink is completed
+*/		
+	blink: function(duration, frequence, callback) {
+	
+		var current_freq = 0;
+	
+		var render = function() {
+			
+				duration--;
+				
+				current_freq++;
+			
+				if (current_freq >= frequence) {
+					current_freq = 0;
+					this.toggle();
+				}
+				
+				if (duration <= 0) {
+					
+					this.off("canvas:render", render);
+					this.show();
+					if (callback) callback();
+				}
+		};
+		
+		this.el.on("canvas:render", render);
+	
 	},
 	
 /**

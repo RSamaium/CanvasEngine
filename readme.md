@@ -83,6 +83,8 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Add mouseScroll method in Scrolling class
 * Add random method in CanvasEngine Core
 * Add freeze property in Scrolling class
+* Add mobileUserAgent method in CanvasEngine core
+* Fix event "canvas:render" when element is hidden
 * Fix clip method in Context class
 * Fix name attribute in Element class
 * Fix value 0 in Timeline class
@@ -101,6 +103,7 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Improve load and dump methods in Marshal class
 * Improve new method in CanvasEngine class
 * Improve classes in Hit class
+* Improve isPressed method in Input class
 * Merge Hammer.js in CanvasEngine for multi touch feature
 
 ### v1.1.1

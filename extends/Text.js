@@ -254,6 +254,7 @@ In `ready` method :
 				return;
 			}
 			el = this.lines[i_line].el;
+			
 			if (effect.line) {
 				this.el.append(el);
 				Global_CE.Timeline['new'](el).to({opacity: 1}, effect.line.frames).call(function() {
@@ -309,6 +310,11 @@ In `ready` method :
 	},
 	getNumberLines: function() {
 		return this.lines.length;
+	},
+	effectNumber: function(old_num, new_num, frequence) {
+	
+
+	
 	}
 }); 
 	

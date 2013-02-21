@@ -183,11 +183,11 @@ var Input = {Input: {
 		}
 		
 		document.onkeyup = function(e) {
+			self._keyPress[e.which] = 0;
+			self._keyPressed[e.which] = false;
 			if (self._keyUp[e.which]) {
 				self._keyUp[e.which](e);
 			}
-			self._keyPress[e.which] = 0;
-			self._keyPressed[e.which] = false;
 		};
 	},
 
@@ -289,7 +289,15 @@ var Input = {Input: {
 	  @return Boolean true if pressed
 	*/
 	isPressed: function(key) {
-		return this._keyPressed[key];
+		if (!(key instanceof Array)) {
+			key = [key];
+		}
+		for (var i=0 ; i < key.length ; i++) {
+			if (this._keyPressed[key[i]]) {
+				return true;
+			}
+		}
+		return false;
 	},
 
 /**

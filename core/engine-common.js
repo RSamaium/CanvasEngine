@@ -560,6 +560,38 @@ CanvasEngine.random = function(min, max) {
 	return Math.floor((Math.random() * max) + min);
 };
 
+/**
+@doc utilities/
+@method mobileUserAgent Returns the name of the user agent used
+@static
+@return {String|Boolean} name of the agent user ("iphone", "ipod", "ipad", "blackberry", "android" or "windows phone") or false if it is not a mobile
+@example
+
+	if (CE.mobileUserAgent()) {
+		// It's a mobile
+	}
+	if (CE.mobileUserAgent() == "android") {
+		// It's a Android mobile
+	}
+*/
+CanvasEngine.mobileUserAgent = function() {
+	var ua = navigator.userAgent;
+	if (ua.match(/(iPhone)/))
+		return "iphone";
+	else if (ua.match(/(iPod)/))
+		return "ipod";
+	else if (ua.match(/(iPad)/)) 
+		return "ipad";
+	else if (ua.match(/(BlackBerry)/)) 
+		return "blackberry";
+	else if (ua.match(/(Android)/))
+		return "android";
+	else if (ua.match(/(Windows Phone)/)) 
+		return "windows phone";
+	else
+		return false;
+};
+
 CanvasEngine._benchmark = {};
 CanvasEngine._interval_benchmark = 60;
 CanvasEngine._freq_benchmark = {};

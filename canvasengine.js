@@ -2105,13 +2105,17 @@ In `ready` method :
 		*/
 		_refresh: function(init, children, ctx) {
 			children = children === undefined ? true : children;
-			if (!this._visible) return;
-		
 			
+
+			if (this.stage.trigger) this.stage.trigger("canvas:refresh", this);
+			
+			if (!this._visible) {
+				this._loop();
+				return;
+			}
+
 			if (!this.real_pause) {
-			
-				if (this.stage.trigger) this.stage.trigger("canvas:refresh", this);
-			
+
 				if (init || !this.parent) {
 					this.parent = {
 						scaleX: 1,
@@ -2786,7 +2790,6 @@ In method ready
 		*/
 		hide: function() {
 			this._visible = false;
-			this.stage.refresh();
 		},
 		/**
 			@doc manipulate/
@@ -2794,7 +2797,6 @@ In method ready
 		*/
 		show: function() {
 			this._visible = true;
-			this.stage.refresh();
 		},
 		/**
 			@doc manipulate/
