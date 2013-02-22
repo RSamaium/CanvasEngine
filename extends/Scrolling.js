@@ -57,6 +57,7 @@ Class.create("Scrolling", {
 		if (!scroll_el.parallax_x) scroll_el.parallax_x = 0;
 		if (!scroll_el.parallax_y) scroll_el.parallax_y = 0;
 		this.scroll_el.push(scroll_el);
+		if (this.main_el) this.setScreen(scroll_el);
 		return this.scroll_el[this.scroll_el.length-1];
 	},
 	/**

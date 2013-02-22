@@ -277,7 +277,7 @@ In `ready` method :
 		for (var i=0 ; i < this.text.length ; i++) {
 			text = this.text[i];
 			if (s.lineWidth) {
-				testWidth = canvas.measureText(text).width;
+				testWidth = canvas.measureText(text, s.size, s.family).width;
 				if (testWidth < s.lineWidth) {
 					drawLine(pos, text);
 				}

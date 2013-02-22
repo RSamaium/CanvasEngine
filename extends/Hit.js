@@ -265,29 +265,43 @@ THE SOFTWARE.
 			};
 		}
 		
-		var a1, a2, b1, b2, lines = [], k=0, result, coincident = [];
-		for (i = 0; i < this.getNumberOfSides(); i++) {
-			lines[k] = [];
+	
+		var a1, a2, coincident_result = [], lines = [], k=0;
+		
+		function testInteraction(type, a1, a2) {
+			var j, b1, b2, result, coincident = [];
+			
 			for (j = 0; j < other.getNumberOfSides(); j++) {
-				a1 = offset(this, this.points[i]);
-				a2 = offset(this, this.points[i+1] ? this.points[i+1] : this.points[0]);
 				b1 = offset(other, other.points[j]);
 				b2 = offset(other, other.points[j+1] ? other.points[j+1] : other.points[0]);
 				result = Polygon.intersectLineLine(a1, a2, b1, b2);
 				if (result == "Coincident") {
-					coincident.push([i, j]);
+					coincident.push({
+						sides: j
+					});
 				}
+				
 				lines[k].push(result);
 			}
+
 			k++;
+			return coincident;
+		}
+		
+	
+		for (i = 0; i < this.getNumberOfSides(); i++) {
+			lines[k] = [];
+			a1 = offset(this, this.points[i]);
+			a2 = offset(this, this.points[i+1] ? this.points[i+1] : this.points[0]);
+			coincident_result.push(testInteraction(null, a1, a2));
 		}
 		return {
 			overlap: overlap + 0.001, 
 			axis: smallest, 
 			lines: lines, 
-			coincident: coincident
+			coincident: coincident_result
 		};
-		
+
 	}
 
 });
@@ -1056,12 +1070,18 @@ In `ready` method
 			};
 		}
 		
+		if (!cell.getPolygon) {
+			entity = entity.model;
+		}
+		
 		var points_cell = [
 			{y: cell.row, x: cell.col},
 			{y: cell.row, x: cell.col+1},
 			{y: cell.row+1, x: cell.col+1},
 			{y: cell.row+1, x: cell.col}
 		];
+		
+		
 		var a1, a2;
 		for (j = 0; j < points_cell.length; j++) {
 			a1 = real(points_cell[j]);
@@ -1149,22 +1169,23 @@ In `ready` method
 			}
 		}
 		
+		var cell = [
+			this.getCellByPos(ep.min_x, ep.min_y),
+			this.getCellByPos(ep.max_x, ep.min_y),
+			this.getCellByPos(ep.max_x, ep.max_y),
+			this.getCellByPos(ep.min_x, ep.max_y)
+		];
 		
-		
-		var nbrows = (ep.max_x - ep.min_x) / this.cell.width, 
-			nbcols = (ep.max_y - ep.min_y) / this.cell.height,
-			x, y, cells;
-		for (i=0 ; i <= nbcols ; i++) {
-			x = ep.min_x + this.cell.width * i;
-			for (j=0 ; j <= nbrows ; j++) {
-				y = ep.min_y + this.cell.height * j;
-				cells = this.getCellByPos(x, y);
-				
-				_cells.push(cells);
+		var nbrows = cell[2].row - cell[0].row,
+			nbcols = cell[1].col - cell[0].col;
+		for (i=0 ; i < nbcols-1 ; i++) {
+			for (j=0 ; j < nbrows-1 ; j++) {
+				cell.push({row: cell[0].row + j, col: cell[0].col + i});
 			}
 		}
+		
 		return {
-			cells: _cells
+			cells: cell
 		};
 	},
 	

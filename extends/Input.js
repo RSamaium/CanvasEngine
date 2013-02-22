@@ -249,6 +249,7 @@ var Input = {Input: {
 	canvas.Input.reset([Input.Enter, Input.Space]);
 */
 	reset: function(keys) {
+		this._keyPressed = {};
 		if (keys) {
 			for (var i=0 ; i < keys.length ; i++) {
 				this._keyFunctions[keys[i]] = null;

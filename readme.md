@@ -95,6 +95,8 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Fix scrolling
 * Fix measureText method in Canvas class
 * Fix draw map in Tiled class
+* Fix testCell method in Hit class
+* Fix intersectsWith method in Polygon class
 * Improve children method in Element class
 * Improve position method in Window class
 * Improve append method in Element class
