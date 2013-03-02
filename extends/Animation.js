@@ -533,6 +533,7 @@ Example
 				}
 				if (self._stop) {
 					if (seq) freq = seq.frequence;
+					i = 0;
 					return;
 				}
 				freq++;
@@ -605,7 +606,7 @@ Example
 						if (seq.frames[0] instanceof Array) {
 
 							if (seq.frames[i] === undefined) {
-								i = -1;
+								i = 0;
 								if (finish.call(this)) return;
 							}
 							this.empty();
@@ -638,13 +639,17 @@ Example
 						}
 						else {
 							id = seq.frames[0] + i;
-							if (id >= seq.frames[1]) {
+							
+							if (id > seq.frames[1]) {
 								i = -1;
-								if (finish.call(this)) return;
+								finish.call(this)
 							}
-							drawImage(this, id);
+							else {
+								drawImage(this, id);
+							}
+							
 						}
-						
+
 						i++;
 					}
 					freq = 0;

@@ -616,14 +616,14 @@ Marshal = {
 					else if (val instanceof Object) {
 						new_class[method] = this._recursiveData(val, type);
 					}
-					else {
+					else if (val !== undefined) {
 						new_class[method] = val;
 					}
 				}
 			}
 		}
 		else {
-			if (typeof data != "function") {
+			if (typeof data != "function" && data !== undefined) {
 				return data;
 			}
 		}

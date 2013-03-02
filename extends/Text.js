@@ -41,11 +41,17 @@ Class.create("Text", {
 		"lineWidth": null
 	},
 	lines: [],
+	
 	initialize: function(scene, text) {
-		text = ""+text;
 		this.scene = scene;
+		this.construct(text);
+	},
+	
+	construct: function(text) {
+		text = ""+text;
 		this.el = this.scene.createElement();
 		this.text = text.split("\n");
+		this.lines = [];
 	},
 	
 	setImageText: function(img_id, letters, size, rowsAndCols) {
@@ -306,15 +312,30 @@ In `ready` method :
 		displayLines.call(this, 0);
 		
 		parent.append(this.el);
+		this.parent = parent;
+		this.pos = {x:x, y:y};
 		return this;
 	},
+
+/**
+@doc text/
+@method refresh Refreshed element and changing the text
+@param {String} text New text
+@return {CanvasEngine.Text}
+*/		
+	refresh: function(text) {
+		if (!this.parent) {
+			throw "Use 'draw' method before";
+		}
+		this.parent.empty();
+		this.construct(text);
+		this.draw(this.parent, this.pos.x, this.pos.y);
+		return this;
+	},
+	
+	// TODO
 	getNumberLines: function() {
 		return this.lines.length;
-	},
-	effectNumber: function(old_num, new_num, frequence) {
-	
-
-	
 	}
 }); 
 	
