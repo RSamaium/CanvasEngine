@@ -719,6 +719,7 @@ var Animation = {
 	* position {Object} : offset of the animation display ("left" and "top" keys)
 	
 @example
+
 In method "ready" of the scene :
 
 	var el = this.createElement();
@@ -726,7 +727,7 @@ In method "ready" of the scene :
 	   images: "chara",
 	   animations: {
 		run: {
-			frames : [0, 5],
+			frames: [0, 5],
 			 size: {
 				width: 42,
 				height: 42
