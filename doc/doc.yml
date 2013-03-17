@@ -28,7 +28,9 @@ extends:
     keyboard:
     gamepad:
     accelerometer:
-   window:
+   box:
+    window:
+    cursor:
    text:
    effect:
 

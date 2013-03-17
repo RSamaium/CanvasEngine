@@ -35,6 +35,7 @@ Class.create("Effect", {
 	},
 
 /**
+@doc effect/
 @method screenFlash Perform a flash on the screen
 @param {String} color Hexadecimal color value. Example : ff0000 for red
 @param {Integer} speed Speed of the flash.
@@ -61,6 +62,7 @@ Class.create("Effect", {
 	},
 
 /**
+@doc effect/
 @method blink Blink element on a period with a specified frequency
 @param {Integer} duration Duration in frames
 @param {Integer} frequence Blinking frequency (the higher the frequency is High, more the blinking is low)
@@ -181,8 +183,8 @@ or :
 	},
 	
 /**
-Change the tone of the screen
-@method changeScreenColorTone
+@doc effect/
+@method changeScreenColorTone Change the tone of the screen
 @param {String} color Hexadecimal color value. Example : 000000 for black. You can put "reset" to reset the tone of the screen :
 	
 	var effect = canvas.Effect.new(this, el);
