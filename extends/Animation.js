@@ -744,20 +744,19 @@ In method "ready" of the scene :
 	animation.play("run", "loop");
 
 
-<jsfiddle>WebCreative5/77wUh/1</jsfiddle>
+<jsfiddle>WebCreative5/77wUh/3</jsfiddle>
 
 You can also chaining multiple different images:
 
-
- var el = this.createElement(),
-	animation = canvas.Animation.new({
-		images: ["foo", "bar"],
-		animations: {
-			_default: {
-				frequence: 7
+	var el = this.createElement(),
+		animation = canvas.Animation.new({
+			images: ["foo", "bar"],
+			animations: {
+				_default: {
+					frequence: 7
+				}
 			}
-		}
-	});
+		});
 	animation.add(el);
 	animation.play("_default", "loop");
 
