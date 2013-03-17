@@ -37,11 +37,12 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * Keyboard and Gamepad
 * Windows
 * Sound
+* Text and Game effects
 * Scrolling
 * Level Design
 * Save & Load
 * Spritesheet Management
-* Mouse Control
+* Mouse Control & Multi Touch
 * Elements Manipulation
 
 ## Editors
@@ -50,9 +51,6 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 
 ## Roadmap (in order)
 
-* Multi touch
-* Game Effects
-* Text Effects
 * Transition
 * UI
 * Box2d
@@ -70,6 +68,46 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * [robwalch](https://github.com/robwalch) - [commit](https://github.com/robwalch/CanvasEngine/commit/e55909952c26ba1ec3e3d5bd6f733ddfffc4b647)
 
 ## Changelog
+
+### v1.2.0
+
+* Add Text feature
+* Add Effect feature
+* Add Cursor feature in Window class
+* Add off method in Element class
+* Add scroll method in Window class
+* Add invertColor method in Materials class
+* Add forceEvent property in Element class
+* Add hasCmd method in Context class
+* Add propagationOpacity property in Element Class
+* Add mouseScroll method in Scrolling class
+* Add random method in CanvasEngine Core
+* Add freeze property in Scrolling class
+* Add mobileUserAgent method in CanvasEngine core
+* Fix event "canvas:render" when element is hidden
+* Fix clip method in Context class
+* Fix name attribute in Element class
+* Fix value 0 in Timeline class
+* Fix press method in Input class
+* Fix load method in Materials class
+* Fix animation construct in Animation class
+* Fix load sound in cache
+* Fix scrolling
+* Fix measureText method in Canvas class
+* Fix draw map in Tiled class
+* Fix testCell method in Hit class
+* Fix intersectsWith method in Polygon class
+* Fix animation loop in Animation class
+* Improve children method in Element class
+* Improve position method in Window class
+* Improve append method in Element class
+* Improve clone method in Element class
+* Improve reset method in Input class
+* Improve load and dump methods in Marshal class
+* Improve new method in CanvasEngine class
+* Improve classes in Hit class
+* Improve isPressed method in Input class
+* Merge Hammer.js in CanvasEngine for multi touch feature
 
 ### v1.1.1
 

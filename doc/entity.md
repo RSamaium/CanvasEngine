@@ -44,9 +44,11 @@ Create the scene :
       },
       render: function(stage) {
     	this.entityA.move(5); // x += 5;
-    	this.entityA.hit("over", [this.entityB], function(el) {
+    	this.entityA.hit([this.entityB], function(state, el) {
+            if (state == "over") {
     		  el.fillStyle = "green";
     		  el.fillRect(0, 0, 100, 100);
+            }
     	});
     	stage.refresh();
       }
@@ -78,9 +80,11 @@ In the `render` method :
 
 2. Test the collision between two entities.
 
-        this.entityA.hit("over", [this.entityB], function(el) {
+       this.entityA.hit([this.entityB], function(state, el) {
+            if (state == "over") {
     		  el.fillStyle = "green";
     		  el.fillRect(0, 0, 100, 100);
+            }
     	});
 
 > You also have to test `out` if the entity is no longer in collision

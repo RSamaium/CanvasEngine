@@ -142,6 +142,7 @@ var Input = {Input: {
 	*/
 	press: function(key, onPressKey) {
 		this._press('keyPress', key, onPressKey);
+		this.keyUp(key);
 	},
 
 	/**
@@ -182,11 +183,11 @@ var Input = {Input: {
 		}
 		
 		document.onkeyup = function(e) {
+			self._keyPress[e.which] = 0;
+			self._keyPressed[e.which] = false;
 			if (self._keyUp[e.which]) {
 				self._keyUp[e.which](e);
 			}
-			self._keyPress[e.which] = 0;
-			self._keyPressed[e.which] = false;
 		};
 	},
 
@@ -239,12 +240,24 @@ var Input = {Input: {
 		}
 	},
 
-	/**
-	  @doc keyboard/
-	  @method reset  Resets all keys. You must assign the buttons (press(), keyDown() and keyUp()) to restore movement and actions
-	*/
-	reset: function() {
-		this._keyFunctions = {};
+/**
+  @doc keyboard/
+  @method reset  Resets all keys. You must assign the buttons (press(), keyDown() and keyUp()) to restore movement and actions
+  @param {Array} keys (optional) Reset only the keys assigned in the array
+  @example
+  
+	canvas.Input.reset([Input.Enter, Input.Space]);
+*/
+	reset: function(keys) {
+		this._keyPressed = {};
+		if (keys) {
+			for (var i=0 ; i < keys.length ; i++) {
+				this._keyFunctions[keys[i]] = null;
+			}
+		}
+		else {
+			this._keyFunctions = {};
+		}
 	},
 
 	/**
@@ -277,7 +290,15 @@ var Input = {Input: {
 	  @return Boolean true if pressed
 	*/
 	isPressed: function(key) {
-		return this._keyPressed[key];
+		if (!(key instanceof Array)) {
+			key = [key];
+		}
+		for (var i=0 ; i < key.length ; i++) {
+			if (this._keyPressed[key[i]]) {
+				return true;
+			}
+		}
+		return false;
 	},
 
 /**

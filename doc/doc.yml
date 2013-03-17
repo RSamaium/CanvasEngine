@@ -29,6 +29,8 @@ extends:
     gamepad:
     accelerometer:
    window:
+   text:
+   effect:
 
 editor: 
    tiled:

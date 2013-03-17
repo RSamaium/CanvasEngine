@@ -24,6 +24,7 @@ Class.create("Scrolling", {
 	main_el: null,
 	scroll_el: [],
 	scene: null,
+	freeze: false,
 	initialize: function(scene, tile_h, tile_w) {
 		this.scene = scene;
 		this.tile_h = tile_h;
@@ -56,6 +57,7 @@ Class.create("Scrolling", {
 		if (!scroll_el.parallax_x) scroll_el.parallax_x = 0;
 		if (!scroll_el.parallax_y) scroll_el.parallax_y = 0;
 		this.scroll_el.push(scroll_el);
+		if (this.main_el) this.setScreen(scroll_el);
 		return this.scroll_el[this.scroll_el.length-1];
 	},
 	/**
@@ -122,8 +124,13 @@ Class.create("Scrolling", {
 		@method update Update scrolling. A call loop
 	*/
 	update: function() {
+		
 		var scroll, container;
 		var canvas = this.scene.getCanvas();
+		
+		if (this.freeze) {
+			return;
+		}
 		
 		if (!this.main_el) {
 			return;
@@ -137,7 +144,9 @@ Class.create("Scrolling", {
 			scroll.screen_x = this.main_el.x - canvas.width/2 + (canvas.width/2 % this.tile_w);
 			scroll.screen_y = this.main_el.y - canvas.height/2 + (canvas.height/2 % this.tile_h);
 			
-			container.y -= Math.abs(container.y) == scroll.screen_y ? 0 : Math.floor((scroll.screen_y < Math.abs(container.y) ? -this.tile_h : this.tile_h) / scroll.speed);
+			//container.y -= Math.abs(container.y) == scroll.screen_y ? 0 : Math.floor((scroll.screen_y < Math.abs(container.y) ? -this.tile_h : this.tile_h) / scroll.speed);
+			
+			
 
 			var absx = Math.abs(container.x);
 			var absy = Math.abs(container.y);
@@ -237,6 +246,94 @@ Class.create("Scrolling", {
 			}
 			
 		}
+	},
+
+/**
+@doc scrolling/
+@method mouseScroll Performs the scrolling with the mouse.
+@param {CanvasEngine.Element} clip Element containing the main element in the second parameter of this method. Indicate the dimensions of the element
+@param {CanvasEngine.Element} content Element with the content to scroll. Indicate the dimensions of the element
+@param {Object} callbacks (optinal) Different callbacks
+
+* dragstart : When the user starts to scroll
+* drag : When the user scrolls 
+* onTop : When the scroller reaches the top of the element
+* onBottom : When the scroller reaches the bottom of the element
+
+return {CanvasEngine.Scrolling}
+@example
+
+In method `ready`
+
+	var clip = this.createElement(300, 350), // Dimensions of the element
+		content = this.createElement(300, 800); // Dimensions of the element
+		
+	var scroll = canvas.Scrolling.New(this);
+	scroll.mouseScroll(clip, content);
+	
+	stage.append(clip);
+
+*/
+	mouseScroll: function(clip, content, callbacks) {
+	
+		callbacks = callbacks || {};
+		
+		if (content.height < clip.height) {
+			clip.append(content);
+			return this;
+		}
+	
+		var  scroll_start = {};
+		var self = this;
+		
+		content.forceEvent = true;
+	
+		clip.beginPath();
+		clip.rect(0, 0, clip.width, clip.height);
+		clip.clip();
+		clip.closePath();
+		
+		content.rect(0, 0, content.width, content.height);
+
+		content.on("dragstart", function(ev) {
+            scroll_start = this.offset();
+            scroll_start.time = new Date().getTime();
+			if (callbacks.dragstart) callbacks.dragstart.call(this, ev);
+			
+         });
+
+
+         content.on("drag", function(ev) {
+            if(ev.direction == 'up' || ev.direction == 'left') {
+                ev.distance = -ev.distance;
+            }
+
+            var delta = 1, y;
+            y = scroll_start.top + ev.distance * delta;
+			
+			if (y >= 0) {
+                y = 0;
+				if (callbacks.onTop) callbacks.onTop.call(this, ev);
+            }
+            else if (clip.height >= (y + this.height)) {
+                y = -this.height + clip.height;
+				if (callbacks.onBottom) callbacks.onBottom.call(this, ev);
+            } 
+			
+			this.y = y;
+			
+			if (callbacks.drag) callbacks.drag.call(this, ev);
+        });
+
+
+        content.on("dragend", function(ev) {
+            if (callbacks.dragend) callbacks.dragend.call(this, ev);
+        });
+		
+		clip.append(content);
+		
+		return this;
+		
 	}
 });
 

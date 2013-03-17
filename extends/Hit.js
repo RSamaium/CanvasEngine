@@ -30,285 +30,313 @@ THE SOFTWARE.
  *  This is the Point constructor. Polygon uses this object, but it is
  *  just a really simple set of x and y coordinates.
  */
-function Point(px, py) {
-	this.x = px;
-	this.y = py;
-}
-
+ Class.create("Point", {
+	
+	initialize: function(px, py) {
+		this.x = px;
+		this.y = py;
+	}
+ 
+ });
+ 
+  
+ 
 /*
  *  This is the Polygon constructor. All points are center-relative.
  */
-function Polygon(c) {
-	this.points = new Array();
-	this.center = c;
+ Class.create("Polygon", {
+ 
+	initialize: function(c) {
+		this.points = [];
+		this.center = c;
+	},
 	
-}
+	/*
+	 *  Point x and y values should be relative to the center.
+	 */
+	addPoint: function(p) {
+		this.points.push(p);
+	},
 
-/*
- *  Point x and y values should be relative to the center.
- */
-Polygon.prototype.addPoint = function(p) {
-	this.points.push(p);
-}
-
-/*
- *  Point x and y values should be absolute coordinates.
- */
-Polygon.prototype.addAbsolutePoint = function(p) {
-	this.points.push( { "x": p.x - this.center.x, "y": p.y - this.center.y } );
-}
+	/*
+	 *  Point x and y values should be absolute coordinates.
+	 */
+	addAbsolutePoint: function(p) {
+		this.points.push( { "x": p.x - this.center.x, "y": p.y - this.center.y } );
+	},
 
 /*
  * Returns the number of sides. Equal to the number of vertices.
  */
-Polygon.prototype.getNumberOfSides = function() {
-	return this.points.length;
-}
+	getNumberOfSides: function() {
+		return this.points.length;
+	},
 
-/*
- * rotate the polygon by a number of radians
- */
-Polygon.prototype.rotate = function(rads) {
-	
-	for (var i = 0; i < this.points.length; i++) {
-		var x = this.points[i].x;
-		var y = this.points[i].y;
-		this.points[i].x = Math.cos(rads) * x - Math.sin(rads) * y;
-		this.points[i].y = Math.sin(rads) * x + Math.cos(rads) * y;
-	}
-	
-}
-
-/*
- *  This function returns true if the given point is inside the polygon,
- *  and false otherwise.
- */
-Polygon.prototype.containsPoint = function(pnt) {
-	
-	var nvert = this.points.length;
-	var testx = pnt.x;
-	var testy = pnt.y;
-	
-	var vertx = new Array();
-	for (var q = 0; q < this.points.length; q++) {
-		vertx.push(this.points[q].x + this.center.x);
-	}
-	
-	var verty = new Array();
-	for (var w = 0; w < this.points.length; w++) {
-		verty.push(this.points[w].y + this.center.y);
-	}
-
-	var i, j = 0;
-	var c = false;
-	for (i = 0, j = nvert - 1; i < nvert; j = i++) {
-		if ( ((verty[i]>testy) != (verty[j]>testy)) &&
-				(testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
-			c = !c;
-	}
-	return c;
-	
-}
-
-/*
- *  To detect intersection with another Polygon object, this
- *  function uses the Separating Axis Theorem. It returns false
- *  if there is no intersection, or an object if there is. The object
- *  contains 2 fields, overlap and axis. Moving the polygon by overlap
- *  on axis will get the polygons out of intersection.
- */
-Polygon.prototype.intersectsWith = function(other) {
-	
-	var axis = new Point();
-	var tmp, minA, maxA, minB, maxB;
-	var side, i;
-	var smallest = null;
-	var overlap = 99999999;
-
-	/* test polygon A's sides */
-	for (side = 0; side < this.getNumberOfSides(); side++)
-	{
-		/* get the axis that we will project onto */
-		if (side == 0)
-		{
-			axis.x = this.points[this.getNumberOfSides() - 1].y - this.points[0].y;
-			axis.y = this.points[0].x - this.points[this.getNumberOfSides() - 1].x;
+	/*
+	 * rotate the polygon by a number of radians
+	 */
+	rotate: function(rads) {
+		
+		for (var i = 0; i < this.points.length; i++) {
+			var x = this.points[i].x;
+			var y = this.points[i].y;
+			this.points[i].x = Math.cos(rads) * x - Math.sin(rads) * y;
+			this.points[i].y = Math.sin(rads) * x + Math.cos(rads) * y;
 		}
-		else
-		{
-			axis.x = this.points[side - 1].y - this.points[side].y;
-			axis.y = this.points[side].x - this.points[side - 1].x;
+		
+	},
+
+	/*
+	 *  This function returns true if the given point is inside the polygon,
+	 *  and false otherwise.
+	 */
+	containsPoint: function(pnt) {
+		
+		var nvert = this.points.length;
+		var testx = pnt.x;
+		var testy = pnt.y;
+		
+		var vertx = new Array();
+		for (var q = 0; q < this.points.length; q++) {
+			vertx.push(this.points[q].x + this.center.x);
+		}
+		
+		var verty = new Array();
+		for (var w = 0; w < this.points.length; w++) {
+			verty.push(this.points[w].y + this.center.y);
 		}
 
-		/* normalize the axis */
-		tmp = Math.sqrt(axis.x * axis.x + axis.y * axis.y);
-		axis.x /= tmp;
-		axis.y /= tmp;
-
-		/* project polygon A onto axis to determine the min/max */
-		minA = maxA = this.points[0].x * axis.x + this.points[0].y * axis.y;
-		for (i = 1; i < this.getNumberOfSides(); i++)
-		{
-			tmp = this.points[i].x * axis.x + this.points[i].y * axis.y;
-			if (tmp > maxA)
-				maxA = tmp;
-			else if (tmp < minA)
-				minA = tmp;
+		var i, j = 0;
+		var c = false;
+		for (i = 0, j = nvert - 1; i < nvert; j = i++) {
+			if ( ((verty[i]>testy) != (verty[j]>testy)) &&
+					(testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
+				c = !c;
 		}
-		/* correct for offset */
-		tmp = this.center.x * axis.x + this.center.y * axis.y;
-		minA += tmp;
-		maxA += tmp;
+		return c;
+		
+	},
 
-		/* project polygon B onto axis to determine the min/max */
-		minB = maxB = other.points[0].x * axis.x + other.points[0].y * axis.y;
-		for (i = 1; i < other.getNumberOfSides(); i++)
+	/*
+	 *  To detect intersection with another Polygon object, this
+	 *  function uses the Separating Axis Theorem. It returns false
+	 *  if there is no intersection, or an object if there is. The object
+	 *  contains 2 fields, overlap and axis. Moving the polygon by overlap
+	 *  on axis will get the polygons out of intersection.
+	 */
+	intersectsWith: function(other) {
+		
+		var axis = Class.New("Point");
+		var tmp, minA, maxA, minB, maxB;
+		var side, i;
+		var smallest = null;
+		var overlap = 99999999;
+
+		/* test polygon A's sides */
+		for (side = 0; side < this.getNumberOfSides(); side++)
 		{
-			tmp = other.points[i].x * axis.x + other.points[i].y * axis.y;
-			if (tmp > maxB)
-				maxB = tmp;
-			else if (tmp < minB)
-				minB = tmp;
-		}
-		/* correct for offset */
-		tmp = other.center.x * axis.x + other.center.y * axis.y;
-		minB += tmp;
-		maxB += tmp;
+			/* get the axis that we will project onto */
+			if (side == 0)
+			{
+				axis.x = this.points[this.getNumberOfSides() - 1].y - this.points[0].y;
+				axis.y = this.points[0].x - this.points[this.getNumberOfSides() - 1].x;
+			}
+			else
+			{
+				axis.x = this.points[side - 1].y - this.points[side].y;
+				axis.y = this.points[side].x - this.points[side - 1].x;
+			}
 
-		/* test if lines intersect, if not, return false */
-		if (maxA < minB || minA > maxB) {
-			return false;
-		} else {
-			var o = (maxA > minB ? maxA - minB : maxB - minA);
-			if (o < overlap) {
-				overlap = o;
-				
-				smallest = {x: axis.x, y: axis.y};
+			/* normalize the axis */
+			tmp = Math.sqrt(axis.x * axis.x + axis.y * axis.y);
+			axis.x /= tmp;
+			axis.y /= tmp;
+
+			/* project polygon A onto axis to determine the min/max */
+			minA = maxA = this.points[0].x * axis.x + this.points[0].y * axis.y;
+			for (i = 1; i < this.getNumberOfSides(); i++)
+			{
+				tmp = this.points[i].x * axis.x + this.points[i].y * axis.y;
+				if (tmp > maxA)
+					maxA = tmp;
+				else if (tmp < minA)
+					minA = tmp;
+			}
+			/* correct for offset */
+			tmp = this.center.x * axis.x + this.center.y * axis.y;
+			minA += tmp;
+			maxA += tmp;
+
+			/* project polygon B onto axis to determine the min/max */
+			minB = maxB = other.points[0].x * axis.x + other.points[0].y * axis.y;
+			for (i = 1; i < other.getNumberOfSides(); i++)
+			{
+				tmp = other.points[i].x * axis.x + other.points[i].y * axis.y;
+				if (tmp > maxB)
+					maxB = tmp;
+				else if (tmp < minB)
+					minB = tmp;
+			}
+			/* correct for offset */
+			tmp = other.center.x * axis.x + other.center.y * axis.y;
+			minB += tmp;
+			maxB += tmp;
+
+			/* test if lines intersect, if not, return false */
+			if (maxA < minB || minA > maxB) {
+				return false;
+			} else {
+				var o = (maxA > minB ? maxA - minB : maxB - minA);
+				if (o < overlap) {
+					overlap = o;
+					
+					smallest = {x: axis.x, y: axis.y};
+				}
 			}
 		}
-	}
-	
-	/* test polygon B's sides */
-	for (side = 0; side < other.getNumberOfSides(); side++)
-	{
-		/* get the axis that we will project onto */
-		if (side == 0)
+		
+		/* test polygon B's sides */
+		for (side = 0; side < other.getNumberOfSides(); side++)
 		{
-			axis.x = other.points[other.getNumberOfSides() - 1].y - other.points[0].y;
-			axis.y = other.points[0].x - other.points[other.getNumberOfSides() - 1].x;
-		}
-		else
-		{
-			axis.x = other.points[side - 1].y - other.points[side].y;
-			axis.y = other.points[side].x - other.points[side - 1].x;
-		}
+			/* get the axis that we will project onto */
+			if (side == 0)
+			{
+				axis.x = other.points[other.getNumberOfSides() - 1].y - other.points[0].y;
+				axis.y = other.points[0].x - other.points[other.getNumberOfSides() - 1].x;
+			}
+			else
+			{
+				axis.x = other.points[side - 1].y - other.points[side].y;
+				axis.y = other.points[side].x - other.points[side - 1].x;
+			}
 
-		/* normalize the axis */
-		tmp = Math.sqrt(axis.x * axis.x + axis.y * axis.y);
-		axis.x /= tmp;
-		axis.y /= tmp;
+			/* normalize the axis */
+			tmp = Math.sqrt(axis.x * axis.x + axis.y * axis.y);
+			axis.x /= tmp;
+			axis.y /= tmp;
 
-		/* project polygon A onto axis to determine the min/max */
-		minA = maxA = this.points[0].x * axis.x + this.points[0].y * axis.y;
-		for (i = 1; i < this.getNumberOfSides(); i++)
-		{
-			tmp = this.points[i].x * axis.x + this.points[i].y * axis.y;
-			if (tmp > maxA)
-				maxA = tmp;
-			else if (tmp < minA)
-				minA = tmp;
-		}
-		/* correct for offset */
-		tmp = this.center.x * axis.x + this.center.y * axis.y;
-		minA += tmp;
-		maxA += tmp;
+			/* project polygon A onto axis to determine the min/max */
+			minA = maxA = this.points[0].x * axis.x + this.points[0].y * axis.y;
+			for (i = 1; i < this.getNumberOfSides(); i++)
+			{
+				tmp = this.points[i].x * axis.x + this.points[i].y * axis.y;
+				if (tmp > maxA)
+					maxA = tmp;
+				else if (tmp < minA)
+					minA = tmp;
+			}
+			/* correct for offset */
+			tmp = this.center.x * axis.x + this.center.y * axis.y;
+			minA += tmp;
+			maxA += tmp;
 
-		/* project polygon B onto axis to determine the min/max */
-		minB = maxB = other.points[0].x * axis.x + other.points[0].y * axis.y;
-		for (i = 1; i < other.getNumberOfSides(); i++)
-		{
-			tmp = other.points[i].x * axis.x + other.points[i].y * axis.y;
-			if (tmp > maxB)
-				maxB = tmp;
-			else if (tmp < minB)
-				minB = tmp;
-		}
-		/* correct for offset */
-		tmp = other.center.x * axis.x + other.center.y * axis.y;
-		minB += tmp;
-		maxB += tmp;
+			/* project polygon B onto axis to determine the min/max */
+			minB = maxB = other.points[0].x * axis.x + other.points[0].y * axis.y;
+			for (i = 1; i < other.getNumberOfSides(); i++)
+			{
+				tmp = other.points[i].x * axis.x + other.points[i].y * axis.y;
+				if (tmp > maxB)
+					maxB = tmp;
+				else if (tmp < minB)
+					minB = tmp;
+			}
+			/* correct for offset */
+			tmp = other.center.x * axis.x + other.center.y * axis.y;
+			minB += tmp;
+			maxB += tmp;
 
-		/* test if lines intersect, if not, return false */
-		if (maxA < minB || minA > maxB) {
-			return false;
-		} else {
-			var o = (maxA > minB ? maxA - minB : maxB - minA);
-			if (o < overlap) {
-				overlap = o;
-				
-				smallest = {x: axis.x, y: axis.y};
+			/* test if lines intersect, if not, return false */
+			if (maxA < minB || minA > maxB) {
+				return false;
+			} else {
+				var o = (maxA > minB ? maxA - minB : maxB - minA);
+				if (o < overlap) {
+					overlap = o;
+					
+					smallest = {x: axis.x, y: axis.y};
+				}
 			}
 		}
-	}
+		
+		function offset(poly, pt) {
+			return {
+				x: pt.x + poly.center.x,
+				y: pt.y + poly.center.y
+			};
+		}
+		
 	
-	function offset(poly, pt) {
-		return {
-			x: pt.x + poly.center.x,
-			y: pt.y + poly.center.y
-		};
-	}
+		var a1, a2, coincident_result = [], lines = [], k=0;
+		
+		function testInteraction(type, a1, a2) {
+			var j, b1, b2, result, coincident = [];
+			
+			for (j = 0; j < other.getNumberOfSides(); j++) {
+				b1 = offset(other, other.points[j]);
+				b2 = offset(other, other.points[j+1] ? other.points[j+1] : other.points[0]);
+				result = Polygon.intersectLineLine(a1, a2, b1, b2);
+				if (result == "Coincident") {
+					coincident.push({
+						sides: j
+					});
+				}
+				
+				lines[k].push(result);
+			}
+
+			k++;
+			return coincident;
+		}
+		
 	
-	var a1, a2, b1, b2, lines = [], k=0, result, coincident = [];
-	for (i = 0; i < this.getNumberOfSides(); i++) {
-		lines[k] = [];
-		for (j = 0; j < other.getNumberOfSides(); j++) {
+		for (i = 0; i < this.getNumberOfSides(); i++) {
+			lines[k] = [];
 			a1 = offset(this, this.points[i]);
 			a2 = offset(this, this.points[i+1] ? this.points[i+1] : this.points[0]);
-			b1 = offset(other, other.points[j]);
-			b2 = offset(other, other.points[j+1] ? other.points[j+1] : other.points[0]);
-			result = Polygon.intersectLineLine(a1, a2, b1, b2);
-			if (result == "Coincident") {
-				coincident.push([i, j]);
-			}
-			lines[k].push(result);
+			coincident_result.push(testInteraction(null, a1, a2));
 		}
-		k++;
-	}
-	return {
-		overlap: overlap + 0.001, 
-		axis: smallest, 
-		lines: lines, 
-		coincident: coincident
-	};
-	
-}
+		return {
+			overlap: overlap + 0.001, 
+			axis: smallest, 
+			lines: lines, 
+			coincident: coincident_result
+		};
 
+	}
+
+});
+
+var Polygon = {};
+ 
 Polygon.intersectLineLine = function(a1, a2, b1, b2) {
 
-    var ua_t = (b2.x - b1.x) * (a1.y - b1.y) - (b2.y - b1.y) * (a1.x - b1.x);
-    var ub_t = (a2.x - a1.x) * (a1.y - b1.y) - (a2.y - a1.y) * (a1.x - b1.x);
-    var u_b  = (b2.y - b1.y) * (a2.x - a1.x) - (b2.x - b1.x) * (a2.y - a1.y);
+var ua_t = (b2.x - b1.x) * (a1.y - b1.y) - (b2.y - b1.y) * (a1.x - b1.x);
+var ub_t = (a2.x - a1.x) * (a1.y - b1.y) - (a2.y - a1.y) * (a1.x - b1.x);
+var u_b  = (b2.y - b1.y) * (a2.x - a1.x) - (b2.x - b1.x) * (a2.y - a1.y);
 
-    if ( u_b != 0 ) {
-        var ua = ua_t / u_b;
-        var ub = ub_t / u_b;
+if ( u_b != 0 ) {
+	var ua = ua_t / u_b;
+	var ub = ub_t / u_b;
 
-        if ( 0 <= ua && ua <= 1 && 0 <= ub && ub <= 1 ) {
-            return {
-				x: a1.x + ua * (a2.x - a1.x),
-				y: a1.y + ua * (a2.y - a1.y)
-			};
-        } else {
-           return false;
-        }
-    } else {
-        if ( ua_t == 0 || ub_t == 0 ) {
-           return "Coincident";
-        } else {
-           return "Parallel";
-        }
-    }
+	if ( 0 <= ua && ua <= 1 && 0 <= ub && ub <= 1 ) {
+		return {
+			x: a1.x + ua * (a2.x - a1.x),
+			y: a1.y + ua * (a2.y - a1.y)
+		};
+	} else {
+	   return false;
+	}
+} else {
+	if ( ua_t == 0 || ub_t == 0 ) {
+	   return "Coincident";
+	} else {
+	   return "Parallel";
+	}
+}
 };
+ 
+
+
 
 /**
 @doc entity
@@ -416,7 +444,7 @@ View Hit class
 			array = {"0": array};
 		}
 		for (var key in array) {
-			this._polygon[key] = new Polygon({x: array[key][0][0], y: array[key][0][1] });
+			this._polygon[key] = Class.New("Polygon", [{x: array[key][0][0], y: array[key][0][1] }]);
 			for (var i=0 ; i < array[key].length ; i++) {
 				this._polygon[key].addPoint({x: array[key][i][0], y: array[key][i][1]});
 			}
@@ -451,6 +479,7 @@ View Hit class
 			[x+w, y+h],
 			[x, y+h]
 		]);
+	
 	},
 	
 /**
@@ -1041,12 +1070,18 @@ In `ready` method
 			};
 		}
 		
+		if (!cell.getPolygon) {
+			entity = entity.model;
+		}
+		
 		var points_cell = [
 			{y: cell.row, x: cell.col},
 			{y: cell.row, x: cell.col+1},
 			{y: cell.row+1, x: cell.col+1},
 			{y: cell.row+1, x: cell.col}
 		];
+		
+		
 		var a1, a2;
 		for (j = 0; j < points_cell.length; j++) {
 			a1 = real(points_cell[j]);
@@ -1134,22 +1169,23 @@ In `ready` method
 			}
 		}
 		
+		var cell = [
+			this.getCellByPos(ep.min_x, ep.min_y),
+			this.getCellByPos(ep.max_x, ep.min_y),
+			this.getCellByPos(ep.max_x, ep.max_y),
+			this.getCellByPos(ep.min_x, ep.max_y)
+		];
 		
-		
-		var nbrows = (ep.max_x - ep.min_x) / this.cell.width, 
-			nbcols = (ep.max_y - ep.min_y) / this.cell.height,
-			x, y, cells;
-		for (i=0 ; i <= nbcols ; i++) {
-			x = ep.min_x + this.cell.width * i;
-			for (j=0 ; j <= nbrows ; j++) {
-				y = ep.min_y + this.cell.height * j;
-				cells = this.getCellByPos(x, y);
-				
-				_cells.push(cells);
+		var nbrows = cell[2].row - cell[0].row,
+			nbcols = cell[1].col - cell[0].col;
+		for (i=0 ; i < nbcols-1 ; i++) {
+			for (j=0 ; j < nbrows-1 ; j++) {
+				cell.push({row: cell[0].row + j, col: cell[0].col + i});
 			}
 		}
+		
 		return {
-			cells: _cells
+			cells: cell
 		};
 	},
 	

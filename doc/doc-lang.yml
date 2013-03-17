@@ -25,6 +25,8 @@ save: Save/Load
 input: Input
 collision: Collision
 window: Window
+text: Text
+effect: Effect
 
 hit: Entity
 entity: Entity Model

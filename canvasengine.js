@@ -326,13 +326,14 @@ Using Sound :
 @method transparentColor Make a color transparent in the image
 @param {String} id Image id
 @param {String} color hexadecimal code
+@param {Boolean} cache (optional) Puts the canvas generated in cache (false by default)
 @return {HTML5Canvas}
 */
-			transparentColor: function(id, color) {
+			transparentColor: function(id, color, cache) {
 				var imageData, data, rgb, 
-					_canvas = this.imageToCanvas(id),
+					_canvas = this.imageToCanvas(id, cache),
 					canvas = _canvas.canvas,
-					ctx = _canvas.ctx
+					ctx = _canvas.ctx;
 
 				imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 				data = imageData.data;
@@ -348,8 +349,31 @@ Using Sound :
 				ctx.putImageData(imageData, 0, 0);
 				return canvas;
 			},
-			
-			
+	
+/**
+@doc materials/
+// @method invertColor Inverts the colors of the image
+@param {String} id Image id
+@param {Boolean} cache (optional) Puts the canvas generated in cache (false by default)
+@return {HTML5Canvas}
+*/	
+			invertColor: function(id, cache) {
+				var imageData, data, 
+					_canvas = this.imageToCanvas(id),
+					canvas = _canvas.canvas,
+					ctx = _canvas.ctx;
+					
+				data = imageData.data;
+
+				for(var i = 0; i < data.length; i += 4) {
+				  data[i] = 255 - data[i];
+				  data[i + 1] = 255 - data[i + 1];
+				  data[i + 2] = 255 - data[i + 2];
+				}
+				
+				ctx.putImageData(imageData, 0, 0);
+				return canvas;
+			},
 			
 /**
 @doc materials/
@@ -372,6 +396,9 @@ Using Sound :
 				ctx.putImageData(imageData, 0, 0);
 				return canvas;
 			},
+			
+			// TODO
+			// Nearest-neighbor
 			
 /**
 @doc materials/
@@ -406,20 +433,22 @@ The value can be an object to give several parameters :
 "path" is the path and "transparentcolor" the color that will be transparent image
 */
 			load: function(type, path, onLoad, onFinish) {
-				var i=0, self = this, materials, img_data;
-				if (path instanceof Array) {
-					materials = path;
+				var i=0, p, self = this, materials = [], img_data;
+				
+				if (!(path instanceof Array)) {
+					path = [path]
 				}
-				else {
-					materials = [];
-					for (var key in path) {
+				
+				for (var j=0 ; j < path.length ; j++) {
+					p = path[j];
+					for (var key in p) {
 						img_data = {};
-						if (typeof path[key] == "string") {
-							img_data.path = path[key];
+						if (typeof p[key] == "string") {
+							img_data.path = p[key];
 						}
 						else {
-							img_data.path = path[key].path;
-							img_data.transparentcolor = path[key].transparentcolor;
+							img_data.path = p[key].path;
+							img_data.transparentcolor = p[key].transparentcolor;
 						}
 						materials.push({
 							id: key,
@@ -429,6 +458,7 @@ The value can be an object to give several parameters :
 						
 					}
 				}
+				
 				switch (type) {
 					case "images":
 						load();
@@ -497,6 +527,11 @@ The value can be an object to give several parameters :
 									self.sounds[materials[i].id] = this;
 									next();
 								}, false);
+								snd.addEventListener('error', function (e) { 
+									throw e;
+								}, false);
+								snd.load();
+								snd.pause();
 							}
 							
 							snd.src = _p;
@@ -778,11 +813,11 @@ Leaving the other scenes after preloading of the scene called
 						if (params.exitScenes) {
 							params.exitScenes.allExcept = params.exitScenes.allExcept || [];
 							params.exitScenes.allExcept = _allExcept.concat(params.exitScenes.allExcept);
-							_class._load.call(_class, params.exitScenes);
+							_class._load.call(_class, params.exitScenes, params.params);
 						}
 						else {
 							if (!params.overlay) this.exitAll(_allExcept);
-							_class._load.call(_class);
+							_class._load.call(_class, {}, params.params);
 						}
 						this._scenesNbCall[name]++;
 					}
@@ -947,20 +982,82 @@ Leaving the other scenes after preloading of the scene called
 			this.width = this.element.width;
 			this.height = this.element.height;
 			this.ctx = this.element.getContext('2d');
+			this.hammerExist = typeof(Hammer) !== "undefined";
 			old = this.ctx;
 			this._mouseEvent();
-			var events = ["click", "dbclick", "mousemove"];
+			var events = ["click", "dbclick", "mousemove"],
+				hammer_events = [
+					"dragstart", 
+					"drag", 
+					"dragend", 
+					"dragup", 
+					"dragdown", 
+					"dragleft",  
+					"dragright", 
+					"swipe",  
+					"swipeup", 
+					"swipedown", 
+					"swipeleft", 
+					"swiperight",
+					"rotate",
+					"pinch", 
+					"pinchin", 
+					"pinchout",
+					"tap", 
+					"doubletap", 
+					"hold", 
+					"transformstart", 
+					"transform", 
+					"transformend", 
+					"release",
+					"touch",
+					"release"
+				];
+			
+			var hammer = null;
+			if (this.hammerExist) {
+				hammer = new Hammer(this.element);
+			}
 			
 			function bindEvent(type) {
 				this.element.addEventListener(type, function(e) {
-					var	mouse = self.getMousePosition(e),
-						scenes = CanvasEngine.Scene.getEnabled();
-					for (var name in scenes) {
-						scenes[name].getStage()["_" + type](e, mouse);
-					}
+					callback(e, type);
 				}, false);
 			}
 			
+			function bindHammer(type) {
+				hammer.on(type, function(e) { 
+					callback(e, type);
+				});
+			}
+			
+			function callback(e, type) {
+				var touches, mouse, scenes = CanvasEngine.Scene.getEnabled(), stage;
+				if (e.gesture) {
+					touches = e.gesture.touches;
+				}
+				else {
+					touches = [self.getMousePosition(e)];
+				}
+				for (var name in scenes) {
+					stage = scenes[name].getStage();
+					for(var t=0; t < touches.length; t++) {
+						self.getMousePosition(e)
+						if (touches[t].pageX !== undefined) {
+							touches[t] = self.getMousePosition(touches[t]);
+						}
+						stage._select(touches[t], function(el_real) {
+							 el_real.trigger(type, e, touches[t]);
+						});
+					}
+				}
+			}
+			
+			if (hammer) {
+				for (var i=0 ; i < hammer_events.length ; i++) {
+					bindHammer.call(this, hammer_events[i]);
+				}
+			}
 			for (var i=0 ; i < events.length ; i++) {
 				bindEvent.call(this, events[i]);
 			}
@@ -987,22 +1084,7 @@ Leaving the other scenes after preloading of the scene called
 				document.body.appendChild(canvas);
 			}
 			else {
-			
-				/* Disable Highlight Color
-				if (!document.head) document.head = document.getElementsByTagName('head')[0];
-				var style = document.createElement("style");
-				document.head.appendChild(style);
-				var sheet = style.sheet ? style.sheet : style.styleSheet[0];
-
-				
-				sheet.insertRule("#" + id + "{-webkit-user-select: none;}", 0);
-				
-				 //-webkit-user-drag: none;-webkit-tap-highlight-color: rgba(0, 0, 0, 0);}
-				 
-				 */
-
 				canvas = document.getElementById(id);
-
 			}
 			
 			return canvas;
@@ -1039,6 +1121,10 @@ Leaving the other scenes after preloading of the scene called
 				left += obj.offsetLeft;
 				obj = obj.offsetParent;
 			}
+			
+			if (e.clientX == undefined) e.clientX = e.pageX;
+			if (e.clientY == undefined) e.clientY = e.pageY;
+			
 			var mouseX = e.clientX - left + window.pageXOffset;
 			var mouseY = e.clientY - top + window.pageYOffset;
 			return {x: mouseX, y: mouseY};
@@ -1047,6 +1133,8 @@ Leaving the other scenes after preloading of the scene called
 @doc canvas/
 @method measureText Returns an object that contains the width of the specified text
 @param {String} txt Text
+@param {String} font_size (optional) Font Size (default 12px);
+@param {String} font_family (optional) Font Family (default Arial);
 @return Object
 @example
 	
@@ -1056,8 +1144,14 @@ In method "ready" of the scene :
 		_canvas.measureText("Hello World").width;
 	
 */
-		measureText: function(txt) {
-			return this.ctx.measureText(txt);
+		measureText: function(txt, font_size, font_family) {
+			var val;
+			font_family = font_family || "Arial";
+			font_size = font_size || "12px";
+			this.ctx.font = "normal " + font_size + " " + font_family;
+			val = this.ctx.measureText(txt);
+			this.ctx.font = null;
+			return val;
 		},
 		
 /**
@@ -1294,23 +1388,39 @@ In the method "ready" in the scene class :
 --
 
 	var el = this.createElement(100, 100);
+	
+--
+Create two elements : 
+
+	var els = this.createElement(["foo", "bar"]);
+	stage.append(els.foo, els.bar);
 
 */
 		 createElement: function(name, width, height) {
+			if (name instanceof Array) {
+				var obj = {};
+				for (var i=0 ; i < name.length ; i++) {
+					obj[name[i]] = this.createElement(name[i]);
+				}
+				return obj;
+			}
 			if (typeof name != "string") {
 				height = width;
 				width = name;
 			}
 			var el = CanvasEngine.Element["new"](this, null, width, height);
+			el.name = name;
 			return el;
 		 },
+		 
 		_exit: function() {	
 			this.getCanvas()._elementsByScene[this.name] = {};
 			if (this.exit) this.exit.call(this);
 		},
-		_load: function(params) {
+		_load: function(params, options) {
 			var self = this;
 			params = params || {};
+			options = options || {};
 			this._stage = CanvasEngine.Element["new"](this);
 			for (var i=0 ; i < CanvasEngine.el_canvas.length ; i++) {
 				CanvasEngine.el_canvas[i].stage = this._stage;
@@ -1330,7 +1440,7 @@ In the method "ready" in the scene class :
 				font_length = materialLength("fonts"),
 				total = images_length + sound_length + font_length,
 				current = 0;
-			
+				
 			if (images_length > 0) {
 				materialLoad("images");
 			}
@@ -1375,7 +1485,8 @@ In the method "ready" in the scene class :
 				if (params.when == "afterPreload") {
 					CanvasEngine.Scene.exitAll(params.allExcept);
 				}
-				if (self.ready) self.ready(self._stage, self.getElement);
+				if (self.ready) self.ready(self._stage, self.getElement, options);
+				self._stage.trigger("canvas:readyEnd");
 				if (self.model && self.model.ready) self.model.ready.call(self.model);
 				self._isReady = true;
 			}
@@ -1683,15 +1794,15 @@ In the method "ready" in the scene class :
 				layer =  "ctx";
 				params = params || [];
 				propreties = propreties || {};
-				
+
 				var ctx = this.getScene().getCanvas()._ctxTmp;
 				var cmd, array_cmd = {};
 				var cmd_propreties = [];
-				var isCmd = true, applyBuffer = 1;
+				var isCmd = true, applyBuffer = 1, bufferEventForce = false;
 				
 				var bufferEvent = function(name, _params) {
 					var ctx_mouse = this._canvas[0]["_ctxMouseEvent"];
-					if (this.eventExist("click")) {
+					if (this.hasEvent() || this.hasCmd("clip")) {
 						ctx_mouse[name].apply(this._canvas[0]["_ctxMouseEvent"], _params);
 						if (name == "drawImage") {
 							ctx_mouse.globalCompositeOperation = 'source-atop';
@@ -1702,7 +1813,7 @@ In the method "ready" in the scene class :
 				};
 				
 				var bufferProp = function(cmd_propreties, key, value) {
-					if (cmd_propreties[key]) {
+					if (cmd_propreties[key] || this.forceEvent) {
 						this._canvas[0]["_ctxMouseEvent"][key] = value;
 						return 0;
 					}
@@ -1730,6 +1841,7 @@ In the method "ready" in the scene class :
 						if (cmd_propreties) {
 							for (var key in cmd_propreties) {
 								applyBuffer = 1;
+								
 								if (key == "globalAlpha") {
 									cmd_propreties[key] = this.real_opacity;
 								}
@@ -1740,7 +1852,6 @@ In the method "ready" in the scene class :
 								else {
 									this._canvas[j][layer][key] = cmd_propreties[key];
 								}
-								
 								
 								applyBuffer &= bufferProp.call(this, cmd_propreties, "globalAlpha", 1);
 								applyBuffer &= bufferProp.call(this, cmd_propreties, "strokeStyle", '#' + this.color_key);
@@ -1757,6 +1868,11 @@ In the method "ready" in the scene class :
 						}
 						else {
 							this._canvas[j][layer][name].apply(this._canvas[j][layer], cmd.params);
+							if (this.forceEvent) {
+								if (name == "rect") {
+									bufferEvent.call(this, "fillRect", cmd.params);
+								}
+							}
 							bufferEvent.call(this, name, cmd.params);
 						}
 					}
@@ -1773,9 +1889,13 @@ In the method "ready" in the scene class :
 				var obj = {};
 				for (var k=0 ; k < propreties.length ; k++) {
 					if (this[propreties[k]]) obj[propreties[k]] = this[propreties[k]];
-				};
+				}
 				obj["globalAlpha"] = 1;
 				this._cmd[name] = {params: params, propreties: obj};
+			},
+			
+			hasCmd: function(name) {
+				return this._cmd[name];
 			},
 /**
 @doc draw/
@@ -1796,6 +1916,7 @@ In `ready` method :
 				delete this._cmd[name];
 			}
 	});
+	
 	
 /**
 @doc element
@@ -1938,6 +2059,20 @@ In `ready` method :
 		_out: 1,
 		_over: 0,
 		_pack: null,
+/**
+	@doc manipulate/
+	@property forceEvent Force applying an event on the element even if it is invisible. Assign the height and width or use the rect method before
+	@type Boolean
+	@default false
+*/
+		forceEvent: false,
+/**
+	@doc manipulate/
+	@property propagationOpacity If false, does not take into account the opacity of parent elements
+	@type Boolean
+	@default true
+*/
+		propagationOpacity: null,
 		initialize: function(scene, layer, width, height) {
 			this._id = _CanvasEngine.uniqid();
 			this.width = width;
@@ -1971,6 +2106,7 @@ In `ready` method :
 				"translate",
 				"transform",
 				"setTransform",
+				"resetTransform",
 				"scale",
 				"clearRect"
 			], "draw");
@@ -2002,13 +2138,17 @@ In `ready` method :
 		*/
 		_refresh: function(init, children, ctx) {
 			children = children === undefined ? true : children;
-			if (!this._visible) return;
-		
 			
+
+			if (this.stage.trigger) this.stage.trigger("canvas:refresh", this);
+			
+			if (!this._visible) {
+				this._loop();
+				return;
+			}
+
 			if (!this.real_pause) {
-			
-				if (this.stage.trigger) this.stage.trigger("canvas:refresh", this);
-			
+
 				if (init || !this.parent) {
 					this.parent = {
 						scaleX: 1,
@@ -2020,9 +2160,12 @@ In `ready` method :
 						real_rotate: 0,
 						real_skew_x: 0,
 						real_skew_y: 0,
-						real_opacity: 1
+						real_opacity: 1,
+						real_propagation: true
 					};
 				}
+				
+				this.real_propagation = this.parent.propagationOpacity == null ? true : this.parent.propagationOpacity;
 			
 				this.save();
 					
@@ -2032,11 +2175,19 @@ In `ready` method :
 				this.real_scale_y = this.parent.real_scale_y * this.scaleY;
 				this.real_y = (this.parent.real_y + this.y) * (this.parent.scaleY == 1 ? 1 : this.parent.real_scale_x);
 				this.real_x = (this.parent.real_x + this.x) * (this.parent.scaleX == 1 ? 1 : this.parent.real_scale_y);
+				
 				this.real_skew_x = this.parent.real_skew_x + this.skewX;
 				this.real_skew_y = this.parent.real_skew_y + this.skewY ;
 				this.real_rotate = this.parent.real_rotate + this.rotation ;
+				if (this.real_propagation) {	
+					this.real_opacity = this.parent.real_opacity * this.opacity;
+				}
+				else {
+					this.real_opacity = this.opacity;
+				}
+				
 				this.real_pause = init ? this.pause : this.parent.real_pause;
-				this.real_opacity = this.parent.real_opacity * this.opacity;
+				
 				this.globalAlpha = this.real_opacity;
 				if (this.parent) {
 					if (this.parent.regX) {
@@ -2061,7 +2212,10 @@ In `ready` method :
 			
 			this.draw(ctx);
 			
-			this.restore();
+			if (!this.hasCmd("clip")) {
+				this.restore();
+			}
+		
 			
 			if (children) {
 				// if (!this.real_pause) this._loop();
@@ -2069,6 +2223,10 @@ In `ready` method :
 				for (var i=0 ; i < this._children.length ; i++) {
 					this._children[i]._refresh(false, true, ctx);
 				}
+			}
+			
+			if (this.hasCmd("clip")) {
+				this.restore();
 			}
 		},
 		/**
@@ -2153,19 +2311,41 @@ In `ready` method :
 					
 			}
 		},
-		_dblclick: function(e, mouse) {
-		
-		},
-		_click: function(e, mouse, type) {
+
+		_select: function(mouse, callback) {
 			var el_real, imgData;
 			var canvas = this.scene.getCanvas();
 			
 			imgData = this._canvas[0]["_ctxMouseEvent"].getImageData(mouse.x, mouse.y, 1, 1).data;
 			if (imgData[3] > 0) {
 				el_real = canvas._elementsByScene(this.scene.name, _CanvasEngine.rgbToHex(imgData[0], imgData[1], imgData[2]));
-				if (el_real) el_real.trigger("click", e);
+				if (el_real) callback(el_real);
 			}
+		},
+		
+		_click: function(e, mouse, type) {
+			this._select(mouse, function(el_real) {
+				 el_real.trigger("click", e, mouse);
+			});
+		},
+		
+		_cloneRecursive: function(el) {
+			var sub_el, new_el;
+			if (el._children.length > 0) {
+				for (var i=0 ; i < el._children.length ; i++) {
+					sub_el = el._children[i];
+					new_el = this.scene.createElement();
+					for (var key in sub_el) {
+						if (typeof key != "function") {
+							new_el[key] = sub_el[key];
+						}
+					}
+					new_el.parent = el;
+					this._cloneRecursive(sub_el);
 				
+					el._children[i] = new_el;
+				}
+			}
 		},
 		/**
 			@doc manipulate/
@@ -2179,6 +2359,7 @@ In `ready` method :
 					el[key] = this[key];
 				}
 			}
+			this._cloneRecursive(el);
 			return el;
 		},
 		
@@ -2187,13 +2368,35 @@ In `ready` method :
 	@method append inserts the specified content as the last child of each element in the Element collection
 	@param {CanvasEngine.Element} el 
 	@return CanvasEngine.Element
+	@example
+
+In method ready :
+
+	var el = this.createElement();
+	stage.append(el);
+	
+--
+
+	var el1 = this.createElement(),
+		el2 = this.createElement(),
+		el3 = this.createElement();
+	stage.append(el1, el2, el3);
+	
+--
+	
+	var el = this.createElement(["a", "b", "c"]);
+	stage.append(el.a, el.b, el.c);
 */
-		append: function(el) {
-			this._children.push(el);
-			el.parent = this;
-			el._index = this._children.length-1;
-			el._refresh();
-			return el;
+		append: function() {
+			var el;
+			for (var i=0 ; i < arguments.length ; i++) {
+				el = arguments[i];
+				this._children.push(el);
+				el.parent = this;
+				el._index = this._children.length-1;
+				el._refresh();				
+			}
+			return arguments;
 		},
 		
 /**
@@ -2232,9 +2435,20 @@ In method ready
 /**
 	@doc traversing/
 	@method children Retrieves an array of elements
+	@param children (optional) {Array|Element} If the parameter exists, a new array of elements is assigned. You can copy the child of another element.
 	@return {Array}
 */
-		children: function() {
+		children: function(children) {
+			var _children = [], new_children = [];
+			if (children) {
+				if (children instanceof Array) _children = children;
+				if (children instanceof Class) _children = children.children();
+				for (var i=0 ; i < _children.length ; i++) {
+					new_children[i] = _children[i].clone();
+					new_children[i].parent = this;
+				}
+				this._children = new_children;
+			}
 			return this._children;
 		},
 
@@ -2327,8 +2541,46 @@ In method ready
 			return this;
 		},
 		
-		replaceWith: function(newEl) {
-			var children = this.parent.children();			
+		
+		isAppend: function() {
+			return this in this.parent.children();
+		},
+		
+		first: function() {
+			return this.children()[0];
+		},
+		
+		find: function(name) {
+			var children = this.children(),
+				_find = [];
+			for (var i=0 ; i < children.length ; i++) {	
+				c = children[i];
+				if (name == c.name) {
+					_find.push(c);
+				}
+			}
+			return _find;
+		},
+		
+		findAttr: function(attr, val) {
+			var children = this.children(),
+				c, attr_val;
+			for (var i=0 ; i < children.length ; i++) {
+				c = children[i];
+				console.log(attr, c.attr(attr));
+				attr_val = c.attr(attr);
+				if (attr_val) {
+					if (val != undefined) {
+						if (attr_val == val) {
+							return c;
+						}
+					}
+					else {
+						return c;
+					}
+				}
+			}
+			return false;
 		},
 		
 /**
@@ -2364,7 +2616,7 @@ In method ready
 				index = -1;
 			}
 			if (index < 0) {
-				index = l + index;
+				index = l + index;	
 			}
 			_CanvasEngine.moveArray(this.parent._children, this._index, index);
 			this._index = index;
@@ -2571,7 +2823,6 @@ In method ready
 		*/
 		hide: function() {
 			this._visible = false;
-			this.stage.refresh();
 		},
 		/**
 			@doc manipulate/
@@ -2579,7 +2830,6 @@ In method ready
 		*/
 		show: function() {
 			this._visible = true;
-			this.stage.refresh();
 		},
 		/**
 			@doc manipulate/
@@ -2602,7 +2852,29 @@ Note that some names are defined as follows: "namespace:eventname". For example,
 		console.log(el);
 	});
 
-At each refresh of the scene, to display each element is returned
+At each refresh of the scene, to display each element is returned. 
+
+Other events suitable for tablet and smartphone exist available in Hammer.js :
+
+* hold
+* tap
+* doubletap
+* drag, dragstart, dragend, dragup, dragdown, dragleft, dragright
+* swipe, swipeup, swipedown, swipeleft, swiperight
+* transform, transformstart, transformend
+* rotate
+* pinch, pinchin, pinchout
+* touch (gesture detection starts)
+* release (gesture detection ends)
+
+	var el = this.createElement();
+	el.on("drag", function(e, mouse) {
+		this.x = e.distanceX;
+		this.y = e.distanceY;
+	});
+
+See https://github.com/EightMedia/hammer.js/wiki/Getting-Started
+
 @param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
 @param {Function} callback(event) A function to execute when the event is triggered
 */
@@ -2612,10 +2884,39 @@ At each refresh of the scene, to display each element is returned
 			events = events.split(" ");
 			for (var i=0 ; i < events.length ; i++) {
 				event = events[i];
+				if (event == "click") event = "tap";
 				if (!this._listener[event]) {
 					this._listener[event] = [];
 				}
 				this._listener[event].push(callback);
+			}
+		},
+		
+/**
+@doc events/
+@method off The off() method removes event handlers that were attached with .on()
+@param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
+@param {Function} callback (optional) function which was attached in this event
+*/
+		unbind: function(events, callback) { this.off(events, callback); },
+		off: function(events, callback) {
+			var event;
+			events = events.split(" ");
+			for (var i=0 ; i < events.length ; i++) {
+				event = events[i];
+				if (callback) {
+					for (var i=0 ; i < this._listener[event].length ; i++) {
+						if (this._listener[event][i] == callback) {
+							delete this._listener[event][i];
+							break;
+						}
+					}
+				}
+				else {
+					if (this._listener[event]) {
+						this._listener[event] = [];
+					}
+				}
 			}
 		},
 		
@@ -2627,6 +2928,15 @@ At each refresh of the scene, to display each element is returned
 		*/
 		eventExist: function(event) {
 			return this._listener[event] && this._listener[event].length > 0;
+		},
+		
+		/**
+			@doc events/
+			@method hasEvent If the test element at least one event
+			@param {Boolean}
+		*/
+		hasEvent: function() {
+			return _CanvasEngine.objectSize(this._listener) > 0;
 		},
 		
 		/**
@@ -2646,12 +2956,13 @@ At each refresh of the scene, to display each element is returned
 				if (this._listener[event]) {
 					for (var i=0 ; i < this._listener[event].length ; i++) {
 						 _trigger = true;
-						this._listener[event][i].apply(this, e);
+						if (this._listener[event][i]) this._listener[event][i].apply(this, e);
 					}
 				}
 			}
 			return _trigger;
 		},
+		
 		/**
 			@doc events/
 			@method click Equivalent to the method .on("click", function)
@@ -2723,3 +3034,1334 @@ CanvasEngine.Core = CanvasEngine;
 CanvasEngine.Class = Class;
 
 var CE = CanvasEngine;
+
+/*! Hammer.JS - v1.0.3 - 2013-03-02
+ * http://eightmedia.github.com/hammer.js
+ *
+ * Copyright (c) 2013 Jorik Tangelder <j.tangelder@gmail.com>;
+ * Licensed under the MIT license */
+
+(function(window) {
+    'use strict';
+
+/**
+ * Hammer
+ * use this to create instances
+ * @param   {HTMLElement}   element
+ * @param   {Object}        options
+ * @returns {Hammer.Instance}
+ * @constructor
+ */
+var Hammer = function(element, options) {
+    return new Hammer.Instance(element, options || {});
+};
+
+// default settings
+Hammer.defaults = {
+    // add styles and attributes to the element to prevent the browser from doing
+    // its native behavior. this doesnt prevent the scrolling, but cancels
+    // the contextmenu, tap highlighting etc
+    // set to false to disable this
+    stop_browser_behavior: {
+        userSelect: 'none', // this also triggers onselectstart=false for IE
+        touchCallout: 'none',
+        touchAction: 'none',
+        contentZooming: 'none',
+        userDrag: 'none',
+        tapHighlightColor: 'rgba(0,0,0,0)'
+    }
+
+    // more settings are defined per gesture at gestures.js
+};
+
+// detect touchevents
+Hammer.HAS_POINTEREVENTS = navigator.pointerEnabled || navigator.msPointerEnabled;
+Hammer.HAS_TOUCHEVENTS = ('ontouchstart' in window);
+
+// eventtypes per touchevent (start, move, end)
+// are filled by Hammer.event.determineEventTypes on setup
+Hammer.EVENT_TYPES = {};
+
+// direction defines
+Hammer.DIRECTION_DOWN = 'down';
+Hammer.DIRECTION_LEFT = 'left';
+Hammer.DIRECTION_UP = 'up';
+Hammer.DIRECTION_RIGHT = 'right';
+
+// pointer type
+Hammer.POINTER_MOUSE = 'mouse';
+Hammer.POINTER_TOUCH = 'touch';
+Hammer.POINTER_PEN = 'pen';
+
+// touch event defines
+Hammer.EVENT_START = 'start';
+Hammer.EVENT_MOVE = 'move';
+Hammer.EVENT_END = 'end';
+
+// plugins namespace
+Hammer.plugins = {};
+
+// if the window events are set...
+Hammer.READY = false;
+
+/**
+ * setup events to detect gestures on the document
+ */
+function setup() {
+    if(Hammer.READY) {
+        return;
+    }
+
+    // find what eventtypes we add listeners to
+    Hammer.event.determineEventTypes();
+
+    // Register all gestures inside Hammer.gestures
+    for(var name in Hammer.gestures) {
+        if(Hammer.gestures.hasOwnProperty(name)) {
+            Hammer.detection.register(Hammer.gestures[name]);
+        }
+    }
+
+    // Add touch events on the document
+    Hammer.event.onTouch(document, Hammer.EVENT_MOVE, Hammer.detection.detect);
+    Hammer.event.onTouch(document, Hammer.EVENT_END, Hammer.detection.endDetect);
+
+    // Hammer is ready...!
+    Hammer.READY = true;
+}
+
+/**
+ * create new hammer instance
+ * all methods should return the instance itself, so it is chainable.
+ * @param   {HTMLElement}       element
+ * @param   {Object}            [options={}]
+ * @returns {Hammer.Instance}
+ * @constructor
+ */
+Hammer.Instance = function(element, options) {
+    var self = this;
+
+    // setup HammerJS window events and register all gestures
+    // this also sets up the default options
+    setup();
+
+    this.element = element;
+
+    // start/stop detection option
+    this.enabled = true;
+
+    // merge options
+    this.options = Hammer.utils.extend(
+        Hammer.utils.extend({}, Hammer.defaults),
+        options || {});
+
+    // add some css to the element to prevent the browser from doing its native behavoir
+    if(this.options.stop_browser_behavior) {
+        Hammer.utils.stopDefaultBrowserBehavior(this.element, this.options.stop_browser_behavior);
+    }
+
+    // start detection on touchstart
+    Hammer.event.onTouch(element, Hammer.EVENT_START, function(ev) {
+        if(self.enabled) {
+            Hammer.detection.startDetect(self, ev);
+        }
+    });
+
+    // return instance
+    return this;
+};
+
+
+Hammer.Instance.prototype = {
+    /**
+     * bind events to the instance
+     * @param   {String}      gesture
+     * @param   {Function}    handler
+     * @returns {Hammer.Instance}
+     */
+    on: function onEvent(gesture, handler){
+        var gestures = gesture.split(' ');
+        for(var t=0; t<gestures.length; t++) {
+            this.element.addEventListener(gestures[t], handler, false);
+        }
+        return this;
+    },
+
+
+    /**
+     * unbind events to the instance
+     * @param   {String}      gesture
+     * @param   {Function}    handler
+     * @returns {Hammer.Instance}
+     */
+    off: function offEvent(gesture, handler){
+        var gestures = gesture.split(' ');
+        for(var t=0; t<gestures.length; t++) {
+            this.element.removeEventListener(gestures[t], handler, false);
+        }
+        return this;
+    },
+
+
+    /**
+     * trigger gesture event
+     * @param   {String}      gesture
+     * @param   {Object}      eventData
+     * @returns {Hammer.Instance}
+     */
+    trigger: function triggerEvent(gesture, eventData){
+        // trigger DOM event
+        var event = document.createEvent('Event');
+		event.initEvent(gesture, true, true);
+		event.gesture = eventData;
+		this.element.dispatchEvent(event);
+        return this;
+    },
+
+
+    /**
+     * enable of disable hammer.js detection
+     * @param   {Boolean}   state
+     * @returns {Hammer.Instance}
+     */
+    enable: function enable(state) {
+        this.enabled = state;
+        return this;
+    }
+};
+
+/**
+ * this holds the last move event,
+ * used to fix empty touchend issue
+ * see the onTouch event for an explanation
+ * @type {Object}
+ */
+var last_move_event = null;
+
+
+/**
+ * when the mouse is hold down, this is true
+ * @type {Boolean}
+ */
+var enable_detect = false;
+
+
+/**
+ * when touch events have been fired, this is true
+ * @type {Boolean}
+ */
+var touch_triggered = false;
+
+
+Hammer.event = {
+    /**
+     * simple addEventListener
+     * @param   {HTMLElement}   element
+     * @param   {String}        type
+     * @param   {Function}      handler
+     */
+    bindDom: function(element, type, handler) {
+        var types = type.split(' ');
+        for(var t=0; t<types.length; t++) {
+            element.addEventListener(types[t], handler, false);
+        }
+    },
+
+
+    /**
+     * touch events with mouse fallback
+     * @param   {HTMLElement}   element
+     * @param   {String}        eventType        like Hammer.EVENT_MOVE
+     * @param   {Function}      handler
+     */
+    onTouch: function onTouch(element, eventType, handler) {
+		var self = this;
+        this.bindDom(element, Hammer.EVENT_TYPES[eventType], function(ev) {
+            var sourceEventType = ev.type.toLowerCase();
+
+            // onmouseup, but when touchend has been fired we do nothing.
+            // this is for touchdevices which also fire a mouseup on touchend
+            if(sourceEventType.match(/mouseup/) && touch_triggered) {
+                touch_triggered = false;
+                return;
+            }
+
+            // mousebutton must be down or a touch event
+            if(sourceEventType.match(/touch/) ||   // touch events are always on screen
+                (sourceEventType.match(/mouse/) && ev.which === 1) ||   // mousedown
+                (Hammer.HAS_POINTEREVENTS && sourceEventType.match(/down/))  // pointerevents touch
+            ){
+                enable_detect = true;
+            }
+
+            // we are in a touch event, set the touch triggered bool to true,
+            // this for the conflicts that may occur on ios and android
+            if(sourceEventType.match(/touch|pointer/)) {
+                touch_triggered = true;
+            }
+
+
+            // when touch has been triggered in this detection session
+            // and we are now handling a mouse event, we stop that to prevent conflicts
+            if(enable_detect && !(touch_triggered && sourceEventType.match(/mouse/))) {
+                // update pointer
+                if(Hammer.HAS_POINTEREVENTS && eventType != Hammer.EVENT_END) {
+                    Hammer.PointerEvent.updatePointer(eventType, ev);
+                }
+
+                // because touchend has no touches, and we often want to use these in our gestures,
+                // we send the last move event as our eventData in touchend
+                if(eventType === Hammer.EVENT_END && last_move_event !== null) {
+                    ev = last_move_event;
+                }
+                // store the last move event
+                else {
+                    last_move_event = ev;
+                }
+                // trigger the handler
+                handler.call(Hammer.detection, self.collectEventData(element, eventType, ev));
+
+                // remove pointer after the handler is done
+                if(Hammer.HAS_POINTEREVENTS && eventType == Hammer.EVENT_END) {
+                    Hammer.PointerEvent.updatePointer(eventType, ev);
+                }
+            }
+
+
+            // on the end we reset everything
+            if(sourceEventType.match(/up|cancel|end/)) {
+                enable_detect = false;
+                last_move_event = null;
+                Hammer.PointerEvent.reset();
+            }
+        });
+    },
+
+
+    /**
+     * we have different events for each device/browser
+     * determine what we need and set them in the Hammer.EVENT_TYPES constant
+     */
+    determineEventTypes: function determineEventTypes() {
+        // determine the eventtype we want to set
+        var types;
+        if(Hammer.HAS_POINTEREVENTS) {
+            types = Hammer.PointerEvent.getEvents();
+        }
+        // for non pointer events browsers
+        else {
+            types = [
+                'touchstart mousedown',
+                'touchmove mousemove',
+                'touchend touchcancel mouseup'];
+        }
+
+        Hammer.EVENT_TYPES[Hammer.EVENT_START]  = types[0];
+        Hammer.EVENT_TYPES[Hammer.EVENT_MOVE]   = types[1];
+        Hammer.EVENT_TYPES[Hammer.EVENT_END]    = types[2];
+    },
+
+
+    /**
+     * create touchlist depending on the event
+     * @param   {Object}    ev
+     * @param   {String}    eventType   used by the fakemultitouch plugin
+     */
+    getTouchList: function getTouchList(ev/*, eventType*/) {
+        // get the fake pointerEvent touchlist
+        if(Hammer.HAS_POINTEREVENTS) {
+            return Hammer.PointerEvent.getTouchList();
+        }
+        // get the touchlist
+        else if(ev.touches) {
+            return ev.touches;
+        }
+        // make fake touchlist from mouse position
+        else {
+            return [{
+                identifier: 1,
+                pageX: ev.pageX,
+                pageY: ev.pageY,
+                target: ev.target
+            }];
+        }
+    },
+
+
+    /**
+     * collect event data for Hammer js
+     * @param   {HTMLElement}   element
+     * @param   {String}        eventType        like Hammer.EVENT_MOVE
+     * @param   {Object}        eventData
+     */
+    collectEventData: function collectEventData(element, eventType, ev) {
+        var touches = this.getTouchList(ev, eventType);
+
+        // find out pointerType
+        var pointerType = Hammer.POINTER_TOUCH;
+        if(ev.type.match(/mouse/) || Hammer.PointerEvent.matchType(Hammer.POINTER_MOUSE, ev)) {
+            pointerType = Hammer.POINTER_MOUSE;
+        }
+
+        return {
+            center      : Hammer.utils.getCenter(touches),
+            timestamp   : ev.timestamp || new Date().getTime(), // for IE
+            target      : ev.target,
+            touches     : touches,
+            eventType   : eventType,
+            pointerType : pointerType,
+            srcEvent    : ev,
+
+            /**
+             * prevent the browser default actions
+             * mostly used to disable scrolling of the browser
+             */
+            preventDefault: function() {
+                if(this.srcEvent.preventManipulation) {
+                    this.srcEvent.preventManipulation();
+                }
+
+                if(this.srcEvent.preventDefault) {
+                    this.srcEvent.preventDefault();
+                }
+            },
+
+            /**
+             * stop bubbling the event up to its parents
+             */
+            stopPropagation: function() {
+                this.srcEvent.stopPropagation();
+            },
+
+            /**
+             * immediately stop gesture detection
+             * might be useful after a swipe was detected
+             * @return {*}
+             */
+            stopDetect: function() {
+                return Hammer.detection.stopDetect();
+            }
+        };
+    }
+};
+
+Hammer.PointerEvent = {
+    /**
+     * holds all pointers
+     * @type {Object}
+     */
+    pointers: {},
+
+    /**
+     * get a list of pointers
+     * @returns {Array}     touchlist
+     */
+    getTouchList: function() {
+        var pointers = this.pointers;
+        var touchlist = [];
+
+        // we can use forEach since pointerEvents only is in IE10
+        Object.keys(pointers).sort().forEach(function(id) {
+            touchlist.push(pointers[id]);
+        });
+        return touchlist;
+    },
+
+    /**
+     * update the position of a pointer
+     * @param   {String}   type             Hammer.EVENT_END
+     * @param   {Object}   pointerEvent
+     */
+    updatePointer: function(type, pointerEvent) {
+        if(type == Hammer.EVENT_END) {
+            delete this.pointers[pointerEvent.pointerId];
+        }
+        else {
+            pointerEvent.identifier = pointerEvent.pointerId;
+            this.pointers[pointerEvent.pointerId] = pointerEvent;
+        }
+    },
+
+    /**
+     * check if ev matches pointertype
+     * @param   {String}        pointerType     Hammer.POINTER_MOUSE
+     * @param   {PointerEvent}  ev
+     */
+    matchType: function(pointerType, ev) {
+        if(!ev.pointerType) {
+            return false;
+        }
+
+        var types = {};
+        types[Hammer.POINTER_MOUSE] = (ev.pointerType == ev.MSPOINTER_TYPE_MOUSE || ev.pointerType == Hammer.POINTER_MOUSE);
+        types[Hammer.POINTER_TOUCH] = (ev.pointerType == ev.MSPOINTER_TYPE_TOUCH || ev.pointerType == Hammer.POINTER_TOUCH);
+        types[Hammer.POINTER_PEN] = (ev.pointerType == ev.MSPOINTER_TYPE_PEN || ev.pointerType == Hammer.POINTER_PEN);
+        return types[pointerType];
+    },
+
+
+    /**
+     * get events
+     */
+    getEvents: function() {
+        return [
+            'pointerdown MSPointerDown',
+            'pointermove MSPointerMove',
+            'pointerup pointercancel MSPointerUp MSPointerCancel'
+        ];
+    },
+
+    /**
+     * reset the list
+     */
+    reset: function() {
+        this.pointers = {};
+    }
+};
+
+Hammer.utils = {
+    /**
+     * extend method,
+     * also used for cloning when dest is an empty object
+     * @param   {Object}    dest
+     * @param   {Object}    src
+     * @returns {Object}    dest
+     */
+    extend: function extend(dest, src) {
+        for (var key in src) {
+            dest[key] = src[key];
+        }
+
+        return dest;
+    },
+
+
+    /**
+     * get the center of all the touches
+     * @param   {Array}     touches
+     * @returns {Object}    center
+     */
+    getCenter: function getCenter(touches) {
+        var valuesX = [], valuesY = [];
+
+        for(var t= 0,len=touches.length; t<len; t++) {
+            valuesX.push(touches[t].pageX);
+            valuesY.push(touches[t].pageY);
+        }
+
+        return {
+            pageX: ((Math.min.apply(Math, valuesX) + Math.max.apply(Math, valuesX)) / 2),
+            pageY: ((Math.min.apply(Math, valuesY) + Math.max.apply(Math, valuesY)) / 2)
+        };
+    },
+
+
+    /**
+     * calculate the velocity between two points
+     * @param   {Number}    delta_time
+     * @param   {Number}    delta_x
+     * @param   {Number}    delta_y
+     * @returns {Object}    velocity
+     */
+    getVelocity: function getSimpleDistance(delta_time, delta_x, delta_y) {
+        return {
+            x: Math.abs(delta_x / delta_time) || 0,
+            y: Math.abs(delta_y / delta_time) || 0
+        };
+    },
+
+
+    /**
+     * calculate the angle between two coordinates
+     * @param   {Touch}     touch1
+     * @param   {Touch}     touch2
+     * @returns {Number}    angle
+     */
+    getAngle: function getAngle(touch1, touch2) {
+        var y = touch2.pageY - touch1.pageY,
+            x = touch2.pageX - touch1.pageX;
+        return Math.atan2(y, x) * 180 / Math.PI;
+    },
+
+
+    /**
+     * angle to direction define
+     * @param   {Touch}     touch1
+     * @param   {Touch}     touch2
+     * @returns {String}    direction constant, like Hammer.DIRECTION_LEFT
+     */
+    getDirection: function getDirection(touch1, touch2) {
+        var x = Math.abs(touch1.pageX - touch2.pageX),
+            y = Math.abs(touch1.pageY - touch2.pageY);
+
+        if(x >= y) {
+            return touch1.pageX - touch2.pageX > 0 ? Hammer.DIRECTION_LEFT : Hammer.DIRECTION_RIGHT;
+        }
+        else {
+            return touch1.pageY - touch2.pageY > 0 ? Hammer.DIRECTION_UP : Hammer.DIRECTION_DOWN;
+        }
+    },
+
+
+    /**
+     * calculate the distance between two touches
+     * @param   {Touch}     touch1
+     * @param   {Touch}     touch2
+     * @returns {Number}    distance
+     */
+    getDistance: function getDistance(touch1, touch2) {
+        var x = touch2.pageX - touch1.pageX,
+            y = touch2.pageY - touch1.pageY;
+        return Math.sqrt((x*x) + (y*y));
+    },
+
+
+    /**
+     * calculate the scale factor between two touchLists (fingers)
+     * no scale is 1, and goes down to 0 when pinched together, and bigger when pinched out
+     * @param   {Array}     start
+     * @param   {Array}     end
+     * @returns {Number}    scale
+     */
+    getScale: function getScale(start, end) {
+        // need two fingers...
+        if(start.length >= 2 && end.length >= 2) {
+            return this.getDistance(end[0], end[1]) /
+                this.getDistance(start[0], start[1]);
+        }
+        return 1;
+    },
+
+
+    /**
+     * calculate the rotation degrees between two touchLists (fingers)
+     * @param   {Array}     start
+     * @param   {Array}     end
+     * @returns {Number}    rotation
+     */
+    getRotation: function getRotation(start, end) {
+        // need two fingers
+        if(start.length >= 2 && end.length >= 2) {
+            return this.getAngle(end[1], end[0]) -
+                this.getAngle(start[1], start[0]);
+        }
+        return 0;
+    },
+
+
+    /**
+     * boolean if the direction is vertical
+     * @param    {String}    direction
+     * @returns  {Boolean}   is_vertical
+     */
+    isVertical: function isVertical(direction) {
+        return (direction == Hammer.DIRECTION_UP || direction == Hammer.DIRECTION_DOWN);
+    },
+
+
+    /**
+     * stop browser default behavior with css props
+     * @param   {HtmlElement}   element
+     * @param   {Object}        css_props
+     */
+    stopDefaultBrowserBehavior: function stopDefaultBrowserBehavior(element, css_props) {
+        var prop,
+            vendors = ['webkit','khtml','moz','ms','o',''];
+
+        if(!css_props || !element.style) {
+            return;
+        }
+
+        // with css properties for modern browsers
+        for(var i = 0; i < vendors.length; i++) {
+            for(var p in css_props) {
+                if(css_props.hasOwnProperty(p)) {
+                    prop = p;
+
+                    // vender prefix at the property
+                    if(vendors[i]) {
+                        prop = vendors[i] + prop.substring(0, 1).toUpperCase() + prop.substring(1);
+                    }
+
+                    // set the style
+                    element.style[prop] = css_props[p];
+                }
+            }
+        }
+
+        // also the disable onselectstart
+        if(css_props.userSelect == 'none') {
+            element.onselectstart = function() {
+                return false;
+            };
+        }
+    }
+};
+
+Hammer.detection = {
+    // contains all registred Hammer.gestures in the correct order
+    gestures: [],
+
+    // data of the current Hammer.gesture detection session
+    current: null,
+
+    // the previous Hammer.gesture session data
+    // is a full clone of the previous gesture.current object
+    previous: null,
+
+    // when this becomes true, no gestures are fired
+    stopped: false,
+
+
+    /**
+     * start Hammer.gesture detection
+     * @param   {Hammer.Instance}   inst
+     * @param   {Object}            eventData
+     */
+    startDetect: function startDetect(inst, eventData) {
+        // already busy with a Hammer.gesture detection on an element
+        if(this.current) {
+            return;
+        }
+
+        this.stopped = false;
+
+        this.current = {
+            inst        : inst, // reference to HammerInstance we're working for
+            startEvent  : Hammer.utils.extend({}, eventData), // start eventData for distances, timing etc
+            lastEvent   : false, // last eventData
+            name        : '' // current gesture we're in/detected, can be 'tap', 'hold' etc
+        };
+
+        this.detect(eventData);
+    },
+
+
+    /**
+     * Hammer.gesture detection
+     * @param   {Object}    eventData
+     */
+    detect: function detect(eventData) {
+        if(!this.current || this.stopped) {
+            return;
+        }
+
+        // extend event data with calculations about scale, distance etc
+        eventData = this.extendEventData(eventData);
+
+        // instance options
+        var inst_options = this.current.inst.options;
+
+        // call Hammer.gesture handlers
+        for(var g=0,len=this.gestures.length; g<len; g++) {
+            var gesture = this.gestures[g];
+
+            // only when the instance options have enabled this gesture
+            if(!this.stopped && inst_options[gesture.name] !== false) {
+                // if a handler returns false, we stop with the detection
+                if(gesture.handler.call(gesture, eventData, this.current.inst) === false) {
+                    this.stopDetect();
+                    break;
+                }
+            }
+        }
+
+        // store as previous event event
+        if(this.current) {
+            this.current.lastEvent = eventData;
+        }
+    },
+
+
+    /**
+     * end Hammer.gesture detection
+     * @param   {Object}    eventData
+     */
+    endDetect: function endDetect(eventData) {
+        this.detect(eventData);
+        this.stopDetect();
+    },
+
+
+    /**
+     * clear the Hammer.gesture vars
+     * this is called on endDetect, but can also be used when a final Hammer.gesture has been detected
+     * to stop other Hammer.gestures from being fired
+     */
+    stopDetect: function stopDetect() {
+        // clone current data to the store as the previous gesture
+        // used for the double tap gesture, since this is an other gesture detect session
+        this.previous = Hammer.utils.extend({}, this.current);
+
+        // reset the current
+        this.current = null;
+
+        // stopped!
+        this.stopped = true;
+    },
+
+
+    /**
+     * extend eventData for Hammer.gestures
+     * @param   {Object}   ev
+     * @returns {Object}   ev
+     */
+    extendEventData: function extendEventData(ev) {
+        var startEv = this.current.startEvent;
+
+        // if the touches change, set the new touches over the startEvent touches
+        // this because touchevents don't have all the touches on touchstart, or the
+        // user must place his fingers at the EXACT same time on the screen, which is not realistic
+        // but, sometimes it happens that both fingers are touching at the EXACT same time
+        if(startEv && (ev.touches.length != startEv.touches.length || ev.touches === startEv.touches)) {
+            // extend 1 level deep to get the touchlist with the touch objects
+            startEv.touches = [];
+            for(var i=0,len=ev.touches.length; i<len; i++) {
+                startEv.touches.push(Hammer.utils.extend({}, ev.touches[i]));
+            }
+        }
+
+        var delta_time = ev.timestamp - startEv.timestamp,
+            delta_x = ev.center.pageX - startEv.center.pageX,
+            delta_y = ev.center.pageY - startEv.center.pageY,
+            velocity = Hammer.utils.getVelocity(delta_time, delta_x, delta_y);
+
+        Hammer.utils.extend(ev, {
+            deltaTime   : delta_time,
+
+            deltaX      : delta_x,
+            deltaY      : delta_y,
+
+            velocityX   : velocity.x,
+            velocityY   : velocity.y,
+
+            distance    : Hammer.utils.getDistance(startEv.center, ev.center),
+            angle       : Hammer.utils.getAngle(startEv.center, ev.center),
+            direction   : Hammer.utils.getDirection(startEv.center, ev.center),
+
+            scale       : Hammer.utils.getScale(startEv.touches, ev.touches),
+            rotation    : Hammer.utils.getRotation(startEv.touches, ev.touches),
+
+            startEvent  : startEv
+        });
+
+        return ev;
+    },
+
+
+    /**
+     * register new gesture
+     * @param   {Object}    gesture object, see gestures.js for documentation
+     * @returns {Array}     gestures
+     */
+    register: function register(gesture) {
+        // add an enable gesture options if there is no given
+        var options = gesture.defaults || {};
+        if(typeof(options[gesture.name]) == 'undefined') {
+            options[gesture.name] = true;
+        }
+
+        // extend Hammer default options with the Hammer.gesture options
+        Hammer.utils.extend(Hammer.defaults, options);
+
+        // set its index
+        gesture.index = gesture.index || 1000;
+
+        // add Hammer.gesture to the list
+        this.gestures.push(gesture);
+
+        // sort the list by index
+        this.gestures.sort(function(a, b) {
+            if (a.index < b.index) {
+                return -1;
+            }
+            if (a.index > b.index) {
+                return 1;
+            }
+            return 0;
+        });
+
+        return this.gestures;
+    }
+};
+
+
+Hammer.gestures = Hammer.gestures || {};
+
+/**
+ * Custom gestures
+ * ==============================
+ *
+ * Gesture object
+ * --------------------
+ * The object structure of a gesture:
+ *
+ * { name: 'mygesture',
+ *   index: 1337,
+ *   defaults: {
+ *     mygesture_option: true
+ *   }
+ *   handler: function(type, ev, inst) {
+ *     // trigger gesture event
+ *     inst.trigger(this.name, ev);
+ *   }
+ * }
+
+ * @param   {String}    name
+ * this should be the name of the gesture, lowercase
+ * it is also being used to disable/enable the gesture per instance config.
+ *
+ * @param   {Number}    [index=1000]
+ * the index of the gesture, where it is going to be in the stack of gestures detection
+ * like when you build an gesture that depends on the drag gesture, it is a good
+ * idea to place it after the index of the drag gesture.
+ *
+ * @param   {Object}    [defaults={}]
+ * the default settings of the gesture. these are added to the instance settings,
+ * and can be overruled per instance. you can also add the name of the gesture,
+ * but this is also added by default (and set to true).
+ *
+ * @param   {Function}  handler
+ * this handles the gesture detection of your custom gesture and receives the
+ * following arguments:
+ *
+ *      @param  {Object}    eventData
+ *      event data containing the following properties:
+ *          timestamp   {Number}        time the event occurred
+ *          target      {HTMLElement}   target element
+ *          touches     {Array}         touches (fingers, pointers, mouse) on the screen
+ *          pointerType {String}        kind of pointer that was used. matches Hammer.POINTER_MOUSE|TOUCH
+ *          center      {Object}        center position of the touches. contains pageX and pageY
+ *          deltaTime   {Number}        the total time of the touches in the screen
+ *          deltaX      {Number}        the delta on x axis we haved moved
+ *          deltaY      {Number}        the delta on y axis we haved moved
+ *          velocityX   {Number}        the velocity on the x
+ *          velocityY   {Number}        the velocity on y
+ *          angle       {Number}        the angle we are moving
+ *          direction   {String}        the direction we are moving. matches Hammer.DIRECTION_UP|DOWN|LEFT|RIGHT
+ *          distance    {Number}        the distance we haved moved
+ *          scale       {Number}        scaling of the touches, needs 2 touches
+ *          rotation    {Number}        rotation of the touches, needs 2 touches *
+ *          eventType   {String}        matches Hammer.EVENT_START|MOVE|END
+ *          srcEvent    {Object}        the source event, like TouchStart or MouseDown *
+ *          startEvent  {Object}        contains the same properties as above,
+ *                                      but from the first touch. this is used to calculate
+ *                                      distances, deltaTime, scaling etc
+ *
+ *      @param  {Hammer.Instance}    inst
+ *      the instance we are doing the detection for. you can get the options from
+ *      the inst.options object and trigger the gesture event by calling inst.trigger
+ *
+ *
+ * Handle gestures
+ * --------------------
+ * inside the handler you can get/set Hammer.detection.current. This is the current
+ * detection session. It has the following properties
+ *      @param  {String}    name
+ *      contains the name of the gesture we have detected. it has not a real function,
+ *      only to check in other gestures if something is detected.
+ *      like in the drag gesture we set it to 'drag' and in the swipe gesture we can
+ *      check if the current gesture is 'drag' by accessing Hammer.detection.current.name
+ *
+ *      @readonly
+ *      @param  {Hammer.Instance}    inst
+ *      the instance we do the detection for
+ *
+ *      @readonly
+ *      @param  {Object}    startEvent
+ *      contains the properties of the first gesture detection in this session.
+ *      Used for calculations about timing, distance, etc.
+ *
+ *      @readonly
+ *      @param  {Object}    lastEvent
+ *      contains all the properties of the last gesture detect in this session.
+ *
+ * after the gesture detection session has been completed (user has released the screen)
+ * the Hammer.detection.current object is copied into Hammer.detection.previous,
+ * this is usefull for gestures like doubletap, where you need to know if the
+ * previous gesture was a tap
+ *
+ * options that have been set by the instance can be received by calling inst.options
+ *
+ * You can trigger a gesture event by calling inst.trigger("mygesture", event).
+ * The first param is the name of your gesture, the second the event argument
+ *
+ *
+ * Register gestures
+ * --------------------
+ * When an gesture is added to the Hammer.gestures object, it is auto registered
+ * at the setup of the first Hammer instance. You can also call Hammer.detection.register
+ * manually and pass your gesture object as a param
+ *
+ */
+
+/**
+ * Hold
+ * Touch stays at the same place for x time
+ * @events  hold
+ */
+Hammer.gestures.Hold = {
+    name: 'hold',
+    index: 10,
+    defaults: {
+        hold_timeout: 500,
+        hold_threshold: 1
+    },
+    timer: null,
+    handler: function holdGesture(ev, inst) {
+        switch(ev.eventType) {
+            case Hammer.EVENT_START:
+                // clear any running timers
+                clearTimeout(this.timer);
+
+                // set the gesture so we can check in the timeout if it still is
+                Hammer.detection.current.name = this.name;
+
+                // set timer and if after the timeout it still is hold,
+                // we trigger the hold event
+                this.timer = setTimeout(function() {
+                    if(Hammer.detection.current.name == 'hold') {
+                        inst.trigger('hold', ev);
+                    }
+                }, inst.options.hold_timeout);
+                break;
+
+            // when you move or end we clear the timer
+            case Hammer.EVENT_MOVE:
+                if(ev.distance > inst.options.hold_threshold) {
+                    clearTimeout(this.timer);
+                }
+                break;
+
+            case Hammer.EVENT_END:
+                clearTimeout(this.timer);
+                break;
+        }
+    }
+};
+
+
+/**
+ * Tap/DoubleTap
+ * Quick touch at a place or double at the same place
+ * @events  tap, doubletap
+ */
+Hammer.gestures.Tap = {
+    name: 'tap',
+    index: 100,
+    defaults: {
+        tap_max_touchtime  : 250,
+        tap_max_distance   : 10,
+        doubletap_distance : 20,
+        doubletap_interval : 300
+    },
+    handler: function tapGesture(ev, inst) {
+        if(ev.eventType == Hammer.EVENT_END) {
+            // previous gesture, for the double tap since these are two different gesture detections
+            var prev = Hammer.detection.previous;
+
+            // when the touchtime is higher then the max touch time
+            // or when the moving distance is too much
+            if(ev.deltaTime > inst.options.tap_max_touchtime ||
+                ev.distance > inst.options.tap_max_distance) {
+                return;
+            }
+
+            // check if double tap
+            if(prev && prev.name == 'tap' &&
+                (ev.timestamp - prev.lastEvent.timestamp) < inst.options.doubletap_interval &&
+                ev.distance < inst.options.doubletap_distance) {
+                Hammer.detection.current.name = 'doubletap';
+            }
+            else {
+                Hammer.detection.current.name = 'tap';
+            }
+
+            inst.trigger(Hammer.detection.current.name, ev);
+        }
+    }
+};
+
+
+/**
+ * Swipe
+ * triggers swipe events when the end velocity is above the threshold
+ * @events  swipe, swipeleft, swiperight, swipeup, swipedown
+ */
+Hammer.gestures.Swipe = {
+    name: 'swipe',
+    index: 40,
+    defaults: {
+        // set 0 for unlimited, but this can conflict with transform
+        swipe_max_touches  : 1,
+        swipe_velocity     : 0.7
+    },
+    handler: function swipeGesture(ev, inst) {
+        if(ev.eventType == Hammer.EVENT_END) {
+            // max touches
+            if(inst.options.swipe_max_touches > 0 &&
+                ev.touches.length > inst.options.swipe_max_touches) {
+                return;
+            }
+
+            // when the distance we moved is too small we skip this gesture
+            // or we can be already in dragging
+            if(ev.velocityX > inst.options.swipe_velocity ||
+                ev.velocityY > inst.options.swipe_velocity) {
+                // trigger swipe events
+                inst.trigger(this.name, ev);
+                inst.trigger(this.name + ev.direction, ev);
+            }
+        }
+    }
+};
+
+
+/**
+ * Drag
+ * Move with x fingers (default 1) around on the page. Blocking the scrolling when
+ * moving left and right is a good practice. When all the drag events are blocking
+ * you disable scrolling on that area.
+ * @events  drag, drapleft, dragright, dragup, dragdown
+ */
+Hammer.gestures.Drag = {
+    name: 'drag',
+    index: 50,
+    defaults: {
+        drag_min_distance : 10,
+        // set 0 for unlimited, but this can conflict with transform
+        drag_max_touches  : 1,
+        // prevent default browser behavior when dragging occurs
+        // be careful with it, it makes the element a blocking element
+        // when you are using the drag gesture, it is a good practice to set this true
+        drag_block_horizontal   : false,
+        drag_block_vertical     : false,
+        // drag_lock_to_axis keeps the drag gesture on the axis that it started on,
+        // It disallows vertical directions if the initial direction was horizontal, and vice versa.
+        drag_lock_to_axis       : false
+    },
+    triggered: false,
+    handler: function dragGesture(ev, inst) {
+        // current gesture isnt drag, but dragged is true
+        // this means an other gesture is busy. now call dragend
+        if(Hammer.detection.current.name != this.name && this.triggered) {
+            inst.trigger(this.name +'end', ev);
+            this.triggered = false;
+            return;
+        }
+
+        // max touches
+        if(inst.options.drag_max_touches > 0 &&
+            ev.touches.length > inst.options.drag_max_touches) {
+            return;
+        }
+
+        switch(ev.eventType) {
+            case Hammer.EVENT_START:
+                this.triggered = false;
+                break;
+
+            case Hammer.EVENT_MOVE:
+                // when the distance we moved is too small we skip this gesture
+                // or we can be already in dragging
+                if(ev.distance < inst.options.drag_min_distance &&
+                    Hammer.detection.current.name != this.name) {
+                    return;
+                }
+
+                // we are dragging!
+                Hammer.detection.current.name = this.name;
+
+                // lock drag to axis?
+                var last_direction = Hammer.detection.current.lastEvent.direction;
+                if(inst.options.drag_lock_to_axis && last_direction !== ev.direction) {
+                    // keep direction on the axis that the drag gesture started on
+                    if(Hammer.utils.isVertical(last_direction)) {
+                        ev.direction = (ev.deltaY < 0) ? Hammer.DIRECTION_UP : Hammer.DIRECTION_DOWN;
+                    }
+                    else {
+                        ev.direction = (ev.deltaX < 0) ? Hammer.DIRECTION_LEFT : Hammer.DIRECTION_RIGHT;
+                    }
+                }
+
+                // first time, trigger dragstart event
+                if(!this.triggered) {
+                    inst.trigger(this.name +'start', ev);
+                    this.triggered = true;
+                }
+
+                // trigger normal event
+                inst.trigger(this.name, ev);
+
+                // direction event, like dragdown
+                inst.trigger(this.name + ev.direction, ev);
+
+                // block the browser events
+                if( (inst.options.drag_block_vertical && Hammer.utils.isVertical(ev.direction)) ||
+                    (inst.options.drag_block_horizontal && !Hammer.utils.isVertical(ev.direction))) {
+                    ev.preventDefault();
+                }
+                break;
+
+            case Hammer.EVENT_END:
+                // trigger dragend
+                if(this.triggered) {
+                    inst.trigger(this.name +'end', ev);
+                }
+
+                this.triggered = false;
+                break;
+        }
+    }
+};
+
+
+/**
+ * Transform
+ * User want to scale or rotate with 2 fingers
+ * @events  transform, pinch, pinchin, pinchout, rotate
+ */
+Hammer.gestures.Transform = {
+    name: 'transform',
+    index: 45,
+    defaults: {
+        // factor, no scale is 1, zoomin is to 0 and zoomout until higher then 1
+        transform_min_scale     : 0.01,
+        // rotation in degrees
+        transform_min_rotation  : 1,
+        // prevent default browser behavior when two touches are on the screen
+        // but it makes the element a blocking element
+        // when you are using the transform gesture, it is a good practice to set this true
+        transform_always_block  : false
+    },
+    triggered: false,
+    handler: function transformGesture(ev, inst) {
+        // current gesture isnt drag, but dragged is true
+        // this means an other gesture is busy. now call dragend
+        if(Hammer.detection.current.name != this.name && this.triggered) {
+            inst.trigger(this.name +'end', ev);
+            this.triggered = false;
+            return;
+        }
+
+        // atleast multitouch
+        if(ev.touches.length < 2) {
+            return;
+        }
+
+        // prevent default when two fingers are on the screen
+        if(inst.options.transform_always_block) {
+            ev.preventDefault();
+        }
+
+        switch(ev.eventType) {
+            case Hammer.EVENT_START:
+                this.triggered = false;
+                break;
+
+            case Hammer.EVENT_MOVE:
+                var scale_threshold = Math.abs(1-ev.scale);
+                var rotation_threshold = Math.abs(ev.rotation);
+
+                // when the distance we moved is too small we skip this gesture
+                // or we can be already in dragging
+                if(scale_threshold < inst.options.transform_min_scale &&
+                    rotation_threshold < inst.options.transform_min_rotation) {
+                    return;
+                }
+
+                // we are transforming!
+                Hammer.detection.current.name = this.name;
+
+                // first time, trigger dragstart event
+                if(!this.triggered) {
+                    inst.trigger(this.name +'start', ev);
+                    this.triggered = true;
+                }
+
+                inst.trigger(this.name, ev); // basic transform event
+
+                // trigger rotate event
+                if(rotation_threshold > inst.options.transform_min_rotation) {
+                    inst.trigger('rotate', ev);
+                }
+
+                // trigger pinch event
+                if(scale_threshold > inst.options.transform_min_scale) {
+                    inst.trigger('pinch', ev);
+                    inst.trigger('pinch'+ ((ev.scale < 1) ? 'in' : 'out'), ev);
+                }
+                break;
+
+            case Hammer.EVENT_END:
+                // trigger dragend
+                if(this.triggered) {
+                    inst.trigger(this.name +'end', ev);
+                }
+
+                this.triggered = false;
+                break;
+        }
+    }
+};
+
+
+/**
+ * Touch
+ * Called as first, tells the user has touched the screen
+ * @events  touch
+ */
+Hammer.gestures.Touch = {
+    name: 'touch',
+    index: -Infinity,
+    defaults: {
+        // call preventDefault at touchstart, and makes the element blocking by
+        // disabling the scrolling of the page, but it improves gestures like
+        // transforming and dragging.
+        // be careful with using this, it can be very annoying for users to be stuck
+        // on the page
+        prevent_default: false
+    },
+    handler: function touchGesture(ev, inst) {
+        if(inst.options.prevent_default) {
+            ev.preventDefault();
+        }
+
+        if(ev.eventType ==  Hammer.EVENT_START) {
+            inst.trigger(this.name, ev);
+        }
+    }
+};
+
+
+/**
+ * Release
+ * Called as last, tells the user has released the screen
+ * @events  release
+ */
+Hammer.gestures.Release = {
+    name: 'release',
+    index: Infinity,
+    handler: function releaseGesture(ev, inst) {
+        if(ev.eventType ==  Hammer.EVENT_END) {
+            inst.trigger(this.name, ev);
+        }
+    }
+};
+
+// node export
+if(typeof module === 'object' && typeof module.exports === 'object'){
+    module.exports = Hammer;
+}
+// just window export
+else {
+    window.Hammer = Hammer;
+
+    // requireJS module definition
+    if(typeof window.define === 'function' && window.define.amd) {
+        window.define('hammer', [], function() {
+            return Hammer;
+        });
+    }
+}
+})(this);

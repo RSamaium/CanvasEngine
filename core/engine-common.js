@@ -9,22 +9,28 @@ function Kernel(class_method, name) {
 }
 
 Kernel._extend = function(self, object, clone) {
-	clone = clone === undefined ? true : clone;
-	if (typeof object == "string") {
-		if (Class.__class_config[object]) {
-			object = Class.__class_config[object].methods;
+	var o;
+	if (!(object instanceof Array)) {
+		object = [object];
+	}
+	for (var i=0 ; i < object.length ; i++) {
+		clone = clone === undefined ? true : clone;
+		o = object[i];
+		if (typeof o == "string") {
+			if (Class.__class_config[o]) {
+				o = Class.__class_config[o].methods;
+			}
+			else {
+				return self;
+			}
 		}
-		else {
-			return self;
+		
+		if (clone) o = CanvasEngine.clone(o);
+		
+		for (var key in o) {
+			self[key] = o[key];
 		}
 	}
-	
-	if (clone) object = CanvasEngine.clone(object);
-	
-	for (var key in object) {
-		self[key] = object[key];
-	}
-	
 	return self;
 }
 
@@ -232,18 +238,30 @@ Class.create = function(name, methods, _static) {
 	@method new new class. 
 	@static
 	@params {String} name Class name
-	@params {Array} params Parameters for the constructor
+	@params {Array} params (optional) Parameters for the constructor
+	@params {Boolean} initialize (optional) Calls the constructor "initialize" (true by default)
 	@return {Class}
 */
 Class.New = function() { return Class["new"].apply(this, arguments) };
-Class["new"] = function(name, params) {
+Class["new"] = function(name, params, initialize) {
 	var _class;
+	
+	if (typeof params == "boolean") {
+		initialize = params;
+		params = [];
+	}
+	
+	if (initialize == undefined) {
+		initialize = true;
+	}
+	
 	params = params || [];
+	
 	if (!Class.__class_config[name]) {
 		throw name + " class does not exist. Use method \"create\" for build the structure of this class";
 	}
 	_class = Class.__class_config[name].kernel["new"]();
-	if (_class.initialize) {
+	if (initialize && _class.initialize) {
 		_class.initialize.apply(_class, params);
 	}
 
@@ -486,6 +504,8 @@ CanvasEngine.clone = function(srcInstance) {
 	return newInstance;
 };
 
+
+
 /**
 	@doc utilities/
 	@method hexaToRGB Converts the hexadecimal value of a color in RGB. Returns an array with 3 colors : [r, g, b]
@@ -528,6 +548,50 @@ CanvasEngine.rgbToHex = function(r, g, b) {
 	return CanvasEngine.rgbToHex(r, g, b);
 };
 
+/**
+	@doc utilities/
+	@method random Random value between `min`	and `max`
+	@static
+	@params {Integer} min
+	@params {Integer} max
+	@return {Integer} 
+*/
+CanvasEngine.random = function(min, max) {
+	return Math.floor((Math.random() * max) + min);
+};
+
+/**
+@doc utilities/
+@method mobileUserAgent Returns the name of the user agent used
+@static
+@return {String|Boolean} name of the agent user ("iphone", "ipod", "ipad", "blackberry", "android" or "windows phone") or false if it is not a mobile
+@example
+
+	if (CE.mobileUserAgent()) {
+		// It's a mobile
+	}
+	if (CE.mobileUserAgent() == "android") {
+		// It's a Android mobile
+	}
+*/
+CanvasEngine.mobileUserAgent = function() {
+	var ua = navigator.userAgent;
+	if (ua.match(/(iPhone)/))
+		return "iphone";
+	else if (ua.match(/(iPod)/))
+		return "ipod";
+	else if (ua.match(/(iPad)/)) 
+		return "ipad";
+	else if (ua.match(/(BlackBerry)/)) 
+		return "blackberry";
+	else if (ua.match(/(Android)/))
+		return "android";
+	else if (ua.match(/(Windows Phone)/)) 
+		return "windows phone";
+	else
+		return false;
+};
+
 CanvasEngine._benchmark = {};
 CanvasEngine._interval_benchmark = 60;
 CanvasEngine._freq_benchmark = {};
@@ -546,7 +610,13 @@ CanvasEngine.benchmark = function(id) {
 	
 };
 
-
+CanvasEngine.objectSize = function(obj) {
+    var size = 0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+};
 
 /**
 	@doc utilities/
@@ -575,6 +645,7 @@ CanvasEngine.moveArray = function(array, pos1, pos2) {
           array[i] = array[i + 1];
         }
       }
+	 
       // move element up and shift other elements down
       else {
         for (i = pos1; i > pos2; i--) {
@@ -582,8 +653,12 @@ CanvasEngine.moveArray = function(array, pos1, pos2) {
         }
       }
       // put element from position 1 to destination
+	 
       array[pos2] = tmp;
     }
+	
+	
+	
 	return array;
 }
 

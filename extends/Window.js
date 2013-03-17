@@ -26,7 +26,7 @@ THE SOFTWARE.
 @param {CanvasEngine.Scene} scene Current scene
 @param {Integer} width Width
 @param {Integer} height Height
-@param {String} border Identifier of the image to the border. The image must contain the four corners and four sides to have 9 tiles. The width and height should be divisible by three
+@param {String} border (optional) Identifier of the image to the border. The image must contain the four corners and four sides to have 9 tiles. The width and height should be divisible by three
 @example
 
 	canvas.Scene.New({
@@ -68,8 +68,15 @@ Class.create("Window", {
         this.height = height;
         this.border = border;
         this.scene = scene;
-        this.border_img = Global_CE.Materials.get(border);
-        this._construct();
+		if (border) {
+			this.border_img = Global_CE.Materials.get(border);
+			this._construct();
+		}
+		else {
+			this.el = this.scene.createElement(this.width, this.height);
+			this._content = this.scene.createElement();
+			this.el.append(this._content);
+		}
     },
     _construct: function() {
         if (!Global_CE.Spritesheet) {
@@ -159,6 +166,10 @@ Class.create("Window", {
 @param {String|Integer} x (optional) Position X. If the parameter is a string, the window is positioned at a specific location :
 
 * middle : The window is centered
+* bottom : The position of window is in bottom with 3% margin
+* top : The position of window is in top with 3% margin
+* bottom-X : The position of window is in bottom with X margin (px) (eq: "bottom-20")
+* top+X : The position of window is in top with X margin (px) (eq: "top+20")
 
 @param {Integer} y (optional) Position Y
 @example
@@ -176,7 +187,7 @@ In `ready` method
 @return {CanvasEngine.Window}
 */	
     position: function(typeOrX, y) {
-        var canvas = this.scene.getCanvas();
+        var canvas = this.scene.getCanvas(), margin;
         if (typeOrX === undefined) {
             return {
                 x: this.el.x,
@@ -188,6 +199,18 @@ In `ready` method
                 this.el.x = canvas.width / 2 - this.width / 2;
                 this.el.y = canvas.height / 2 - this.height / 2;
             }
+			else if (typeOrX == "bottom") {
+                this.el.x = canvas.width / 2 - this.width / 2;
+                this.el.y = canvas.height - this.height - (canvas.height * 0.03);
+            }
+			else if (typeOrX == "top") {
+                this.el.x = canvas.width / 2 - this.width / 2;
+                this.el.y = canvas.height * 0.03;
+            }
+			else if (margin = typeOrX.match(/top+([0-9]+)/)) {
+				this.el.x = canvas.width / 2 - this.width / 2;
+                this.el.y = margin[1];
+			}
         }
         else {
             this.el.x = typeOrX;
@@ -254,7 +277,267 @@ In `ready` method
     open: function(parent) {
         parent.append(this.el);
 		return this;
-    }
+    },
+	
+/**
+@doc cursor
+@class cursor Adds the cursor in the window
+@example
+
+In `ready` method
+
+	var box = RPGJS.Window.new(this, 500, 300, "img_id"),
+		el, array_el, text;
+		
+	var array  = ["Text1", "Text2", "Text3"];
+	
+	for (var i=0 ; i < array.length ; i++) {
+		el = this.createElement(480, 35);
+		el.y = i * 35;
+		el.attr('index', i);
+		text = RPGJS.Text.new(this, array[i]); // Text extend
+		text.style({
+			size: "18px",
+			color: "white"
+		}).draw(el, 0, 10);
+		array_el.push(el);
+		box.getContent().append(el);
+	}
+
+	var cursor = this.createElement();
+	cursor.fillStyle = "#7778AA";
+	cursor.fillRect(-10, -10, 480, 30);
+	cursor.opacity = .5;
+
+	box.cursor.init(cursor, array_el);
+	
+	box.cursor.select(function(el) {
+		console.log(el.attr('index'));
+	});
+	
+	box.cursor.change(function(el) {
+		
+	});
+
+	box.open(this.stage);
+	this.stage.append(cursor);
+	
+	box.cursor.setIndex(0);
+	box.cursor.enable(true);
+	
+		
+*/
+	cursor: {
+	
+		array_elements: null,
+		el: null,
+		index: 0,
+		params: {},
+		_enable: true,
+	
+/**
+@doc cursor/
+@method init Initializes functionality cursors.
+@param {CanvasEngine.Element} element (optional) Element corresponding to the cursor
+@param {Array} array_elements Array containing all the elements that can be selected by the cursor
+@param {Object} params (optional) Additional parameters for the cursor
+
+* reverse (Boolean) When the cursor reaches an extreme, it goes through the extreme opposite
+
+@return {CanvasEngine.Window.Cursor}
+*/
+		init: function(element, array_elements, params) {
+			if (element instanceof Array) {
+				array_elements = element;
+				element = null;
+			}
+			this.params = params || {};
+			this.array_elements = array_elements;
+			this.el = element;
+			this.update();
+			return this;
+		},
+	
+/**
+@doc cursor/
+@method refresh Refreshes the table containing the items that can be selected. Updated visual cursor
+@param {Array} array_elements Array containing all the elements that can be selected by the cursor
+@param {Boolean} change (optional) Calls the callback method assigned with the "change"
+@return {CanvasEngine.Window.Cursor}
+*/	
+		refresh: function(array_elements, change) {
+			this.array_elements = array_elements;
+			this.setIndex(this.index, change);
+			this.update();
+			return this;
+		},
+		
+/**
+@doc cursor/
+@method remove Removes the cursor visually
+@param {Array} array_elements Array containing all the elements that can be selected by the cursor
+@param {Boolean} change (optional) Calls the callback method assigned with the "change"
+@return {CanvasEngine.Window.Cursor}
+*/	
+		remove: function() {
+			this.el.remove();
+			return this;
+		},
+
+/**
+@doc cursor/
+@method assignKeys Assigns keyboard events : Up, Bottom and Enter. Also assigns the click on elements for touch and mouse. Elements must, in this case, have values set for the width and height attributesr
+@param {Boolean} reset (optional) Resets all keys
+@return {CanvasEngine.Window.Cursor}
+*/			
+		assignKeys: function(reset) {
+			var self = this;
+			if (reset) {
+				Global_CE.Input.reset();
+			}
+			Global_CE.Input.press([Input.Up], function() {
+				if (!self._enable) {
+					return;
+				}
+				self.setIndex(self.index-1);
+			});
+			Global_CE.Input.press([Input.Bottom], function() {
+				if (!self._enable) {
+					return;
+				}
+				self.setIndex(self.index+1);
+			});
+			
+			
+			function enter() {
+				if (!self._enable) {
+					return;
+				}
+				var el = self.array_elements[self.index];
+				if (self._select && el) self._select.call(self, el);
+			}
+			
+			Global_CE.Input.press([Input.Enter], enter);
+			
+			function assignTap(index) {
+				var el = this.array_elements[index];
+				if (el.width && el.height && this._enable) {
+					el.forceEvent = true;
+					el.beginPath();
+					el.rect(0, 0, el.width, el.height);
+					el.closePath();
+					el.on("tap", function() {
+						self.setIndex(index);
+						self.update();
+						enter();
+					});
+				}
+			}
+			for (var i=0 ; i < this.array_elements.length ; i++) {
+				assignTap.call(this, i);
+			}
+			return this;
+		},
+		
+/**
+@doc cursor/
+@method getCurrentElement Fetches the current element where the cursor is positioned
+@return {CanvasEngine.Element}
+*/	
+		getCurrentElement: function() {
+			return this.array_elements[this.index];
+		},
+	
+/**
+@doc cursor/
+@method setIndex Sets the index of the cursor on an element. The index starts at 0. The cursor is updated visually
+@param {Integer} index new index of cursor
+@param {Boolean} change (optional) Calls the callback method assigned with the "change"
+@return {CanvasEngine.Window.Cursor}
+*/		
+		setIndex: function(index, change) {
+			var h = this.array_elements.length;
+			if (index < 0) {
+				index = this.params.reverse ? h-1 : 0;
+			}
+			else if (index >= h) {
+				index = this.params.reverse ? 0 : h-1;
+			}
+			this.index = index;
+			this.update(true);
+			return true;
+		},
+	
+/**
+@doc cursor/
+@method update The cursor is updated visually. If there is any item, the cursor is hidden
+@param {Boolean} change (optional) Calls the callback method assigned with the `change`
+@return {CanvasEngine.Window.Cursor}
+*/	
+		update: function(call_onchange) {
+			if (this.el) {
+				if (this.array_elements.length == 0) {
+					this.el.hide();
+					return;
+				}
+				else {
+					this.el.show();
+				}
+			}
+			var el = this.getCurrentElement(),
+				pos;
+			if (el) {
+				pos = el.position();
+				if (this.el) {
+					this.el.x = pos.left;
+					this.el.y = pos.top;
+				}
+				if (call_onchange && this._onchange && this.array_elements.length > 0) this._onchange.call(this, el);
+			}	
+		},
+		
+/**
+@doc cursor/
+@method enable Active cursor or not. If it is off, pressing Up, Bottom and Enter are reset. If it is enabled, the method `assignKeys` is called
+@param {Boolean} enable (optional) Enable or disable the cursor. If no value, the current `enable` value is sent
+@return {Boolean}
+*/	
+		enable: function(enable) {
+			if (enable != undefined) {
+				this._enable = enable;
+				if (enable) {
+					this.assignKeys();
+				}
+				else {
+					Global_CE.Input.reset([Input.Enter, Input.Up, Input.bottom]);
+				}
+			}
+			return this._enable;
+		},
+
+/**
+@doc cursor/
+@method change Assigns a callback function when the cursor changes element
+@param {Function} callback Callback
+@return {CanvasEngine.Window.Cursor}
+*/			
+		change: function(_onchange) {
+			this._onchange = _onchange;
+			return this;
+		},
+
+/**
+@doc cursor/
+@method select Assigns a callback when the element is selected (Enter key pressed)
+@param {Function} callback Callback
+@return {CanvasEngine.Window.Cursor}
+*/			
+		select: function(_select) {
+			this._select = _select;
+			return this;
+		}
+	
+	}
 }); 
     
 var Window = {
