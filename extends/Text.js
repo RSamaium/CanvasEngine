@@ -342,10 +342,10 @@ In `ready` method :
 
 /**
 @doc text
-@class Text
+@class Text Draw a text with effects
 @example
 
-	<jsfiddle>WebCreative5/AP6BX</jsfiddle>
+<jsfiddle>WebCreative5/AP6BX</jsfiddle>
 
 */
 var Text = {
