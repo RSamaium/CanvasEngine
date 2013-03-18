@@ -234,10 +234,10 @@ or :
 
 /**
 @doc effect
-@class Effect
+@class Effect Performs effects on the screen or an element
+@example
 
-
-	<jsfiddle>WebCreative5/FmuvM</jsfiddle>
+<jsfiddle>WebCreative5/FmuvM</jsfiddle>
 
 */
 var Effect = {
