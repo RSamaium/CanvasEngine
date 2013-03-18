@@ -237,21 +237,7 @@ or :
 @class Effect
 
 
-	var canvas = CE.defines("canvas_id").
-		extend(Animation).
-		extend(Effect).
-		ready(function() {
-			canvas.Scene.call("MyScene");
-		});
-		
-	canvas.Scene.new({
-		name: "MyScene",
-
-		ready: function(stage) {
-			var effect = canvas.Effect.new(this, stage);
-			effect.changeScreenColorTone("black", 20, "darker", 0.6);
-		}
-	});
+	<jsfiddle>WebCreative5/FmuvM</jsfiddle>
 
 */
 var Effect = {

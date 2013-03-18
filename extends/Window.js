@@ -284,48 +284,61 @@ In `ready` method
 @class cursor Adds the cursor in the window
 @example
 
-In `ready` method
-
-	var box = RPGJS.Window.new(this, 500, 300, "img_id"),
-		el, array_el, text;
-		
-	var array  = ["Text1", "Text2", "Text3"];
-	
-	for (var i=0 ; i < array.length ; i++) {
-		el = this.createElement(480, 35);
-		el.y = i * 35;
-		el.attr('index', i);
-		text = RPGJS.Text.new(this, array[i]); // Text extend
-		text.style({
-			size: "18px",
-			color: "white"
-		}).draw(el, 0, 10);
-		array_el.push(el);
-		box.getContent().append(el);
-	}
-
-	var cursor = this.createElement();
-	cursor.fillStyle = "#7778AA";
-	cursor.fillRect(-10, -10, 480, 30);
-	cursor.opacity = .5;
-
-	box.cursor.init(cursor, array_el);
-	
-	box.cursor.select(function(el) {
-		console.log(el.attr('index'));
-	});
-	
-	box.cursor.change(function(el) {
-		
+	var canvas = CE.defines("canvas_id").
+	extend([Animation, Spritesheet, Window]).
+	ready(function() {
+		canvas.Scene.call("MyScene");
 	});
 
-	box.open(this.stage);
-	this.stage.append(cursor);
-	
-	box.cursor.setIndex(0);
-	box.cursor.enable(true);
-	
+	canvas.Scene.new({
+		name: "MyScene",
+		materials: {
+			images: {
+				img_id: "border_window.png"
+			}
+		},
+		ready: function(stage) {
+		   var box = canvas.Window.new(this, 500, 300, "img_id"),
+			el, array_el, text;
+			
+			var array  = ["Text1", "Text2", "Text3"];
+			
+			for (var i=0 ; i < array.length ; i++) {
+				el = this.createElement(480, 35);
+				el.y = i * 35;
+				el.attr('index', i);
+				text = canvas.Text.new(this, array[i]); // Text extend
+				text.style({
+					size: "18px",
+					color: "white"
+				}).draw(el, 0, 10);
+				array_el.push(el);
+				box.getContent().append(el);
+			}
 		
+			var cursor = this.createElement();
+			cursor.fillStyle = "#7778AA";
+			cursor.fillRect(-10, -10, 480, 30);
+			cursor.opacity = .5;
+		
+			box.cursor.init(cursor, array_el);
+			
+			box.cursor.select(function(el) {
+				console.log(el.attr('index'));
+			});
+			
+			box.cursor.change(function(el) {
+				
+			});
+		
+			box.open(this.stage);
+			this.stage.append(cursor);
+			
+			box.cursor.setIndex(0);
+			box.cursor.enable(true);
+		}
+	});
+
 */
 	cursor: {
 	
