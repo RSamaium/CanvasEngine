@@ -434,12 +434,13 @@ In `ready` method
 			
 			function assignTap(index) {
 				var el = this.array_elements[index];
+				
 				if (el.width && el.height && this._enable) {
 					el.forceEvent = true;
 					el.beginPath();
 					el.rect(0, 0, el.width, el.height);
 					el.closePath();
-					el.on("tap", function() {
+					el.on("touch", function() {
 						self.setIndex(index);
 						self.update();
 						enter();

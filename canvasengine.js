@@ -747,6 +747,7 @@ Using Sound :
 				  _scenes: {},
 				  _cacheScene: {},
 				  _scenesEnabled: {},
+				  _scenesIndex: [],
 				  _scenesNbCall: {},
 				  _current: null,
 				  
@@ -810,6 +811,7 @@ Leaving the other scenes after preloading of the scene called
 					params = params || {};
 					if (_class) {
 						this._scenesEnabled[name] = _class;
+						this._scenesIndex.push(name);
 						if (params.exitScenes) {
 							params.exitScenes.allExcept = params.exitScenes.allExcept || [];
 							params.exitScenes.allExcept = _allExcept.concat(params.exitScenes.allExcept);
@@ -839,6 +841,12 @@ Leaving the other scenes after preloading of the scene called
 					var _class = this._scenesEnabled[name];
 					if (_class) {
 						_class._exit.call(_class);
+						for (var i=0 ; i < this._scenesIndex.length ; i++) {
+							if (this._scenesIndex[i] == name) {
+								delete this._scenesIndex[i];
+								break;
+							}
+						}
 						delete this._scenesEnabled[name];
 					}
 				  },
@@ -920,9 +928,13 @@ Leaving the other scenes after preloading of the scene called
 				  getEnabled: function() {
 					return this._scenesEnabled;
 				  },
+				  
+				  
 				 
 				  _loop: function(canvas) {
-						var self = this;
+						var self = this, j, s;
+						
+						
 						 
 						function loop() {	
 							var key,  i=0;
@@ -932,8 +944,9 @@ Leaving the other scenes after preloading of the scene called
 							canvas[i].clear();
 							canvas[i]._ctxMouseEvent.clearRect(0, 0, canvas[i].width, canvas[i].height);
 							
-							for (key in self._scenesEnabled) {
-								self._scenesEnabled[key]._loop();
+							for (j=0 ; j < self._scenesIndex.length ; j++) {
+								s = self._scenesEnabled[self._scenesIndex[j]];
+								if (s) s._loop();
 							}
 							
 							requestAnimationFrame(loop);
@@ -985,7 +998,7 @@ Leaving the other scenes after preloading of the scene called
 			this.hammerExist = typeof(Hammer) !== "undefined";
 			old = this.ctx;
 			this._mouseEvent();
-			var events = ["click", "dbclick", "mousemove"],
+			var events = ["click", "dbclick", "mousemove", "mousedown", "mouseup"],
 				hammer_events = [
 					"dragstart", 
 					"drag", 
@@ -1014,7 +1027,7 @@ Leaving the other scenes after preloading of the scene called
 					"release"
 				];
 			
-			var hammer = null;
+			var hammer = null, val;
 			if (this.hammerExist) {
 				hammer = new Hammer(this.element);
 			}
@@ -1042,12 +1055,12 @@ Leaving the other scenes after preloading of the scene called
 				for (var name in scenes) {
 					stage = scenes[name].getStage();
 					for(var t=0; t < touches.length; t++) {
-						self.getMousePosition(e)
-						if (touches[t].pageX !== undefined) {
-							touches[t] = self.getMousePosition(touches[t]);
+						val = touches[t];
+						if (val.pageX !== undefined) {
+							val = self.getMousePosition(val);
 						}
-						stage._select(touches[t], function(el_real) {
-							 el_real.trigger(type, e, touches[t]);
+						stage._select(val, function(el_real) {
+							 el_real.trigger(type, e, val);
 						});
 					}
 				}
@@ -1208,6 +1221,84 @@ In method "ready" of the scene :
 */
 		clear: function() {
 			return this.ctx.clearRect(0, 0, this.width, this.height);
+		},
+		
+		cursor: function() {
+		
+			function handleMouseDown(evt) {
+			  evt.preventDefault();
+			  evt.stopPropagation();
+			  evt.target.style.cursor = 'move';
+			}
+
+			document.addEventListener('mousemove', handleMouseDown, false);
+					
+		},
+		
+/**
+	TODO
+	@method setSize
+	@param width 
+	@param heigh
+	@param scale {String} stretch ; fit
+*/
+		setSize: function(width, height, scale) {
+			var ratio, self = this,
+				old_w = this.element.width,
+				old_h = this.element.height,
+				scenes = CanvasEngine.Scene.getEnabled();
+			if (width == "browser") {
+				scale = height;
+				width = window.innerWidth;
+				height = window.innerHeight;
+				this.element.style.position = "fixed";
+				this.element.style.top = 0;
+				this.element.style.left = 0;
+				
+				window.onresize = function(event) {
+					self.setSize("browser", scale);
+				};
+				
+			}
+			else if (width == "fullscreen") {
+				scale = height;
+				width = screen.width;
+				height = screen.height;
+				
+				var prop, vendors = ['ms', 'moz', 'webkit', 'o', 'khtml'];
+			
+				for(var x = 0; x < vendors.length && !this.element.requestFullScreen; ++x) {
+					this.element.requestFullScreen = this.element[vendors[x]+'RequestFullScreen'];
+					this.element.cancelFullScreen =  this.element[vendors[x]+'CancelFullScreen'];
+				}
+			
+				this.element.requestFullScreen(); // Element.ALLOW_KEYBOARD_INPUT
+				
+			}
+
+			this.element.width = width;
+			this.element.height = height;
+			
+			if (scale == "fit") {
+				if (width > height) {
+					ratio = width / old_w;
+				}
+				else {
+					ratio = height / old_h;
+				}
+				for (var name in scenes) {
+					stage = scenes[name].getStage();
+					stage.scaleTo(ratio);
+				}
+			}
+			else if (scale == "stretch") {
+				for (var name in scenes) {
+					stage = scenes[name].getStage();
+					stage.scaleX = width / old_w;
+					stage.scaleY = height / old_h;
+				}
+			}
+			
 		}
 	});
 	
@@ -1247,6 +1338,7 @@ The resources defined in "Materials" are loaded and regularly calls the method "
 		_events: [],
 		_pause: false,
 		_isReady: false,
+		_index: 0,
 /**
 @doc scene/
 @property model Model reference. The methods of this property are the same as scoket.io
@@ -1369,6 +1461,50 @@ The resources defined in "Materials" are loaded and regularly calls the method "
 			if (!id) id = 0;
 			return CanvasEngine.el_canvas[id];
 		},
+		
+/**
+@doc scene/
+@method zIndex Change or get the index of the scene. The index used to define the superposition. By default, the first scene has index 0. If a scene is created at the same level, it will overlay the previous element and its index will be 1
+@param {Integer|Scene}  index (optional) If the value is not specified, the current index of the scene is returned. If the value is negative, you change the index from the end. If the value is a scene, that scene is placed after the scene indicated
+@example
+
+	var scene = canvas.Scene.call("Scene_Title");
+	scene.zIndex(0);
+	
+----------
+
+	var scene = canvas.Scene.call("Scene_Title");
+	scene.zIndex(); // return current position
+	scene.zIndex(-1); // last position
+		
+----------
+
+	var scene_title = canvas.Scene.get("Scene_Title"),
+		scene_map = canvas.Scene.get("Scene_Map")
+	scene_map.zIndex(scene_title);
+
+@return {Integer|CanvasEngine.Scene}
+*/
+		zIndex: function(index) {
+			var l;
+			if (index === undefined) {
+				return this._index;
+			}
+			if (index instanceof Class) {
+				index = index.zIndex();
+			}
+			l = CanvasEngine.Scene._scenesIndex.length;
+			if (Math.abs(index) >= l) {
+				index = -1;
+			}
+			if (index < 0) {
+				index = l + index;	
+			}
+			_CanvasEngine.moveArray(CanvasEngine.Scene._scenesIndex, this._index, index);
+			this._index = index;
+			return this;
+		 },
+		
 /**
 @doc scene/
 @method createElement Create an element
@@ -1422,6 +1558,7 @@ Create two elements :
 			params = params || {};
 			options = options || {};
 			this._stage = CanvasEngine.Element["new"](this);
+			this._index = CanvasEngine.Scene._scenesIndex.length-1;
 			for (var i=0 ; i < CanvasEngine.el_canvas.length ; i++) {
 				CanvasEngine.el_canvas[i].stage = this._stage;
 			}
@@ -2315,7 +2452,7 @@ In `ready` method :
 		_select: function(mouse, callback) {
 			var el_real, imgData;
 			var canvas = this.scene.getCanvas();
-			
+			//alert(mouse.x);
 			imgData = this._canvas[0]["_ctxMouseEvent"].getImageData(mouse.x, mouse.y, 1, 1).data;
 			if (imgData[3] > 0) {
 				el_real = canvas._elementsByScene(this.scene.name, _CanvasEngine.rgbToHex(imgData[0], imgData[1], imgData[2]));
@@ -2775,7 +2912,6 @@ In method ready
 		scaleTo: function(val) {
 			this.scaleX = val;
 			this.scaleY = val;
-			this.stage.refresh();
 			return this;
 		},
 		/*
@@ -2845,14 +2981,45 @@ In method ready
 		},
 /**
 @doc events/
-@method on The .on() method attaches event handlers to the currently selected set of elements in the CanvasEngine object. 
-Note that some names are defined as follows: "namespace:eventname". For example, there are the following event in CanvasEngine:
+@method on The `on` method attaches event handlers to the currently selected set of elements in the CanvasEngine object.
+
+## General Event ##
+
+Some names are defined as follows: `namespace:eventname`. For example, there are the following event in CanvasEngine:
 
 	stage.on("canvas:refresh", function(el) { // stage is defined in the scene
 		console.log(el);
 	});
 
-At each refresh of the scene, to display each element is returned. 
+At each refresh of the scene, to display each element is returned.
+
+* `canvas:refresh` Calling the event *only* `stage` to each refresh of an element
+* `canvas:render` Call each rendering the element
+* `canvas:readyEnd` Call at the end of the execution of the `ready` method in the scene
+* `animation:draw` Call each sequence. Id parameter sequence
+
+        el.on("animation:draw", function(id) {
+    		console.log(id);
+    	});
+
+## Mouse Events
+
+You can retrieve the mouse events
+
+* click
+* dbclick
+* mousemove
+* mouseup
+* mousedown
+
+Apply on a specific element :
+
+    var el = this.createElement();
+    el.on("click", function(e) {
+		this.opacity = 0.5;
+	});
+
+## Events with Hammer.js  ##
 
 Other events suitable for tablet and smartphone exist available in Hammer.js :
 
@@ -2867,13 +3034,16 @@ Other events suitable for tablet and smartphone exist available in Hammer.js :
 * touch (gesture detection starts)
 * release (gesture detection ends)
 
-	var el = this.createElement();
-	el.on("drag", function(e, mouse) {
-		this.x = e.distanceX;
-		this.y = e.distanceY;
-	});
 
-See https://github.com/EightMedia/hammer.js/wiki/Getting-Started
+        var el = this.createElement();
+	    el.on("drag", function(e, mouse) {
+		    this.x = e.distanceX;
+		    this.y = e.distanceY;
+	    });
+
+
+
+See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://github.com/EightMedia/hammer.js/wiki/Getting-Started)
 
 @param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
 @param {Function} callback(event) A function to execute when the event is triggered

@@ -133,6 +133,9 @@
     Gamepad.getPreviousStates = function() {
         return prevData;
     };
+	Gamepad.support = function() {
+		return getField();
+	};
     Gamepad.getStates = function() {
         var rawPads = getField();
         var len = rawPads.length;
