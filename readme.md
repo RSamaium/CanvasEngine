@@ -69,6 +69,15 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 
 ## Changelog
 
+### v1.2.1
+
+* Add getBasePath method in Materials class
+* Add getFilename method in Materials class
+* Add mousedown et mouseup events
+* Add zIndex method in Scene class
+* Fix mulit-touch gestures on touchpads
+* Improve loading sounds
+
 ### v1.2.0
 
 * Add Text feature

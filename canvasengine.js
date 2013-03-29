@@ -412,6 +412,42 @@ Using Sound :
 			
 /**
 @doc materials/
+@method getBasePath Retrieves the base of a path
+@param {String} path Path
+@return {String}
+@example
+
+	canvas.Materials.getBasePath("sound/sample.mp3"); // return "sound"
+
+*/
+			getBasePath: function(path) {
+				return path.substring(0, path.lastIndexOf('/'));
+			},
+
+/**
+@doc materials/
+@method getFilename Gets the file name with or without the extension in a path
+@param {String} path Path
+@param {Boolean} ext (optional) Show extension if true (false by default)
+@return {String}
+@example
+
+	canvas.Materials.getFilename("sound/sample.mp3"); // return "sample"
+
+*/			
+			getFilename: function(path, ext) {
+				var parts = path.replace(/^.*[\\\/]/, '');
+				if (!ext) {
+					parts = parts.split('.');
+				}
+				else {
+					return parts;
+				}
+				return parts.slice(0, parts.length - 1).join(".");
+			},
+			
+/**
+@doc materials/
 @method load Load a resource
 @param {String} type Type : "images" or "sounds"
 @param {Array|Object} path Paths to resources.
@@ -517,24 +553,38 @@ The value can be an object to give several parameters :
 						else {
 							var snd = new Audio(), 
 								_p = materials[i].path,
+								base = self.getBasePath(_p),
+								filename = self.getFilename(_p),
 								ext = self.getExtension(_p);
 								
-							if (ext == "mp3" && !snd.canPlayType('audio/mpeg')) {
-								next();
-							}
-							else {
-								snd.addEventListener('canplaythrough', function() { 
-									self.sounds[materials[i].id] = this;
-									next();
-								}, false);
-								snd.addEventListener('error', function (e) { 
-									throw e;
-								}, false);
-								snd.load();
-								snd.pause();
+							var audio_test = {
+								"mp3": snd.canPlayType('audio/mpeg'),
+								"ogg": snd.canPlayType('audio/ogg; codecs="vorbis"'),
+								"m4a": snd.canPlayType('audio/mp4; codecs="mp4a.40.2"')
+							};
+							
+							if (!audio_test[ext]) {
+								for (var key_ext in audio_test) {
+									if (ext == key_ext) continue;
+									if (audio_test[key_ext]) {
+										_p = base + "/" + filename + "." + key_ext;
+										break;
+									}
+								}
 							}
 							
-							snd.src = _p;
+							snd.setAttribute("src", _p);
+							snd.addEventListener('canplaythrough', function() { 
+								self.sounds[materials[i].id] = this;
+								next();
+							}, false);
+							snd.addEventListener('error', function (e) { 
+								throw e;
+							}, false);
+							snd.load();
+							snd.pause();
+							document.body.appendChild(snd);
+	
 						}
 					}
 					else {
@@ -595,6 +645,12 @@ Using Sound :
 			canvas.Sound.get("sound_id").play();
 		}
 	});
+	
+Here, CanvasEngine fetches the MP3 file in the `sound` folder. If the browser does not support it (like Firefox), it's OGG or M4A file with the same name will be searched.
+
+1. First load : `path/to/music.mp3`
+2. If no supported : `path/to/music.ogg`
+3. If no supported : `path/to/music.m4a`
 	
 */
 		Sound: {
@@ -2452,7 +2508,6 @@ In `ready` method :
 		_select: function(mouse, callback) {
 			var el_real, imgData;
 			var canvas = this.scene.getCanvas();
-			//alert(mouse.x);
 			imgData = this._canvas[0]["_ctxMouseEvent"].getImageData(mouse.x, mouse.y, 1, 1).data;
 			if (imgData[3] > 0) {
 				el_real = canvas._elementsByScene(this.scene.name, _CanvasEngine.rgbToHex(imgData[0], imgData[1], imgData[2]));
