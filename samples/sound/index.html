@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<title>Animation - Canvas Engine</title>
+<title>Sound - Canvas Engine</title>
 <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet">
 
 <link href="../../main.css" rel="stylesheet">
@@ -26,58 +26,53 @@
 <div role="main" class="container demo" style="margin-top: 50px">
     
     <div class="page-header">
-        <h1>Animation</h1>
+        <h1>Sound</h1>
     </div>
-	<div class="span12">
-       <a href="example.zip" class="btn btn-primary">Download ZIP</a>
-       <a href="http://canvasengine.net/doc/?p=extends.animation" class="btn">View documentation</a>
-       <a href="https://github.com/RSamaium/CanvasEngine/tree/gh-pages/samples/animation" class="btn">View in Github</a>
+    <div class="span12">
+       <!-- If ZIP file exist -->
+       <!-- <a href="example.zip" class="btn btn-primary">Download ZIP</a> -->
+
+       <a href="http://canvasengine.net/doc/?p=core.sound" class="btn">View documentation</a>
+       <a href="https://github.com/RSamaium/CanvasEngine/tree/gh-pages/samples/sound" class="btn">View in Github</a>
     </div>
-	<br>
-	<br>
+    <br>
+    <br>
     <h2>Result</h2>
     <div class="span12">
-        <iframe src="example.html"></iframe>
+        <iframe src="example.html" width="420" height="120"></iframe>
     </div>
     <h2>Code</h2>
     <div class="span12">
         <pre class="prettyprint">var canvas = CE.defines("canvas_id").
-        extend(Animation).
-        ready(function() {
-            canvas.Scene.call("MyScene");
-        });
-   
+    ready(function() {
+        canvas.Scene.call("MyScene");
+    });
 
 canvas.Scene.new({
     name: "MyScene",
     materials: {
-        images: {
-            chara: "images/chara.png"
+        sounds: {
+            sound_id: "sounds/sound.mp3"
         }
     },
     ready: function(stage) {
-       var el = this.createElement(),
-            animation = canvas.Animation.new({
-                images: "chara",
-                animations: {
-                    walk: {
-                        frames: [0, 4],
-                        size: {
-                            width: 250/5,
-                            height: 200/4
-                        },
-                        frequence: 5
-                    }
-                }
-            });
+        var _btn = {w: 110, h: 40};
+        var btn = this.createElement(_btn.w, _btn.h),
+            text = this.createElement();
+            
+        btn.fillStyle = "black";
+        btn.fillRect(0, 0, _btn.w, _btn.h);
         
-        animation.add(el);
-        animation.play("walk", "loop");
+        text.font = "20px Arial";
+        text.fillStyle = "white";
+        text.fillText("Click me", 20, 27);
         
-        stage.append(el);
-    },
-    render: function(stage) {
-        stage.refresh();
+        btn.on("click", function() {
+            canvas.Sound.get("sound_id").play();
+        });
+        
+        btn.append(text);
+        stage.append(btn);
     }
 });</pre>
     </div>

@@ -18,7 +18,7 @@ canvas.Scene.new({
 				images: "chara",
 				animations: {
 					walk: {
-						frames: [0, 3],
+						frames: [0, 4],
 						size: {
 							width: 250/5,
 							height: 200/4
