@@ -563,6 +563,7 @@ The value can be an object to give several parameters :
 								"m4a": snd.canPlayType('audio/mp4; codecs="mp4a.40.2"')
 							};
 							
+
 							if (!audio_test[ext]) {
 								for (var key_ext in audio_test) {
 									if (ext == key_ext) continue;
@@ -579,11 +580,18 @@ The value can be an object to give several parameters :
 								next();
 							}, false);
 							snd.addEventListener('error', function (e) { 
-								throw e;
+								
 							}, false);
 							snd.load();
 							snd.pause();
 							document.body.appendChild(snd);
+							
+							// For iOS
+							// http://developer.apple.com/library/safari/#documentation/AudioVideo/Conceptual/Using_HTML5_Audio_Video/Device-SpecificConsiderations/Device-SpecificConsiderations.html
+							if (/^i/.test(_CanvasEngine.mobileUserAgent())) {
+								self.sounds[materials[i].id] = snd;
+								next(); // skip "canplaythrough"
+							}
 	
 						}
 					}
@@ -867,7 +875,7 @@ Leaving the other scenes after preloading of the scene called
 					params = params || {};
 					if (_class) {
 						this._scenesEnabled[name] = _class;
-						this._scenesIndex.push(name);
+						if (this._scenesIndex.indexOf(name) == -1) this._scenesIndex.push(name);
 						if (params.exitScenes) {
 							params.exitScenes.allExcept = params.exitScenes.allExcept || [];
 							params.exitScenes.allExcept = _allExcept.concat(params.exitScenes.allExcept);
@@ -1169,7 +1177,7 @@ Leaving the other scenes after preloading of the scene called
 		},
 /**
 @doc canvas/
-@method Get the X and Y position of the mouse in the canvas
+@method getMousePosition Get the X and Y position of the mouse in the canvas
 @param {Event} event
 @return Object
 @example
@@ -1310,6 +1318,7 @@ In method "ready" of the scene :
 				this.element.style.position = "fixed";
 				this.element.style.top = 0;
 				this.element.style.left = 0;
+
 				
 				window.onresize = function(event) {
 					self.setSize("browser", scale);

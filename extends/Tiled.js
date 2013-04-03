@@ -285,6 +285,7 @@ Consider adding inserting Tiled.js
 */
 var Tiled = {
 	Tiled: {
+		New: function() { return this["new"].apply(this, arguments); },
 		"new": function(scene, el, url) {
 			return Class["new"]("Tiled", [scene, el, url]);
 		}

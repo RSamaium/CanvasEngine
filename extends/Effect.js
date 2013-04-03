@@ -242,6 +242,7 @@ or :
 */
 var Effect = {
 	Effect: {
+		New: function() { return this["new"].apply(this, arguments); },
 		"new": function(scene, el) {
 			return Class["new"]("Effect", [scene, el]);
 		}

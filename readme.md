@@ -69,6 +69,11 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 
 ## Changelog
 
+### v1.2.2
+
+* Fix scene reloaded
+* Fix sounds for iOS
+
 ### v1.2.1
 
 * Add getBasePath method in Materials class

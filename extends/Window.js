@@ -556,6 +556,7 @@ In `ready` method
     
 var Window = {
     Window: {
+		New: function() { return this["new"].apply(this, arguments); },
         "new": function(scene, width, height, border) {
             return Class["new"]("Window", [scene, width, height, border]);
         }
