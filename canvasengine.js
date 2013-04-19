@@ -132,6 +132,7 @@ var Model = Class["new"]("ModelClientClass"),
 
 * swf_sound : view Sound class
 * cocoonjs : Object indicating the size of the canvas. Use this property if you want to compile your project with CocoonJS (http://ludei.com)
+* render : Do not rendering (true by default)
 
 Example : 
 		{width: 640, height: 480}
@@ -143,6 +144,8 @@ Example :
 				 ready(function() {
 					// DOM is ready
 				 });
+				 
+View `ready` method
  */
 CanvasEngine.defines = function(canvas, params) {
 	params = params || {};
@@ -170,7 +173,7 @@ CanvasEngine.defines = function(canvas, params) {
 		},
 /**
 @doc engine/
-@method ready Calls the function when DOM is ready. The method uses "window.load" or SoundManager callback if it is present
+@method ready Calls the function when DOM is ready. The method uses "window.load" or SoundManager callback if it is present. If the DOM is already loaded (with jquery by example). Do not put the callback function
 @param {Function} callback
 @return CanvasEngineClass
 @example
@@ -179,6 +182,12 @@ CanvasEngine.defines = function(canvas, params) {
 				 ready(function() {
 					// DOM is ready
 				 });
+				 
+With jQuery :
+
+	$(function() {
+		var canvas = CE.defines("canvas_id").ready();
+	});
 */
 		ready: function(callback) {
 			var self = this;
@@ -189,6 +198,9 @@ CanvasEngine.defines = function(canvas, params) {
 					  onready: onReady  
 				});
 			}
+			else if (!callback) {
+				onReady();
+			}
 			else {
 				window.onload = onReady;
 			}
@@ -198,7 +210,7 @@ CanvasEngine.defines = function(canvas, params) {
 					self.el_canvas.push(self.Canvas["new"](self.canvas[i]));
 				}
 				if (params.render) CanvasEngine.Scene._loop(self.el_canvas);
-				callback();	
+				if (callback) callback();	
 			}
 			return this;
 		},
@@ -477,21 +489,26 @@ The value can be an object to give several parameters :
 				
 				for (var j=0 ; j < path.length ; j++) {
 					p = path[j];
-					for (var key in p) {
-						img_data = {};
-						if (typeof p[key] == "string") {
-							img_data.path = p[key];
+					if (p.id) {
+						materials.push(p);
+					}
+					else {
+						for (var key in p) {
+							img_data = {};
+							if (typeof p[key] == "string") {
+								img_data.path = p[key];
+							}
+							else {
+								img_data.path = p[key].path;
+								img_data.transparentcolor = p[key].transparentcolor;
+							}
+							materials.push({
+								id: key,
+								path: img_data.path,
+								transparentcolor: img_data.transparentcolor
+							});
+							
 						}
-						else {
-							img_data.path = p[key].path;
-							img_data.transparentcolor = p[key].transparentcolor;
-						}
-						materials.push({
-							id: key,
-							path: img_data.path,
-							transparentcolor: img_data.transparentcolor
-						});
-						
 					}
 				}
 				
@@ -1051,7 +1068,13 @@ Leaving the other scenes after preloading of the scene called
 @type Integer
 */
 		height: 0, 
-		mouseEvent: false,
+/**
+@doc canvas/
+@property mouseEvent if false, disables `mouseover`, `mouseout` and `mousemove` to improve performance
+@type Boolean
+@default true
+*/
+		mouseEvent: true,
 		initialize: function(id) {
 			var self = this;
 			this.id = id;
@@ -1123,9 +1146,14 @@ Leaving the other scenes after preloading of the scene called
 						if (val.pageX !== undefined) {
 							val = self.getMousePosition(val);
 						}
+						if (type == "mousemove") {
+							if (self.mouseEvent) stage._mousemove(e, val);
+							else continue;
+						}	
 						stage._select(val, function(el_real) {
-							 el_real.trigger(type, e, val);
+							el_real.trigger(type, e, val);	
 						});
+						
 					}
 				}
 			}
@@ -2492,8 +2520,7 @@ In `ready` method :
 			for (var i=0 ; i < this._children.length ; i++) {
 				el_real = this._children[i];
 				over = mouse.x > el_real.real_x && mouse.x < el_real.real_x + el_real.width &&
-						mouse.y > el_real.real_y && mouse.y < el_real.real_y + el_real.height;
-						
+						mouse.y > el_real.real_y && mouse.y < el_real.real_y + el_real.height;	
 				if (over) {
 					if (el_real._out == 1) {
 						el_real._out++;
@@ -3075,6 +3102,18 @@ You can retrieve the mouse events
 * mousemove
 * mouseup
 * mousedown
+* mouseout
+* mouseover
+
+> For `mousemove` and `mouseout`, you must give size to the element (in `ready` method)
+
+    var el = this.createElement(300, 300);
+
+> or
+
+    var el = this.createElement();
+    el.width = 300;
+    el.height = 300;
 
 Apply on a specific element :
 
