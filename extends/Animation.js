@@ -710,6 +710,7 @@ var Animation = {
 @param {Object} options
 
 * images {String|Array} : identifying the image. If the value is an array. The different images are chained
+* addIn {CanvasEngine.Element} : allows you to add animation to an existing element
 * animations {Object} : Includes all animations. The key is the identifier of the animation. The value parameters (view example)
 	* frames {Array} : Array with two elements: the first is to play the first frame, the second frame is the arrival
 	* size {Object} : Set the width and height of the sequence ("width" and "height" keys )
@@ -762,6 +763,74 @@ You can also chaining multiple different images:
 
 
 <jsfiddle>WebCreative5/E2vVW</jsfiddle>
+
+## Example of an image with several sequences
+
+Here is the picture:
+
+![](http://canvasengine.net/examples/img/fire.png)
+
+You can retrieve sequences and create a particular animation :
+
+    canvas.Animation.New({
+			images: "fire",
+			addIn: stage,
+			animations: {
+				_default: {
+					position: {
+						top: 75/2,
+						left: 74/2
+					},
+                    frequence: 8,
+					frames: [
+                        [{"pattern":7}],
+                        [{"pattern":8}],
+                        [{"pattern":9}]
+                    ],
+					size: {
+						width: 75,
+						height: 74
+					}
+				}
+			}
+		});
+
+* position : Position of the point of origin
+* frequence : Frequency
+* frames : Different sequences for each frame. A frame is composed of an array with several sequences
+    * pattern : Identifying the pattern. The identifier starts at 1 and increments in the direction of West Reading
+    * x : Position X
+    * y : Position Y
+    * zoom : Scaling between 0 and 100
+    * opacity : Opacity between 0 and 255
+    * rotation : Rotation between 0 and 360
+
+<jsfiddle>WebCreative5/ePwtq</jsfiddle>
+
+It is possible to provide default values width `framesDefault` that will apply to all sequences that do not have the property :
+
+    canvas.Animation.New({
+			images: "fire",
+			addIn: stage,
+			animations: {
+				_default: {
+                    framesDefault: {
+                        rotation: 20
+                    },
+					frames: [
+                        [{"pattern":7}],
+                        [{"pattern":8}],
+                        [{"pattern":9}]
+                    ],
+					size: {
+						width: 75,
+						height: 74
+					}
+				}
+			}
+		});
+
+
 */
 	Animation: {
 		New: function() { return this["new"].apply(this, arguments); },

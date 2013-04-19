@@ -256,4 +256,3 @@ http://rsamaium.github.com/CanvasEngine
 ## License
 
 MIT. Free for commercial use.
-
