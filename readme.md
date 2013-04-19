@@ -71,9 +71,9 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 
 ### v1.2.3
 
-* Fix materials loading as `{id: Number, path: String}`
-* Fix `mouseover` and `mouseout`
-* Add `mouveEvent` property in Canvas class
+* Fix materials loading as `{id: Number, path: String}` ([Doc](http://canvasengine.net/doc/?p=core.materials.load))
+* Fix `mouseover` and `mouseout`  ([Doc](http://canvasengine.net/doc/?p=core.element.events.on))
+* Add `mouveEvent` property in Canvas class ([Doc](http://canvasengine.net/doc/?p=core.canvas.mouseEvent))
 * Force `ready` method of canvas if the DOM is already loaded ([Doc](http://canvasengine.net/doc/?p=core.engine.ready))
 
 ### v1.2.2
