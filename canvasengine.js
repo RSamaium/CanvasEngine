@@ -3179,7 +3179,7 @@ Other events suitable for tablet and smartphone exist available in Hammer.js :
 		    this.y = e.distanceY;
 	    });
 
-
+> If you use the `click` event, it will be replaced by `touch` for touch devices
 
 See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://github.com/EightMedia/hammer.js/wiki/Getting-Started)
 
@@ -3238,21 +3238,21 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 			return this._listener[event] && this._listener[event].length > 0;
 		},
 		
-		/**
-			@doc events/
-			@method hasEvent If the test element at least one event
-			@param {Boolean}
-		*/
+/**
+@doc events/
+@method hasEvent If the test element at least one event
+@param {Boolean}
+*/
 		hasEvent: function() {
 			return _CanvasEngine.objectSize(this._listener) > 0;
 		},
 		
-		/**
-			@doc events/
-			@method trigger Any event handlers attached with .on() or one of its shortcut methods are triggered when the corresponding event occurs. They can be fired manually, however, with the .trigger() method.
-			@param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
-			@param {Object|Array} params Params
-		*/
+/**
+@doc events/
+@method trigger Any event handlers attached with .on() or one of its shortcut methods are triggered when the corresponding event occurs. They can be fired manually, however, with the .trigger() method.
+@param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
+@param {Object|Array} params Params
+*/
 		trigger: function(events, e) {
 			var event, _trigger = false;;
 			events = events.split(" ");
@@ -3271,35 +3271,47 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 			return _trigger;
 		},
 		
-		/**
-			@doc events/
-			@method click Equivalent to the method .on("click", function)
-			@params {Function} callback
-		*/
+/**
+@doc events/
+@method click Equivalent to the method `.on("click", function)`
+
+[More details on here ](?p=core.element.events.on)
+
+@params {Function} callback
+*/
 		click: function(callback) {
 			this.on("click", callback);
 		},
-		/**
-			@doc events/
-			@method dblclick Equivalent to the method .on("dblclick", function)
-			@params {Function} callback
-		*/
+/**
+@doc events/
+@method dblclick Equivalent to the method `.on("dblclick", function)`
+
+[More details on here ](?p=core.element.events.on)
+
+@params {Function} callback
+*/
 		dblclick: function(callback) {
 			this.on("dblclick", callback);
 		},
-		/**
-			@doc events/
-			@method mouseover Equivalent to the method .on("mouseover", function)
-			@params {Function} callback
-		*/
+/**
+@doc events/
+@method mouseover Equivalent to the method `.on("mouseover", function)`. 
+
+[More details on here ](?p=core.element.events.on)
+
+@params {Function} callback
+*/
 		mouseover: function(callback) {
 			this.on("mouseover", callback);
 		},
-		/**
-			@doc events/
-			@method mouseout Equivalent to the method .on("mouseout", function)
-			@params {Function} callback
-		*/
+/**
+@doc events/
+@method mouseout Equivalent to the method `.on("mouseout", function)`
+
+[More details on here ](?p=core.element.events.on)
+
+@params {Function} callback
+*/
 		mouseout: function(callback) {
 			this.on("mouseout", callback);
 		},
