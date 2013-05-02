@@ -116,6 +116,7 @@ Class.create("ModelClientClass", {
 
 var Model = Class["new"]("ModelClientClass"),
 	Global_CE;
+	
 
 /**
 	@class CanvasEngine
@@ -221,6 +222,7 @@ With jQuery :
 		noConflict: function() {
 			this._noConflict = true;
 		},
+		
 		
 /**
 @doc materials
@@ -860,6 +862,7 @@ Here, CanvasEngine fetches the MP3 file in the `sound` folder. If the browser do
 	* allExcept (optional) {Array} : Names of other scenes not to leave
 	* when (optional) {String} : When should I leave the scenes calling the scene
 		* "afterPreload" : When the scene is called preloaded
+	* params (optional) {Object} Other params
 @return {CanvasEngine.Scene}
 @example
 
@@ -882,6 +885,18 @@ Leaving the other scenes after preloading of the scene called
 			when: "afterPreload"
 		}
 	});
+	
+With other parameters :
+
+	canvas.Scene.call("SceneName", {
+		params: {"foo": "bar"}
+	});
+	
+and, in `ready` method :
+
+	ready: function(stage, el, params) {
+		console.log(params.foo) // bar
+	}
 
 */
 				  call: function(name, params) {
@@ -1229,6 +1244,9 @@ Leaving the other scenes after preloading of the scene called
 			
 			if (e.clientX == undefined) e.clientX = e.pageX;
 			if (e.clientY == undefined) e.clientY = e.pageY;
+			
+			if (!window.pageXOffset) window.pageXOffset = 0;
+			if (!window.pageYOffset) window.pageYOffset = 0;
 			
 			var mouseX = e.clientX - left + window.pageXOffset;
 			var mouseY = e.clientY - top + window.pageYOffset;
@@ -1646,6 +1664,16 @@ Create two elements :
 			this.getCanvas()._elementsByScene[this.name] = {};
 			if (this.exit) this.exit.call(this);
 		},
+		loadEvents: function() {
+			var self = this;
+			if (_CanvasEngine.io && this._events) {
+				_CanvasEngine.each(this._events, function(i, val) {
+					_CanvasEngine.io.on(self.name + "." + val, function(data) {
+						if (self[val] && CanvasEngine.Scene.isEnabled(self.name)) self[val].call(self, data);
+					});
+				});
+			}
+		},
 		_load: function(params, options) {
 			var self = this;
 			params = params || {};
@@ -1655,6 +1683,7 @@ Create two elements :
 			for (var i=0 ; i < CanvasEngine.el_canvas.length ; i++) {
 				CanvasEngine.el_canvas[i].stage = this._stage;
 			}
+			
 			if (this.model) {		
 				if (this._events) {
 					CE.each(this._events, function(i, val) {
@@ -1664,6 +1693,8 @@ Create two elements :
 					});
 				}
 			}
+
+			//this.loadEvents();
 			
 			var images_length = materialLength("images"),
 				sound_length = materialLength("sounds"),
@@ -3157,7 +3188,7 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 			events = events.split(" ");
 			for (var i=0 ; i < events.length ; i++) {
 				event = events[i];
-				if (event == "click") event = "tap";
+				if (CanvasEngine.mobileUserAgent && event == "click") event = "touch";
 				if (!this._listener[event]) {
 					this._listener[event] = [];
 				}

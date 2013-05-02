@@ -618,6 +618,11 @@ Example
 							if (!seq.framesDefault.opacity) seq.framesDefault.opacity = 255;
 							if (!seq.framesDefault.rotation) seq.framesDefault.rotation = 0;
 							
+							if (!seq.frames[i]) {
+								i++;
+								return;
+							}
+							
 							for (var j=0 ; j < seq.frames[i].length ; j++) {
 								currentSeq =  seq.frames[i][j];
 								if (currentSeq) {
@@ -630,7 +635,6 @@ Example
 									children.scaleY = currentSeq.zoom != undefined ? currentSeq.zoom / 100 : seq.framesDefault.zoom / 100;
 									children.opacity = currentSeq.opacity != undefined ? currentSeq.opacity / 255 : seq.framesDefault.opacity / 255;
 									children.rotation = currentSeq.rotation != undefined ? currentSeq.rotation : seq.framesDefault.rotation;
-									
 									drawImage(children, id);
 									this.append(children);
 								}

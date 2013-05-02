@@ -51,10 +51,20 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 
 ## Roadmap (in order)
 
+### v1.3
+
 * Transition
 * UI
+
+### v1.4
+
 * Box2d
 * Synchronized multi canvas (local multiplayer)
+
+### v2.0
+
+* Users and Groups Management for multiplayer model
+* CSS drawing
 
 ## Test performance
 
