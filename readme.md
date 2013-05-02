@@ -79,6 +79,10 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 
 ## Changelog
 
+### v1.2.4
+
+* Fix `getMousePosition` ([Doc](http://canvasengine.net/doc/?p=core.canvas.getMousePosition))
+
 ### v1.2.3
 
 * Fix materials loading as `{id: Number, path: String}` ([Doc](http://canvasengine.net/doc/?p=core.materials.load))
