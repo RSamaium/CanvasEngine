@@ -1230,6 +1230,8 @@ and, in `ready` method :
 		var pos = self.getCanvas().getMousePosition(e);
 		console.log(pos.x, pos.y);
 	});
+	
+<jsfiddle>WebCreative5/KqH3L/1</jsfiddle>
 
 */
 		getMousePosition: function(e) {
@@ -3136,7 +3138,7 @@ You can retrieve the mouse events
 * mouseout
 * mouseover
 
-> For `mousemove` and `mouseout`, you must give size to the element (in `ready` method)
+> For `mouseover` and `mouseout`, you must give size to the element (in `ready` method)
 
     var el = this.createElement(300, 300);
 
@@ -3145,6 +3147,8 @@ You can retrieve the mouse events
     var el = this.createElement();
     el.width = 300;
     el.height = 300;
+	
+<jsfiddle>WebCreative5/Y9Kum</jsfiddle>
 
 Apply on a specific element :
 
