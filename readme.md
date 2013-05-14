@@ -51,10 +51,20 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 
 ## Roadmap (in order)
 
+### v1.3
+
 * Transition
 * UI
+
+### v1.4
+
 * Box2d
 * Synchronized multi canvas (local multiplayer)
+
+### v2.0
+
+* Users and Groups Management for multiplayer model
+* CSS drawing
 
 ## Test performance
 
@@ -68,6 +78,36 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 * [robwalch](https://github.com/robwalch) - [commit](https://github.com/robwalch/CanvasEngine/commit/e55909952c26ba1ec3e3d5bd6f733ddfffc4b647)
 
 ## Changelog
+
+### v1.2.5
+
+* Fix loop animation
+* Add `patternSize` property in Animation Class ([Doc](http://canvasengine.net/doc/?p=extends.animation))
+
+### v1.2.4
+
+* Fix `getMousePosition` ([Doc](http://canvasengine.net/doc/?p=core.canvas.getMousePosition))
+
+### v1.2.3
+
+* Fix materials loading as `{id: Number, path: String}` ([Doc](http://canvasengine.net/doc/?p=core.materials.load))
+* Fix `mouseover` and `mouseout`  ([Doc](http://canvasengine.net/doc/?p=core.element.events.on))
+* Add `mouveEvent` property in Canvas class ([Doc](http://canvasengine.net/doc/?p=core.canvas.mouseEvent))
+* Force `ready` method of canvas if the DOM is already loaded ([Doc](http://canvasengine.net/doc/?p=core.engine.ready))
+
+### v1.2.2
+
+* Fix scene reloaded
+* Fix sounds for iOS
+
+### v1.2.1
+
+* Add getBasePath method in Materials class
+* Add getFilename method in Materials class
+* Add mousedown et mouseup events
+* Add zIndex method in Scene class
+* Fix mulit-touch gestures on touchpads
+* Improve loading sounds
 
 ### v1.2.0
 
@@ -235,4 +275,3 @@ http://rsamaium.github.com/CanvasEngine
 ## License
 
 MIT. Free for commercial use.
-

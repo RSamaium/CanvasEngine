@@ -189,11 +189,48 @@ Example :
 	{x: 200, scaleX: 2}
 
 @param {Integer} frames Duration in frames
-@param {Function} ease Effect. See http://gsgd.co.uk/sandbox/jquery/easing/
-Example
+@param {Function} ease (optional) Effect.
+
+Use `Ease` object that has constants :
+
+* easeInQuad
+* easeOutQuad
+* easeInCubic
+* easeOutCubic
+* easeInOutCubic
+* easeInQuart
+* easeOutQuart
+* easeInOutQuart
+* easeInQuint
+* easeOutQuint
+* easeInOutQuint
+* easeInSine
+* easeOutSine
+* easeInOutSine
+* easeInExpo
+* easeOutExpo
+* easeInOutExpo
+* easeInCirc
+* easeOutCirc
+* easeInOutCirc
+* easeInElastic
+* easeOutElastic
+* easeInOutElastic
+* easeInBack
+* easeOutBack
+* easeInOutBack
+* easeInBounce
+* easeOutBounce
+* easeInOutBounce
+
+See example below. You can see the effects on [http://gsgd.co.uk/sandbox/jquery/easing/](http://gsgd.co.uk/sandbox/jquery/easing/)
+
+@example
 
 	var timeline = canvas.Timeline.new(el);
 	timeline.to({x: 100}, 70,  Ease.easeOutElastic).call();
+	
+<jsfiddle>MAdmq/8</jsfiddle>
 
 @return {CanvasEngine.Timeline}
 */
@@ -245,7 +282,7 @@ Example
 	},
 /**
 @doc timeline/
-@method add Adds values to the properties of a period
+@method add Adds values to the properties of a period. 
 @param  {Object} attr Property values :
 	
 * opacity 
@@ -260,8 +297,8 @@ Example :
 	{x: 200, scaleX: 2}
 
 @param {Integer} frames Duration in frames
-@param {Function} ease Effect. See http://gsgd.co.uk/sandbox/jquery/easing/
-Example
+@param {Function} ease (optional) Effect. See [to()](?p=extends.timeline.to)
+@example
 
 	var timeline = canvas.Timeline.new(el);
 	timeline.add({x: 100}, 70,  Ease.easeOutElastic).call();
@@ -562,10 +599,16 @@ Example
 						var id;
 						var children;
 						
-						
-						
 						function drawImage(_el, id) {
 							var _img = self._images;
+							
+							if (seq.patternSize) {
+								seq.size = {
+									width: img.width / seq.patternSize.width,
+									height: img.height / seq.patternSize.height
+								};
+							}
+							
 							sy = parseInt(id / Math.round(img.width / seq.size.width));
 							sx = (id % Math.round(img.width / seq.size.width));
 								
@@ -618,6 +661,11 @@ Example
 							if (!seq.framesDefault.opacity) seq.framesDefault.opacity = 255;
 							if (!seq.framesDefault.rotation) seq.framesDefault.rotation = 0;
 							
+							if (!seq.frames[i]) {
+								i++;
+								return;
+							}
+							
 							for (var j=0 ; j < seq.frames[i].length ; j++) {
 								currentSeq =  seq.frames[i][j];
 								if (currentSeq) {
@@ -630,7 +678,6 @@ Example
 									children.scaleY = currentSeq.zoom != undefined ? currentSeq.zoom / 100 : seq.framesDefault.zoom / 100;
 									children.opacity = currentSeq.opacity != undefined ? currentSeq.opacity / 255 : seq.framesDefault.opacity / 255;
 									children.rotation = currentSeq.rotation != undefined ? currentSeq.rotation : seq.framesDefault.rotation;
-									
 									drawImage(children, id);
 									this.append(children);
 								}
@@ -641,8 +688,9 @@ Example
 							id = seq.frames[0] + i;
 							
 							if (id > seq.frames[1]) {
-								i = -1;
-								finish.call(this)
+								i = 0;
+								finish.call(this);
+								drawImage(this, seq.frames[0]);
 							}
 							else {
 								drawImage(this, id);
@@ -688,7 +736,7 @@ Example
 var Animation = {
 /**
 @doc timeline
-@class Timeline Create a temporal animation
+@class Timeline Create a temporal animation. See [to()](?p=extends.timeline.to)
 @param {Element} el
 @example
 
@@ -710,23 +758,42 @@ var Animation = {
 @param {Object} options
 
 * images {String|Array} : identifying the image. If the value is an array. The different images are chained
+* addIn {CanvasEngine.Element} : allows you to add animation to an existing element
 * animations {Object} : Includes all animations. The key is the identifier of the animation. The value parameters (view example)
 	* frames {Array} : Array with two elements: the first is to play the first frame, the second frame is the arrival
-	* size {Object} : Set the width and height of the sequence ("width" and "height" keys )
+	* size {Object} : Set the width and height of the sequence (`width` and `height` keys )
+	* patternSize {Object} `(>= 1.2.5)` : Number of patterns :
+	
+	    Example :
+    		
+            patternSize: {
+    			width: 4,
+    			height: 4
+    		}
+    		
+    	If the image measurement 100*100px, this amounts to:
+    		
+    		size: {
+    			width: 100 / 4,
+    			height: 100 / 4
+    		}
+		
+		
 	* frequence {integer} : Frequency display. The higher the value the more high frequency is low
 	* finish {Function} : Callback when the animation is finished
 	* image {String} :  identifying the image specific to this animation
 	* position {Object} : offset of the animation display ("left" and "top" keys)
 	
 @example
-In method "ready" of the scene :
+
+In method `ready` of the scene :
 
 	var el = this.createElement();
 	var animation = canvas.Animation.new({
 	   images: "chara",
 	   animations: {
 		run: {
-			frames : [0, 5],
+			frames: [0, 5],
 			 size: {
 				width: 42,
 				height: 42
@@ -743,25 +810,92 @@ In method "ready" of the scene :
 	animation.play("run", "loop");
 
 
-<jsfiddle>WebCreative5/77wUh/1</jsfiddle>
+<jsfiddle>WebCreative5/77wUh/3</jsfiddle>
 
 You can also chaining multiple different images:
 
-
- var el = this.createElement(),
-	animation = canvas.Animation.new({
-		images: ["foo", "bar"],
-		animations: {
-			_default: {
-				frequence: 7
+	var el = this.createElement(),
+		animation = canvas.Animation.new({
+			images: ["foo", "bar"],
+			animations: {
+				_default: {
+					frequence: 7
+				}
 			}
-		}
-	});
+		});
 	animation.add(el);
 	animation.play("_default", "loop");
 
 
 <jsfiddle>WebCreative5/E2vVW</jsfiddle>
+
+## Example of an image with several sequences
+
+Here is the picture:
+
+![](http://canvasengine.net/examples/img/fire.png)
+
+You can retrieve sequences and create a particular animation :
+
+    canvas.Animation.New({
+			images: "fire",
+			addIn: stage,
+			animations: {
+				_default: {
+					position: {
+						top: 75/2,
+						left: 74/2
+					},
+                    frequence: 8,
+					frames: [
+                        [{"pattern":7}],
+                        [{"pattern":8}],
+                        [{"pattern":9}]
+                    ],
+					size: {
+						width: 75,
+						height: 74
+					}
+				}
+			}
+		});
+
+* position : Position of the point of origin
+* frequence : Frequency
+* frames : Different sequences for each frame. A frame is composed of an array with several sequences
+    * pattern : Identifying the pattern. The identifier starts at 1 and increments in the direction of West Reading
+    * x : Position X
+    * y : Position Y
+    * zoom : Scaling between 0 and 100
+    * opacity : Opacity between 0 and 255
+    * rotation : Rotation between 0 and 360
+
+<jsfiddle>WebCreative5/ePwtq</jsfiddle>
+
+It is possible to provide default values width `framesDefault` that will apply to all sequences that do not have the property :
+
+    canvas.Animation.New({
+			images: "fire",
+			addIn: stage,
+			animations: {
+				_default: {
+                    framesDefault: {
+                        rotation: 20
+                    },
+					frames: [
+                        [{"pattern":7}],
+                        [{"pattern":8}],
+                        [{"pattern":9}]
+                    ],
+					size: {
+						width: 75,
+						height: 74
+					}
+				}
+			}
+		});
+
+
 */
 	Animation: {
 		New: function() { return this["new"].apply(this, arguments); },

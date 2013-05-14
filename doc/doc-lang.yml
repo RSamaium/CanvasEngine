@@ -24,14 +24,20 @@ scrolling: Scrolling
 save: Save/Load
 input: Input
 collision: Collision
-window: Window
+box: Window
+text: Text
+effect: Effect
 
 hit: Entity
+entity: Entity Model
 grid: Grid
 
 keyboard: Keyboard
 gamepad: Gamepad
 accelerometer: Accelerometer
+
+window: Dialog Box
+cursor: Cursor
 
 tiled: Tiled Map Editor
 gleed2d: Gleed2D

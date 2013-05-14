@@ -342,37 +342,10 @@ In `ready` method :
 
 /**
 @doc text
-@class Text
+@class Text Draw a text with effects
+@example
 
-
-	var canvas = CE.defines("canvas_id").
-		extend(Text).
-		ready(function() {
-			canvas.Scene.call("MyScene");
-		});
-		
-	canvas.Scene.new({
-		name: "MyScene",
-
-		ready: function(stage) {
-		
-			var content = this.createElement();
-			
-			var text = RPGJS.Text.new(this, "Hello World");
-			text.style({
-				size: "18px",
-				lineWidth: 300,
-				color: "white"
-			}).draw(content, 20, 20, {
-				line: {	// Animation
-					frames: 20
-				}
-			});
-			
-			stage.append(content);
-			
-		}
-	});
+<jsfiddle>WebCreative5/AP6BX</jsfiddle>
 
 */
 var Text = {

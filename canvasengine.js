@@ -116,6 +116,7 @@ Class.create("ModelClientClass", {
 
 var Model = Class["new"]("ModelClientClass"),
 	Global_CE;
+	
 
 /**
 	@class CanvasEngine
@@ -132,6 +133,7 @@ var Model = Class["new"]("ModelClientClass"),
 
 * swf_sound : view Sound class
 * cocoonjs : Object indicating the size of the canvas. Use this property if you want to compile your project with CocoonJS (http://ludei.com)
+* render : Do not rendering (true by default)
 
 Example : 
 		{width: 640, height: 480}
@@ -143,6 +145,8 @@ Example :
 				 ready(function() {
 					// DOM is ready
 				 });
+				 
+View `ready` method
  */
 CanvasEngine.defines = function(canvas, params) {
 	params = params || {};
@@ -170,7 +174,7 @@ CanvasEngine.defines = function(canvas, params) {
 		},
 /**
 @doc engine/
-@method ready Calls the function when DOM is ready. The method uses "window.load" or SoundManager callback if it is present
+@method ready Calls the function when DOM is ready. The method uses "window.load" or SoundManager callback if it is present. If the DOM is already loaded (with jquery by example). Do not put the callback function
 @param {Function} callback
 @return CanvasEngineClass
 @example
@@ -179,6 +183,12 @@ CanvasEngine.defines = function(canvas, params) {
 				 ready(function() {
 					// DOM is ready
 				 });
+				 
+With jQuery :
+
+	$(function() {
+		var canvas = CE.defines("canvas_id").ready();
+	});
 */
 		ready: function(callback) {
 			var self = this;
@@ -189,6 +199,9 @@ CanvasEngine.defines = function(canvas, params) {
 					  onready: onReady  
 				});
 			}
+			else if (!callback) {
+				onReady();
+			}
 			else {
 				window.onload = onReady;
 			}
@@ -198,7 +211,7 @@ CanvasEngine.defines = function(canvas, params) {
 					self.el_canvas.push(self.Canvas["new"](self.canvas[i]));
 				}
 				if (params.render) CanvasEngine.Scene._loop(self.el_canvas);
-				callback();	
+				if (callback) callback();	
 			}
 			return this;
 		},
@@ -209,6 +222,7 @@ CanvasEngine.defines = function(canvas, params) {
 		noConflict: function() {
 			this._noConflict = true;
 		},
+		
 		
 /**
 @doc materials
@@ -412,6 +426,42 @@ Using Sound :
 			
 /**
 @doc materials/
+@method getBasePath Retrieves the base of a path
+@param {String} path Path
+@return {String}
+@example
+
+	canvas.Materials.getBasePath("sound/sample.mp3"); // return "sound"
+
+*/
+			getBasePath: function(path) {
+				return path.substring(0, path.lastIndexOf('/'));
+			},
+
+/**
+@doc materials/
+@method getFilename Gets the file name with or without the extension in a path
+@param {String} path Path
+@param {Boolean} ext (optional) Show extension if true (false by default)
+@return {String}
+@example
+
+	canvas.Materials.getFilename("sound/sample.mp3"); // return "sample"
+
+*/			
+			getFilename: function(path, ext) {
+				var parts = path.replace(/^.*[\\\/]/, '');
+				if (!ext) {
+					parts = parts.split('.');
+				}
+				else {
+					return parts;
+				}
+				return parts.slice(0, parts.length - 1).join(".");
+			},
+			
+/**
+@doc materials/
 @method load Load a resource
 @param {String} type Type : "images" or "sounds"
 @param {Array|Object} path Paths to resources.
@@ -441,21 +491,26 @@ The value can be an object to give several parameters :
 				
 				for (var j=0 ; j < path.length ; j++) {
 					p = path[j];
-					for (var key in p) {
-						img_data = {};
-						if (typeof p[key] == "string") {
-							img_data.path = p[key];
+					if (p.id) {
+						materials.push(p);
+					}
+					else {
+						for (var key in p) {
+							img_data = {};
+							if (typeof p[key] == "string") {
+								img_data.path = p[key];
+							}
+							else {
+								img_data.path = p[key].path;
+								img_data.transparentcolor = p[key].transparentcolor;
+							}
+							materials.push({
+								id: key,
+								path: img_data.path,
+								transparentcolor: img_data.transparentcolor
+							});
+							
 						}
-						else {
-							img_data.path = p[key].path;
-							img_data.transparentcolor = p[key].transparentcolor;
-						}
-						materials.push({
-							id: key,
-							path: img_data.path,
-							transparentcolor: img_data.transparentcolor
-						});
-						
 					}
 				}
 				
@@ -517,24 +572,46 @@ The value can be an object to give several parameters :
 						else {
 							var snd = new Audio(), 
 								_p = materials[i].path,
+								base = self.getBasePath(_p),
+								filename = self.getFilename(_p),
 								ext = self.getExtension(_p);
 								
-							if (ext == "mp3" && !snd.canPlayType('audio/mpeg')) {
-								next();
-							}
-							else {
-								snd.addEventListener('canplaythrough', function() { 
-									self.sounds[materials[i].id] = this;
-									next();
-								}, false);
-								snd.addEventListener('error', function (e) { 
-									throw e;
-								}, false);
-								snd.load();
-								snd.pause();
+							var audio_test = {
+								"mp3": snd.canPlayType('audio/mpeg'),
+								"ogg": snd.canPlayType('audio/ogg; codecs="vorbis"'),
+								"m4a": snd.canPlayType('audio/mp4; codecs="mp4a.40.2"')
+							};
+							
+
+							if (!audio_test[ext]) {
+								for (var key_ext in audio_test) {
+									if (ext == key_ext) continue;
+									if (audio_test[key_ext]) {
+										_p = base + "/" + filename + "." + key_ext;
+										break;
+									}
+								}
 							}
 							
-							snd.src = _p;
+							snd.setAttribute("src", _p);
+							snd.addEventListener('canplaythrough', function() { 
+								self.sounds[materials[i].id] = this;
+								next();
+							}, false);
+							snd.addEventListener('error', function (e) { 
+								
+							}, false);
+							snd.load();
+							snd.pause();
+							document.body.appendChild(snd);
+							
+							// For iOS
+							// http://developer.apple.com/library/safari/#documentation/AudioVideo/Conceptual/Using_HTML5_Audio_Video/Device-SpecificConsiderations/Device-SpecificConsiderations.html
+							if (/^i/.test(_CanvasEngine.mobileUserAgent())) {
+								self.sounds[materials[i].id] = snd;
+								next(); // skip "canplaythrough"
+							}
+	
 						}
 					}
 					else {
@@ -595,6 +672,12 @@ Using Sound :
 			canvas.Sound.get("sound_id").play();
 		}
 	});
+	
+Here, CanvasEngine fetches the MP3 file in the `sound` folder. If the browser does not support it (like Firefox), it's OGG or M4A file with the same name will be searched.
+
+1. First load : `path/to/music.mp3`
+2. If no supported : `path/to/music.ogg`
+3. If no supported : `path/to/music.m4a`
 	
 */
 		Sound: {
@@ -747,6 +830,7 @@ Using Sound :
 				  _scenes: {},
 				  _cacheScene: {},
 				  _scenesEnabled: {},
+				  _scenesIndex: [],
 				  _scenesNbCall: {},
 				  _current: null,
 				  
@@ -778,6 +862,7 @@ Using Sound :
 	* allExcept (optional) {Array} : Names of other scenes not to leave
 	* when (optional) {String} : When should I leave the scenes calling the scene
 		* "afterPreload" : When the scene is called preloaded
+	* params (optional) {Object} Other params
 @return {CanvasEngine.Scene}
 @example
 
@@ -800,6 +885,18 @@ Leaving the other scenes after preloading of the scene called
 			when: "afterPreload"
 		}
 	});
+	
+With other parameters :
+
+	canvas.Scene.call("SceneName", {
+		params: {"foo": "bar"}
+	});
+	
+and, in `ready` method :
+
+	ready: function(stage, el, params) {
+		console.log(params.foo) // bar
+	}
 
 */
 				  call: function(name, params) {
@@ -810,6 +907,7 @@ Leaving the other scenes after preloading of the scene called
 					params = params || {};
 					if (_class) {
 						this._scenesEnabled[name] = _class;
+						if (this._scenesIndex.indexOf(name) == -1) this._scenesIndex.push(name);
 						if (params.exitScenes) {
 							params.exitScenes.allExcept = params.exitScenes.allExcept || [];
 							params.exitScenes.allExcept = _allExcept.concat(params.exitScenes.allExcept);
@@ -839,6 +937,12 @@ Leaving the other scenes after preloading of the scene called
 					var _class = this._scenesEnabled[name];
 					if (_class) {
 						_class._exit.call(_class);
+						for (var i=0 ; i < this._scenesIndex.length ; i++) {
+							if (this._scenesIndex[i] == name) {
+								delete this._scenesIndex[i];
+								break;
+							}
+						}
 						delete this._scenesEnabled[name];
 					}
 				  },
@@ -920,9 +1024,13 @@ Leaving the other scenes after preloading of the scene called
 				  getEnabled: function() {
 					return this._scenesEnabled;
 				  },
+				  
+				  
 				 
 				  _loop: function(canvas) {
-						var self = this;
+						var self = this, j, s;
+						
+						
 						 
 						function loop() {	
 							var key,  i=0;
@@ -932,8 +1040,9 @@ Leaving the other scenes after preloading of the scene called
 							canvas[i].clear();
 							canvas[i]._ctxMouseEvent.clearRect(0, 0, canvas[i].width, canvas[i].height);
 							
-							for (key in self._scenesEnabled) {
-								self._scenesEnabled[key]._loop();
+							for (j=0 ; j < self._scenesIndex.length ; j++) {
+								s = self._scenesEnabled[self._scenesIndex[j]];
+								if (s) s._loop();
 							}
 							
 							requestAnimationFrame(loop);
@@ -974,7 +1083,13 @@ Leaving the other scenes after preloading of the scene called
 @type Integer
 */
 		height: 0, 
-		mouseEvent: false,
+/**
+@doc canvas/
+@property mouseEvent if false, disables `mouseover`, `mouseout` and `mousemove` to improve performance
+@type Boolean
+@default true
+*/
+		mouseEvent: true,
 		initialize: function(id) {
 			var self = this;
 			this.id = id;
@@ -985,7 +1100,7 @@ Leaving the other scenes after preloading of the scene called
 			this.hammerExist = typeof(Hammer) !== "undefined";
 			old = this.ctx;
 			this._mouseEvent();
-			var events = ["click", "dbclick", "mousemove"],
+			var events = ["click", "dbclick", "mousemove", "mousedown", "mouseup"],
 				hammer_events = [
 					"dragstart", 
 					"drag", 
@@ -1014,7 +1129,7 @@ Leaving the other scenes after preloading of the scene called
 					"release"
 				];
 			
-			var hammer = null;
+			var hammer = null, val;
 			if (this.hammerExist) {
 				hammer = new Hammer(this.element);
 			}
@@ -1042,13 +1157,18 @@ Leaving the other scenes after preloading of the scene called
 				for (var name in scenes) {
 					stage = scenes[name].getStage();
 					for(var t=0; t < touches.length; t++) {
-						self.getMousePosition(e)
-						if (touches[t].pageX !== undefined) {
-							touches[t] = self.getMousePosition(touches[t]);
+						val = touches[t];
+						if (val.pageX !== undefined) {
+							val = self.getMousePosition(val);
 						}
-						stage._select(touches[t], function(el_real) {
-							 el_real.trigger(type, e, touches[t]);
+						if (type == "mousemove") {
+							if (self.mouseEvent) stage._mousemove(e, val);
+							else continue;
+						}	
+						stage._select(val, function(el_real) {
+							el_real.trigger(type, e, val);	
 						});
+						
 					}
 				}
 			}
@@ -1100,7 +1220,7 @@ Leaving the other scenes after preloading of the scene called
 		},
 /**
 @doc canvas/
-@method Get the X and Y position of the mouse in the canvas
+@method getMousePosition Get the X and Y position of the mouse in the canvas
 @param {Event} event
 @return Object
 @example
@@ -1110,6 +1230,8 @@ Leaving the other scenes after preloading of the scene called
 		var pos = self.getCanvas().getMousePosition(e);
 		console.log(pos.x, pos.y);
 	});
+	
+<jsfiddle>WebCreative5/KqH3L/1</jsfiddle>
 
 */
 		getMousePosition: function(e) {
@@ -1124,6 +1246,9 @@ Leaving the other scenes after preloading of the scene called
 			
 			if (e.clientX == undefined) e.clientX = e.pageX;
 			if (e.clientY == undefined) e.clientY = e.pageY;
+			
+			if (!window.pageXOffset) window.pageXOffset = 0;
+			if (!window.pageYOffset) window.pageYOffset = 0;
 			
 			var mouseX = e.clientX - left + window.pageXOffset;
 			var mouseY = e.clientY - top + window.pageYOffset;
@@ -1208,6 +1333,85 @@ In method "ready" of the scene :
 */
 		clear: function() {
 			return this.ctx.clearRect(0, 0, this.width, this.height);
+		},
+		
+		cursor: function() {
+		
+			function handleMouseDown(evt) {
+			  evt.preventDefault();
+			  evt.stopPropagation();
+			  evt.target.style.cursor = 'move';
+			}
+
+			document.addEventListener('mousemove', handleMouseDown, false);
+					
+		},
+		
+/**
+	TODO
+	@method setSize
+	@param width 
+	@param heigh
+	@param scale {String} stretch ; fit
+*/
+		setSize: function(width, height, scale) {
+			var ratio, self = this,
+				old_w = this.element.width,
+				old_h = this.element.height,
+				scenes = CanvasEngine.Scene.getEnabled();
+			if (width == "browser") {
+				scale = height;
+				width = window.innerWidth;
+				height = window.innerHeight;
+				this.element.style.position = "fixed";
+				this.element.style.top = 0;
+				this.element.style.left = 0;
+
+				
+				window.onresize = function(event) {
+					self.setSize("browser", scale);
+				};
+				
+			}
+			else if (width == "fullscreen") {
+				scale = height;
+				width = screen.width;
+				height = screen.height;
+				
+				var prop, vendors = ['ms', 'moz', 'webkit', 'o', 'khtml'];
+			
+				for(var x = 0; x < vendors.length && !this.element.requestFullScreen; ++x) {
+					this.element.requestFullScreen = this.element[vendors[x]+'RequestFullScreen'];
+					this.element.cancelFullScreen =  this.element[vendors[x]+'CancelFullScreen'];
+				}
+			
+				this.element.requestFullScreen(); // Element.ALLOW_KEYBOARD_INPUT
+				
+			}
+
+			this.element.width = width;
+			this.element.height = height;
+			
+			if (scale == "fit") {
+				if (width > height) {
+					ratio = width / old_w;
+				}
+				else {
+					ratio = height / old_h;
+				}
+				for (var name in scenes) {
+					stage = scenes[name].getStage();
+					stage.scaleTo(ratio);
+				}
+			}
+			else if (scale == "stretch") {
+				for (var name in scenes) {
+					stage = scenes[name].getStage();
+					stage.scaleX = width / old_w;
+					stage.scaleY = height / old_h;
+				}
+			}
+			
 		}
 	});
 	
@@ -1247,6 +1451,7 @@ The resources defined in "Materials" are loaded and regularly calls the method "
 		_events: [],
 		_pause: false,
 		_isReady: false,
+		_index: 0,
 /**
 @doc scene/
 @property model Model reference. The methods of this property are the same as scoket.io
@@ -1369,6 +1574,50 @@ The resources defined in "Materials" are loaded and regularly calls the method "
 			if (!id) id = 0;
 			return CanvasEngine.el_canvas[id];
 		},
+		
+/**
+@doc scene/
+@method zIndex Change or get the index of the scene. The index used to define the superposition. By default, the first scene has index 0. If a scene is created at the same level, it will overlay the previous element and its index will be 1
+@param {Integer|Scene}  index (optional) If the value is not specified, the current index of the scene is returned. If the value is negative, you change the index from the end. If the value is a scene, that scene is placed after the scene indicated
+@example
+
+	var scene = canvas.Scene.call("Scene_Title");
+	scene.zIndex(0);
+	
+----------
+
+	var scene = canvas.Scene.call("Scene_Title");
+	scene.zIndex(); // return current position
+	scene.zIndex(-1); // last position
+		
+----------
+
+	var scene_title = canvas.Scene.get("Scene_Title"),
+		scene_map = canvas.Scene.get("Scene_Map")
+	scene_map.zIndex(scene_title);
+
+@return {Integer|CanvasEngine.Scene}
+*/
+		zIndex: function(index) {
+			var l;
+			if (index === undefined) {
+				return this._index;
+			}
+			if (index instanceof Class) {
+				index = index.zIndex();
+			}
+			l = CanvasEngine.Scene._scenesIndex.length;
+			if (Math.abs(index) >= l) {
+				index = -1;
+			}
+			if (index < 0) {
+				index = l + index;	
+			}
+			_CanvasEngine.moveArray(CanvasEngine.Scene._scenesIndex, this._index, index);
+			this._index = index;
+			return this;
+		 },
+		
 /**
 @doc scene/
 @method createElement Create an element
@@ -1417,14 +1666,26 @@ Create two elements :
 			this.getCanvas()._elementsByScene[this.name] = {};
 			if (this.exit) this.exit.call(this);
 		},
+		loadEvents: function() {
+			var self = this;
+			if (_CanvasEngine.io && this._events) {
+				_CanvasEngine.each(this._events, function(i, val) {
+					_CanvasEngine.io.on(self.name + "." + val, function(data) {
+						if (self[val] && CanvasEngine.Scene.isEnabled(self.name)) self[val].call(self, data);
+					});
+				});
+			}
+		},
 		_load: function(params, options) {
 			var self = this;
 			params = params || {};
 			options = options || {};
 			this._stage = CanvasEngine.Element["new"](this);
+			this._index = CanvasEngine.Scene._scenesIndex.length-1;
 			for (var i=0 ; i < CanvasEngine.el_canvas.length ; i++) {
 				CanvasEngine.el_canvas[i].stage = this._stage;
 			}
+			
 			if (this.model) {		
 				if (this._events) {
 					CE.each(this._events, function(i, val) {
@@ -1434,6 +1695,8 @@ Create two elements :
 					});
 				}
 			}
+
+			//this.loadEvents();
 			
 			var images_length = materialLength("images"),
 				sound_length = materialLength("sounds"),
@@ -2290,8 +2553,7 @@ In `ready` method :
 			for (var i=0 ; i < this._children.length ; i++) {
 				el_real = this._children[i];
 				over = mouse.x > el_real.real_x && mouse.x < el_real.real_x + el_real.width &&
-						mouse.y > el_real.real_y && mouse.y < el_real.real_y + el_real.height;
-						
+						mouse.y > el_real.real_y && mouse.y < el_real.real_y + el_real.height;	
 				if (over) {
 					if (el_real._out == 1) {
 						el_real._out++;
@@ -2315,7 +2577,6 @@ In `ready` method :
 		_select: function(mouse, callback) {
 			var el_real, imgData;
 			var canvas = this.scene.getCanvas();
-			
 			imgData = this._canvas[0]["_ctxMouseEvent"].getImageData(mouse.x, mouse.y, 1, 1).data;
 			if (imgData[3] > 0) {
 				el_real = canvas._elementsByScene(this.scene.name, _CanvasEngine.rgbToHex(imgData[0], imgData[1], imgData[2]));
@@ -2775,7 +3036,6 @@ In method ready
 		scaleTo: function(val) {
 			this.scaleX = val;
 			this.scaleY = val;
-			this.stage.refresh();
 			return this;
 		},
 		/*
@@ -2845,14 +3105,59 @@ In method ready
 		},
 /**
 @doc events/
-@method on The .on() method attaches event handlers to the currently selected set of elements in the CanvasEngine object. 
-Note that some names are defined as follows: "namespace:eventname". For example, there are the following event in CanvasEngine:
+@method on The `on` method attaches event handlers to the currently selected set of elements in the CanvasEngine object.
+
+## General Event ##
+
+Some names are defined as follows: `namespace:eventname`. For example, there are the following event in CanvasEngine:
 
 	stage.on("canvas:refresh", function(el) { // stage is defined in the scene
 		console.log(el);
 	});
 
-At each refresh of the scene, to display each element is returned. 
+At each refresh of the scene, to display each element is returned.
+
+* `canvas:refresh` Calling the event *only* `stage` to each refresh of an element
+* `canvas:render` Call each rendering the element
+* `canvas:readyEnd` Call at the end of the execution of the `ready` method in the scene
+* `animation:draw` Call each sequence. Id parameter sequence
+
+        el.on("animation:draw", function(id) {
+    		console.log(id);
+    	});
+
+## Mouse Events
+
+You can retrieve the mouse events
+
+* click
+* dbclick
+* mousemove
+* mouseup
+* mousedown
+* mouseout
+* mouseover
+
+> For `mouseover` and `mouseout`, you must give size to the element (in `ready` method)
+
+    var el = this.createElement(300, 300);
+
+> or
+
+    var el = this.createElement();
+    el.width = 300;
+    el.height = 300;
+	
+<jsfiddle>WebCreative5/Y9Kum</jsfiddle>
+
+Apply on a specific element :
+
+    var el = this.createElement();
+    el.on("click", function(e) {
+		this.opacity = 0.5;
+	});
+
+## Events with Hammer.js  ##
 
 Other events suitable for tablet and smartphone exist available in Hammer.js :
 
@@ -2867,13 +3172,16 @@ Other events suitable for tablet and smartphone exist available in Hammer.js :
 * touch (gesture detection starts)
 * release (gesture detection ends)
 
-	var el = this.createElement();
-	el.on("drag", function(e, mouse) {
-		this.x = e.distanceX;
-		this.y = e.distanceY;
-	});
 
-See https://github.com/EightMedia/hammer.js/wiki/Getting-Started
+        var el = this.createElement();
+	    el.on("drag", function(e, mouse) {
+		    this.x = e.distanceX;
+		    this.y = e.distanceY;
+	    });
+
+> If you use the `click` event, it will be replaced by `touch` for touch devices
+
+See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://github.com/EightMedia/hammer.js/wiki/Getting-Started)
 
 @param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
 @param {Function} callback(event) A function to execute when the event is triggered
@@ -2884,7 +3192,7 @@ See https://github.com/EightMedia/hammer.js/wiki/Getting-Started
 			events = events.split(" ");
 			for (var i=0 ; i < events.length ; i++) {
 				event = events[i];
-				if (event == "click") event = "tap";
+				if (CanvasEngine.mobileUserAgent && event == "click") event = "touch";
 				if (!this._listener[event]) {
 					this._listener[event] = [];
 				}
@@ -2930,21 +3238,21 @@ See https://github.com/EightMedia/hammer.js/wiki/Getting-Started
 			return this._listener[event] && this._listener[event].length > 0;
 		},
 		
-		/**
-			@doc events/
-			@method hasEvent If the test element at least one event
-			@param {Boolean}
-		*/
+/**
+@doc events/
+@method hasEvent If the test element at least one event
+@param {Boolean}
+*/
 		hasEvent: function() {
 			return _CanvasEngine.objectSize(this._listener) > 0;
 		},
 		
-		/**
-			@doc events/
-			@method trigger Any event handlers attached with .on() or one of its shortcut methods are triggered when the corresponding event occurs. They can be fired manually, however, with the .trigger() method.
-			@param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
-			@param {Object|Array} params Params
-		*/
+/**
+@doc events/
+@method trigger Any event handlers attached with .on() or one of its shortcut methods are triggered when the corresponding event occurs. They can be fired manually, however, with the .trigger() method.
+@param {String} events One or more space-separated event types and optional namespaces, such as "click" or "mouseover"
+@param {Object|Array} params Params
+*/
 		trigger: function(events, e) {
 			var event, _trigger = false;;
 			events = events.split(" ");
@@ -2963,35 +3271,47 @@ See https://github.com/EightMedia/hammer.js/wiki/Getting-Started
 			return _trigger;
 		},
 		
-		/**
-			@doc events/
-			@method click Equivalent to the method .on("click", function)
-			@params {Function} callback
-		*/
+/**
+@doc events/
+@method click Equivalent to the method `.on("click", function)`
+
+[More details on here ](?p=core.element.events.on)
+
+@params {Function} callback
+*/
 		click: function(callback) {
 			this.on("click", callback);
 		},
-		/**
-			@doc events/
-			@method dblclick Equivalent to the method .on("dblclick", function)
-			@params {Function} callback
-		*/
+/**
+@doc events/
+@method dblclick Equivalent to the method `.on("dblclick", function)`
+
+[More details on here ](?p=core.element.events.on)
+
+@params {Function} callback
+*/
 		dblclick: function(callback) {
 			this.on("dblclick", callback);
 		},
-		/**
-			@doc events/
-			@method mouseover Equivalent to the method .on("mouseover", function)
-			@params {Function} callback
-		*/
+/**
+@doc events/
+@method mouseover Equivalent to the method `.on("mouseover", function)`. 
+
+[More details on here ](?p=core.element.events.on)
+
+@params {Function} callback
+*/
 		mouseover: function(callback) {
 			this.on("mouseover", callback);
 		},
-		/**
-			@doc events/
-			@method mouseout Equivalent to the method .on("mouseout", function)
-			@params {Function} callback
-		*/
+/**
+@doc events/
+@method mouseout Equivalent to the method `.on("mouseout", function)`
+
+[More details on here ](?p=core.element.events.on)
+
+@params {Function} callback
+*/
 		mouseout: function(callback) {
 			this.on("mouseout", callback);
 		},

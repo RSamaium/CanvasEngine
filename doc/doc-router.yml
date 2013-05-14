@@ -10,3 +10,5 @@
 - extends/Tiled.js
 - extends/Hit.js
 - extends/Window.js
+- extends/Text.js
+- extends/Effect.js
