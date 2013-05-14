@@ -189,11 +189,48 @@ Example :
 	{x: 200, scaleX: 2}
 
 @param {Integer} frames Duration in frames
-@param {Function} ease Effect. See http://gsgd.co.uk/sandbox/jquery/easing/
-Example
+@param {Function} ease (optional) Effect.
+
+Use `Ease` object that has constants :
+
+* easeInQuad
+* easeOutQuad
+* easeInCubic
+* easeOutCubic
+* easeInOutCubic
+* easeInQuart
+* easeOutQuart
+* easeInOutQuart
+* easeInQuint
+* easeOutQuint
+* easeInOutQuint
+* easeInSine
+* easeOutSine
+* easeInOutSine
+* easeInExpo
+* easeOutExpo
+* easeInOutExpo
+* easeInCirc
+* easeOutCirc
+* easeInOutCirc
+* easeInElastic
+* easeOutElastic
+* easeInOutElastic
+* easeInBack
+* easeOutBack
+* easeInOutBack
+* easeInBounce
+* easeOutBounce
+* easeInOutBounce
+
+See example below. You can see the effects on [http://gsgd.co.uk/sandbox/jquery/easing/](http://gsgd.co.uk/sandbox/jquery/easing/)
+
+@example
 
 	var timeline = canvas.Timeline.new(el);
 	timeline.to({x: 100}, 70,  Ease.easeOutElastic).call();
+	
+<jsfiddle>MAdmq/8</jsfiddle>
 
 @return {CanvasEngine.Timeline}
 */
@@ -245,7 +282,7 @@ Example
 	},
 /**
 @doc timeline/
-@method add Adds values to the properties of a period
+@method add Adds values to the properties of a period. 
 @param  {Object} attr Property values :
 	
 * opacity 
@@ -260,8 +297,8 @@ Example :
 	{x: 200, scaleX: 2}
 
 @param {Integer} frames Duration in frames
-@param {Function} ease Effect. See http://gsgd.co.uk/sandbox/jquery/easing/
-Example
+@param {Function} ease (optional) Effect. See [to()](?p=extends.timeline.to)
+@example
 
 	var timeline = canvas.Timeline.new(el);
 	timeline.add({x: 100}, 70,  Ease.easeOutElastic).call();
@@ -562,10 +599,16 @@ Example
 						var id;
 						var children;
 						
-						
-						
 						function drawImage(_el, id) {
 							var _img = self._images;
+							
+							if (seq.patternSize) {
+								seq.size = {
+									width: img.width / seq.patternSize.width,
+									height: img.height / seq.patternSize.height
+								};
+							}
+							
 							sy = parseInt(id / Math.round(img.width / seq.size.width));
 							sx = (id % Math.round(img.width / seq.size.width));
 								
@@ -645,8 +688,9 @@ Example
 							id = seq.frames[0] + i;
 							
 							if (id > seq.frames[1]) {
-								i = -1;
-								finish.call(this)
+								i = 0;
+								finish.call(this);
+								drawImage(this, seq.frames[0]);
 							}
 							else {
 								drawImage(this, id);
@@ -692,7 +736,7 @@ Example
 var Animation = {
 /**
 @doc timeline
-@class Timeline Create a temporal animation
+@class Timeline Create a temporal animation. See [to()](?p=extends.timeline.to)
 @param {Element} el
 @example
 
@@ -717,7 +761,24 @@ var Animation = {
 * addIn {CanvasEngine.Element} : allows you to add animation to an existing element
 * animations {Object} : Includes all animations. The key is the identifier of the animation. The value parameters (view example)
 	* frames {Array} : Array with two elements: the first is to play the first frame, the second frame is the arrival
-	* size {Object} : Set the width and height of the sequence ("width" and "height" keys )
+	* size {Object} : Set the width and height of the sequence (`width` and `height` keys )
+	* patternSize {Object} `(>= 1.2.5)` : Number of patterns :
+	
+	    Example :
+    		
+            patternSize: {
+    			width: 4,
+    			height: 4
+    		}
+    		
+    	If the image measurement 100*100px, this amounts to:
+    		
+    		size: {
+    			width: 100 / 4,
+    			height: 100 / 4
+    		}
+		
+		
 	* frequence {integer} : Frequency display. The higher the value the more high frequency is low
 	* finish {Function} : Callback when the animation is finished
 	* image {String} :  identifying the image specific to this animation
@@ -725,7 +786,7 @@ var Animation = {
 	
 @example
 
-In method "ready" of the scene :
+In method `ready` of the scene :
 
 	var el = this.createElement();
 	var animation = canvas.Animation.new({
