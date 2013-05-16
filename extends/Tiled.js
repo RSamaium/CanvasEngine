@@ -271,17 +271,22 @@ Consider adding inserting Tiled.js
 		ready: function(stage) {
 			 var el = this.createElement();
 			 var tiled = canvas.Tiled.new();
-			tiled.load(this, el, "map/map.json");
+			
 			tiled.ready(function() {
 				 var tile_w = this.getTileWidth(),
 					 tile_h = this.getTileHeight(),
 					 layer_object = this.getLayerObject();
 				 stage.append(el);
 			});
-			
+			tiled.load(this, el, "map/map.json");
 		}
 	});
 
+1. `mytileset` in material object is the name of tileset in Tiled Map Editor
+2. `getLayer()` retrieves a layer. The name is the same as in Tiled Map Editor
+
+![](http://canvasengine.net/presentation/images/tiled2.png)
+	
 */
 var Tiled = {
 	Tiled: {

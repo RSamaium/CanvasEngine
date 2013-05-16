@@ -49,6 +49,14 @@ THE SOFTWARE.
 }());
 // --
 
+var prop, vendors = ['ms', 'moz', 'webkit', 'o', 'khtml'];
+				
+for(var x = 0; x < vendors.length && !Element.prototype.requestFullScreen; ++x) {
+	Element.prototype.requestFullScreen = Element.prototype[vendors[x]+'RequestFullScreen'];
+	document.cancelFullScreen =  document[vendors[x]+'CancelFullScreen'];
+}
+
+
 Class.create("ModelClientClass", {
 	create: function(name, events, model) {
 		if (!(events instanceof Array)) {
@@ -131,9 +139,10 @@ var Model = Class["new"]("ModelClientClass"),
 @param {String} canvas canvas ID
 @param {Object} params (optional) additional parameters
 
-* swf_sound : view Sound class
+* swf_sound : see Sound class
 * cocoonjs : Object indicating the size of the canvas. Use this property if you want to compile your project with CocoonJS (http://ludei.com)
 * render : Do not rendering (true by default)
+* contextmenu `(>= 1.2.6)` : Show right-click menu (false by default)
 
 Example : 
 		{width: 640, height: 480}
@@ -1165,8 +1174,9 @@ and, in `ready` method :
 							if (self.mouseEvent) stage._mousemove(e, val);
 							else continue;
 						}	
+						stage.trigger(type, [e, val]);
 						stage._select(val, function(el_real) {
-							el_real.trigger(type, e, val);	
+							el_real.trigger(type, [e, val]);	
 						});
 						
 					}
@@ -1182,6 +1192,11 @@ and, in `ready` method :
 				bindEvent.call(this, events[i]);
 			}
 			
+			if (!params.contextmenu) {
+				this.element.addEventListener('contextmenu', function (event) {
+					event.preventDefault();
+				});
+			}
 		},
 		_elementsByScene: function(name, key, val) {
 			if (!this._globalElements[name]) this._globalElements[name] = {};
@@ -1347,30 +1362,88 @@ In method "ready" of the scene :
 					
 		},
 		
+/** 
+	TODO
+@method isFullscreen Tests if the canvas is full
+@return {Boolean}
+*/
+		isFullscreen: function() {
+			return document.fullscreen || document.mozFullScreen || document.webkitIsFullScreen;
+		},
+
 /**
 	TODO
-	@method setSize
-	@param width 
-	@param heigh
-	@param scale {String} stretch ; fit
+@method setSize Change the size of the canvas or put in full screen
+
+> Tested on Chrome, Firefox 20, IE9+, Opera 12.15
+
+@param width Width in pixels or indicating the size of the expansion : 
+
+* `fullscreen` : Put in full screen (HTML5 Fullscreen)
+
+	Support Fullscreen :
+
+	* Chrome 15+
+	* Firefox 10+
+	* Safari 5.1+
+	* Opera 12.50+
+
+	> For browsers that do not support full screen, we do a full screen in the browser
+
+* `browser` : Put the canvas in full screen in the browser. The canvas is the `fixed` position in CSS
+
+* `reset` : Resets the size of the canvas (the hands and departure)
+
+@param height (optional) Height in pixels
+@param scale {String} (optional) type of scale : `stretch` or `fit`
+	
+@example
+
+In `ready` method.
+
+	var _canvas = this.getCanvas(); // "this" is current scene.
+
+Example 1
+
+	_canvas.setSize(400, 300, "fit");
+	
+Example 2
+
+	_canvas.setSize("browser");
+	
+Example 3
+
+	_canvas.setSize("browser", "stretch");
+	
+	
+Example 4
+
+	_canvas.setSize("fullscreen", "fit");
+	
+Example 5
+
+	_canvas.setSize("reset");
+	
+@return {CanvasEngine.Canvas}
 */
 		setSize: function(width, height, scale) {
 			var ratio, self = this,
 				old_w = this.element.width,
-				old_h = this.element.height,
-				scenes = CanvasEngine.Scene.getEnabled();
-			if (width == "browser") {
-				scale = height;
-				width = window.innerWidth;
-				height = window.innerHeight;
-				this.element.style.position = "fixed";
-				this.element.style.top = 0;
-				this.element.style.left = 0;
-
-				
-				window.onresize = function(event) {
-					self.setSize("browser", scale);
-				};
+				old_h = this.element.height, 
+				type = width;
+			if (width == "reset") {
+				width = this._oldSize.width;
+				height = this._oldSize.height;
+				this.element.style.width = null;
+				this.element.style.height = null;
+				if (this._oldSize.type == "browser") {
+					this.element.style.position = 
+					this.element.style.top = 
+					this.element.style.left = null;
+				}
+				else if (this._oldSize.type == "fullscreen") {
+					document.cancelFullScreen();
+				}
 				
 			}
 			else if (width == "fullscreen") {
@@ -1378,40 +1451,48 @@ In method "ready" of the scene :
 				width = screen.width;
 				height = screen.height;
 				
-				var prop, vendors = ['ms', 'moz', 'webkit', 'o', 'khtml'];
-			
-				for(var x = 0; x < vendors.length && !this.element.requestFullScreen; ++x) {
-					this.element.requestFullScreen = this.element[vendors[x]+'RequestFullScreen'];
-					this.element.cancelFullScreen =  this.element[vendors[x]+'CancelFullScreen'];
-				}
-			
-				this.element.requestFullScreen(); // Element.ALLOW_KEYBOARD_INPUT
-				
-			}
-
-			this.element.width = width;
-			this.element.height = height;
-			
-			if (scale == "fit") {
-				if (width > height) {
-					ratio = width / old_w;
+				if (this.element.requestFullScreen) {
+					this.element.requestFullScreen(); // Element.ALLOW_KEYBOARD_INPUT
 				}
 				else {
-					ratio = height / old_h;
+					width = type = "browser"; 
 				}
-				for (var name in scenes) {
-					stage = scenes[name].getStage();
-					stage.scaleTo(ratio);
-				}
-			}
-			else if (scale == "stretch") {
-				for (var name in scenes) {
-					stage = scenes[name].getStage();
-					stage.scaleX = width / old_w;
-					stage.scaleY = height / old_h;
-				}
+				
 			}
 			
+			if (width == "browser") {
+				scale = height;
+				width = window.innerWidth;
+				height = window.innerHeight;
+				this.element.style.position = "fixed";
+				this.element.style.top = 0;
+				this.element.style.left = 0;
+				window.onresize = function(event) {
+					if (type == "browser") self.setSize("browser", scale);
+				};
+			}
+			
+
+			if (scale == "fit") {
+				ratio = old_w/old_h;
+				width = height * ratio;
+				
+				this.element.style.width = width+'px';
+				this.element.style.height = height+'px';
+
+			}
+			else if (scale == "stretch") {
+				this.element.style.width = width+'px';
+				this.element.style.height = height+'px';
+			}
+			else {
+				this.element.width = width;
+				this.element.height = height;
+			}
+			this._oldSize = {width: old_w, height: old_h, type: type};
+			this.width = width;
+			this.height = height;
+			return this;
 		}
 	});
 	
@@ -3153,8 +3234,19 @@ You can retrieve the mouse events
 Apply on a specific element :
 
     var el = this.createElement();
-    el.on("click", function(e) {
+    el.on("click", function(e, mouse) {
 		this.opacity = 0.5;
+	});
+	
+** Callback parameter **
+
+* event {Event} : a mouse event
+* mouse {Object} `(>= 1.2.6)` : Position the mouse on the canvas. `{x: , y: }`
+
+Example :
+
+    stage.on("mousemove", function(e, mouse) {
+		console.log(mouse.x, mouse.y);
 	});
 
 ## Events with Hammer.js  ##

@@ -79,6 +79,13 @@ Method `ready` is called when the canvas is ready (DOM loaded)
 
 ## Changelog
 
+### v1.2.6 (dev)
+
+* Add `setSize()` in Canvas class
+* Add `isFullscreen()` in Canvas class
+* Add mouse position in `trigger` parameters
+* Disable context menu by default
+
 ### v1.2.5
 
 * Fix loop animation
