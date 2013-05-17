@@ -25,6 +25,93 @@ Follow the steps below to start:
 
 Method `ready` is called when the canvas is ready (DOM loaded)
 
+## Use development files
+
+Development files allows you to improve or correct CanvasEngine. To do this, insert these two files:
+
+        <!DOCTYPE html>
+        <script src="core/engine-common.js"></script>
+		<script src="canvasengine.js"></script>
+		<canvas id="canvas_id" width="640" height="480"></canvas>
+
+> View other branches of CanvasEngine on Github, you'll other version under development
+
+If you want to use features (Animation, Input, etc), add the appropriate files :
+
+    <script src="extends/Animation.js"></script>
+
+If you develop or modify a feature, you can use the global variable `Global_CE` to use other features.
+
+Example :
+
+    // In extends/your_feacture.js
+    Global_CE.Input.press(Input.Enter, function() {
+    });
+
+### Your code
+
+Your code contains classe(s) :
+
+    Class.create("My_Class", {
+
+
+    });
+
+The developer can use this class in his game. You can also add code like this:
+    
+    var My_Class = {
+    	My_Class: {
+    		New: function) {
+    			return Class.New("My_Class");
+    		}
+    	}
+    };
+
+it will use the namespace defined initially by the user :
+
+    var canvas = CE.defines("canvas_id").extend(My_Class).ready(function() {	
+         canvas.Scene.call("MyScene");
+    });
+
+    canvas.Scene.new({
+      name: "MyScene",
+      ready: function(stage) {
+         var foo = canvas.My_Class.New();
+      }
+    });
+
+### Documentation
+
+Try to properly document the code for developer :
+
+    /**
+        @doc my_class
+        @class Definition of "My Class"
+        @example
+
+            ...
+
+    */
+    Class.create("My_Class", {
+
+    /**
+      @doc my_class/
+      @method foo ...
+      @param bar {String} ...
+      @example
+
+            ...
+
+    */
+         foo: function(bar) {
+
+         }
+
+    });
+
+See [http://canvasengine.net/doc](http://canvasengine.net/doc)
+
+
 ## Features
 
 * Scene Structure
