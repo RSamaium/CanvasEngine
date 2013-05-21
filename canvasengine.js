@@ -1381,7 +1381,7 @@ In method "ready" of the scene :
 > * iPad ; iOS 6.1.2 - Safari, Google Chrome
 > * Android 2.3.4 - Default Android Browser, Firefox
 
-@param width {Integer|String} Width in pixels or indicating the size of the expansion : 
+@param {Integer|String} width Width in pixels or indicating the size of the expansion : 
 
 * `fullscreen` : Put in full screen (HTML5 Fullscreen)
 
@@ -1398,8 +1398,8 @@ In method "ready" of the scene :
 
 * `reset` : Resets the size of the canvas (the hands and departure)
 
-@param height {Integer} (optional) Height in pixels
-@param scale {String} (optional) type of scale : `stretch` or `fit`
+@param {Integer} height (optional) Height in pixels
+@param {String} scale (optional) type of scale : `stretch` or `fit`
 	
 @example
 
