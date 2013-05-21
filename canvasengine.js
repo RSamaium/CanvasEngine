@@ -135,7 +135,9 @@ var Model = Class["new"]("ModelClientClass"),
 			
 */
  /**
-@method CanvasEngine.defines Initialize CanvasEngine  by setting the canvas 
+@doc engine/
+@method defines Initialize CanvasEngine  by setting the canvas 
+@static
 @param {String} canvas canvas ID
 @param {Object} params (optional) additional parameters
 
@@ -1422,7 +1424,9 @@ Example 3
 	
 Example 4
 
-	_canvas.setSize("fullscreen", "fit");
+	stage.click(function(e, mouse) {
+		_canvas.setSize("fullscreen", "fit");
+	});
 	
 Example 5
 

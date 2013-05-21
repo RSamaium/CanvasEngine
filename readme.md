@@ -168,10 +168,10 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 
 ### v1.2.6
 
-* Add `setSize()` in Canvas class
-* Add `isFullscreen()` in Canvas class
-* Add mouse position in `trigger` parameters
-* Disable context menu by default
+* Add `setSize()` in Canvas class ([Doc](http://canvasengine.net/doc/?p=core.canvas.setSize))
+* Add `isFullscreen()` in Canvas class ([Doc](http://canvasengine.net/doc/?p=core.canvas.isFullscreen))
+* Add mouse position in `trigger` parameters ([Doc](http://canvasengine.net/doc/?p=core.element.events.on))
+* Disable context menu by default  ([Doc](http://canvasengine.net/doc/?p=core.engine.defines))
 
 ### v1.2.5
 
