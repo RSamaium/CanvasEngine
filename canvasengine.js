@@ -1346,7 +1346,10 @@ In method "ready" of the scene :
 		clear: function() {
 			return this.ctx.clearRect(0, 0, this.width, this.height);
 		},
-		
+	
+/**
+	TODO
+*/	
 		cursor: function() {
 		
 			function handleMouseDown(evt) {
@@ -1373,11 +1376,12 @@ In method "ready" of the scene :
 @method setSize `(>=1.2.6)` Change the size of the canvas or put in full screen
 
 > Tested on :
-> Windows 7 - Chrome 26, Firefox 20, Internet Explorer 9 and 10, Opera 12.15, Safari 5.1.7 
-> iPad ; iOS 6.1.2 - Safari, Google Chrome
-> Android 2.3.4 - Default Android Browser, Firefox
 
-@param width Width in pixels or indicating the size of the expansion : 
+> * Windows 7 - Chrome 26, Firefox 20, Internet Explorer 9 and 10, Opera 12.15, Safari 5.1.7 
+> * iPad ; iOS 6.1.2 - Safari, Google Chrome
+> * Android 2.3.4 - Default Android Browser, Firefox
+
+@param width {Integer|String} Width in pixels or indicating the size of the expansion : 
 
 * `fullscreen` : Put in full screen (HTML5 Fullscreen)
 
@@ -1394,7 +1398,7 @@ In method "ready" of the scene :
 
 * `reset` : Resets the size of the canvas (the hands and departure)
 
-@param height (optional) Height in pixels
+@param height {Integer} (optional) Height in pixels
 @param scale {String} (optional) type of scale : `stretch` or `fit`
 	
 @example
