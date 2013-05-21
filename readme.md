@@ -166,7 +166,7 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 
 ## Changelog
 
-### v1.2.6 (dev)
+### v1.2.6
 
 * Add `setSize()` in Canvas class
 * Add `isFullscreen()` in Canvas class

@@ -29,7 +29,9 @@ Here are all the possibilities :
 * touch (gesture detection starts)
 * release (gesture detection ends)
 
-> Notice that `tap` is equivalent to the `click` event
+> Notice that `touch` is equivalent to the `click` event
+
+See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://github.com/EightMedia/hammer.js/wiki/Getting-Started)
 
 ## Full example ##
 
@@ -47,8 +49,8 @@ Here are all the possibilities :
 			el.fillRect(0, 0, 100, 100);
 			
 			el.on("dragright", function(e, mouse) {
-				this.x = e.distanceX;
-				this.y = e.distanceY;
+				this.x = e.gesture.deltaX;
+				this.y = e.gesture.deltaY;
 			});
 			
 			stage.append(el);

@@ -1038,9 +1038,7 @@ and, in `ready` method :
 				 
 				  _loop: function(canvas) {
 						var self = this, j, s;
-						
-						
-						 
+
 						function loop() {	
 							var key,  i=0;
 							
@@ -1048,7 +1046,6 @@ and, in `ready` method :
 							
 							canvas[i].clear();
 							canvas[i]._ctxMouseEvent.clearRect(0, 0, canvas[i].width, canvas[i].height);
-							
 							for (j=0 ; j < self._scenesIndex.length ; j++) {
 								s = self._scenesEnabled[self._scenesIndex[j]];
 								if (s) s._loop();
@@ -1363,8 +1360,8 @@ In method "ready" of the scene :
 		},
 		
 /** 
-	TODO
-@method isFullscreen Tests if the canvas is full
+@doc canvas/
+@method isFullscreen `(>=1.2.6)` Tests if the canvas is full screen (HTML5 only)
 @return {Boolean}
 */
 		isFullscreen: function() {
@@ -1372,10 +1369,13 @@ In method "ready" of the scene :
 		},
 
 /**
-	TODO
-@method setSize Change the size of the canvas or put in full screen
+@doc canvas/
+@method setSize `(>=1.2.6)` Change the size of the canvas or put in full screen
 
-> Tested on Chrome, Firefox 20, IE9+, Opera 12.15
+> Tested on :
+> Windows 7 - Chrome 26, Firefox 20, Internet Explorer 9 and 10, Opera 12.15, Safari 5.1.7 
+> iPad ; iOS 6.1.2 - Safari, Google Chrome
+> Android 2.3.4 - Default Android Browser, Firefox
 
 @param width Width in pixels or indicating the size of the expansion : 
 
@@ -1434,7 +1434,7 @@ Example 5
 			if (width == "reset") {
 				width = this._oldSize.width;
 				height = this._oldSize.height;
-				this.element.style.width = null;
+				this.element.style.width =
 				this.element.style.height = null;
 				if (this._oldSize.type == "browser") {
 					this.element.style.position = 
@@ -1455,7 +1455,8 @@ Example 5
 					this.element.requestFullScreen(); // Element.ALLOW_KEYBOARD_INPUT
 				}
 				else {
-					width = type = "browser"; 
+					width = 
+					type = "browser"; 
 				}
 				
 			}
@@ -1465,7 +1466,7 @@ Example 5
 				width = window.innerWidth;
 				height = window.innerHeight;
 				this.element.style.position = "fixed";
-				this.element.style.top = 0;
+				this.element.style.top =
 				this.element.style.left = 0;
 				window.onresize = function(event) {
 					if (type == "browser") self.setSize("browser", scale);
@@ -1474,16 +1475,16 @@ Example 5
 			
 
 			if (scale == "fit") {
-				ratio = old_w/old_h;
+				ratio = old_w / old_h;
 				width = height * ratio;
 				
-				this.element.style.width = width+'px';
-				this.element.style.height = height+'px';
+				this.element.style.width = width + 'px';
+				this.element.style.height = height + 'px';
 
 			}
 			else if (scale == "stretch") {
-				this.element.style.width = width+'px';
-				this.element.style.height = height+'px';
+				this.element.style.width = width + 'px';
+				this.element.style.height = height + 'px';
 			}
 			else {
 				this.element.width = width;
