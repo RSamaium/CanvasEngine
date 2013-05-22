@@ -662,11 +662,11 @@ Use :
 * Insert the JS script : `<script src="soundmanager2.js"></script>` [http://www.schillmania.com/projects/soundmanager2/doc/getstarted/#basic-inclusion](http://www.schillmania.com/projects/soundmanager2/doc/getstarted/#basic-inclusion)
 * Put the swf file to the root of your project. If you want to change the path :
 
-	var canvas = CE.defines("canvas_id", {
-		swf_sound: 'path/to/swf/'
-	}).ready(function() {
+		var canvas = CE.defines("canvas_id", {
+			swf_sound: 'path/to/swf/'
+		}).ready(function() {
 
-	});
+		});
 
 Assign the path with the property `swf_sound`
 @example
