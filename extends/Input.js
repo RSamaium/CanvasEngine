@@ -155,10 +155,16 @@ var Input = {Input: {
 	},
 
 	/**
-	  @doc keyboard/
-	  @method keyDown  Calling a function when a key is down
-	  @param {Integer} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
-	  @param {Function} onPressKey Function called. One parameter: the event of the button (Event Object)
+@doc keyboard/
+@method keyDown  Calling a function when a key is down
+@param {Integer} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
+@param {Function} onPressKey (optional) Function called. One parameter: the event of the button (Event Object)
+@example
+
+To avoid latency before repeating the movement, use `isPressed()` in render method. In the example below, use Left and Right keys :
+
+<jsfiddle>WebCreative5/KCSu3</jsfiddle>
+	  
 	*/
 	keyDown: function(key, onPressKey) {
 		this._press('keyDown', key, onPressKey);
@@ -168,7 +174,7 @@ var Input = {Input: {
 	  @doc keyboard/
 	  @method keyUp  Calling a function when a key is up
 	  @param {Integer} key Value of the key (or keys if array). Input.A or [Input.A, Input.Z] for example
-	  @param {Function} onKeyUp Function called. One parameter: the event of the button (Event Object)
+	  @param {Function} onKeyUp (optional) Function called. One parameter: the event of the button (Event Object)
 	*/
 	keyUp: function(key, onKeyUp) {
 		var self = this;

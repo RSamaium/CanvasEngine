@@ -127,9 +127,11 @@ Kernel.prototype = {
 /**
 @doc class/
 @method extend add object in this class
-@params {Object} object
+@params {Object|String} object or name of existing class
 @params {Boolean} clone (optional) Makes a clone of the object (false by default)
 @example
+
+Example 1 :
 
 	Class.create("Foo", {
 	
@@ -142,6 +144,24 @@ Kernel.prototype = {
 		
 		}
 	});
+	
+Example 2 :
+
+	Class.create("Bar", {
+	
+		initialize: function() {
+			
+		}
+	
+	});
+
+	Class.create("Foo", {
+	
+		mymethod: function() {
+			
+		}
+	
+	}).extend("Bar");
 
 @return {Object}
 */

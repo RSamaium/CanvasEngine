@@ -143,11 +143,15 @@ var Model = Class["new"]("ModelClientClass"),
 
 * swf_sound : see Sound class
 * cocoonjs : Object indicating the size of the canvas. Use this property if you want to compile your project with CocoonJS (http://ludei.com)
+	
+	Example : 
+		
+		{width: 640, height: 480}
+
 * render : Do not rendering (true by default)
 * contextmenu `(>= 1.2.6)` : Show right-click menu (false by default)
 
-Example : 
-		{width: 640, height: 480}
+		
 @return CanvasEngineClass
 @example
 "CE"  is equivalent to "CanvasEngine"
@@ -651,10 +655,11 @@ The value can be an object to give several parameters :
 /**
 @doc sound
 @class Sound Sound management
-The class uses HTML5 audio but you can use SoundManager 2 (http://www.schillmania.com/projects/soundmanager2/). 
+The class uses HTML5 audio but you can use SoundManager 2 [http://www.schillmania.com/projects/soundmanager2/](http://www.schillmania.com/projects/soundmanager2/). 
 
 Use :
-* Insert the JS script : <script src="soundmanager2.js"></script> (http://www.schillmania.com/projects/soundmanager2/doc/getstarted/#basic-inclusion)
+
+* Insert the JS script : `<script src="soundmanager2.js"></script>` [http://www.schillmania.com/projects/soundmanager2/doc/getstarted/#basic-inclusion](http://www.schillmania.com/projects/soundmanager2/doc/getstarted/#basic-inclusion)
 * Put the swf file to the root of your project. If you want to change the path :
 
 	var canvas = CE.defines("canvas_id", {
@@ -663,7 +668,7 @@ Use :
 
 	});
 
-Assign the path with the property "swf_sound"
+Assign the path with the property `swf_sound`
 @example
 Using Sound :
 	
