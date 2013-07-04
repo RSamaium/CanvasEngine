@@ -639,6 +639,26 @@ CanvasEngine.objectSize = function(obj) {
 };
 
 /**
+@doc utilities/
+@method extend `(>= 1.2.7)` Merging two objects
+@static
+@params {Object} target An object that will receive the new properties if additional objects are passed in.
+@params {Object} obj An object containing additional properties to merge in.
+@examples
+
+	CE.extend({a: 1}, {b: 2}); // =>{a: 1, b: 2}
+
+@return {Object} 
+*/
+// TODO : clone
+CanvasEngine.extend = function(obj1, obj2, clone) {
+	if (!obj1) obj1 = {};
+	if (!obj2) obj2 = {};
+	return Kernel._extend(obj1, obj2, clone);
+}
+
+
+/**
 	@doc utilities/
 	@method moveArray Move one index to another location of an array
 	@static

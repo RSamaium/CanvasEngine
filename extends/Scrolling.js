@@ -124,7 +124,7 @@ Class.create("Scrolling", {
 		@method update Update scrolling. A call loop
 	*/
 	update: function() {
-		
+
 		var scroll, container;
 		var canvas = this.scene.getCanvas();
 		

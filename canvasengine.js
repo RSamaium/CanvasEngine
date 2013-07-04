@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 
 
-// Erik Möller
+// Erik MÃ¶ller
 // http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
 (function() {
     var lastTime = 0;
@@ -141,8 +141,14 @@ var Model = Class["new"]("ModelClientClass"),
 @param {String} canvas canvas ID
 @param {Object} params (optional) additional parameters
 
-* swf_sound : see Sound class
-* cocoonjs : Object indicating the size of the canvas. Use this property if you want to compile your project with CocoonJS (http://ludei.com)
+* swf_sound : see Sound class (obsolete, use `soundmanager` object)
+* soundmanager : `(>= 1.2.7)` SoundManager options [http://www.schillmania.com/projects/soundmanager2/doc/#sm-config](http://www.schillmania.com/projects/soundmanager2/doc/#sm-config)
+
+	Example :
+	
+		{url: "swf/", debugMode: false}
+
+* cocoonjs : Object indicating the size of the canvas. Use this property if you want to compile your project with CocoonJS ([http://ludei.com](http://ludei.com))
 	
 	Example : 
 		
@@ -150,6 +156,30 @@ var Model = Class["new"]("ModelClientClass"),
 
 * render : Do not rendering (true by default)
 * contextmenu `(>= 1.2.6)` : Show right-click menu (false by default)
+* ignoreLoadError `(>= 1.2.7)` : Begins the scene even if the materials are not loaded
+
+	Example :
+	
+		var canvas = CE.defines("canvas_id", {
+			ignoreLoadError: true
+		}).
+		 ready(function() {
+			 canvas.Scene.call("MyScene");
+		 });
+	
+		canvas.Scene.New({
+			name: "MyScene",
+			materials: {
+				images: {
+					foo: "path/picture.png" 		// picture.png does not exist but ...
+				}
+			},
+			ready: function(stage) { 				// ready() is still called
+				var el = this.createElement();
+				el.drawImage("foo");				// image is ignored
+				stage.append(el);
+			}
+		});
 
 		
 @return CanvasEngineClass
@@ -209,10 +239,11 @@ With jQuery :
 			var self = this;
 			CanvasEngine.Sound._manager = typeof(soundManager) !== "undefined";
 			if (CanvasEngine.Sound._manager) {
-				soundManager.setup({
+				soundManager.setup(_CanvasEngine.extend({
+					  // swf_sound : obsolete
 					  url: params.swf_sound ? params.swf_sound : "swf/",
 					  onready: onReady  
-				});
+				}, params.soundmanager));
 			}
 			else if (!callback) {
 				onReady();
@@ -292,6 +323,11 @@ Using Sound :
 				else if (id instanceof Image || id instanceof HTMLCanvasElement) {
 					return id;
 				}
+				
+				if (params.ignoreLoadError) {
+					return false;
+				}
+				
 				throw "Cannot to draw the image or sound \"" + id + "\" because it does not exist";
 			},
 			
@@ -558,6 +594,13 @@ The value can be an object to give several parameters :
 							if(onLoad) onLoad.call(self, _img);
 							load();
 						};
+						img.onerror = function(e) {
+							if (params.ignoreLoadError) {
+								i++;
+								if (onLoad) onLoad.call(self, e);
+								load();
+							}
+						}
 						img.src = materials[i].path;
 					}
 					else {
@@ -576,13 +619,18 @@ The value can be an object to give several parameters :
 					
 					if (materials[i]) {
 						if (CanvasEngine.Sound._manager) {
-							self.sounds[materials[i].id] = soundManager.createSound({
-							  id: materials[i].id,
-							  url:  materials[i].path,
-							  autoLoad: true,
-							  autoPlay: false,
-							  onload: next
-							});
+							if (self.sounds[materials[i].id]) {
+								next();
+							}
+							else {
+								self.sounds[materials[i].id] = soundManager.createSound({
+								  id: materials[i].id,
+								  url:  materials[i].path,
+								  autoLoad: true,
+								  autoPlay: false,
+								  onload: next
+								});
+							}
 						}
 						else {
 							var snd = new Audio(), 
@@ -614,7 +662,9 @@ The value can be an object to give several parameters :
 								next();
 							}, false);
 							snd.addEventListener('error', function (e) { 
-								
+								if (params.ignoreLoadError) {
+									next();
+								}
 							}, false);
 							snd.load();
 							snd.pause();
@@ -663,12 +713,15 @@ Use :
 * Put the swf file to the root of your project. If you want to change the path :
 
 		var canvas = CE.defines("canvas_id", {
-			swf_sound: 'path/to/swf/'
+			soundmanager: {
+				url: 'path/to/swf/'
+			}
 		}).ready(function() {
 
 		});
 
-Assign the path with the property `swf_sound`
+> * See [defines()](?p=core.engine.defines)
+> * See [http://www.schillmania.com/projects/soundmanager2/doc/#sm-config](http://www.schillmania.com/projects/soundmanager2/doc/#sm-config)
 @example
 Using Sound :
 	
@@ -734,6 +787,22 @@ Here, CanvasEngine fetches the MP3 file in the `sound` folder. If the browser do
 			playOnly: function(id) {
 				this.allStop(id);
 				this.get(id).play();
+				return this;
+			},
+			
+/**
+TODO
+@method playLoop Plays a looping sound
+@param {Integer} id Identifier of the music
+@return  {CanvasEngine.Sound}
+*/
+			playLoop: function(id) {
+				var snd = this.get(id);
+				snd.addEventListener('ended', function() {
+					this.currentTime = 0;
+					this.play();
+				}, false);
+				snd.play();
 				return this;
 			},
 /**
@@ -1045,10 +1114,21 @@ and, in `ready` method :
 				 
 				  _loop: function(canvas) {
 						var self = this, j, s;
+						
+						this.fps = 0
+						var lastCalledTime = new Date().getTime(), delta;
+						
 
-						function loop() {	
+						 
+
+						function loop() {
+							
 							var key,  i=0;
 							
+							delta = (new Date().getTime() - lastCalledTime)/1000;
+						    lastCalledTime = new Date().getTime();
+						    self.fps = 1/delta;
+							 
 							CanvasEngine.Sound._loop();
 							
 							canvas[i].clear();
@@ -1057,12 +1137,22 @@ and, in `ready` method :
 								s = self._scenesEnabled[self._scenesIndex[j]];
 								if (s) s._loop();
 							}
-							
+							 
 							requestAnimationFrame(loop);
 						}
 						
 						requestAnimationFrame(loop);
 				 },
+				 
+				 // TODO
+				 getFPS: function() {
+					return ~~this.fps;
+				 },
+				 
+				 // TODO
+				 getPerformance: function() {
+					return ~~(this.getFPS() / 60 * 100);
+				 }
 			}
 	});
 	
@@ -1104,9 +1194,23 @@ and, in `ready` method :
 */
 		mouseEvent: true,
 		initialize: function(id) {
-			var self = this;
+			var self = this, w, h;
 			this.id = id;
-			this.element = this._getElementById(id);
+			var el = this._getElementById(id);
+			if (el.tagName != "CANVAS") {
+				this.element = document.createElement('canvas');
+				w = this.element.width = el.getAttribute('width');
+				h = this.element.height = el.getAttribute('height');
+				this.element.style.position = "absolute";
+				el.style.position = "relative";
+				el.style.width = w + "px";
+				el.style.height = h + "px";
+				el.style.overflow = "hidden";
+				el.appendChild(this.element);
+			}
+			else {
+				this.element = el;
+			}
 			this.width = this.element.width;
 			this.height = this.element.height;
 			this.ctx = this.element.getContext('2d');
@@ -1840,6 +1944,7 @@ Create two elements :
 			}
 			
 			function canvasReady() {
+	
 				if (params.when == "afterPreload") {
 					CanvasEngine.Scene.exitAll(params.allExcept);
 				}
@@ -1869,6 +1974,7 @@ Create two elements :
 	Class.create("Context", {
 			_cmd: {},
 			img: {},
+			_useClip: false,
 			globalAlpha: 1,
 			// private ; read only
 			_PROPS: ["shadowColor", "shadowBlur", "shadowOffsetX", "shadowOffsetY", "globalAlpha", "globalCompositeOperation", "lineJoin", "lineWidth", "miterLimit", "fillStyle", "font", "textBaseline", "strokeStyle"],
@@ -1878,7 +1984,7 @@ Create two elements :
 			},
 			
 /**
-@doc draw/
+obsolete
 @method addMethod Adds methods for 2d context
 @param {String|Array} names Method(s) Name(s)
 @param {String} type (optional) Type of the method:
@@ -1894,25 +2000,34 @@ Create two elements :
 	stage.append(el);
 
 */
-			addMethod: function(names, type) {
+			_setMethod: function(name, type) {
+				var self = this;
+				this[name] = function() {
+					var method = type == "cmd" ? "_addCmd" : "draw";
+					self[method](name, arguments);
+				};
+			},
+			
+			/*addMethod: function(names, type) {
 				var self = this;
 				type = type || "cmd";
 				if (!(names instanceof Array)) {
 					names = [names];
 				}
 				
-				function addCmd(name) {
-					self[name] = function() {
-						var method = type == "cmd" ? "_addCmd" : "draw";
-						self[method](name, arguments);
-					};
+				function addCmd(name, method) {
+					var self = this;
+					
 				}
 				
 				for (var i=0 ; i < names.length ; i++) {
-					addCmd(names[i]);
+					
+					this._setMethod(names[i], type);
+						
+					//addCmd.call(this, names[i], method);
 				}
 				
-			},
+			},*/
 			
 /**
 	@doc draw/
@@ -2019,12 +2134,12 @@ In the method "ready" in the scene class :
 				//buffer = CanvasEngine.Materials.createBuffer(img, this.color_key);
 		
 				
-				function f(t) {
+				/*function f(t) {
 					for (var i=1 ; i < t.length ; i++) {
 						t[i] = Math.round(t[i]);
 					}
 					return t;
-				}
+				}*/
 				
 				if (sw !== undefined) {
 					array = [_img, sx, sy, sw, sh, dx, dy, dw, dh];
@@ -2050,6 +2165,30 @@ In the method "ready" in the scene class :
 				
 				this._addCmd("drawImage", array);
 			},
+			
+			// Do not make a loop for performance reasons
+			moveTo: function() { this._addCmd.call(this, "moveTo", arguments); },
+			lineTo: function() { this._addCmd.call(this, "lineTo", arguments); },
+			quadraticCurveTo: function() { this._addCmd.call(this, "quadraticCurveTo", arguments); },
+			bezierCurveTo: function() { this._addCmd.call(this, "bezierCurveTo", arguments); },
+			beginPath: function() { this._addCmd.call(this, "beginPath", arguments); },
+			closePath: function() { this._addCmd.call(this, "closePath", arguments); },
+			clip: function() { 
+				this._useClip = true;
+				this._addCmd.call(this, "clip", arguments); 
+			},
+			rect: function() { this._addCmd.call(this, "rect", arguments); },
+			arc: function() { this._addCmd.call(this, "arc", arguments); },
+			addColorStop: function() { this._addCmd.call(this, "addColorStop", arguments); },
+			rotate: function() { this.draw.call(this, "rotate", arguments); },
+			translate: function() { this.draw.call(this, "translate", arguments); },
+			transform: function() { this.draw.call(this, "transform", arguments); },
+			setTransform: function() { this.draw.call(this, "setTransform", arguments); },
+			resetTransform: function() { this.draw.call(this, "resetTransform", arguments); },
+			clearRect: function() { this.draw.call(this, "clearRect", arguments); },
+			scale: function() { this.draw.call(this, "scale", arguments); },
+
+			
 			/**
 				@doc draw/
 				@method arc See http://www.w3schools.com/html5/canvas_arc.asp
@@ -2146,29 +2285,36 @@ In the method "ready" in the scene class :
 				}
 				
 			},
+			
+			_bufferEvent: function(name, _params) {
+				var ctx_mouse = this._canvas[0]["_ctxMouseEvent"];
+				if (this.hasEvent() || this._useClip) {
+					ctx_mouse[name].apply(this._canvas[0]["_ctxMouseEvent"], _params);
+					if (name == "drawImage") {
+						ctx_mouse.globalCompositeOperation = 'source-atop';
+						ctx_mouse.fillStyle = '#' + this.color_key;
+						ctx_mouse.fillRect(this._buffer_img.x, this._buffer_img.y, this._buffer_img.width, this._buffer_img.height);
+					}
+				}
+			},
+			
 			draw: function(name, params, propreties) {
 			
-				//CE.benchmark("draw method");
-				layer =  "ctx";
-				params = params || [];
-				propreties = propreties || {};
+				
 
+				var layer =  "ctx", ctx;
+				if (!params) params = [];
+				if (!propreties) propreties = {};
+				/*params = params || [];
+				propreties = propreties || {};*/
+				
 				var ctx = this.getScene().getCanvas()._ctxTmp;
+				
 				var cmd, array_cmd = {};
-				var cmd_propreties = [];
+				var cmd_propreties = {};
 				var isCmd = true, applyBuffer = 1, bufferEventForce = false;
 				
-				var bufferEvent = function(name, _params) {
-					var ctx_mouse = this._canvas[0]["_ctxMouseEvent"];
-					if (this.hasEvent() || this.hasCmd("clip")) {
-						ctx_mouse[name].apply(this._canvas[0]["_ctxMouseEvent"], _params);
-						if (name == "drawImage") {
-							ctx_mouse.globalCompositeOperation = 'source-atop';
-							ctx_mouse.fillStyle = '#' + this.color_key;
-							ctx_mouse.fillRect(this._buffer_img.x, this._buffer_img.y, this._buffer_img.width, this._buffer_img.height);
-						}
-					}
-				};
+				
 				
 				var bufferProp = function(cmd_propreties, key, value) {
 					if (cmd_propreties[key] || this.forceEvent) {
@@ -2189,11 +2335,11 @@ In the method "ready" in the scene class :
 				else {
 					array_cmd = this._cmd;
 				}
-				for (var name in array_cmd) {
-					cmd = array_cmd[name];
+				for (var _name in array_cmd) {
+					cmd = array_cmd[_name];
 					for (var j=0 ; j < this._canvas.length ; j++) {
 						cmd_propreties = cmd.propreties;
-						if (isCmd && name == "restore") {	
+						if (isCmd && _name == "restore") {	
 							this.clearPropreties();
 						}
 						if (cmd_propreties) {
@@ -2222,16 +2368,16 @@ In the method "ready" in the scene class :
 							}
 						}
 						if (ctx) {
-							ctx[name].apply(ctx, cmd.params);
+							ctx[_name].apply(ctx, cmd.params);
 						}
 						else {
-							this._canvas[j][layer][name].apply(this._canvas[j][layer], cmd.params);
+							this._canvas[j][layer][_name].apply(this._canvas[j][layer], cmd.params);
 							if (this.forceEvent) {
-								if (name == "rect") {
-									bufferEvent.call(this, "fillRect", cmd.params);
+								if (_name == "rect") {
+									this._bufferEvent("fillRect", cmd.params);
 								}
 							}
-							bufferEvent.call(this, name, cmd.params);
+							this._bufferEvent(_name, cmd.params);
 						}
 					}
 				}
@@ -2253,7 +2399,8 @@ In the method "ready" in the scene class :
 			},
 			
 			hasCmd: function(name) {
-				return this._cmd[name];
+				// http://jsperf.com/test-an-object-is-not-undefined
+				return this._cmd[name] !== undefined;
 			},
 /**
 @doc draw/
@@ -2271,6 +2418,9 @@ In `ready` method :
 
 */
 			removeCmd: function(name) {
+				if (name == "clip") {
+					this._useClip = false;
+				}
 				delete this._cmd[name];
 			}
 	});
@@ -2416,6 +2566,7 @@ In `ready` method :
 		_buffer_img: null,
 		_out: 1,
 		_over: 0,
+		_nbEvent: 0,
 		_pack: null,
 /**
 	@doc manipulate/
@@ -2446,7 +2597,7 @@ In `ready` method :
 			while (key in elements);
 			
 			
-			this.addMethod([
+			/*this.addMethod([
 				"moveTo",
 				"lineTo",
 				"quadraticCurveTo",
@@ -2457,9 +2608,9 @@ In `ready` method :
 				"rect",
 				"arc",
 				"addColorStop"
-			], "cmd");
+			], "cmd");*/
 			
-			this.addMethod([
+			/*this.addMethod([
 				"rotate",
 				"translate",
 				"transform",
@@ -2467,7 +2618,7 @@ In `ready` method :
 				"resetTransform",
 				"scale",
 				"clearRect"
-			], "draw");
+			], "draw");*/
 			
 			this.color_key = key;
 			this.scene.getCanvas()._elementsByScene(this.scene.name, key, this);
@@ -2485,7 +2636,7 @@ In `ready` method :
 */
 		refresh: function() {
 			//this.clear();
-			this._refresh(true);
+			this._refresh(true, true);
 			this._canvas._event_mouse = null;
 		},
 		/**
@@ -2495,15 +2646,17 @@ In `ready` method :
 		
 		*/
 		_refresh: function(init, children, ctx) {
-			children = children === undefined ? true : children;
-			
-
-			if (this.stage.trigger) this.stage.trigger("canvas:refresh", this);
+	
+			//children = children === undefined ? true : children;
+		
+			if (this.stage._onRefresh) this.stage._onRefresh(this);
 			
 			if (!this._visible) {
 				this._loop();
 				return;
 			}
+			
+			
 
 			if (!this.real_pause) {
 
@@ -2527,12 +2680,14 @@ In `ready` method :
 			
 				this.save();
 					
-				this.setTransform(1, 0, 0, 1, 0, 0);
+				// this.setTransform(1, 0, 0, 1, 0, 0);
 				
 				this.real_scale_x = this.parent.real_scale_x * this.scaleX;
 				this.real_scale_y = this.parent.real_scale_y * this.scaleY;
-				this.real_y = (this.parent.real_y + this.y) * (this.parent.scaleY == 1 ? 1 : this.parent.real_scale_x);
-				this.real_x = (this.parent.real_x + this.x) * (this.parent.scaleX == 1 ? 1 : this.parent.real_scale_y);
+				// this.real_y = (this.parent.real_y + this.y) * (this.parent.scaleY == 1 ? 1 : this.parent.real_scale_x);
+				// this.real_x = (this.parent.real_x + this.x) * (this.parent.scaleX == 1 ? 1 : this.parent.real_scale_y);
+				this.real_y = (this.parent.real_y + this.y);
+				this.real_x = (this.parent.real_x + this.x);
 				
 				this.real_skew_x = this.parent.real_skew_x + this.skewX;
 				this.real_skew_y = this.parent.real_skew_y + this.skewY ;
@@ -2543,6 +2698,8 @@ In `ready` method :
 				else {
 					this.real_opacity = this.opacity;
 				}
+				
+				
 				
 				this.real_pause = init ? this.pause : this.parent.real_pause;
 				
@@ -2557,20 +2714,29 @@ In `ready` method :
 				}
 				var regX = this.real_x + this.regX;
 				var regY = this.real_y + this.regY;
-				this.translate(regX, regY);
-				if (this.rotation != 0) {
-					this.rotateDeg(this.rotation);
+				if (this.regX != 0 || this.regY != 0) {
+					this.translate(regX, regY);
 				}
-				this.scale(this.real_scale_x, this.real_scale_y);
-				this.transform(1, this.real_skew_x, this.real_skew_y, 1, 0, 0);
+				if (this.real_rotate != 0) {
+					this.rotateDeg(this.real_rotate);
+				}
+				if (this.real_scale_x != 1 || this.real_scale_y != 1) {
+					this.scale(this.real_scale_x, this.real_scale_y);
+				}
+				if (this.real_skew_x != 0 || this.real_skew_y != 0) {
+					this.transform(1, this.real_skew_x, this.real_skew_y, 1, 0, 0);
+				}
 				this.translate(this.real_x,  this.real_y);
-				this.translate(-regX, -regY);
-			}
+				if (this.regX != 0 || this.regY != 0) {
+					this.translate(-regX, -regY);
+				}
+			} 
 			
 			
 			this.draw(ctx);
 			
-			if (!this.hasCmd("clip")) {
+			
+			if (!this._useClip) {
 				this.restore();
 			}
 		
@@ -2583,10 +2749,22 @@ In `ready` method :
 				}
 			}
 			
-			if (this.hasCmd("clip")) {
+			if (this._useClip) {
 				this.restore();
 			}
+			
 		},
+		
+		setX: function(x) {
+			// var perf = CanvasEngine.Scene.getPerformance();
+			// this.x = x * ~~(100 / perf);
+			this.x = x;
+		},
+		
+		setY: function(y) {
+			this.y = y;
+		},
+
 		/**
 			@doc manipulate/
 			@method rotateTo A rotation element in a direction
@@ -2750,7 +2928,7 @@ In method ready :
 				this._children.push(el);
 				el.parent = this;
 				el._index = this._children.length-1;
-				el._refresh();				
+				el._refresh(false, true);				
 			}
 			return arguments;
 		},
@@ -2859,7 +3037,7 @@ In method ready
 			
 			this.scene.getCanvas()._ctxTmp = ctx;
 			for (var i=0 ; i < children.length ; i++) {
-				this._children[i]._refresh();
+				this._children[i]._refresh(true, true);
 			}
 			this.scene.getCanvas()._ctxTmp = null;
 			if (!free_memory) this._pack = children;
@@ -3298,9 +3476,13 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 			events = events.split(" ");
 			for (var i=0 ; i < events.length ; i++) {
 				event = events[i];
-				if (CanvasEngine.mobileUserAgent && event == "click") event = "touch";
+				// Using specific properties for performance
+				if (event == "canvas:refresh") this.stage._onRefresh = callback;
+				else if (event == "canvas:render") this._onRender = callback;
+				else if (CanvasEngine.mobileUserAgent && event == "click") event = "touch";
 				if (!this._listener[event]) {
 					this._listener[event] = [];
+					this._nbEvent++;
 				}
 				this._listener[event].push(callback);
 			}
@@ -3321,15 +3503,20 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 				if (callback) {
 					for (var i=0 ; i < this._listener[event].length ; i++) {
 						if (this._listener[event][i] == callback) {
-							delete this._listener[event][i];
+							this._listener[event].splice(i, 1);
 							break;
 						}
 					}
 				}
 				else {
 					if (this._listener[event]) {
-						this._listener[event] = [];
+						delete this._listener[event];
+						this._nbEvent--;
 					}
+				}
+				if (this._listener[event] && this._listener[event].length == 0) {
+					delete this._listener[event];
+					this._nbEvent--;
 				}
 			}
 		},
@@ -3350,7 +3537,7 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 @param {Boolean}
 */
 		hasEvent: function() {
-			return _CanvasEngine.objectSize(this._listener) > 0;
+			return this._nbEvent > 0;
 		},
 		
 /**
@@ -3360,7 +3547,7 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 @param {Object|Array} params Params
 */
 		trigger: function(events, e) {
-			var event, _trigger = false;;
+			var event, _trigger = false;
 			events = events.split(" ");
 			if (!(e instanceof Array)) {
 				e = [e];
@@ -3422,10 +3609,7 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 			this.on("mouseout", callback);
 		},
 		_loop: function() {
-			/*for (var i=0 ; i < this._loop_listener.length ; i++) {
-				this._loop_listener[i].call(this);
-			}*/
-			this.trigger("canvas:render");
+			if (this._onRender) this._onRender();
 		},
 /**
 @doc events/

@@ -657,11 +657,12 @@ In `ready` method
      entity.position(10, 50);
 
 */
-	position: function(x, y) {
+	position: function(x, y, move) {
 		var pos = this.model.position(x, y);
 		if (x !== undefined) {
 			this.el.x = pos.x;
 			this.el.y = pos.y;
+			
 		}
 		return {x: pos.y,  y: pos.y};
 	},
@@ -685,7 +686,7 @@ In `ready` method
 		var pos = this.model.position();
 		if (!x) x = 0;
 		if (!y) y = 0;
-		return this.position(x + pos.x, y + pos.y);
+		return this.position(x + pos.x, y + pos.y, true);
 	},
 	
 

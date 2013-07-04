@@ -166,6 +166,15 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 
 ## Changelog
 
+### v1.2.7
+
+* Add `extend()` in CanvasEngine Core ([Doc](http://canvasengine.net/doc/?p=core.utilities.extend))
+* Add `soundmanager` option in defines() ([Doc](http://canvasengine.net/doc/?p=core.engine.defines))
+* Add `ignoreLoadError` option in defines() ([Doc](http://canvasengine.net/doc/?p=core.engine.defines))
+* Removal `addMethod()` in Element class
+* Fix no recreating the sound if already created (with SoundManager2)
+* Rendering performance increased
+
 ### v1.2.6
 
 * Add `setSize()` in Canvas class ([Doc](http://canvasengine.net/doc/?p=core.canvas.setSize))
