@@ -92,9 +92,9 @@ Class.create("Tiled", {
 			if (this.layers[i].data) {
 				for (var k=0 ; k < this.layers[i].height ; k++) {
 					for (var j=0 ; j < this.layers[i].width ; j++) {
-						_tile = this.scene.createElement();
 						_id = this.layers[i].data[id];
 						if (_id != 0) {
+                            _tile = this.scene.createElement();
 							tileset = this.tilesetsIndexed[_id];
 							_id -= tileset.firstgid;
 							y = this.tile_h * Math.floor(_id / (Math.round(tileset.imagewidth / this.tile_h)));
