@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 
 
-// Erik Möller
+// Erik MÃ¶ller
 // http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
 (function() {
     var lastTime = 0;
@@ -48,6 +48,14 @@ THE SOFTWARE.
         };
 }());
 // --
+
+var prop, vendors = ['ms', 'moz', 'webkit', 'o', 'khtml'];
+				
+for(var x = 0; x < vendors.length && !Element.prototype.requestFullScreen; ++x) {
+	Element.prototype.requestFullScreen = Element.prototype[vendors[x]+'RequestFullScreen'];
+	document.cancelFullScreen =  document[vendors[x]+'CancelFullScreen'];
+}
+
 
 Class.create("ModelClientClass", {
 	create: function(name, events, model) {
@@ -127,16 +135,53 @@ var Model = Class["new"]("ModelClientClass"),
 			
 */
  /**
-@method CanvasEngine.defines Initialize CanvasEngine  by setting the canvas 
+@doc engine/
+@method defines Initialize CanvasEngine  by setting the canvas 
+@static
 @param {String} canvas canvas ID
 @param {Object} params (optional) additional parameters
 
-* swf_sound : view Sound class
-* cocoonjs : Object indicating the size of the canvas. Use this property if you want to compile your project with CocoonJS (http://ludei.com)
-* render : Do not rendering (true by default)
+* swf_sound : see Sound class (obsolete, use `soundmanager` object)
+* soundmanager : `(>= 1.2.7)` SoundManager options [http://www.schillmania.com/projects/soundmanager2/doc/#sm-config](http://www.schillmania.com/projects/soundmanager2/doc/#sm-config)
 
-Example : 
+	Example :
+	
+		{url: "swf/", debugMode: false}
+
+* cocoonjs : Object indicating the size of the canvas. Use this property if you want to compile your project with CocoonJS ([http://ludei.com](http://ludei.com))
+	
+	Example : 
+		
 		{width: 640, height: 480}
+
+* render : Do not rendering (true by default)
+* contextmenu `(>= 1.2.6)` : Show right-click menu (false by default)
+* ignoreLoadError `(>= 1.2.7)` : Begins the scene even if the materials are not loaded
+
+	Example :
+	
+		var canvas = CE.defines("canvas_id", {
+			ignoreLoadError: true
+		}).
+		 ready(function() {
+			 canvas.Scene.call("MyScene");
+		 });
+	
+		canvas.Scene.New({
+			name: "MyScene",
+			materials: {
+				images: {
+					foo: "path/picture.png" 		// picture.png does not exist but ...
+				}
+			},
+			ready: function(stage) { 				// ready() is still called
+				var el = this.createElement();
+				el.drawImage("foo");				// image is ignored
+				stage.append(el);
+			}
+		});
+
+		
 @return CanvasEngineClass
 @example
 "CE"  is equivalent to "CanvasEngine"
@@ -194,10 +239,11 @@ With jQuery :
 			var self = this;
 			CanvasEngine.Sound._manager = typeof(soundManager) !== "undefined";
 			if (CanvasEngine.Sound._manager) {
-				soundManager.setup({
+				soundManager.setup(_CanvasEngine.extend({
+					  // swf_sound : obsolete
 					  url: params.swf_sound ? params.swf_sound : "swf/",
 					  onready: onReady  
-				});
+				}, params.soundmanager));
 			}
 			else if (!callback) {
 				onReady();
@@ -222,6 +268,8 @@ With jQuery :
 		noConflict: function() {
 			this._noConflict = true;
 		},
+		
+		
 		
 		
 /**
@@ -254,7 +302,9 @@ Using Sound :
 			_buffer: {},
 			_cache_canvas: {},
 			sounds: {},
+			videos: {},
 			fonts: {},
+			data: {},
 /**
 @doc materials/
 @method get Get the picture or sound according to its identifier
@@ -267,17 +317,21 @@ Using Sound :
 				if (type) {
 					return this[type + "s"][id];
 				}	
-			
-				if (this.images[id]) {
-					return this.images[id];
+				if (_m = this.images[id] || this.sounds[id] || this.videos[id] || this.data[id]) {
+					return _m
 				}
-				else if (this.sounds[id]) {
-					return this.sounds[id];
-				}
-				else if (id instanceof Image || id instanceof HTMLCanvasElement) {
+				else if (id instanceof Image || 
+						id instanceof HTMLCanvasElement || 
+						id instanceof HTMLVideoElement ||
+						id instanceof HTMLAudioElement) {
 					return id;
 				}
-				throw "Cannot to draw the image or sound \"" + id + "\" because it does not exist";
+				
+				if (params.ignoreLoadError) {
+					return false;
+				}
+				
+				throw "Cannot to get the data \"" + id + "\" because it does not exist";
 			},
 			
 /**
@@ -291,19 +345,24 @@ Using Sound :
 @param {Boolean} cache Image id
 @return {Object}
 */
-			imageToCanvas: function(id, cache) {
-				if (this._cache_canvas[id] && cache) {
+			imageToCanvas: function(id, params) {
+				params = params || {};
+				if (this._cache_canvas[id] && params.cache) {
 					return this._cache_canvas[id];
 				} 
 				var img = this.get(id), canvas, ctx;
 				
-				canvas =  document.createElement('canvas');		
-				canvas.width = img.width;
-				canvas.height = img.height;
-				ctx = canvas.getContext('2d');
+				if (!img) return;
 				
-				ctx.drawImage(img, 0, 0);
-
+				var w = params.width || img.width,
+					h = params.height || img.height,
+				
+				canvas =  document.createElement('canvas');		
+				canvas.width = w;
+				canvas.height = h;
+				ctx = canvas.getContext('2d');
+				ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, w, h);
+			
 				this._cache_canvas[id] = {
 					canvas: canvas,
 					ctx: ctx
@@ -345,7 +404,9 @@ Using Sound :
 */
 			transparentColor: function(id, color, cache) {
 				var imageData, data, rgb, 
-					_canvas = this.imageToCanvas(id, cache),
+					_canvas = this.imageToCanvas(id, {
+						cache: cache
+					}),
 					canvas = _canvas.canvas,
 					ctx = _canvas.ctx;
 
@@ -377,6 +438,7 @@ Using Sound :
 					canvas = _canvas.canvas,
 					ctx = _canvas.ctx;
 					
+				imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 				data = imageData.data;
 
 				for(var i = 0; i < data.length; i += 4) {
@@ -401,8 +463,13 @@ Using Sound :
 */
 			cropImage: function(id, x, y, w, h) {
 				var imageData, data, rgb, 
-					_canvas = this.imageToCanvas(id),
-					canvas = _canvas.canvas,
+					_canvas = this.imageToCanvas(id);
+					
+				if (!_canvas) {
+					return;
+				}
+					
+				var canvas = _canvas.canvas,
 					ctx = _canvas.ctx
 				imageData = ctx.getImageData(x, y, w, h);
 				canvas.width = w;
@@ -428,14 +495,16 @@ Using Sound :
 @doc materials/
 @method getBasePath Retrieves the base of a path
 @param {String} path Path
+@param {Boolean} (optional) slash If there is a non-empty path and the parameter is true then a slash is added to the end of the string returned
 @return {String}
 @example
 
 	canvas.Materials.getBasePath("sound/sample.mp3"); // return "sound"
 
 */
-			getBasePath: function(path) {
-				return path.substring(0, path.lastIndexOf('/'));
+			getBasePath: function(path, slash) {
+				var p = path.substring(0, path.lastIndexOf('/'))
+				return p != "" && slash ? p + "/" : p;
 			},
 
 /**
@@ -460,10 +529,131 @@ Using Sound :
 				return parts.slice(0, parts.length - 1).join(".");
 			},
 			
+			Transition: {
+		
+				_data: {},
+			
+				set: function(id, data) {
+					var imageData, _data, new_data = [];
+					if (this._data[id]) {
+						return this._data[id];
+					}
+					if (!(id instanceof Array)) {
+						var _canvas = CanvasEngine.Materials.imageToCanvas(id, {
+							width: 1024,
+							height: 768
+						});
+						if (typeof Uint8ClampedArray != "undefined") {
+							new_data = new Uint8ClampedArray(_canvas.canvas.width * _canvas.canvas.height);
+						}
+						imageData = _canvas.ctx.getImageData(0, 0, _canvas.canvas.width, _canvas.canvas.height);
+						_data = imageData.data;
+						var j=0;
+						for (var i=0; i < _data.length; i+=4) {
+							new_data[j] = _data[i];
+							j++;
+						}
+					}
+					else {
+						new_data = data;
+					}
+					this._data[id] = new_data;
+					return new_data;
+				},
+				
+				get: function(id) {
+					return this._data[id];
+				}
+			
+			},
+			
 /**
 @doc materials/
 @method load Load a resource
-@param {String} type Type : "images" or "sounds"
+@param {String} type 
+
+* images : Loading images.
+
+        images: {
+            {foo: "bar.png"}
+        }
+
+    For use :
+
+        el.drawImage("foo"); // el is an element
+
+    It is possible to define a transparent color to make the image with `transparentcolor` option:
+
+        images: {
+            {foo: {path: "bar.png", transparentcolor: "#ff0000"}
+        }
+
+* sounds : Loading sound. Test if the browser supports the sound. If your browser does not support the format, it will take another file with the same name but with a different extension
+
+        sounds: {
+            foo: "bar.mp3"
+        }
+
+    On Firefox, it will automatically search `bar.ogg`
+
+    For use :
+
+        canvas.Sound.get("foo").play(); // "canvas" is namespace
+		
+* videos : add videos which will be displayed in the canvas :
+
+		videos: {
+			foo: "bar.mp4"
+		}
+		
+	To use :
+	
+		el.drawImage("foo"); // el is an element
+		
+	To use video API :
+	
+		var video = canvas.Materials.get("foo", "video");
+		video.play();
+		
+	To use the webcam :
+	
+		videos: {
+			foo: {webcam: {audio: false, video: true}}
+		}
+		
+	To display and manipulate is the same as the single video
+
+* fonts
+
+    For Internet Explorer, it will take a file with the same name but with the extension `.eot`
+
+        fonts: {
+			foo: "bar.ttf"
+		}
+
+    For use are in the text:
+
+        el.font = 'normal 40pt foo'; // "el" is an element
+
+	For fonts, you can use [Web Font Loader](https://github.com/typekit/webfontloader)
+
+        fonts: {
+			google: { families: ["test"] },
+			foo: "bar.ttf"
+		}
+
+     For use are in the text:
+
+        el.font = 'normal 40pt test';
+
+   You can find fonts from [Google Fonts](http://www.google.com/fonts) and other modules (see [Web Font Loader Github](https://github.com/typekit/webfontloader))
+
+* data : Loading a JSON file
+
+        data: {
+            foo: "bar.json"
+        }
+
 @param {Array|Object} path Paths to resources.
 * If array : Elements are composed of objects where the key is the identifier and value is the path
 	
@@ -481,6 +671,9 @@ The value can be an object to give several parameters :
 	{img1: {path: "path/to/img1.png", transparentcolor: "#ff0000"}, img2: "path/to/im2.png"}
 	
 "path" is the path and "transparentcolor" the color that will be transparent image
+
+@param {Function} onLoad (optional) Callback when a resource is loaded
+@param {Function} onFinish (optional) Callback when all resources are loaded
 */
 			load: function(type, path, onLoad, onFinish) {
 				var i=0, p, self = this, materials = [], img_data;
@@ -497,23 +690,23 @@ The value can be an object to give several parameters :
 					else {
 						for (var key in p) {
 							img_data = {};
+							
+							img_data = _CanvasEngine.extend({}, p[key]);
+							
 							if (typeof p[key] == "string") {
 								img_data.path = p[key];
 							}
-							else {
-								img_data.path = p[key].path;
-								img_data.transparentcolor = p[key].transparentcolor;
+							if (img_data.id) {
+								img_data._id = img_data.id;
 							}
-							materials.push({
-								id: key,
-								path: img_data.path,
-								transparentcolor: img_data.transparentcolor
-							});
+							img_data.id = key;
+
+							materials.push(img_data);
 							
 						}
 					}
 				}
-				
+
 				switch (type) {
 					case "images":
 						load();
@@ -524,6 +717,12 @@ The value can be an object to give several parameters :
 					case "fonts":
 						loadFont();
 					break;
+					case "videos":
+						loadVideos();
+					break;
+					case "data":
+						loadData();
+					break;
 				}
 				
 				function load() {
@@ -532,17 +731,30 @@ The value can be an object to give several parameters :
 						img = new Image();
 						img.onload = function() {
 							var _img;
+							
 							if (materials[i].transparentcolor) {
 								_img = self.transparentColor(img, materials[i].transparentcolor);
+							}
+							if (materials[i].invertcolor) {
+								_img = self.invertColor(img);
 							}
 							else {
 								_img = img;
 							}
+							
 							self.images[materials[i].id] = _img;
+							
 							i++;
 							if(onLoad) onLoad.call(self, _img);
 							load();
 						};
+						img.onerror = function(e) {
+							if (params.ignoreLoadError) {
+								i++;
+								if (onLoad) onLoad.call(self, e);
+								load();
+							}
+						}
 						img.src = materials[i].path;
 					}
 					else {
@@ -561,13 +773,18 @@ The value can be an object to give several parameters :
 					
 					if (materials[i]) {
 						if (CanvasEngine.Sound._manager) {
-							self.sounds[materials[i].id] = soundManager.createSound({
-							  id: materials[i].id,
-							  url:  materials[i].path,
-							  autoLoad: true,
-							  autoPlay: false,
-							  onload: next
-							});
+							if (self.sounds[materials[i].id]) {
+								next();
+							}
+							else {
+								self.sounds[materials[i].id] = soundManager.createSound({
+								  id: materials[i].id,
+								  url:  materials[i].path,
+								  autoLoad: true,
+								  autoPlay: false,
+								  onload: next
+								});
+							}
 						}
 						else {
 							var snd = new Audio(), 
@@ -599,7 +816,9 @@ The value can be an object to give several parameters :
 								next();
 							}, false);
 							snd.addEventListener('error', function (e) { 
-								
+								if (params.ignoreLoadError) {
+									next();
+								}
 							}, false);
 							snd.load();
 							snd.pause();
@@ -620,15 +839,149 @@ The value can be an object to give several parameters :
 				}
 				
 				function loadFont() {
-					if (materials[i]) {
-						var s = document.createElement('style'), 
-						rule = "font-family: '" + materials[i].id + "'; src: url('" + materials[i].path + "');";
-						s.type = "text/css";
-						s.cssText = "@font-face {" + rule + "}";
-						document.getElementsByTagName('head')[0].appendChild(s);
+					var m = materials[i];
+					if (m) {
+						if (m.id == "google" || m.id == "ascender" || m.id == "typekit" || m.id == "monotype" || m.id == "fontdeck") {
+							var obj = {};
+							obj[m.id] = m;
+							if (m._id) {
+								obj[m.id].id = m._id;
+							}
+							if (typeof WebFontConfig == "undefined") {
+								WebFontConfig = {};
+							}
+							WebFontConfig = _CanvasEngine.extend(WebFontConfig, obj);
+						}
+						
+						else {
+							var s = document.createElement('style');
+							var path = self.getBasePath(m.path, true) + self.getFilename(m.path) + "." + 
+								(_CanvasEngine.browser.msie ? "eot" : "ttf");
+							s.innerHTML = "@font-face { font-family: '" + m.id + "'; src: url('" + path + "'); font-weight: normal; font-style: normal;}";
+							document.getElementsByTagName('head')[0].appendChild(s);
+						}
+						
 						i++;
 						if (onLoad) onLoad.call(self, this);
 						loadFont();
+					}
+					else {
+						if (!document.getElementById("google-webfont")) {
+							var wf = document.createElement('script');
+							wf.src = ('https:' == document.location.protocol ? 'https' : 'http') +
+							  '://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js';
+							wf.type = 'text/javascript';
+							wf.async = 'true';
+							wf.id = "google-webfont";
+							var s = document.getElementsByTagName('script')[0];
+							s.parentNode.insertBefore(wf, s);
+						}
+						if (onFinish) onFinish.call(self);
+					}
+				}
+				
+				function loadVideos() {
+				
+					function next() {
+						i++;
+						if (onLoad) onLoad.call(self, this);
+						loadVideos();
+					}
+					
+					/*
+						function supportedVideoFormat(video) {
+						   var returnExtension = "";
+						   if (video.canPlayType("video/webm") =="probably" || 
+							   video.canPlayType("video/webm") == "maybe") {
+								 returnExtension = "webm";
+						   } else if(video.canPlayType("video/mp4") == "probably" || 
+							   video.canPlayType("video/mp4") == "maybe") {
+								 returnExtension = "mp4";
+						   } else if(video.canPlayType("video/ogg") =="probably" || 
+							   video.canPlayType("video/ogg") == "maybe") {
+								 returnExtension = "ogg";
+						   }
+
+						   return returnExtension;
+
+						}
+						*/
+						
+					
+					
+					if (materials[i]) {
+						var v = document.createElement("video");
+						
+						if (materials[i].webcam) {
+							// https://developer.mozilla.org/en-US/docs/WebRTC/navigator.getUserMedia
+							navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+							function successCallback(stream) {
+								window.stream = stream;
+								 if (window.URL) {
+									v.src = window.URL.createObjectURL(stream);
+								} else {
+									v.src = stream;
+								}
+								self.videos[materials[i].id] = v;
+								next();
+							}
+
+							function errorCallback(error){
+							   throw "navigator.getUserMedia error: " + error;
+							}
+
+							navigator.getUserMedia(materials[i].webcam, successCallback, errorCallback);
+						}
+						else {
+							v.src = materials[i].path;
+							v.addEventListener("loadeddata", function() {
+								self.videos[materials[i].id] = v;
+								next();
+							 }, false);
+							v.onerror = function(e) {
+								if (params.ignoreLoadError) {
+									next();
+								}
+								else {
+									throw "Video error #" + e.target.error.code + ": See http://dev.w3.org/html5/spec-author-view/video.html#dom-mediaerror-media_err_aborted" ;
+								}
+							}
+							v.load();
+						}
+						document.body.appendChild(v);
+						v.setAttribute("style", "display:none;");
+						
+					}
+					else {
+						if (onFinish) onFinish.call(self);
+					}
+				
+					
+				
+				}
+				
+				function loadData() {
+				
+					function next() {
+						i++;
+						if (onLoad) onLoad.call(self, this);
+						loadData();
+					}
+				
+					if (materials[i]) {
+						_CanvasEngine.ajax({
+							url: materials[i].path, 
+							dataType: "json",
+							success: function(data) {
+								 self.data[materials[i].id] = data;
+								 next();
+							},
+							error: function() {
+								if (params.ignoreLoadError) {
+									next();
+								}
+							}
+						});
 					}
 					else {
 						if (onFinish) onFinish.call(self);
@@ -640,19 +993,23 @@ The value can be an object to give several parameters :
 /**
 @doc sound
 @class Sound Sound management
-The class uses HTML5 audio but you can use SoundManager 2 (http://www.schillmania.com/projects/soundmanager2/). 
+The class uses HTML5 audio but you can use SoundManager 2 [http://www.schillmania.com/projects/soundmanager2/](http://www.schillmania.com/projects/soundmanager2/). 
 
 Use :
-* Insert the JS script : <script src="soundmanager2.js"></script> (http://www.schillmania.com/projects/soundmanager2/doc/getstarted/#basic-inclusion)
+
+* Insert the JS script : `<script src="soundmanager2.js"></script>` [http://www.schillmania.com/projects/soundmanager2/doc/getstarted/#basic-inclusion](http://www.schillmania.com/projects/soundmanager2/doc/getstarted/#basic-inclusion)
 * Put the swf file to the root of your project. If you want to change the path :
 
-	var canvas = CE.defines("canvas_id", {
-		swf_sound: 'path/to/swf/'
-	}).ready(function() {
+		var canvas = CE.defines("canvas_id", {
+			soundmanager: {
+				url: 'path/to/swf/'
+			}
+		}).ready(function() {
 
-	});
+		});
 
-Assign the path with the property "swf_sound"
+> * See [defines()](?p=core.engine.defines)
+> * See [http://www.schillmania.com/projects/soundmanager2/doc/#sm-config](http://www.schillmania.com/projects/soundmanager2/doc/#sm-config)
 @example
 Using Sound :
 	
@@ -718,6 +1075,22 @@ Here, CanvasEngine fetches the MP3 file in the `sound` folder. If the browser do
 			playOnly: function(id) {
 				this.allStop(id);
 				this.get(id).play();
+				return this;
+			},
+			
+/**
+TODO
+@method playLoop Plays a looping sound
+@param {Integer} id Identifier of the music
+@return  {CanvasEngine.Sound}
+*/
+			playLoop: function(id) {
+				var snd = this.get(id);
+				snd.addEventListener('ended', function() {
+					this.currentTime = 0;
+					this.play();
+				}, false);
+				snd.play();
 				return this;
 			},
 /**
@@ -907,15 +1280,22 @@ and, in `ready` method :
 					params = params || {};
 					if (_class) {
 						this._scenesEnabled[name] = _class;
-						if (this._scenesIndex.indexOf(name) == -1) this._scenesIndex.push(name);
+						if (this._scenesIndex.indexOf(name) == -1) {
+							if (params.transition) {
+								this._scenesIndex = _allExcept.concat(this._scenesIndex);
+							}
+							else {
+								this._scenesIndex.push(name);
+							}
+						}
 						if (params.exitScenes) {
 							params.exitScenes.allExcept = params.exitScenes.allExcept || [];
 							params.exitScenes.allExcept = _allExcept.concat(params.exitScenes.allExcept);
 							_class._load.call(_class, params.exitScenes, params.params);
 						}
 						else {
-							if (!params.overlay) this.exitAll(_allExcept);
-							_class._load.call(_class, {}, params.params);
+							//if (!params.overlay || !params.transition) this.exitAll(_allExcept);
+							_class._load.call(_class, {transition: params.transition}, params.params);
 						}
 						this._scenesNbCall[name]++;
 					}
@@ -1030,26 +1410,44 @@ and, in `ready` method :
 				  _loop: function(canvas) {
 						var self = this, j, s;
 						
+						this.fps = 0
+						var lastCalledTime = new Date().getTime(), delta;
 						
+
 						 
-						function loop() {	
+
+						function loop() {
+							
 							var key,  i=0;
 							
+							delta = (new Date().getTime() - lastCalledTime)/1000;
+						    lastCalledTime = new Date().getTime();
+						    self.fps = 1/delta;
+							 
 							CanvasEngine.Sound._loop();
 							
 							canvas[i].clear();
 							canvas[i]._ctxMouseEvent.clearRect(0, 0, canvas[i].width, canvas[i].height);
-							
 							for (j=0 ; j < self._scenesIndex.length ; j++) {
 								s = self._scenesEnabled[self._scenesIndex[j]];
 								if (s) s._loop();
 							}
-							
+							 
 							requestAnimationFrame(loop);
 						}
 						
 						requestAnimationFrame(loop);
 				 },
+				 
+				 // TODO
+				 getFPS: function() {
+					return ~~this.fps;
+				 },
+				 
+				 // TODO
+				 getPerformance: function() {
+					return ~~(this.getFPS() / 60 * 100);
+				 }
 			}
 	});
 	
@@ -1067,6 +1465,8 @@ and, in `ready` method :
 		ctx: null,
 		_globalElements: {},
 		_ctxTmp: null,
+		_layerDOM: null,
+		_layerParent: null,
 		_ctxMouseEvent: null,
 /**
 @doc canvas/
@@ -1091,9 +1491,32 @@ and, in `ready` method :
 */
 		mouseEvent: true,
 		initialize: function(id) {
-			var self = this;
+			var self = this, w, h;
 			this.id = id;
-			this.element = this._getElementById(id);
+			var el = this._getElementById(id);
+			if (el.tagName != "CANVAS") {
+				this.element = document.createElement('canvas');
+				this._layerDOM = document.createElement('div');
+				w = this.element.width = el.getAttribute('width');
+				h = this.element.height = el.getAttribute('height');
+				this.element.style.position = "absolute";
+				el.style.position = 
+				this._layerDOM.style.position = "relative";
+				el.style.width = w + "px";
+				el.style.height = h + "px";
+				el.style.overflow = 
+				this._layerDOM.style.overflow = "hidden";
+				
+				this._layerDOM.style.width = "100%";
+				this._layerDOM.style.height = "100%";
+
+				el.appendChild(this.element);
+				el.appendChild(this._layerDOM);
+				this._layerParent = el;
+			}
+			else {
+				this.element = el;
+			}
 			this.width = this.element.width;
 			this.height = this.element.height;
 			this.ctx = this.element.getContext('2d');
@@ -1128,14 +1551,16 @@ and, in `ready` method :
 					"touch",
 					"release"
 				];
+				
+			var _el = this._layerParent || this.element;
 			
 			var hammer = null, val;
 			if (this.hammerExist) {
-				hammer = new Hammer(this.element);
+				hammer = new Hammer(_el);
 			}
 			
 			function bindEvent(type) {
-				this.element.addEventListener(type, function(e) {
+				_el.addEventListener(type, function(e) {
 					callback(e, type);
 				}, false);
 			}
@@ -1165,8 +1590,9 @@ and, in `ready` method :
 							if (self.mouseEvent) stage._mousemove(e, val);
 							else continue;
 						}	
+						stage.trigger(type, [e, val]);
 						stage._select(val, function(el_real) {
-							el_real.trigger(type, e, val);	
+							el_real.trigger(type, [e, val]);	
 						});
 						
 					}
@@ -1182,6 +1608,11 @@ and, in `ready` method :
 				bindEvent.call(this, events[i]);
 			}
 			
+			if (!params.contextmenu) {
+				_el.addEventListener('contextmenu', function (event) {
+					event.preventDefault();
+				});
+			}
 		},
 		_elementsByScene: function(name, key, val) {
 			if (!this._globalElements[name]) this._globalElements[name] = {};
@@ -1300,7 +1731,9 @@ In method "ready" of the scene :
 */
 		createPattern: function(img, repeatOption) {
 			repeatOption = repeatOption || "repeat";
-			return this.ctx.createPattern(CanvasEngine.Materials.get(img), repeatOption);
+			var _img = CanvasEngine.Materials.get(img);
+			if (!_img) return;
+			return this.ctx.createPattern(_img, repeatOption);
 		},
 		
 /**
@@ -1327,6 +1760,46 @@ In method "ready" of the scene :
 			return this.ctx.addColorStop(stop, color);
 		},
 		
+		getImageData: function(x, y, w, h) {
+			if (!x) {
+				x = 0;
+				y = 0;
+			}
+			if (!w) {
+				w = this.width;
+				h = this.height;
+			}
+			return this.ctx.getImageData(x, y, w, h);
+		},
+		
+		getImageData: function(x, y, w, h) {
+			if (!x) {
+				x = 0;
+				y = 0;
+			}
+			if (!w) {
+				w = this.width;
+				h = this.height;
+			}
+			return this.ctx.getImageData(x, y, w, h);
+		},
+		
+		putImageData: function(imgData, x, y, dirtyX, dirtyY, dirtyWidth, dirtyHeight) {
+			if (!x) {
+				x = 0;
+				y = 0;
+			}
+			return this.ctx.putImageData(imgData, x, y, dirtyX, dirtyY, dirtyWidth, dirtyHeight);
+		},
+		
+		createImageData: function() {
+			return this.ctx.createImageData.apply(this.ctx, arguments);
+		},
+		
+		toDataURL: function() {
+			return this.ctx.toDataURL();
+		},
+		
 /**
 	@doc canvas/
 	@method clear Erases the content of canvas
@@ -1334,7 +1807,10 @@ In method "ready" of the scene :
 		clear: function() {
 			return this.ctx.clearRect(0, 0, this.width, this.height);
 		},
-		
+	
+/**
+	TODO
+*/	
 		cursor: function() {
 		
 			function handleMouseDown(evt) {
@@ -1347,30 +1823,94 @@ In method "ready" of the scene :
 					
 		},
 		
+/** 
+@doc canvas/
+@method isFullscreen `(>=1.2.6)` Tests if the canvas is full screen (HTML5 only)
+@return {Boolean}
+*/
+		isFullscreen: function() {
+			return document.fullscreen || document.mozFullScreen || document.webkitIsFullScreen;
+		},
+
 /**
-	TODO
-	@method setSize
-	@param width 
-	@param heigh
-	@param scale {String} stretch ; fit
+@doc canvas/
+@method setSize `(>=1.2.6)` Change the size of the canvas or put in full screen
+
+> Tested on :
+
+> * Windows 7 - Chrome 26, Firefox 20, Internet Explorer 9 and 10, Opera 12.15, Safari 5.1.7 
+> * iPad ; iOS 6.1.2 - Safari, Google Chrome
+> * Android 2.3.4 - Default Android Browser, Firefox
+
+@param {Integer|String} width Width in pixels or indicating the size of the expansion : 
+
+* `fullscreen` : Put in full screen (HTML5 Fullscreen)
+
+	Support Fullscreen :
+
+	* Chrome 15+
+	* Firefox 10+
+	* Safari 5.1+
+	* Opera 12.50+
+
+	> For browsers that do not support full screen, we do a full screen in the browser
+
+* `browser` : Put the canvas in full screen in the browser. The canvas is the `fixed` position in CSS
+
+* `reset` : Resets the size of the canvas (the hands and departure)
+
+@param {Integer} height (optional) Height in pixels
+@param {String} scale (optional) type of scale : `stretch` or `fit`
+	
+@example
+
+In `ready` method.
+
+	var _canvas = this.getCanvas(); // "this" is current scene.
+
+Example 1
+
+	_canvas.setSize(400, 300, "fit");
+	
+Example 2
+
+	_canvas.setSize("browser");
+	
+Example 3
+
+	_canvas.setSize("browser", "stretch");
+	
+	
+Example 4
+
+	stage.click(function(e, mouse) {
+		_canvas.setSize("fullscreen", "fit");
+	});
+	
+Example 5
+
+	_canvas.setSize("reset");
+	
+@return {CanvasEngine.Canvas}
 */
 		setSize: function(width, height, scale) {
 			var ratio, self = this,
 				old_w = this.element.width,
-				old_h = this.element.height,
-				scenes = CanvasEngine.Scene.getEnabled();
-			if (width == "browser") {
-				scale = height;
-				width = window.innerWidth;
-				height = window.innerHeight;
-				this.element.style.position = "fixed";
-				this.element.style.top = 0;
-				this.element.style.left = 0;
-
-				
-				window.onresize = function(event) {
-					self.setSize("browser", scale);
-				};
+				old_h = this.element.height, 
+				type = width;
+			if (width == "reset") {
+				width = this._oldSize.width;
+				height = this._oldSize.height;
+				this.element.style.width =
+				this.element.style.height = null;
+				if (this._oldSize.type == "browser") {
+					this.element.style.position = 
+					this.element.style.top = 
+					this.element.style.left = null;
+				}
+				else if (this._oldSize.type == "fullscreen") {
+					document.cancelFullScreen();
+				}
 				
 			}
 			else if (width == "fullscreen") {
@@ -1378,40 +1918,59 @@ In method "ready" of the scene :
 				width = screen.width;
 				height = screen.height;
 				
-				var prop, vendors = ['ms', 'moz', 'webkit', 'o', 'khtml'];
-			
-				for(var x = 0; x < vendors.length && !this.element.requestFullScreen; ++x) {
-					this.element.requestFullScreen = this.element[vendors[x]+'RequestFullScreen'];
-					this.element.cancelFullScreen =  this.element[vendors[x]+'CancelFullScreen'];
-				}
-			
-				this.element.requestFullScreen(); // Element.ALLOW_KEYBOARD_INPUT
-				
-			}
-
-			this.element.width = width;
-			this.element.height = height;
-			
-			if (scale == "fit") {
-				if (width > height) {
-					ratio = width / old_w;
+				if (this.element.requestFullScreen) {
+					this.element.requestFullScreen(); // Element.ALLOW_KEYBOARD_INPUT
 				}
 				else {
-					ratio = height / old_h;
+					width = 
+					type = "browser"; 
 				}
-				for (var name in scenes) {
-					stage = scenes[name].getStage();
-					stage.scaleTo(ratio);
-				}
-			}
-			else if (scale == "stretch") {
-				for (var name in scenes) {
-					stage = scenes[name].getStage();
-					stage.scaleX = width / old_w;
-					stage.scaleY = height / old_h;
-				}
+				
 			}
 			
+			if (width == "browser") {
+				scale = height;
+				width = window.innerWidth;
+				height = window.innerHeight;
+				var el = this.element;
+				if (this._layerParent) {
+					el = this._layerParent;
+				}
+				el.style.position = "fixed";
+				el.style.top =
+				el.style.left = 0;
+				window.onresize = function(event) {
+					if (type == "browser") self.setSize("browser", scale);
+				};
+			}
+			
+
+			if (scale == "fit") {
+				ratio = old_w / old_h;
+				width = height * ratio;
+				
+				this.element.style.width = width + 'px';
+				this.element.style.height = height + 'px';
+
+			}
+			else if (scale == "stretch") {
+				this.element.style.width = width + 'px';
+				this.element.style.height = height + 'px';
+			}
+			else {
+				this.element.width = width;
+				this.element.height = height;
+			}
+			
+			if (this._layerParent) {
+				this._layerParent.style.width = width + "px";
+				this._layerParent.style.height = height + "px";
+			}
+			
+			this._oldSize = {width: old_w, height: old_h, type: type};
+			this.width = width;
+			this.height = height;
+			return this;
 		}
 	});
 	
@@ -1701,7 +2260,9 @@ Create two elements :
 			var images_length = materialLength("images"),
 				sound_length = materialLength("sounds"),
 				font_length = materialLength("fonts"),
-				total = images_length + sound_length + font_length,
+				videos_length = materialLength("videos"),
+				data_length = materialLength("data"),
+				total = images_length + sound_length + font_length + videos_length + data_length,
 				current = 0;
 				
 			if (images_length > 0) {
@@ -1713,7 +2274,13 @@ Create two elements :
 			if (font_length > 0) {
 				materialLoad("fonts");
 			}
-			if (images_length == 0 && sound_length == 0 && font_length == 0) {
+			if (videos_length > 0) {
+				materialLoad("videos");
+			}
+			if (data_length > 0) {
+				materialLoad("data");
+			}
+			if (images_length == 0 && sound_length == 0 && font_length == 0 && videos_length == 0  && data_length == 0) {
 				canvasReady();
 			}
 			
@@ -1744,14 +2311,66 @@ Create two elements :
 				return i;
 			}
 			
+
 			function canvasReady() {
+	
 				if (params.when == "afterPreload") {
 					CanvasEngine.Scene.exitAll(params.allExcept);
 				}
+				
 				if (self.ready) self.ready(self._stage, self.getElement, options);
 				self._stage.trigger("canvas:readyEnd");
 				if (self.model && self.model.ready) self.model.ready.call(self.model);
 				self._isReady = true;
+				
+				if (params.transition) {
+				
+					var scenes = CanvasEngine.Scene.getEnabled(), j=0, stage;
+					for (var s in scenes) {
+						if (s == self.name) continue;
+						stage = scenes[s].getStage();
+						/*CanvasEngine.Timeline.New(scenes[s].getStage()).to({opacity: 0}, 30).call(function() {
+							CanvasEngine.Scene.exitAll(self.name);
+						});*/
+						
+						var _canvas = stage.buffer(1024, 768),
+							ctx = _canvas.getContext('2d');
+						
+						
+						var k=0;
+						var worker = new Worker('workers/transition.js');
+						
+						//;
+						
+						worker.addEventListener("message", function (ev) {
+							if (k==0) {
+								stage.empty();
+							}
+						    ctx.putImageData(ev.data.imageData, 0, 0);
+							stage.drawImage(_canvas);
+							k++;
+							if (ev.data.finish) {
+								worker.terminate();
+								CanvasEngine.Scene.exitAll(self.name);
+							}
+						});
+						
+						var imageData = ctx.getImageData(0, 0, 1024, 768);
+
+						worker.postMessage({
+							imgData: imageData,
+							pattern: CanvasEngine.Materials.Transition.get("t")
+						});
+						
+						stage.on("canvas:refresh", function(el) { // stage is defined in the scene
+							worker.postMessage("");
+						});
+						
+						j++;
+					}
+				}
+			
+				
 			}
 		}
 	});
@@ -1774,6 +2393,7 @@ Create two elements :
 	Class.create("Context", {
 			_cmd: {},
 			img: {},
+			_useClip: false,
 			globalAlpha: 1,
 			// private ; read only
 			_PROPS: ["shadowColor", "shadowBlur", "shadowOffsetX", "shadowOffsetY", "globalAlpha", "globalCompositeOperation", "lineJoin", "lineWidth", "miterLimit", "fillStyle", "font", "textBaseline", "strokeStyle"],
@@ -1783,7 +2403,7 @@ Create two elements :
 			},
 			
 /**
-@doc draw/
+obsolete
 @method addMethod Adds methods for 2d context
 @param {String|Array} names Method(s) Name(s)
 @param {String} type (optional) Type of the method:
@@ -1799,25 +2419,34 @@ Create two elements :
 	stage.append(el);
 
 */
-			addMethod: function(names, type) {
+			_setMethod: function(name, type) {
+				var self = this;
+				this[name] = function() {
+					var method = type == "cmd" ? "_addCmd" : "draw";
+					self[method](name, arguments);
+				};
+			},
+			
+			/*addMethod: function(names, type) {
 				var self = this;
 				type = type || "cmd";
 				if (!(names instanceof Array)) {
 					names = [names];
 				}
 				
-				function addCmd(name) {
-					self[name] = function() {
-						var method = type == "cmd" ? "_addCmd" : "draw";
-						self[method](name, arguments);
-					};
+				function addCmd(name, method) {
+					var self = this;
+					
 				}
 				
 				for (var i=0 ; i < names.length ; i++) {
-					addCmd(names[i]);
+					
+					this._setMethod(names[i], type);
+						
+					//addCmd.call(this, names[i], method);
 				}
 				
-			},
+			},*/
 			
 /**
 	@doc draw/
@@ -1924,12 +2553,12 @@ In the method "ready" in the scene class :
 				//buffer = CanvasEngine.Materials.createBuffer(img, this.color_key);
 		
 				
-				function f(t) {
+				/*function f(t) {
 					for (var i=1 ; i < t.length ; i++) {
 						t[i] = Math.round(t[i]);
 					}
 					return t;
-				}
+				}*/
 				
 				if (sw !== undefined) {
 					array = [_img, sx, sy, sw, sh, dx, dy, dw, dh];
@@ -1955,6 +2584,33 @@ In the method "ready" in the scene class :
 				
 				this._addCmd("drawImage", array);
 			},
+			
+			// Do not make a loop for performance reasons
+			moveTo: function() { this._addCmd.call(this, "moveTo", arguments); },
+			lineTo: function() { this._addCmd.call(this, "lineTo", arguments); },
+			quadraticCurveTo: function() { this._addCmd.call(this, "quadraticCurveTo", arguments); },
+			bezierCurveTo: function() { this._addCmd.call(this, "bezierCurveTo", arguments); },
+			beginPath: function() { this._addCmd.call(this, "beginPath", arguments); },
+			closePath: function() { this._addCmd.call(this, "closePath", arguments); },
+			clip: function() { 
+				this._useClip = true;
+				this._addCmd.call(this, "clip", arguments); 
+			},
+			rect: function() { this._addCmd.call(this, "rect", arguments); },
+			arc: function() { this._addCmd.call(this, "arc", arguments); },
+			arcTo: function() { this._addCmd.call(this, "arcTo", arguments); },
+			addColorStop: function() { this._addCmd.call(this, "addColorStop", arguments); },
+			isPointInPath: function() { this._addCmd.call(this, "isPointInPath", arguments); },
+			
+			rotate: function() { this.draw.call(this, "rotate", arguments); },
+			translate: function() { this.draw.call(this, "translate", arguments); },
+			transform: function() { this.draw.call(this, "transform", arguments); },
+			setTransform: function() { this.draw.call(this, "setTransform", arguments); },
+			resetTransform: function() { this.draw.call(this, "resetTransform", arguments); },
+			clearRect: function() { this.draw.call(this, "clearRect", arguments); },
+			scale: function() { this.draw.call(this, "scale", arguments); },
+
+			
 			/**
 				@doc draw/
 				@method arc See http://www.w3schools.com/html5/canvas_arc.asp
@@ -2051,29 +2707,36 @@ In the method "ready" in the scene class :
 				}
 				
 			},
+			
+			_bufferEvent: function(name, _params) {
+				var ctx_mouse = this._canvas[0]["_ctxMouseEvent"];
+				if (this.hasEvent() || this._useClip) {
+					ctx_mouse[name].apply(this._canvas[0]["_ctxMouseEvent"], _params);
+					if (name == "drawImage") {
+						ctx_mouse.globalCompositeOperation = 'source-atop';
+						ctx_mouse.fillStyle = '#' + this.color_key;
+						ctx_mouse.fillRect(this._buffer_img.x, this._buffer_img.y, this._buffer_img.width, this._buffer_img.height);
+					}
+				}
+			},
+			
 			draw: function(name, params, propreties) {
 			
-				//CE.benchmark("draw method");
-				layer =  "ctx";
-				params = params || [];
-				propreties = propreties || {};
+				
 
+				var layer =  "ctx", ctx;
+				if (!params) params = [];
+				if (!propreties) propreties = {};
+				/*params = params || [];
+				propreties = propreties || {};*/
+				
 				var ctx = this.getScene().getCanvas()._ctxTmp;
+				
 				var cmd, array_cmd = {};
-				var cmd_propreties = [];
+				var cmd_propreties = {};
 				var isCmd = true, applyBuffer = 1, bufferEventForce = false;
 				
-				var bufferEvent = function(name, _params) {
-					var ctx_mouse = this._canvas[0]["_ctxMouseEvent"];
-					if (this.hasEvent() || this.hasCmd("clip")) {
-						ctx_mouse[name].apply(this._canvas[0]["_ctxMouseEvent"], _params);
-						if (name == "drawImage") {
-							ctx_mouse.globalCompositeOperation = 'source-atop';
-							ctx_mouse.fillStyle = '#' + this.color_key;
-							ctx_mouse.fillRect(this._buffer_img.x, this._buffer_img.y, this._buffer_img.width, this._buffer_img.height);
-						}
-					}
-				};
+				
 				
 				var bufferProp = function(cmd_propreties, key, value) {
 					if (cmd_propreties[key] || this.forceEvent) {
@@ -2094,11 +2757,11 @@ In the method "ready" in the scene class :
 				else {
 					array_cmd = this._cmd;
 				}
-				for (var name in array_cmd) {
-					cmd = array_cmd[name];
+				for (var _name in array_cmd) {
+					cmd = array_cmd[_name];
 					for (var j=0 ; j < this._canvas.length ; j++) {
 						cmd_propreties = cmd.propreties;
-						if (isCmd && name == "restore") {	
+						if (isCmd && _name == "restore") {	
 							this.clearPropreties();
 						}
 						if (cmd_propreties) {
@@ -2127,16 +2790,16 @@ In the method "ready" in the scene class :
 							}
 						}
 						if (ctx) {
-							ctx[name].apply(ctx, cmd.params);
+							ctx[_name].apply(ctx, cmd.params);
 						}
 						else {
-							this._canvas[j][layer][name].apply(this._canvas[j][layer], cmd.params);
+							this._canvas[j][layer][_name].apply(this._canvas[j][layer], cmd.params);
 							if (this.forceEvent) {
-								if (name == "rect") {
-									bufferEvent.call(this, "fillRect", cmd.params);
+								if (_name == "rect") {
+									this._bufferEvent("fillRect", cmd.params);
 								}
 							}
-							bufferEvent.call(this, name, cmd.params);
+							this._bufferEvent(_name, cmd.params);
 						}
 					}
 				}
@@ -2158,7 +2821,8 @@ In the method "ready" in the scene class :
 			},
 			
 			hasCmd: function(name) {
-				return this._cmd[name];
+				// http://jsperf.com/test-an-object-is-not-undefined
+				return this._cmd[name] !== undefined;
 			},
 /**
 @doc draw/
@@ -2176,6 +2840,9 @@ In `ready` method :
 
 */
 			removeCmd: function(name) {
+				if (name == "clip") {
+					this._useClip = false;
+				}
 				delete this._cmd[name];
 			}
 	});
@@ -2321,6 +2988,8 @@ In `ready` method :
 		_buffer_img: null,
 		_out: 1,
 		_over: 0,
+		_nbEvent: 0,
+		_onRender: [],
 		_pack: null,
 /**
 	@doc manipulate/
@@ -2351,7 +3020,7 @@ In `ready` method :
 			while (key in elements);
 			
 			
-			this.addMethod([
+			/*this.addMethod([
 				"moveTo",
 				"lineTo",
 				"quadraticCurveTo",
@@ -2362,9 +3031,9 @@ In `ready` method :
 				"rect",
 				"arc",
 				"addColorStop"
-			], "cmd");
+			], "cmd");*/
 			
-			this.addMethod([
+			/*this.addMethod([
 				"rotate",
 				"translate",
 				"transform",
@@ -2372,7 +3041,7 @@ In `ready` method :
 				"resetTransform",
 				"scale",
 				"clearRect"
-			], "draw");
+			], "draw");*/
 			
 			this.color_key = key;
 			this.scene.getCanvas()._elementsByScene(this.scene.name, key, this);
@@ -2390,7 +3059,7 @@ In `ready` method :
 */
 		refresh: function() {
 			//this.clear();
-			this._refresh(true);
+			this._refresh(true, true);
 			this._canvas._event_mouse = null;
 		},
 		/**
@@ -2400,15 +3069,17 @@ In `ready` method :
 		
 		*/
 		_refresh: function(init, children, ctx) {
-			children = children === undefined ? true : children;
-			
-
-			if (this.stage.trigger) this.stage.trigger("canvas:refresh", this);
+	
+			//children = children === undefined ? true : children;
+		
+			if (this.stage._onRefresh) this.stage._onRefresh(this);
 			
 			if (!this._visible) {
 				this._loop();
 				return;
 			}
+			
+			
 
 			if (!this.real_pause) {
 
@@ -2432,12 +3103,14 @@ In `ready` method :
 			
 				this.save();
 					
-				this.setTransform(1, 0, 0, 1, 0, 0);
+				// this.setTransform(1, 0, 0, 1, 0, 0);
 				
 				this.real_scale_x = this.parent.real_scale_x * this.scaleX;
 				this.real_scale_y = this.parent.real_scale_y * this.scaleY;
-				this.real_y = (this.parent.real_y + this.y) * (this.parent.scaleY == 1 ? 1 : this.parent.real_scale_x);
-				this.real_x = (this.parent.real_x + this.x) * (this.parent.scaleX == 1 ? 1 : this.parent.real_scale_y);
+				// this.real_y = (this.parent.real_y + this.y) * (this.parent.scaleY == 1 ? 1 : this.parent.real_scale_x);
+				// this.real_x = (this.parent.real_x + this.x) * (this.parent.scaleX == 1 ? 1 : this.parent.real_scale_y);
+				this.real_y = (this.parent.real_y + this.y);
+				this.real_x = (this.parent.real_x + this.x);
 				
 				this.real_skew_x = this.parent.real_skew_x + this.skewX;
 				this.real_skew_y = this.parent.real_skew_y + this.skewY ;
@@ -2448,6 +3121,8 @@ In `ready` method :
 				else {
 					this.real_opacity = this.opacity;
 				}
+				
+				
 				
 				this.real_pause = init ? this.pause : this.parent.real_pause;
 				
@@ -2462,20 +3137,29 @@ In `ready` method :
 				}
 				var regX = this.real_x + this.regX;
 				var regY = this.real_y + this.regY;
-				this.translate(regX, regY);
-				if (this.rotation != 0) {
-					this.rotateDeg(this.rotation);
+				if (this.regX != 0 || this.regY != 0) {
+					this.translate(regX, regY);
 				}
-				this.scale(this.real_scale_x, this.real_scale_y);
-				this.transform(1, this.real_skew_x, this.real_skew_y, 1, 0, 0);
+				if (this.real_rotate != 0) {
+					this.rotateDeg(this.real_rotate);
+				}
+				if (this.real_scale_x != 1 || this.real_scale_y != 1) {
+					this.scale(this.real_scale_x, this.real_scale_y);
+				}
+				if (this.real_skew_x != 0 || this.real_skew_y != 0) {
+					this.transform(1, this.real_skew_x, this.real_skew_y, 1, 0, 0);
+				}
 				this.translate(this.real_x,  this.real_y);
-				this.translate(-regX, -regY);
-			}
+				if (this.regX != 0 || this.regY != 0) {
+					this.translate(-regX, -regY);
+				}
+			} 
 			
 			
 			this.draw(ctx);
 			
-			if (!this.hasCmd("clip")) {
+			
+			if (!this._useClip) {
 				this.restore();
 			}
 		
@@ -2488,10 +3172,40 @@ In `ready` method :
 				}
 			}
 			
-			if (this.hasCmd("clip")) {
+			if (this._useClip) {
 				this.restore();
 			}
+			
 		},
+		
+		setX: function(x) {
+			// var perf = CanvasEngine.Scene.getPerformance();
+			// this.x = x * ~~(100 / perf);
+			this.x = x;
+		},
+		
+		setY: function(y) {
+			this.y = y;
+		},
+		
+		buffer: function(w, h) {
+			var children = this.children(),
+				canvas = document.createElement("canvas"),
+				ctx = canvas.getContext('2d'),
+				scene = this.getScene(),
+				_canvas = this.scene.getCanvas();
+			
+			canvas.width = w || _canvas.width;
+			canvas.height = h || _canvas.height;
+			
+			this.scene.getCanvas()._ctxTmp = ctx;
+			for (var i=0 ; i < children.length ; i++) {
+				this._children[i]._refresh(true, true);
+			}
+			this.scene.getCanvas()._ctxTmp = null;
+			return canvas;
+		},
+
 		/**
 			@doc manipulate/
 			@method rotateTo A rotation element in a direction
@@ -2655,7 +3369,7 @@ In method ready :
 				this._children.push(el);
 				el.parent = this;
 				el._index = this._children.length-1;
-				el._refresh();				
+				el._refresh(false, true);				
 			}
 			return arguments;
 		},
@@ -2764,7 +3478,7 @@ In method ready
 			
 			this.scene.getCanvas()._ctxTmp = ctx;
 			for (var i=0 ; i < children.length ; i++) {
-				this._children[i]._refresh();
+				this._children[i]._refresh(true, true);
 			}
 			this.scene.getCanvas()._ctxTmp = null;
 			if (!free_memory) this._pack = children;
@@ -3153,8 +3867,19 @@ You can retrieve the mouse events
 Apply on a specific element :
 
     var el = this.createElement();
-    el.on("click", function(e) {
+    el.on("click", function(e, mouse) {
 		this.opacity = 0.5;
+	});
+	
+** Callback parameter **
+
+* event {Event} : a mouse event
+* mouse {Object} `(>= 1.2.6)` : Position the mouse on the canvas. `{x: , y: }`
+
+Example :
+
+    stage.on("mousemove", function(e, mouse) {
+		console.log(mouse.x, mouse.y);
 	});
 
 ## Events with Hammer.js  ##
@@ -3192,9 +3917,13 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 			events = events.split(" ");
 			for (var i=0 ; i < events.length ; i++) {
 				event = events[i];
-				if (CanvasEngine.mobileUserAgent && event == "click") event = "touch";
+				// Using specific properties for performance
+				if (event == "canvas:refresh") this.stage._onRefresh = callback;
+				else if (event == "canvas:render") this._onRender.push(callback);
+				else if (CanvasEngine.mobileUserAgent && event == "click") event = "touch";
 				if (!this._listener[event]) {
 					this._listener[event] = [];
+					this._nbEvent++;
 				}
 				this._listener[event].push(callback);
 			}
@@ -3215,15 +3944,20 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 				if (callback) {
 					for (var i=0 ; i < this._listener[event].length ; i++) {
 						if (this._listener[event][i] == callback) {
-							delete this._listener[event][i];
+							this._listener[event].splice(i, 1);
 							break;
 						}
 					}
 				}
 				else {
 					if (this._listener[event]) {
-						this._listener[event] = [];
+						delete this._listener[event];
+						this._nbEvent--;
 					}
+				}
+				if (this._listener[event] && this._listener[event].length == 0) {
+					delete this._listener[event];
+					this._nbEvent--;
 				}
 			}
 		},
@@ -3244,7 +3978,7 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 @param {Boolean}
 */
 		hasEvent: function() {
-			return _CanvasEngine.objectSize(this._listener) > 0;
+			return this._nbEvent > 0;
 		},
 		
 /**
@@ -3254,7 +3988,7 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 @param {Object|Array} params Params
 */
 		trigger: function(events, e) {
-			var event, _trigger = false;;
+			var event, _trigger = false;
 			events = events.split(" ");
 			if (!(e instanceof Array)) {
 				e = [e];
@@ -3316,10 +4050,9 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 			this.on("mouseout", callback);
 		},
 		_loop: function() {
-			/*for (var i=0 ; i < this._loop_listener.length ; i++) {
-				this._loop_listener[i].call(this);
-			}*/
-			this.trigger("canvas:render");
+			for (var i=0 ; i < this._onRender.length ; i++) {
+				if (this._onRender[i]) this._onRender[i].call(this);
+			}
 		},
 /**
 @doc events/
