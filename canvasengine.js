@@ -744,6 +744,10 @@ The value can be an object to give several parameters :
 							
 							self.images[materials[i].id] = _img;
 							
+							if (materials[i].transition) {
+								self.Transition.set(materials[i].id);
+							}
+							
 							i++;
 							if(onLoad) onLoad.call(self, _img);
 							load();
@@ -1294,8 +1298,8 @@ and, in `ready` method :
 							_class._load.call(_class, params.exitScenes, params.params);
 						}
 						else {
-							//if (!params.overlay || !params.transition) this.exitAll(_allExcept);
-							_class._load.call(_class, {transition: params.transition}, params.params);
+							if (!params.overlay && !params.transition) this.exitAll(_allExcept);
+							_class._load.call(_class, params, params.params);
 						}
 						this._scenesNbCall[name]++;
 					}
@@ -1319,7 +1323,7 @@ and, in `ready` method :
 						_class._exit.call(_class);
 						for (var i=0 ; i < this._scenesIndex.length ; i++) {
 							if (this._scenesIndex[i] == name) {
-								delete this._scenesIndex[i];
+								this._scenesIndex.splice(i, 1);
 								break;
 							}
 						}
@@ -1760,18 +1764,7 @@ In method "ready" of the scene :
 			return this.ctx.addColorStop(stop, color);
 		},
 		
-		getImageData: function(x, y, w, h) {
-			if (!x) {
-				x = 0;
-				y = 0;
-			}
-			if (!w) {
-				w = this.width;
-				h = this.height;
-			}
-			return this.ctx.getImageData(x, y, w, h);
-		},
-		
+
 		getImageData: function(x, y, w, h) {
 			if (!x) {
 				x = 0;
@@ -2006,6 +1999,7 @@ The resources defined in "Materials" are loaded and regularly calls the method "
 "stage" is an object of type "Element". This is the main element of the scene containing all child elements to create.
 */
 	Class.create("Scene", {
+		id: 0,
 		_stage: {},
 		_events: [],
 		_pause: false,
@@ -2047,6 +2041,7 @@ The resources defined in "Materials" are loaded and regularly calls the method "
 		//_isExit: false,
 		initialize: function(obj) {
 			var ev, self = this;
+			this.id = _CanvasEngine.uniqid();
 			this._events = obj.events;
 		},
 		_loop: function() {
@@ -2238,12 +2233,15 @@ Create two elements :
 		_load: function(params, options) {
 			var self = this;
 			params = params || {};
+			
 			options = options || {};
 			this._stage = CanvasEngine.Element["new"](this);
+			
 			this._index = CanvasEngine.Scene._scenesIndex.length-1;
 			for (var i=0 ; i < CanvasEngine.el_canvas.length ; i++) {
 				CanvasEngine.el_canvas[i].stage = this._stage;
 			}
+
 			
 			if (this.model) {		
 				if (this._events) {
@@ -2311,7 +2309,7 @@ Create two elements :
 				return i;
 			}
 			
-
+			
 			function canvasReady() {
 	
 				if (params.when == "afterPreload") {
@@ -2323,30 +2321,59 @@ Create two elements :
 				if (self.model && self.model.ready) self.model.ready.call(self.model);
 				self._isReady = true;
 				
-				if (params.transition) {
 				
-					var scenes = CanvasEngine.Scene.getEnabled(), j=0, stage;
-					for (var s in scenes) {
-						if (s == self.name) continue;
-						stage = scenes[s].getStage();
-						/*CanvasEngine.Timeline.New(scenes[s].getStage()).to({opacity: 0}, 30).call(function() {
-							CanvasEngine.Scene.exitAll(self.name);
-						});*/
+				
+				if (params.transition) {
+					if (params.transition === true) {
+						params.transition = {type: "fade"};
+					}
+					self.execTransition(params.transition.type, params.transition, params.overlay);
+					
+				}
+			
+				
+			}
+		},
+		execTransition: function(type, params, is_overlay) {
+			var self = this, _canvas;
+			
+			params = params || {};
+			params = _CanvasEngine.extend({
+				frames: 30
+			}, params);
+			
+			
+			var scenes = CanvasEngine.Scene.getEnabled(), j=0, stage;
+			for (var s in scenes) {
+				if (scenes[s].id == this.id) continue;
+				stage = scenes[s].getStage();
+				_canvas = scenes[s].getCanvas();
+				switch (type) {
+					case "fade":
+						if (!CanvasEngine.Timeline) {
+							throw "Add the Timeline class for transitions";
+						}
 						
-						var _canvas = stage.buffer(1024, 768),
-							ctx = _canvas.getContext('2d');
+						CanvasEngine.Timeline.New(stage).to({opacity: 0}, params.frames).call(function() {
+							if (!is_overlay) CanvasEngine.Scene.exitAll(self.name);
+							if (params.finish) params.finish.call(self);
+							scenes[s].zIndex(0);
+						});
 						
-						
+					break;
+					case "image":
+						var _canvas = stage.buffer(_canvas.width, _canvas.height),
+						ctx = _canvas.getContext('2d');
+				
+				
 						var k=0;
 						var worker = new Worker('workers/transition.js');
-						
-						//;
-						
+
 						worker.addEventListener("message", function (ev) {
 							if (k==0) {
 								stage.empty();
 							}
-						    ctx.putImageData(ev.data.imageData, 0, 0);
+							ctx.putImageData(ev.data.imageData, 0, 0);
 							stage.drawImage(_canvas);
 							k++;
 							if (ev.data.finish) {
@@ -2355,11 +2382,11 @@ Create two elements :
 							}
 						});
 						
-						var imageData = ctx.getImageData(0, 0, 1024, 768);
+						var imageData = ctx.getImageData(0, 0, _canvas.width, _canvas.height);
 
 						worker.postMessage({
 							imgData: imageData,
-							pattern: CanvasEngine.Materials.Transition.get("t")
+							pattern: CanvasEngine.Materials.Transition.get(params.id)
 						});
 						
 						stage.on("canvas:refresh", function(el) { // stage is defined in the scene
@@ -2367,9 +2394,9 @@ Create two elements :
 						});
 						
 						j++;
-					}
+					break;
 				}
-			
+				
 				
 			}
 		}

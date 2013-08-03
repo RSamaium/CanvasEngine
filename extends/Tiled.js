@@ -54,7 +54,8 @@ Class.create("Tiled", {
 		this.el = el;
 		this.url = url;
 		this.scene = scene;
-		CanvasEngine.getJSON(this.url, function(data) {
+		
+		function ready(data) {
 			self.tile_h = data.tileheight;
 			self.tile_w = data.tilewidth;
 			self.width = data.width;
@@ -79,7 +80,15 @@ Class.create("Tiled", {
 				self.tilesetsIndexed[m] = self.tilesetsIndexed[_id];
 			}
 			self._draw();
-		});
+		}
+		
+		if (typeof url === 'string') {
+			CanvasEngine.getJSON(this.url, data);
+		}	
+		else {
+			ready(url);
+		}
+		
 	},
 	_draw: function() {
 		this.map = this.scene.createElement();
@@ -152,14 +161,14 @@ Class.create("Tiled", {
 	},
 	 /**
 		@doc tiled/
-		@method getTileWidth Returns the height of the map in tiles 
+		@method getTileHeight Returns the height of the map in tiles 
 		@return {Integer}
 	 */
 	getTileHeight: function() {
 		return this.tile_h;
 	},
 	 /**
-		@method getTileWidth Returns the width of the map in pixels
+		@method getWidthPixel Returns the width of the map in pixels
 		@return {Integer}
 	 */
 	getWidthPixel: function() {
@@ -167,7 +176,7 @@ Class.create("Tiled", {
 	},
 	 /**
 		@doc tiled/
-		@method getTileWidth Returns the height of the map in pixels
+		@method getHeightPixel Returns the height of the map in pixels
 		@return {Integer}
 	 */
 	getHeightPixel: function() {
@@ -271,17 +280,22 @@ Consider adding inserting Tiled.js
 		ready: function(stage) {
 			 var el = this.createElement();
 			 var tiled = canvas.Tiled.new();
-			tiled.load(this, el, "map/map.json");
+			
 			tiled.ready(function() {
 				 var tile_w = this.getTileWidth(),
 					 tile_h = this.getTileHeight(),
 					 layer_object = this.getLayerObject();
 				 stage.append(el);
 			});
-			
+			tiled.load(this, el, "map/map.json");
 		}
 	});
 
+1. `mytileset` in material object is the name of tileset in Tiled Map Editor
+2. `getLayer()` retrieves a layer. The name is the same as in Tiled Map Editor
+
+![](http://canvasengine.net/presentation/images/tiled2.png)
+	
 */
 var Tiled = {
 	Tiled: {
