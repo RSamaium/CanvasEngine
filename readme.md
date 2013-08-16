@@ -114,27 +114,104 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 
 ## Features
 
+**Low-level API**
+
+* Fullscreen support (Supported platforms).
+* Multiple image file formats: DDS, JPG, PNG and TGA.
+    * Define a transparent color
 * Scene Structure
-* Overlay scenes
+    * Overlay scenes 
+    * Pause scene
 * Multiplayer model
 * Preloading
-* Animations
-* Timeline
-* Collision (beetween entities and grid)
-* Keyboard and Gamepad
-* Windows
-* Sound
-* Text and Game effects
-* Scrolling
-* Level Design
-* Save & Load
-* Spritesheet Management
-* Mouse Control & Multi Touch
+    * Get the percentage of loading
 * Elements Manipulation
+    * Manipulation : jQuery syntaxe
+    * Draw : HTML5 Canvas API syntaxe
+* Utilities
+    * merge object
+    * class
 
-## Editors
+**Windows**
+
+* Dialog box with the outline
+* Cursor
+
+**Animations**
+
+* Set an animation from a spritesheet
+* Frequence and animation speed
+* Sequence of multiple image
+* Creating a custom animation with multiple sequences
+* Display once, loop or temporary
+
+**Timeline (aka Tween)**
+
+* Easy to make interpolations effects
+* 29 Effects :
+    * easeInQuad, easeOutQuad, easeInCubic, easeOutCubic, etc.
+* Loop
+
+**Collision**
+
+* Entities model
+* Test collision with virtual grid
+* Polygon intersection and Contains Point.
+
+**Text**
+
+* Set maximum line width
+* Display effect
+    * Line by line
+    * Character by character
+* font file formats : TTF, EOT
+* external fonts  
+    * Google Fonts
+    * Fontdeck
+    * Fonts.com
+    * Typekit
+
+**Sound**
+
+* Multiple sound file formats: OGG, WAV, MP3.
+* Fading effects
+* Web Audio or SoundManager2
+
+**Effects**
+
+* Change tone screen
+* Perform a flash
+* Shake screen
+
+**Scrolling**
+
+
+**Level Design**
+
 * Tiled Map Editor (http://www.mapeditor.org)
 * Gleed 2d (http://gleed2d.codeplex.com)
+
+**Save & Load**
+
+* Encoding with BISON.js
+
+**Spritesheet Management**
+
+**Input**
+
+* Access to input types: Keyboard, Mouse, Xbox360 Pad, Joysticks
+* click, dbclick, mousemove, mouseup, mousedown, mouseout, mouseover*
+* Multi-Touch with Hammer.js : 
+    * hold
+    * tap
+    * doubletap
+    * drag, dragstart, dragend, dragup, dragdown, dragleft, dragright
+    * swipe, swipeup, swipedown, swipeleft, swiperight
+    * transform, transformstart, transformend
+    * rotate
+    * pinch, pinchin, pinchout
+    * touch (gesture detection starts)
+    * release (gesture detection ends)
 
 ## Roadmap (in order)
 
@@ -165,6 +242,8 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 * [robwalch](https://github.com/robwalch) - [commit](https://github.com/robwalch/CanvasEngine/commit/e55909952c26ba1ec3e3d5bd6f733ddfffc4b647)
 
 ## Changelog
+
+### v1.2.8
 
 ### v1.2.7
 

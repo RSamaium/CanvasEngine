@@ -50,8 +50,14 @@ Class.create("Text", {
 	construct: function(text) {
 		text = ""+text;
 		this.el = this.scene.createElement();
+		text = this._transformHTML(text);
 		this.text = text.split("\n");
 		this.lines = [];
+	},
+	
+	_transformHTML: function(text) {
+		text = text.replace(/<br>/g, "\n");
+		return text;
 	},
 	
 	setImageText: function(img_id, letters, size, rowsAndCols) {
@@ -284,24 +290,24 @@ In `ready` method :
 			text = this.text[i];
 			if (s.lineWidth) {
 				testWidth = canvas.measureText(text, s.size, s.family).width;
-				if (testWidth < s.lineWidth) {
-					drawLine(pos, text);
+				text_line = "";
+				words = text.split(" ");
+				for(var n = 0; n < words.length; n++) {
+				  testLine = text_line + words[n] + " ";
+				  metrics = canvas.measureText(testLine, s.size, s.family);
+				  testWidth = metrics.width;
+				  if (testWidth > s.lineWidth) {
+					drawLine(pos, text_line);
+					text_line = words[n] + " ";
+					pos++;
+				  }
+				  else {
+					text_line = testLine;
+				  }
 				}
-				else {
-					words = text.split(" "), pos = 0;
-					for(var n = 0; n < words.length; n++) {
-					  testLine = text_line + words[n] + " ";
-					  metrics = canvas.measureText(testLine);
-					  testWidth = metrics.width;
-					  if (testWidth > s.lineWidth) {
-						drawLine(pos, text_line);
-						text_line = words[n] + " ";
-						pos++;
-					  }
-					  else {
-						text_line = testLine;
-					  }
-					}
+				if (testWidth < s.lineWidth) {
+					drawLine(pos, text_line);
+					pos++;
 				}
 			}
 			else {
@@ -350,6 +356,7 @@ In `ready` method :
 */
 var Text = {
 	Text: {
+		New: function() { return this["new"].apply(this, arguments); },
 		"new": function(scene, text) {
 			return Class["new"]("Text", [scene, text]);
 		}

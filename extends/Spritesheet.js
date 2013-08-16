@@ -110,7 +110,7 @@ Equivalent to
 			dest_y = +(dest.y || "0")-tile[6],
 			dest_w = dest.w || tile[2],
 			dest_h = dest.h || tile[3];
-		
+
 		el.drawImage(this.image, tile[0], tile[1], tile[2], tile[3], dest_x, dest_y, dest_w, dest_h);
 	},
 

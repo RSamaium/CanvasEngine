@@ -359,10 +359,13 @@ CanvasEngine.arraySplice = function(val, array) {
 * success {Function}  (optional) Callback if the request was successful
 */
 CanvasEngine.ajax = function(options) {
-
-	if (!options) options = {};
-	options.url = options.url || "./";
-	options.type = options.type || "GET";
+	
+	options = CanvasEngine.extend({
+		url: "./",
+		type: "GET",
+		statusCode: {}
+	}, options);
+	
 	options.data = options.data ? JSON.stringify(options.data) : null;
 	
 	if (fs) {
@@ -388,26 +391,37 @@ CanvasEngine.ajax = function(options) {
 		catch (e3) {  xhr = false;   }
 		}
 	}
+	
+	function onSuccess() {
+		var ret;
+		if (options.success) {
+			ret = xhr.responseText;
+			if (options.dataType == 'json') {
+				ret = CanvasEngine.parseJSON(ret);
+			}
+			else if (options.dataType == 'xml') {
+				ret = xhr.responseXML;
+			}
+			options.success(ret);
+		}
+	}
 
-	xhr.onreadystatechange  = function() { 
-		 var ret;
-		 if(xhr.readyState  == 4)  {
-			  if(xhr.status  == 200) {
-					if (options.success) {
-						ret = xhr.responseText;
-						if (options.dataType == 'json') {
-							ret = CanvasEngine.parseJSON(ret);
-						}
-						else if (options.dataType == 'xml') {
-							ret = xhr.responseXML;
-						}
-						options.success(ret);
-					}
+	xhr.onreadystatechange  = function() {
+		 if (xhr.readyState  == 4)  {
+			  if (options.statusCode  && options.statusCode[xhr.status]) options.statusCode[xhr.status]();
+			  if (xhr.status  == 200) {
+				 onSuccess();
+			  }
+			  else  {
+				 if (options.error) options.error(xhr);
 			  }
 		 }
 	}; 
 	
    xhr.open(options.type, options.url,  true); 
+   if (options.mimeType) {
+		xhr.overrideMimeType(options.mimeType);
+   }
    xhr.send(options.data); 
 
 }
@@ -657,6 +671,87 @@ CanvasEngine.extend = function(obj1, obj2, clone) {
 	return Kernel._extend(obj1, obj2, clone);
 }
 
+/*CanvasEngine.browser = function() {
+	var ua = navigator.userAgent.toLowerCase();
+	var browser = {};
+	
+	function testNavigator(name) {
+		var patt = new RegExp (name);
+		browser[name] = {};
+		browser[name] = patt.test(ua) && (name == "mozilla" ? !/webkit/.test(ua) : true);
+		if (browser[name]
+	}
+	
+	
+	browser.webkit = /webkit/.test(ua);
+	browser.opera = /opera/.test(ua);
+	browser.msie = /msie/.test(ua);
+	/msie\/([^ ]+)/.exec();
+	return browser;
+}*/
+
+/**
+@doc utilities/
+@static
+@property browser `(>= 1.2.8)` Retrieves the methods and properties related to browser.  It contains flags for each of the four most prevalent browser classes (Internet Explorer, Mozilla, Webkit, and Opera) as well as version information.
+
+* `mozilla` : Tests if the browser is Mozilla
+* `webkit` : Tests if the browser is Webkit (Chrome, Safari)
+* `opera` : Tests if the browser is Opera
+* `msie` : Tests if the browser is Internet Explorer
+
+Example
+
+	if (CE.browser.msie) {
+		// if browser is Internet Explorer
+	}
+
+Knowing the browser version :
+
+* `version`
+
+Example
+
+	if (CE.browser.msie && parseInt(CE.browser.version) == 9) { // crop value
+		// if browser is Internet Explorer 9
+	}
+	
+Knowing the browser used by the user :
+
+* `which()`. Returns the object: `{ua: , version: }`
+
+Example
+	
+	CE.browser.which(); // returns {ua: "mozilla", version: "22.0"}
+
+@type Object
+*/
+
+if (typeof exports == "undefined") {
+	var _ua = navigator.userAgent.toLowerCase(),
+	_version = /(chrome|firefox|msie|version)(\/| )([0-9.]+)/.exec(_ua);
+	CanvasEngine.browser = {
+		mozilla: /mozilla/.test(_ua) && !/webkit/.test(_ua),
+		webkit: /webkit/.test(_ua),
+		opera: /opera/.test(_ua),
+		msie: /msie/.test(_ua),
+		version: _version ? _version[3] : null,
+		which: function() {
+			var is;
+			CanvasEngine.each(["mozilla", "webkit", "opera", "msie"], function(i, ua) {
+				if (CanvasEngine.browser[ua]) {
+					is = ua;
+				}
+			})
+			return {
+				ua: is,
+				version: CanvasEngine.browser.version
+			};
+		}
+	};
+}
+
+
 
 /**
 	@doc utilities/
@@ -701,6 +796,112 @@ CanvasEngine.moveArray = function(array, pos1, pos2) {
 	
 	return array;
 }
+
+CanvasEngine.algo = {
+
+	pascalTriangle: function(max) {
+	
+		max = max || 10;
+	
+		var enchain = [[1,1], [1,2,1]],
+		nb_max_move = max - enchain.length;
+		
+		for (var i=enchain.length ; i <= nb_max_move ; i++) {
+			enchain[i] = [1]
+			for (var j=1 ; j <= i ; j++) {
+				enchain[i][j] = enchain[i-1][j] + enchain[i-1][j-1];
+			}
+			enchain[i][i+1] = 1;
+		}
+		
+		return enchain;
+		
+	},
+	
+
+	
+}
+
+CanvasEngine.toMatrix = function(array, width, height) {
+	var matrix = [], k = 0;
+	for (var j=0 ; j < height ; j++) {
+		for (var i=0 ; i < width ; i++) {
+			if (!matrix[i]) matrix[i] = [];
+			matrix[i][j] =  array[k];
+			k++;
+		}
+	}
+	return matrix;
+}
+
+/*
+
+	
+
+	var array = [
+				[1, 0],
+				[1, 1],
+				[1, 0]
+			]
+			
+	// 90		
+			
+	=> 		[
+				[1, 1, 1],
+				[0, 1, 0]
+			]
+			
+			
+	// -90 
+	
+	=> 		[
+				[0, 1, 0],
+				[1, 1, 1]
+			]
+			
+	// 180
+	
+		
+	=> 		[
+				[0, 1],
+				[1, 1],
+				[0, 1]
+			]
+*/
+
+CanvasEngine.rotateMatrix = function(array, rotation) {
+	var matrix = [], matrix2 = [];
+	
+	rotation = rotation || "90";
+	
+	if (rotation == "90" || rotation == "-90") {
+		for (var j=0 ; j < array[0].length ; j++) {
+			matrix[j] = [];
+			for (var i=0 ; i < array.length ; i++) {
+				matrix[j][i] = array[i][j];
+			}
+		}
+	}
+	
+	if (rotation == "-90") {
+		var j=0;
+		for (var i=matrix.length-1 ; i >= 0 ; i--) {
+			matrix2[j] = matrix[i];
+			j++;
+		}
+		return matrix2;
+	}
+	
+	if (rotation == "180") {
+		for (var i=0 ; i < array.length ; i++) {
+			matrix[i] = array[i].reverse();
+		}
+	}
+	
+	return matrix;
+
+}
+
 
 var _CanvasEngine = CanvasEngine;
 

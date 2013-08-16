@@ -20,6 +20,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+if (typeof exports != "undefined") {
+	var CE = require("canvasengine").listen(),
+		CanvasEngine = false,
+		Class = CE.Class;
+}
+
 Class.create("Tiled", {
 	el: null,
 	url: "",
@@ -51,10 +57,18 @@ Class.create("Tiled", {
 	 */
 	load: function(scene, el, url) {
 		var self = this;
-		this.el = el;
-		this.url = url;
-		this.scene = scene;
-		CanvasEngine.getJSON(this.url, function(data) {
+		
+		if (typeof scene == "string") {
+			this.url = url = scene;
+		}
+		else {
+			this.el = el;
+			this.url = url;
+			this.scene = scene;
+		}
+		
+		function ready(data) {
+			var clone_data = CE.Core.extend({}, data);
 			self.tile_h = data.tileheight;
 			self.tile_w = data.tilewidth;
 			self.width = data.width;
@@ -78,8 +92,21 @@ Class.create("Tiled", {
 				_id = self.tilesetsIndexed[m] ? m : _id;
 				self.tilesetsIndexed[m] = self.tilesetsIndexed[_id];
 			}
-			self._draw();
-		});
+			if (typeof exports == "undefined") {
+				self._draw();
+			}
+			else {
+				if (self._ready) self._ready.call(self, clone_data);
+			}
+		}
+		
+		if (typeof url === 'string') {
+			(CanvasEngine || CE.Core).getJSON(this.url, ready);
+		}	
+		else {
+			ready(url);
+		}
+		
 	},
 	_draw: function() {
 		this.map = this.scene.createElement();
@@ -152,14 +179,14 @@ Class.create("Tiled", {
 	},
 	 /**
 		@doc tiled/
-		@method getTileWidth Returns the height of the map in tiles 
+		@method getTileHeight Returns the height of the map in tiles 
 		@return {Integer}
 	 */
 	getTileHeight: function() {
 		return this.tile_h;
 	},
 	 /**
-		@method getTileWidth Returns the width of the map in pixels
+		@method getWidthPixel Returns the width of the map in pixels
 		@return {Integer}
 	 */
 	getWidthPixel: function() {
@@ -167,7 +194,7 @@ Class.create("Tiled", {
 	},
 	 /**
 		@doc tiled/
-		@method getTileWidth Returns the height of the map in pixels
+		@method getHeightPixel Returns the height of the map in pixels
 		@return {Integer}
 	 */
 	getHeightPixel: function() {
@@ -229,7 +256,22 @@ Class.create("Tiled", {
 			return _getTileLayers(new_tile);
 		}
 		return tileset.tileproperties[this.layers[layerOrX].data[tile]];
+	},
+	
+	tileToProperty: function(prop_name) {
+		var layers = this.getDataLayers(), val;
+		var new_layers = [];
+		for (var i=0 ; i < layers.length ; i++) {
+			new_layers[i] = [];
+			for (var j=0 ; j < layers[i].length ; j++) {
+				val = this.tilesets[0].tileproperties[layers[i][j]]; // Hack Tiled Bug
+				new_layers[i][j] =  val ? +val[prop_name] : 0;
+			}
+		}
+		return new_layers;
 	}
+	
+	
 });
 
 /**
@@ -297,3 +339,6 @@ var Tiled = {
 	}
 };
 
+if (typeof exports != "undefined") {
+	exports.Class = Tiled.Tiled;
+}

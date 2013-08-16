@@ -49,13 +49,14 @@ THE SOFTWARE.
 }());
 // --
 
-var prop, vendors = ['ms', 'moz', 'webkit', 'o', 'khtml'];
-				
-for(var x = 0; x < vendors.length && !Element.prototype.requestFullScreen; ++x) {
-	Element.prototype.requestFullScreen = Element.prototype[vendors[x]+'RequestFullScreen'];
-	document.cancelFullScreen =  document[vendors[x]+'CancelFullScreen'];
+if (typeof Element != "undefined") {
+	var prop, vendors = ['ms', 'moz', 'webkit', 'o', 'khtml'];
+					
+	for(var x = 0; x < vendors.length && !Element.prototype.requestFullScreen; ++x) {
+		Element.prototype.requestFullScreen = Element.prototype[vendors[x]+'RequestFullScreen'];
+		document.cancelFullScreen =  document[vendors[x]+'CancelFullScreen'];
+	}
 }
-
 
 Class.create("ModelClientClass", {
 	create: function(name, events, model) {
@@ -125,6 +126,90 @@ Class.create("ModelClientClass", {
 var Model = Class["new"]("ModelClientClass"),
 	Global_CE;
 	
+/**
+@doc server/
+@property io Object of Socket.io. View [https://github.com/LearnBoost/socket.io/wiki/Exposed-events#client](https://github.com/LearnBoost/socket.io/wiki/Exposed-events#client)
+
+@type Object
+@default null
+@example
+
+	CE.connectServer('http://127.0.0.1', 8333);
+	CE.io.emit("Foo", {bar: "test"});
+
+*/
+CanvasEngine.io = null;
+
+CanvasEngine.socketIO = function() {
+	if (typeof(io) == "undefined") {
+		throw "Please add socket.io - http://socket.io";
+	}
+	return io;
+};
+
+CanvasEngine.User = {
+
+	authentication: function(username, password, params) {
+		CanvasEngine.socketIO();
+		CanvasEngine.io.emit("_authentication", {
+			username: username,
+			password: password
+		});
+		CanvasEngine.io.on("_authentication", function(ret) {
+			if (ret.ret == "success" && params.success) {
+				params.success();
+			}
+			else if (ret.ret == "failed" && params.failed) {
+				params.failed(ret.err);
+			}
+		});
+	},
+	
+	register: function(username, password, params) {
+	
+		CanvasEngine.socketIO();
+		CanvasEngine.io.emit("_register", {
+			username: username,
+			password: password,
+			data: params.data
+		});
+		CanvasEngine.io.on("_register", function(ret) {
+			if (ret.ret == "success" && params.success) {
+				params.success();
+			}
+			else if (ret.ret == "failed" && params.failed) {
+				params.failed(ret.err);
+			}
+		});
+	
+	}
+	
+};
+
+/**
+@doc server/
+@method connectServer Allows you to connect to the server. Created a Socket object from socket.io. Use the property `io` then to perform methods of Socket.io
+
+To use Socket.io , do not forget to put the JS file :
+
+	<script src="socket.io.min.js"></script>
+
+@static
+@param {String} host IP or host name
+@param {Integer} port Port
+@return CanvasEngineClass
+@example
+
+	CE.connectServer('http://127.0.0.1', 8333);
+	CE.io.on("reconnecting", function() {
+		console.log("reconnecting");
+	});
+				 
+*/	
+CanvasEngine.connectServer = function(host, port) {
+	CanvasEngine.socketIO();
+	CanvasEngine.io = io.connect(host + ":" + port);
+};
 
 /**
 	@class CanvasEngine
@@ -256,6 +341,7 @@ With jQuery :
 				for (var i=0 ; i < self.canvas.length ; i++) {
 					self.el_canvas.push(self.Canvas["new"](self.canvas[i]));
 				}
+				
 				if (params.render) CanvasEngine.Scene._loop(self.el_canvas);
 				if (callback) callback();	
 			}
@@ -268,6 +354,8 @@ With jQuery :
 		noConflict: function() {
 			this._noConflict = true;
 		},
+		
+		
 		
 		
 /**
@@ -300,7 +388,9 @@ Using Sound :
 			_buffer: {},
 			_cache_canvas: {},
 			sounds: {},
+			videos: {},
 			fonts: {},
+			data: {},
 /**
 @doc materials/
 @method get Get the picture or sound according to its identifier
@@ -313,14 +403,13 @@ Using Sound :
 				if (type) {
 					return this[type + "s"][id];
 				}	
-			
-				if (this.images[id]) {
-					return this.images[id];
+				if (_m = this.images[id] || this.sounds[id] || this.videos[id] || this.data[id]) {
+					return _m
 				}
-				else if (this.sounds[id]) {
-					return this.sounds[id];
-				}
-				else if (id instanceof Image || id instanceof HTMLCanvasElement) {
+				else if (id instanceof Image || 
+						id instanceof HTMLCanvasElement || 
+						id instanceof HTMLVideoElement ||
+						id instanceof HTMLAudioElement) {
 					return id;
 				}
 				
@@ -328,7 +417,7 @@ Using Sound :
 					return false;
 				}
 				
-				throw "Cannot to draw the image or sound \"" + id + "\" because it does not exist";
+				throw "Cannot to get the data \"" + id + "\" because it does not exist";
 			},
 			
 /**
@@ -342,19 +431,24 @@ Using Sound :
 @param {Boolean} cache Image id
 @return {Object}
 */
-			imageToCanvas: function(id, cache) {
-				if (this._cache_canvas[id] && cache) {
+			imageToCanvas: function(id, params) {
+				params = params || {};
+				if (this._cache_canvas[id] && params.cache) {
 					return this._cache_canvas[id];
 				} 
 				var img = this.get(id), canvas, ctx;
 				
-				canvas =  document.createElement('canvas');		
-				canvas.width = img.width;
-				canvas.height = img.height;
-				ctx = canvas.getContext('2d');
+				if (!img) return;
 				
-				ctx.drawImage(img, 0, 0);
-
+				var w = params.width || img.width,
+					h = params.height || img.height,
+				
+				canvas =  document.createElement('canvas');		
+				canvas.width = w;
+				canvas.height = h;
+				ctx = canvas.getContext('2d');
+				ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, w, h);
+			
 				this._cache_canvas[id] = {
 					canvas: canvas,
 					ctx: ctx
@@ -396,7 +490,9 @@ Using Sound :
 */
 			transparentColor: function(id, color, cache) {
 				var imageData, data, rgb, 
-					_canvas = this.imageToCanvas(id, cache),
+					_canvas = this.imageToCanvas(id, {
+						cache: cache
+					}),
 					canvas = _canvas.canvas,
 					ctx = _canvas.ctx;
 
@@ -428,6 +524,7 @@ Using Sound :
 					canvas = _canvas.canvas,
 					ctx = _canvas.ctx;
 					
+				imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 				data = imageData.data;
 
 				for(var i = 0; i < data.length; i += 4) {
@@ -452,8 +549,13 @@ Using Sound :
 */
 			cropImage: function(id, x, y, w, h) {
 				var imageData, data, rgb, 
-					_canvas = this.imageToCanvas(id),
-					canvas = _canvas.canvas,
+					_canvas = this.imageToCanvas(id);
+					
+				if (!_canvas) {
+					return;
+				}
+					
+				var canvas = _canvas.canvas,
 					ctx = _canvas.ctx
 				imageData = ctx.getImageData(x, y, w, h);
 				canvas.width = w;
@@ -479,14 +581,16 @@ Using Sound :
 @doc materials/
 @method getBasePath Retrieves the base of a path
 @param {String} path Path
+@param {Boolean} (optional) slash If there is a non-empty path and the parameter is true then a slash is added to the end of the string returned
 @return {String}
 @example
 
 	canvas.Materials.getBasePath("sound/sample.mp3"); // return "sound"
 
 */
-			getBasePath: function(path) {
-				return path.substring(0, path.lastIndexOf('/'));
+			getBasePath: function(path, slash) {
+				var p = path.substring(0, path.lastIndexOf('/'))
+				return p != "" && slash ? p + "/" : p;
 			},
 
 /**
@@ -511,10 +615,131 @@ Using Sound :
 				return parts.slice(0, parts.length - 1).join(".");
 			},
 			
+			Transition: {
+		
+				_data: {},
+			
+				set: function(id, data) {
+					var imageData, _data, new_data = [];
+					if (this._data[id]) {
+						return this._data[id];
+					}
+					if (!(id instanceof Array)) {
+						var _canvas = CanvasEngine.Materials.imageToCanvas(id, {
+							width: 1024,
+							height: 768
+						});
+						if (typeof Uint8ClampedArray != "undefined") {
+							new_data = new Uint8ClampedArray(_canvas.canvas.width * _canvas.canvas.height);
+						}
+						imageData = _canvas.ctx.getImageData(0, 0, _canvas.canvas.width, _canvas.canvas.height);
+						_data = imageData.data;
+						var j=0;
+						for (var i=0; i < _data.length; i+=4) {
+							new_data[j] = _data[i];
+							j++;
+						}
+					}
+					else {
+						new_data = data;
+					}
+					this._data[id] = new_data;
+					return new_data;
+				},
+				
+				get: function(id) {
+					return this._data[id];
+				}
+			
+			},
+			
 /**
 @doc materials/
 @method load Load a resource
-@param {String} type Type : "images" or "sounds"
+@param {String} type 
+
+* images : Loading images.
+
+        images: {
+            {foo: "bar.png"}
+        }
+
+    For use :
+
+        el.drawImage("foo"); // el is an element
+
+    It is possible to define a transparent color to make the image with `transparentcolor` option:
+
+        images: {
+            {foo: {path: "bar.png", transparentcolor: "#ff0000"}
+        }
+
+* sounds : Loading sound. Test if the browser supports the sound. If your browser does not support the format, it will take another file with the same name but with a different extension
+
+        sounds: {
+            foo: "bar.mp3"
+        }
+
+    On Firefox, it will automatically search `bar.ogg`
+
+    For use :
+
+        canvas.Sound.get("foo").play(); // "canvas" is namespace
+		
+* videos : add videos which will be displayed in the canvas :
+
+		videos: {
+			foo: "bar.mp4"
+		}
+		
+	To use :
+	
+		el.drawImage("foo"); // el is an element
+		
+	To use video API :
+	
+		var video = canvas.Materials.get("foo", "video");
+		video.play();
+		
+	To use the webcam :
+	
+		videos: {
+			foo: {webcam: {audio: false, video: true}}
+		}
+		
+	To display and manipulate is the same as the single video
+
+* fonts
+
+    For Internet Explorer, it will take a file with the same name but with the extension `.eot`
+
+        fonts: {
+			foo: "bar.ttf"
+		}
+
+    For use are in the text:
+
+        el.font = 'normal 40pt foo'; // "el" is an element
+
+	For fonts, you can use [Web Font Loader](https://github.com/typekit/webfontloader)
+
+        fonts: {
+			google: { families: ["test"] },
+			foo: "bar.ttf"
+		}
+
+     For use are in the text:
+
+        el.font = 'normal 40pt test';
+
+   You can find fonts from [Google Fonts](http://www.google.com/fonts) and other modules (see [Web Font Loader Github](https://github.com/typekit/webfontloader))
+
+* data : Loading a JSON file
+
+        data: {
+            foo: "bar.json"
+        }
+
 @param {Array|Object} path Paths to resources.
 * If array : Elements are composed of objects where the key is the identifier and value is the path
 	
@@ -532,6 +757,9 @@ The value can be an object to give several parameters :
 	{img1: {path: "path/to/img1.png", transparentcolor: "#ff0000"}, img2: "path/to/im2.png"}
 	
 "path" is the path and "transparentcolor" the color that will be transparent image
+
+@param {Function} onLoad (optional) Callback when a resource is loaded
+@param {Function} onFinish (optional) Callback when all resources are loaded
 */
 			load: function(type, path, onLoad, onFinish) {
 				var i=0, p, self = this, materials = [], img_data;
@@ -548,23 +776,23 @@ The value can be an object to give several parameters :
 					else {
 						for (var key in p) {
 							img_data = {};
+							
+							img_data = _CanvasEngine.extend({}, p[key]);
+							
 							if (typeof p[key] == "string") {
 								img_data.path = p[key];
 							}
-							else {
-								img_data.path = p[key].path;
-								img_data.transparentcolor = p[key].transparentcolor;
+							if (img_data.id) {
+								img_data._id = img_data.id;
 							}
-							materials.push({
-								id: key,
-								path: img_data.path,
-								transparentcolor: img_data.transparentcolor
-							});
+							img_data.id = key;
+
+							materials.push(img_data);
 							
 						}
 					}
 				}
-				
+
 				switch (type) {
 					case "images":
 						load();
@@ -575,6 +803,12 @@ The value can be an object to give several parameters :
 					case "fonts":
 						loadFont();
 					break;
+					case "videos":
+						loadVideos();
+					break;
+					case "data":
+						loadData();
+					break;
 				}
 				
 				function load() {
@@ -583,13 +817,23 @@ The value can be an object to give several parameters :
 						img = new Image();
 						img.onload = function() {
 							var _img;
+							
 							if (materials[i].transparentcolor) {
 								_img = self.transparentColor(img, materials[i].transparentcolor);
+							}
+							if (materials[i].invertcolor) {
+								_img = self.invertColor(img);
 							}
 							else {
 								_img = img;
 							}
+							
 							self.images[materials[i].id] = _img;
+							
+							if (materials[i].transition) {
+								self.Transition.set(materials[i].id);
+							}
+							
 							i++;
 							if(onLoad) onLoad.call(self, _img);
 							load();
@@ -685,15 +929,149 @@ The value can be an object to give several parameters :
 				}
 				
 				function loadFont() {
-					if (materials[i]) {
-						var s = document.createElement('style'), 
-						rule = "font-family: '" + materials[i].id + "'; src: url('" + materials[i].path + "');";
-						s.type = "text/css";
-						s.cssText = "@font-face {" + rule + "}";
-						document.getElementsByTagName('head')[0].appendChild(s);
+					var m = materials[i];
+					if (m) {
+						if (m.id == "google" || m.id == "ascender" || m.id == "typekit" || m.id == "monotype" || m.id == "fontdeck") {
+							var obj = {};
+							obj[m.id] = m;
+							if (m._id) {
+								obj[m.id].id = m._id;
+							}
+							if (typeof WebFontConfig == "undefined") {
+								WebFontConfig = {};
+							}
+							WebFontConfig = _CanvasEngine.extend(WebFontConfig, obj);
+						}
+						
+						else {
+							var s = document.createElement('style');
+							var path = self.getBasePath(m.path, true) + self.getFilename(m.path) + "." + 
+								(_CanvasEngine.browser.msie ? "eot" : "ttf");
+							s.innerHTML = "@font-face { font-family: '" + m.id + "'; src: url('" + path + "'); font-weight: normal; font-style: normal;}";
+							document.getElementsByTagName('head')[0].appendChild(s);
+						}
+						
 						i++;
 						if (onLoad) onLoad.call(self, this);
 						loadFont();
+					}
+					else {
+						if (!document.getElementById("google-webfont")) {
+							var wf = document.createElement('script');
+							wf.src = ('https:' == document.location.protocol ? 'https' : 'http') +
+							  '://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js';
+							wf.type = 'text/javascript';
+							wf.async = 'true';
+							wf.id = "google-webfont";
+							var s = document.getElementsByTagName('script')[0];
+							s.parentNode.insertBefore(wf, s);
+						}
+						if (onFinish) onFinish.call(self);
+					}
+				}
+				
+				function loadVideos() {
+				
+					function next() {
+						i++;
+						if (onLoad) onLoad.call(self, this);
+						loadVideos();
+					}
+					
+					/*
+						function supportedVideoFormat(video) {
+						   var returnExtension = "";
+						   if (video.canPlayType("video/webm") =="probably" || 
+							   video.canPlayType("video/webm") == "maybe") {
+								 returnExtension = "webm";
+						   } else if(video.canPlayType("video/mp4") == "probably" || 
+							   video.canPlayType("video/mp4") == "maybe") {
+								 returnExtension = "mp4";
+						   } else if(video.canPlayType("video/ogg") =="probably" || 
+							   video.canPlayType("video/ogg") == "maybe") {
+								 returnExtension = "ogg";
+						   }
+
+						   return returnExtension;
+
+						}
+						*/
+						
+					
+					
+					if (materials[i]) {
+						var v = document.createElement("video");
+						
+						if (materials[i].webcam) {
+							// https://developer.mozilla.org/en-US/docs/WebRTC/navigator.getUserMedia
+							navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+							function successCallback(stream) {
+								window.stream = stream;
+								 if (window.URL) {
+									v.src = window.URL.createObjectURL(stream);
+								} else {
+									v.src = stream;
+								}
+								self.videos[materials[i].id] = v;
+								next();
+							}
+
+							function errorCallback(error){
+							   throw "navigator.getUserMedia error: " + error;
+							}
+
+							navigator.getUserMedia(materials[i].webcam, successCallback, errorCallback);
+						}
+						else {
+							v.src = materials[i].path;
+							v.addEventListener("loadeddata", function() {
+								self.videos[materials[i].id] = v;
+								next();
+							 }, false);
+							v.onerror = function(e) {
+								if (params.ignoreLoadError) {
+									next();
+								}
+								else {
+									throw "Video error #" + e.target.error.code + ": See http://dev.w3.org/html5/spec-author-view/video.html#dom-mediaerror-media_err_aborted" ;
+								}
+							}
+							v.load();
+						}
+						document.body.appendChild(v);
+						v.setAttribute("style", "display:none;");
+						
+					}
+					else {
+						if (onFinish) onFinish.call(self);
+					}
+				
+					
+				
+				}
+				
+				function loadData() {
+				
+					function next() {
+						i++;
+						if (onLoad) onLoad.call(self, this);
+						loadData();
+					}
+				
+					if (materials[i]) {
+						_CanvasEngine.ajax({
+							url: materials[i].path, 
+							dataType: "json",
+							success: function(data) {
+								 self.data[materials[i].id] = data;
+								 next();
+							},
+							error: function() {
+								if (params.ignoreLoadError) {
+									next();
+								}
+							}
+						});
 					}
 					else {
 						if (onFinish) onFinish.call(self);
@@ -992,15 +1370,22 @@ and, in `ready` method :
 					params = params || {};
 					if (_class) {
 						this._scenesEnabled[name] = _class;
-						if (this._scenesIndex.indexOf(name) == -1) this._scenesIndex.push(name);
+						if (this._scenesIndex.indexOf(name) == -1) {
+							if (params.transition) {
+								this._scenesIndex = _allExcept.concat(this._scenesIndex);
+							}
+							else {
+								this._scenesIndex.push(name);
+							}
+						}
 						if (params.exitScenes) {
 							params.exitScenes.allExcept = params.exitScenes.allExcept || [];
 							params.exitScenes.allExcept = _allExcept.concat(params.exitScenes.allExcept);
 							_class._load.call(_class, params.exitScenes, params.params);
 						}
 						else {
-							if (!params.overlay) this.exitAll(_allExcept);
-							_class._load.call(_class, {}, params.params);
+							if (!params.overlay && !params.transition) this.exitAll(_allExcept);
+							_class._load.call(_class, params, params.params);
 						}
 						this._scenesNbCall[name]++;
 					}
@@ -1024,7 +1409,7 @@ and, in `ready` method :
 						_class._exit.call(_class);
 						for (var i=0 ; i < this._scenesIndex.length ; i++) {
 							if (this._scenesIndex[i] == name) {
-								delete this._scenesIndex[i];
+								this._scenesIndex.splice(i, 1);
 								break;
 							}
 						}
@@ -1170,6 +1555,8 @@ and, in `ready` method :
 		ctx: null,
 		_globalElements: {},
 		_ctxTmp: null,
+		_layerDOM: null,
+		_layerParent: null,
 		_ctxMouseEvent: null,
 /**
 @doc canvas/
@@ -1197,16 +1584,25 @@ and, in `ready` method :
 			var self = this, w, h;
 			this.id = id;
 			var el = this._getElementById(id);
-			if (el.tagName != "CANVAS") {
+			if (el.tagName != "CANVAS" && el.tagName != "canvas") {
 				this.element = document.createElement('canvas');
+				this._layerDOM = document.createElement('div');
 				w = this.element.width = el.getAttribute('width');
 				h = this.element.height = el.getAttribute('height');
 				this.element.style.position = "absolute";
-				el.style.position = "relative";
+				el.style.position = 
+				this._layerDOM.style.position = "relative";
 				el.style.width = w + "px";
 				el.style.height = h + "px";
-				el.style.overflow = "hidden";
+				el.style.overflow = 
+				this._layerDOM.style.overflow = "hidden";
+				
+				this._layerDOM.style.width = "100%";
+				this._layerDOM.style.height = "100%";
+
 				el.appendChild(this.element);
+				el.appendChild(this._layerDOM);
+				this._layerParent = el;
 			}
 			else {
 				this.element = el;
@@ -1215,7 +1611,7 @@ and, in `ready` method :
 			this.height = this.element.height;
 			this.ctx = this.element.getContext('2d');
 			this.hammerExist = typeof(Hammer) !== "undefined";
-			old = this.ctx;
+			//old = this.ctx;
 			this._mouseEvent();
 			var events = ["click", "dbclick", "mousemove", "mousedown", "mouseup"],
 				hammer_events = [
@@ -1245,14 +1641,16 @@ and, in `ready` method :
 					"touch",
 					"release"
 				];
+				
+			var _el = this._layerParent || this.element;
 			
 			var hammer = null, val;
 			if (this.hammerExist) {
-				hammer = new Hammer(this.element);
+				hammer = new Hammer(_el);
 			}
 			
 			function bindEvent(type) {
-				this.element.addEventListener(type, function(e) {
+				_el.addEventListener(type, function(e) {
 					callback(e, type);
 				}, false);
 			}
@@ -1301,7 +1699,7 @@ and, in `ready` method :
 			}
 			
 			if (!params.contextmenu) {
-				this.element.addEventListener('contextmenu', function (event) {
+				_el.addEventListener('contextmenu', function (event) {
 					event.preventDefault();
 				});
 			}
@@ -1318,7 +1716,6 @@ and, in `ready` method :
 		},
 		_getElementById: function(id) {
 			var canvas;
-			
 			if (params.cocoonjs) {
 				canvas = document.createElement("canvas");
 				canvas.width = params.cocoonjs.width;
@@ -1423,7 +1820,9 @@ In method "ready" of the scene :
 */
 		createPattern: function(img, repeatOption) {
 			repeatOption = repeatOption || "repeat";
-			return this.ctx.createPattern(CanvasEngine.Materials.get(img), repeatOption);
+			var _img = CanvasEngine.Materials.get(img);
+			if (!_img) return;
+			return this.ctx.createPattern(_img, repeatOption);
 		},
 		
 /**
@@ -1448,6 +1847,35 @@ In method "ready" of the scene :
 */
 		addColorStop: function(stop, color) {
 			return this.ctx.addColorStop(stop, color);
+		},
+		
+
+		getImageData: function(x, y, w, h) {
+			if (!x) {
+				x = 0;
+				y = 0;
+			}
+			if (!w) {
+				w = this.width;
+				h = this.height;
+			}
+			return this.ctx.getImageData(x, y, w, h);
+		},
+		
+		putImageData: function(imgData, x, y, dirtyX, dirtyY, dirtyWidth, dirtyHeight) {
+			if (!x) {
+				x = 0;
+				y = 0;
+			}
+			return this.ctx.putImageData(imgData, x, y, dirtyX, dirtyY, dirtyWidth, dirtyHeight);
+		},
+		
+		createImageData: function() {
+			return this.ctx.createImageData.apply(this.ctx, arguments);
+		},
+		
+		toDataURL: function() {
+			return this.ctx.toDataURL();
 		},
 		
 /**
@@ -1582,9 +2010,13 @@ Example 5
 				scale = height;
 				width = window.innerWidth;
 				height = window.innerHeight;
-				this.element.style.position = "fixed";
-				this.element.style.top =
-				this.element.style.left = 0;
+				var el = this.element;
+				if (this._layerParent) {
+					el = this._layerParent;
+				}
+				el.style.position = "fixed";
+				el.style.top =
+				el.style.left = 0;
 				window.onresize = function(event) {
 					if (type == "browser") self.setSize("browser", scale);
 				};
@@ -1607,6 +2039,12 @@ Example 5
 				this.element.width = width;
 				this.element.height = height;
 			}
+			
+			if (this._layerParent) {
+				this._layerParent.style.width = width + "px";
+				this._layerParent.style.height = height + "px";
+			}
+			
 			this._oldSize = {width: old_w, height: old_h, type: type};
 			this.width = width;
 			this.height = height;
@@ -1646,6 +2084,7 @@ The resources defined in "Materials" are loaded and regularly calls the method "
 "stage" is an object of type "Element". This is the main element of the scene containing all child elements to create.
 */
 	Class.create("Scene", {
+		id: 0,
 		_stage: {},
 		_events: [],
 		_pause: false,
@@ -1687,6 +2126,7 @@ The resources defined in "Materials" are loaded and regularly calls the method "
 		//_isExit: false,
 		initialize: function(obj) {
 			var ev, self = this;
+			this.id = _CanvasEngine.uniqid();
 			this._events = obj.events;
 		},
 		_loop: function() {
@@ -1878,12 +2318,15 @@ Create two elements :
 		_load: function(params, options) {
 			var self = this;
 			params = params || {};
+			
 			options = options || {};
 			this._stage = CanvasEngine.Element["new"](this);
+			
 			this._index = CanvasEngine.Scene._scenesIndex.length-1;
 			for (var i=0 ; i < CanvasEngine.el_canvas.length ; i++) {
 				CanvasEngine.el_canvas[i].stage = this._stage;
 			}
+
 			
 			if (this.model) {		
 				if (this._events) {
@@ -1895,12 +2338,14 @@ Create two elements :
 				}
 			}
 
-			//this.loadEvents();
+			this.loadEvents();
 			
 			var images_length = materialLength("images"),
 				sound_length = materialLength("sounds"),
 				font_length = materialLength("fonts"),
-				total = images_length + sound_length + font_length,
+				videos_length = materialLength("videos"),
+				data_length = materialLength("data"),
+				total = images_length + sound_length + font_length + videos_length + data_length,
 				current = 0;
 				
 			if (images_length > 0) {
@@ -1912,7 +2357,13 @@ Create two elements :
 			if (font_length > 0) {
 				materialLoad("fonts");
 			}
-			if (images_length == 0 && sound_length == 0 && font_length == 0) {
+			if (videos_length > 0) {
+				materialLoad("videos");
+			}
+			if (data_length > 0) {
+				materialLoad("data");
+			}
+			if (images_length == 0 && sound_length == 0 && font_length == 0 && videos_length == 0  && data_length == 0) {
 				canvasReady();
 			}
 			
@@ -1943,15 +2394,95 @@ Create two elements :
 				return i;
 			}
 			
+			
 			function canvasReady() {
 	
 				if (params.when == "afterPreload") {
 					CanvasEngine.Scene.exitAll(params.allExcept);
 				}
+				
 				if (self.ready) self.ready(self._stage, self.getElement, options);
 				self._stage.trigger("canvas:readyEnd");
 				if (self.model && self.model.ready) self.model.ready.call(self.model);
 				self._isReady = true;
+				
+				
+				
+				if (params.transition) {
+					if (params.transition === true) {
+						params.transition = {type: "fade"};
+					}
+					self.execTransition(params.transition.type, params.transition, params.overlay);
+					
+				}
+			
+				
+			}
+		},
+		execTransition: function(type, params, is_overlay) {
+			var self = this, _canvas;
+			
+			params = params || {};
+			params = _CanvasEngine.extend({
+				frames: 30
+			}, params);
+			
+			
+			var scenes = CanvasEngine.Scene.getEnabled(), j=0, stage;
+			for (var s in scenes) {
+				if (scenes[s].id == this.id) continue;
+				stage = scenes[s].getStage();
+				_canvas = scenes[s].getCanvas();
+				switch (type) {
+					case "fade":
+						if (!CanvasEngine.Timeline) {
+							throw "Add the Timeline class for transitions";
+						}
+						
+						CanvasEngine.Timeline.New(stage).to({opacity: 0}, params.frames).call(function() {
+							if (!is_overlay) CanvasEngine.Scene.exitAll(self.name);
+							if (params.finish) params.finish.call(self);
+							scenes[s].zIndex(0);
+						});
+						
+					break;
+					case "image":
+						var _canvas = stage.buffer(_canvas.width, _canvas.height),
+						ctx = _canvas.getContext('2d');
+				
+				
+						var k=0;
+						var worker = new Worker('workers/transition.js');
+
+						worker.addEventListener("message", function (ev) {
+							if (k==0) {
+								stage.empty();
+							}
+							ctx.putImageData(ev.data.imageData, 0, 0);
+							stage.drawImage(_canvas);
+							k++;
+							if (ev.data.finish) {
+								worker.terminate();
+								CanvasEngine.Scene.exitAll(self.name);
+							}
+						});
+						
+						var imageData = ctx.getImageData(0, 0, _canvas.width, _canvas.height);
+
+						worker.postMessage({
+							imgData: imageData,
+							pattern: CanvasEngine.Materials.Transition.get(params.id)
+						});
+						
+						stage.on("canvas:refresh", function(el) { // stage is defined in the scene
+							worker.postMessage("");
+						});
+						
+						j++;
+					break;
+				}
+				
+				
 			}
 		}
 	});
@@ -2029,12 +2560,64 @@ obsolete
 				
 			},*/
 			
+			_defaultRectParams: function(x, y, w, h, z) {
+				if (typeof x == "string") {
+					this.fillStyle = x;
+					x = y;
+					y = w;
+					w = h;
+					h = z;
+				}
+				if (x == undefined) {
+					x = 0;
+					y = 0;
+				}
+				if (w == undefined) {
+					w = this.width;
+					h = this.height;
+				}
+				return [x, y, w, h];
+			},
+			
 /**
 	@doc draw/
-	@method fillRect. See http://www.w3schools.com/html5/canvas_fillrect.asp
+	@method fillRect The fillRect() method draws a "filled" rectangle. The default color of the fill is black. Before the positions, you can specify the color of the rectangle
+	@param {Integer|String} x (optional) The x-coordinate of the upper-left corner of the rectangle. By default, 0.
+	@param {Integer} y (optional) The y-coordinate of the upper-left corner of the rectangle. By default, 0.
+	@param {Integer} width (optional) The width of the rectangle, in pixels. By default, width of the element. 
+	@param {Integer} height (optional) The height of the rectangle, in pixels. By default, height of the element. 
+	@example
+	
+In `ready` method.
+
+Example 1 :
+	
+	var el = this.createElement(100, 100);
+	el.fillStyle = "red";
+	el.fillRect();
+	
+Example 2 :
+
+	var el = this.createElement(100, 100);
+	el.fillRect("red");
+	
+Example 3 :
+
+	var el = this.createElement(100, 100);
+	el.fillRect("red", 10, 25);
+	
+Example 4 :
+
+	var el = this.createElement(100, 100);
+	el.fillRect(10, 25);
+	
+Example 5 :
+
+	var el = this.createElement();
+	el.fillRect(10, 25, 100, 100);
 */
 			fillRect: function(x, y, w, h) {
-				this._addCmd("fillRect", [x, y, w, h], ["fillStyle"]);
+				this._addCmd("fillRect", this._defaultRectParams.apply(this, arguments), ["fillStyle"]);
 			},
 /**
 	@doc draw/
@@ -2057,11 +2640,45 @@ obsolete
 			strokeText: function(text, x, y) {
 				this._addCmd("strokeText", [text, x, y], ["strokeStyle", "font", "textBaseline"]);
 			},
-			/**
-				@method strokeRect See http://www.w3schools.com/html5/canvas_strokerect.asp
-			*/
+/**
+	@doc draw/
+	@method strokeRect The strokeRect() method draws a rectangle (no fill). The default color of the stroke is black.
+	@param {Integer|String} x (optional) The x-coordinate of the upper-left corner of the rectangle. By default, 0.
+	@param {Integer} y (optional) The y-coordinate of the upper-left corner of the rectangle. By default, 0.
+	@param {Integer} width (optional) The width of the rectangle, in pixels. By default, width of the element. 
+	@param {Integer} height (optional) The height of the rectangle, in pixels. By default, height of the element. 
+	@example
+	
+In `ready` method.
+
+Example 1 :
+	
+	var el = this.createElement(100, 100);
+	el.strokeStyle = "red";
+	el.strokeRect();
+	
+Example 2 :
+
+	var el = this.createElement(100, 100);
+	el.strokeRect("red");
+	
+Example 3 :
+
+	var el = this.createElement(100, 100);
+	el.strokeRect("red", 10, 25);
+	
+Example 4 :
+
+	var el = this.createElement(100, 100);
+	el.strokeRect(10, 25);
+	
+Example 5 :
+
+	var el = this.createElement();
+	el.strokeRect(10, 25, 100, 100);
+*/
 			strokeRect: function(x, y, w, h) {
-				this._addCmd("strokeRect", [x, y, w, h], ["strokeStyle"]);
+				this._addCmd("strokeRect", this._defaultRectParams.apply(this, arguments), ["strokeStyle"]);
 			},
 			/**
 				@doc draw/
@@ -2179,7 +2796,10 @@ In the method "ready" in the scene class :
 			},
 			rect: function() { this._addCmd.call(this, "rect", arguments); },
 			arc: function() { this._addCmd.call(this, "arc", arguments); },
+			arcTo: function() { this._addCmd.call(this, "arcTo", arguments); },
 			addColorStop: function() { this._addCmd.call(this, "addColorStop", arguments); },
+			isPointInPath: function() { this._addCmd.call(this, "isPointInPath", arguments); },
+			
 			rotate: function() { this.draw.call(this, "rotate", arguments); },
 			translate: function() { this.draw.call(this, "translate", arguments); },
 			transform: function() { this.draw.call(this, "transform", arguments); },
@@ -2471,6 +3091,13 @@ In `ready` method :
 		y: 0,
 		real_x: 0,
 		real_y: 0,
+		real_scale_x: 1,
+		real_scale_y: 1,
+		real_rotate: 0,
+		real_skew_x: 0,
+		real_skew_y: 0,
+		real_opacity: 1,
+		real_propagation: true,
 		/**
 			@doc manipulate/
 			@property scaleX Scale in X. Value 1 equivalent to 100%
@@ -2567,6 +3194,7 @@ In `ready` method :
 		_out: 1,
 		_over: 0,
 		_nbEvent: 0,
+		_onRender: [],
 		_pack: null,
 /**
 	@doc manipulate/
@@ -2624,6 +3252,24 @@ In `ready` method :
 			this.scene.getCanvas()._elementsByScene(this.scene.name, key, this);
 			this._canvas = CanvasEngine.el_canvas;
 		},
+		
+		_initParams: function(init) {
+			if (init || !this.parent) {
+				this.parent = {
+					scaleX: 1,
+					scaleY: 1,
+					real_x: 0,
+					real_y: 0,
+					real_scale_x: 1,
+					real_scale_y: 1,
+					real_rotate: 0,
+					real_skew_x: 0,
+					real_skew_y: 0,
+					real_opacity: 1,
+					real_propagation: true
+				};
+			}
+		},
 /**
 @doc draw/
 @method refresh Refreshes the elements of the scene	
@@ -2659,29 +3305,14 @@ In `ready` method :
 			
 
 			if (!this.real_pause) {
-
-				if (init || !this.parent) {
-					this.parent = {
-						scaleX: 1,
-						scaleY: 1,
-						real_x: 0,
-						real_y: 0,
-						real_scale_x: 1,
-						real_scale_y: 1,
-						real_rotate: 0,
-						real_skew_x: 0,
-						real_skew_y: 0,
-						real_opacity: 1,
-						real_propagation: true
-					};
-				}
+			
+				this._initParams(init);
 				
 				this.real_propagation = this.parent.propagationOpacity == null ? true : this.parent.propagationOpacity;
 			
 				this.save();
 					
 				// this.setTransform(1, 0, 0, 1, 0, 0);
-				
 				this.real_scale_x = this.parent.real_scale_x * this.scaleX;
 				this.real_scale_y = this.parent.real_scale_y * this.scaleY;
 				// this.real_y = (this.parent.real_y + this.y) * (this.parent.scaleY == 1 ? 1 : this.parent.real_scale_x);
@@ -2696,9 +3327,9 @@ In `ready` method :
 					this.real_opacity = this.parent.real_opacity * this.opacity;
 				}
 				else {
+					
 					this.real_opacity = this.opacity;
 				}
-				
 				
 				
 				this.real_pause = init ? this.pause : this.parent.real_pause;
@@ -2720,18 +3351,20 @@ In `ready` method :
 				if (this.real_rotate != 0) {
 					this.rotateDeg(this.real_rotate);
 				}
+				
+				this.translate(this.real_x,  this.real_y);
+				
 				if (this.real_scale_x != 1 || this.real_scale_y != 1) {
 					this.scale(this.real_scale_x, this.real_scale_y);
 				}
 				if (this.real_skew_x != 0 || this.real_skew_y != 0) {
 					this.transform(1, this.real_skew_x, this.real_skew_y, 1, 0, 0);
 				}
-				this.translate(this.real_x,  this.real_y);
+				
 				if (this.regX != 0 || this.regY != 0) {
 					this.translate(-regX, -regY);
 				}
 			} 
-			
 			
 			this.draw(ctx);
 			
@@ -2763,6 +3396,24 @@ In `ready` method :
 		
 		setY: function(y) {
 			this.y = y;
+		},
+		
+		buffer: function(w, h) {
+			var children = this.children(),
+				canvas = document.createElement("canvas"),
+				ctx = canvas.getContext('2d'),
+				scene = this.getScene(),
+				_canvas = this.scene.getCanvas();
+			
+			canvas.width = w || _canvas.width;
+			canvas.height = h || _canvas.height;
+			
+			this.scene.getCanvas()._ctxTmp = ctx;
+			for (var i=0 ; i < children.length ; i++) {
+				this._children[i]._refresh(true, true);
+			}
+			this.scene.getCanvas()._ctxTmp = null;
+			return canvas;
 		},
 
 		/**
@@ -3478,7 +4129,7 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 				event = events[i];
 				// Using specific properties for performance
 				if (event == "canvas:refresh") this.stage._onRefresh = callback;
-				else if (event == "canvas:render") this._onRender = callback;
+				else if (event == "canvas:render") this._onRender.push(callback);
 				else if (CanvasEngine.mobileUserAgent && event == "click") event = "touch";
 				if (!this._listener[event]) {
 					this._listener[event] = [];
@@ -3609,7 +4260,9 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 			this.on("mouseout", callback);
 		},
 		_loop: function() {
-			if (this._onRender) this._onRender();
+			for (var i=0 ; i < this._onRender.length ; i++) {
+				if (this._onRender[i]) this._onRender[i].call(this);
+			}
 		},
 /**
 @doc events/
