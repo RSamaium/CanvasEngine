@@ -247,7 +247,14 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 * Add Using WebCam
 * Add `getImageData()`, `putImageData()`, `createImageData()` and `toDataURL()` in Canvas class
 * Add `arcTo()` and `isPointInPath()` in Context class
+* Add `opaqueImage()` in Materials class
+* Add `toTimer()` in CanvasEngine Core
+* Add `toMatrix()` and `rotateMatrix()` in CanvasEngine Core
+* Add `remove()` in Window class
 * Fix `invertColor()` in Materials class
+* Fix flip an element
+* Fix click on transparent image
+* Removes `forceEvent` property and adding the method `forceEvent()`
 * Improve `imageToCanvas()` in Materials class
 * Improve `getBasePath()` in Materials class
 * Ability to use the DOM to display the canvas

@@ -21,6 +21,12 @@ THE SOFTWARE.
 */
 
 
+if (typeof exports != "undefined") {
+	var CE = require("canvasengine").listen(),
+		CanvasEngine = false,
+		Class = CE.Class;
+}
+
 /*
 	http://www.amphibian.com/blogstuff/collision.html
 */
@@ -657,11 +663,12 @@ In `ready` method
      entity.position(10, 50);
 
 */
-	position: function(x, y) {
+	position: function(x, y, move) {
 		var pos = this.model.position(x, y);
 		if (x !== undefined) {
 			this.el.x = pos.x;
 			this.el.y = pos.y;
+			
 		}
 		return {x: pos.y,  y: pos.y};
 	},
@@ -685,7 +692,7 @@ In `ready` method
 		var pos = this.model.position();
 		if (!x) x = 0;
 		if (!y) y = 0;
-		return this.position(x + pos.x, y + pos.y);
+		return this.position(x + pos.x, y + pos.y, true);
 	},
 	
 
@@ -823,7 +830,7 @@ In `ready` method
 		
     console.log(grid.getCellByPos(pos.x, pos.y)); // {col: 0, row: 0}
 */
-var Grid, _prototype = {
+Class.create("Grid", {
 	_rows: 0,
 	_cols: 0,
 	cell: {
@@ -876,6 +883,9 @@ In `ready` method
 	);
 */	
 	setPropertyCell: function(prop) {
+		if (typeof(PF) != "undefined") {
+			this._pf_prop = (CanvasEngine || CE.Core).rotateMatrix(prop);
+		}	
 		this.cell.prop = prop;
 	},
 	
@@ -1248,43 +1258,139 @@ In `ready` method
 */	
 	getNbCell: function() {
 		return this.getRows() * this.getCols();
-	}
-},
-_return =  function(CE) {
-	return {
-		"new": function(rows, cols) {
-			return CE.Class["new"]("Grid", [rows, cols]);
-		}
-	};
-};
-
-var Hit, _prototype_hit = {
-	initialize: function() {
+	},
+	
+	
+	/*
+ 
+	
+		var matrix = [
+			[0, 0, 0, 1, 0],
+			[1, 0, 0, 0, 1],
+			[0, 0, 1, 0, 0],
+		];
 		
-	}
-},
-_return_hit =  function(CE) {
-	return {
-		"new": function(rows, cols) {
-			return CE.Class["new"]("Hit");
+		CE.passableCell(matrix, 0, 0);
+	
+		=> [[x0, y0], [x1, y1]]
+*/
+	passableCell: function(x, y, max, array_exception) {
+	
+		array_exception = array_exception || [];
+	
+		var H_MAP = this._cols;
+		var W_MAP = this._rows;
+		
+		var mapData = this.cell.prop;
+
+		var tab_move_passable = [];
+		
+		function init_tab_move() {
+			for (var i = 0 ; i < H_MAP * 2 + 1 ; i++) {
+				tab_move_passable[i] = [];
+				for (var j = 0 ; j < H_MAP * 2 + 1 ; j++) {
+					tab_move_passable[i][j] = -1;
+				}
+			}
+			var middle = Math.floor(tab_move_passable.length / 2);
+			tab_move_passable[middle][middle] = 0;
 		}
-	};
-};
+	
+		var pos_temporaire = [];
+		var pos_semi_tempor = [[x, y]];
+		var path = 0;
+		var diff_x = pos_semi_tempor[0][0] - H_MAP;
+		var diff_y = pos_semi_tempor[0][1] - H_MAP;
+		var tab_move = [];
+		var id = 0;
+		init_tab_move();
+		
+		function inArray(x, y) {
+			
+			for (var j = 0 ; j < array_exception.length ; j++) {
+				if (array_exception[j][0] == x && array_exception[j][1] == y) {
+					return true;
+				}
+			}
+			return false;
+		}
+			
+		while (!pos_semi_tempor.length == 0 && path < max) {
+			pos_temporaire = [];
+			for (var i = 0 ; i < pos_semi_tempor.length ; i++) {
+				var new_pos_x = pos_semi_tempor[i][0];
+				var new_pos_y = pos_semi_tempor[i][1];
+				var tab_x = new_pos_x;
+				var tab_y = new_pos_y;
+				
+				for (var j = 0 ; j < 4 ; j++) {
+					switch (j) {
+						case 0: 	
 
-if (typeof(exports) !== "undefined") {
-	exports.Grid = function(CE) {
-		CE.Class.create("Grid", _prototype);
-		CE.Class.create("Hit", _prototype_hit);
-		return _return(CE);
-	};
-}
-else {
-	CE.Class.create("Grid", _prototype);
-	CE.Class.create("Hit", _prototype_hit);
-	Grid = {
-		Grid: _return(CE),
-		Hit: _return_hit(CE)
-	};
+							if (mapData[new_pos_x][new_pos_y  + 1] != undefined && mapData[new_pos_x][new_pos_y  + 1] == id && !inArray(new_pos_x, new_pos_y  + 1) && tab_move_passable[tab_x][tab_y + 1] == -1) {
+								  pos_temporaire.push([new_pos_x,new_pos_y + 1]);
+								  tab_move.push([new_pos_x,new_pos_y + 1]);
+								  tab_move_passable[tab_x][tab_y + 1] = 0;
+							}
+						break;
+						case 1: 
+							
+							if (mapData[new_pos_x + 1]  != undefined && mapData[new_pos_x + 1][new_pos_y]  != undefined && mapData[new_pos_x + 1][new_pos_y] == id && !inArray(new_pos_x + 1, new_pos_y) && tab_move_passable[tab_x + 1][tab_y] == -1) {
+								  pos_temporaire.push([new_pos_x + 1,new_pos_y]);
+								  tab_move.push([new_pos_x + 1,new_pos_y]);
+								  tab_move_passable[tab_x + 1][tab_y] = 0;
+							}
+							
+						break;
+						case 2: 		
+							if (mapData[new_pos_x][new_pos_y - 1]  != undefined && mapData[new_pos_x][new_pos_y - 1] == id && !inArray(new_pos_x, new_pos_y - 1) && tab_move_passable[tab_x][tab_y - 1] == -1) {
+								  pos_temporaire.push([new_pos_x,new_pos_y - 1]);
+								  tab_move.push([new_pos_x,new_pos_y - 1]);
+								  tab_move_passable[tab_x][tab_y - 1] = 0;
+							}
+								
+						break;
+						case 3: 	
+							if (mapData[new_pos_x - 1]  != undefined && mapData[new_pos_x - 1][new_pos_y]  != undefined && mapData[new_pos_x - 1][new_pos_y] == id && !inArray(new_pos_x - 1, new_pos_y) && tab_move_passable[tab_x - 1][tab_y] == -1) {
+								  pos_temporaire.push([new_pos_x - 1,new_pos_y]);
+								  tab_move.push([new_pos_x - 1,new_pos_y]);
+								  tab_move_passable[tab_x - 1][tab_y] = 0;
+							}
+						break;
+					}
+				}
+				
+			}
+
+			pos_semi_tempor = pos_temporaire;
+			path += 1;
+		}
+		return tab_move;
+	},
+	
+	pathfinding: function(x0, y0, x1, y1, type, options) {
+		 type = type || "AStarFinder";
+		 this._pf_grid = new PF.Grid(this._rows, this._cols,  this._pf_prop);
+		 var path = new PF[type](options).findPath(x0, y0, x1, y1, this._pf_grid);
+		 return path;
+	},
+	
+	getPathfindingGrid: function() {
+		return this._pf_grid;
+	}
+	
+});
+
+
+var Hit =  {		
+	Grid: {
+		"new": function(rows, cols) {
+			return Class.New("Grid", [rows, cols]);
+		}
+	}
 }
 
+if (typeof exports != "undefined") {
+	exports.Class = Hit;
+}
  

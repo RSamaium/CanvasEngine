@@ -49,13 +49,14 @@ THE SOFTWARE.
 }());
 // --
 
-var prop, vendors = ['ms', 'moz', 'webkit', 'o', 'khtml'];
-				
-for(var x = 0; x < vendors.length && !Element.prototype.requestFullScreen; ++x) {
-	Element.prototype.requestFullScreen = Element.prototype[vendors[x]+'RequestFullScreen'];
-	document.cancelFullScreen =  document[vendors[x]+'CancelFullScreen'];
+if (typeof Element != "undefined") {
+	var prop, vendors = ['ms', 'moz', 'webkit', 'o', 'khtml'];
+					
+	for(var x = 0; x < vendors.length && !Element.prototype.requestFullScreen; ++x) {
+		Element.prototype.requestFullScreen = Element.prototype[vendors[x]+'RequestFullScreen'];
+		document.cancelFullScreen =  document[vendors[x]+'CancelFullScreen'];
+	}
 }
-
 
 Class.create("ModelClientClass", {
 	create: function(name, events, model) {
@@ -125,6 +126,90 @@ Class.create("ModelClientClass", {
 var Model = Class["new"]("ModelClientClass"),
 	Global_CE;
 	
+/**
+@doc server/
+@property io Object of Socket.io. View [https://github.com/LearnBoost/socket.io/wiki/Exposed-events#client](https://github.com/LearnBoost/socket.io/wiki/Exposed-events#client)
+
+@type Object
+@default null
+@example
+
+	CE.connectServer('http://127.0.0.1', 8333);
+	CE.io.emit("Foo", {bar: "test"});
+
+*/
+CanvasEngine.io = null;
+
+CanvasEngine.socketIO = function() {
+	if (typeof(io) == "undefined") {
+		throw "Please add socket.io - http://socket.io";
+	}
+	return io;
+};
+
+CanvasEngine.User = {
+
+	authentication: function(username, password, params) {
+		CanvasEngine.socketIO();
+		CanvasEngine.io.emit("_authentication", {
+			username: username,
+			password: password
+		});
+		CanvasEngine.io.on("_authentication", function(ret) {
+			if (ret.ret == "success" && params.success) {
+				params.success();
+			}
+			else if (ret.ret == "failed" && params.failed) {
+				params.failed(ret.err);
+			}
+		});
+	},
+	
+	register: function(username, password, params) {
+	
+		CanvasEngine.socketIO();
+		CanvasEngine.io.emit("_register", {
+			username: username,
+			password: password,
+			data: params.data
+		});
+		CanvasEngine.io.on("_register", function(ret) {
+			if (ret.ret == "success" && params.success) {
+				params.success();
+			}
+			else if (ret.ret == "failed" && params.failed) {
+				params.failed(ret.err);
+			}
+		});
+	
+	}
+	
+};
+
+/**
+@doc server/
+@method connectServer Allows you to connect to the server. Created a Socket object from socket.io. Use the property `io` then to perform methods of Socket.io
+
+To use Socket.io , do not forget to put the JS file :
+
+	<script src="socket.io.min.js"></script>
+
+@static
+@param {String} host IP or host name
+@param {Integer} port Port
+@return CanvasEngineClass
+@example
+
+	CE.connectServer('http://127.0.0.1', 8333);
+	CE.io.on("reconnecting", function() {
+		console.log("reconnecting");
+	});
+				 
+*/	
+CanvasEngine.connectServer = function(host, port) {
+	CanvasEngine.socketIO();
+	CanvasEngine.io = io.connect(host + ":" + port);
+};
 
 /**
 	@class CanvasEngine
@@ -256,6 +341,7 @@ With jQuery :
 				for (var i=0 ; i < self.canvas.length ; i++) {
 					self.el_canvas.push(self.Canvas["new"](self.canvas[i]));
 				}
+				
 				if (params.render) CanvasEngine.Scene._loop(self.el_canvas);
 				if (callback) callback();	
 			}
@@ -371,27 +457,12 @@ Using Sound :
 				return this._cache_canvas[id];
 			},
 			
-			// obsolete
-			createBuffer: function(id, color) {
-				
-				if (this._buffer[color]) {
-					return this._buffer[color];
+			createBuffer: function(real_id) {
+				var id = "_opaque_" + real_id;
+				if (!this._buffer[id]) {
+					this._buffer[id] = this.opaqueImage(real_id);
 				}
-				canvas =  this.get(id) ;
-				this._buffer[color] = canvas;
-				return canvas;
-				
-				var _canvas = this.imageToCanvas(id),
-					canvas = _canvas.canvas,
-					ctx = _canvas.ctx;
-				canvas.id = color;
-				ctx.globalCompositeOperation = 'source-atop';
-				ctx.fillStyle = "#" + color;
-				ctx.fillRect(0, 0, canvas.width, canvas.height);
-				
-				this._buffer[color] = canvas;
-
-				return canvas;
+				return this._buffer[id];
 			},
 			
 /**
@@ -478,8 +549,32 @@ Using Sound :
 				return canvas;
 			},
 			
-			// TODO
-			// Nearest-neighbor
+/**
+@doc materials/
+@method opaqueImage Makes transparent pixels (> 0 and < 255) opaque
+@param {String} id Image id
+@return {HTML5Canvas}
+*/
+			opaqueImage: function(id) {
+				var _canvas = this.imageToCanvas(id),
+					canvas = _canvas.canvas,
+					ctx = _canvas.ctx;
+					
+				imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+				data = imageData.data;
+
+				for (var i = 0; i < data.length; i += 4) {
+				
+					if (data[i+3] > 0) {
+						data[i+3] = 255;
+					}
+				}
+				
+				ctx.putImageData(imageData, 0, 0);
+				return canvas;
+			},
+			
+			// TODO Nearest-neighbor
 			
 /**
 @doc materials/
@@ -1443,12 +1538,12 @@ and, in `ready` method :
 						requestAnimationFrame(loop);
 				 },
 				 
-				 // TODO
+				 // TODO getFPS
 				 getFPS: function() {
 					return ~~this.fps;
 				 },
 				 
-				 // TODO
+				 // TODO getPerformance
 				 getPerformance: function() {
 					return ~~(this.getFPS() / 60 * 100);
 				 }
@@ -1498,7 +1593,7 @@ and, in `ready` method :
 			var self = this, w, h;
 			this.id = id;
 			var el = this._getElementById(id);
-			if (el.tagName != "CANVAS") {
+			if (el.tagName != "CANVAS" && el.tagName != "canvas" && !params.css) {
 				this.element = document.createElement('canvas');
 				this._layerDOM = document.createElement('div');
 				w = this.element.width = el.getAttribute('width');
@@ -1523,9 +1618,9 @@ and, in `ready` method :
 			}
 			this.width = this.element.width;
 			this.height = this.element.height;
-			this.ctx = this.element.getContext('2d');
+			this.ctx = params.css ? null : this.element.getContext('2d');
 			this.hammerExist = typeof(Hammer) !== "undefined";
-			old = this.ctx;
+			//old = this.ctx;
 			this._mouseEvent();
 			var events = ["click", "dbclick", "mousemove", "mousedown", "mouseup"],
 				hammer_events = [
@@ -1556,6 +1651,7 @@ and, in `ready` method :
 					"release"
 				];
 				
+
 			var _el = this._layerParent || this.element;
 			
 			var hammer = null, val;
@@ -1565,6 +1661,7 @@ and, in `ready` method :
 			
 			function bindEvent(type) {
 				_el.addEventListener(type, function(e) {
+					
 					callback(e, type);
 				}, false);
 			}
@@ -1608,6 +1705,7 @@ and, in `ready` method :
 					bindHammer.call(this, hammer_events[i]);
 				}
 			}
+			
 			for (var i=0 ; i < events.length ; i++) {
 				bindEvent.call(this, events[i]);
 			}
@@ -1630,7 +1728,6 @@ and, in `ready` method :
 		},
 		_getElementById: function(id) {
 			var canvas;
-			
 			if (params.cocoonjs) {
 				canvas = document.createElement("canvas");
 				canvas.width = params.cocoonjs.width;
@@ -2253,7 +2350,7 @@ Create two elements :
 				}
 			}
 
-			//this.loadEvents();
+			this.loadEvents();
 			
 			var images_length = materialLength("images"),
 				sound_length = materialLength("sounds"),
@@ -2417,6 +2514,85 @@ Create two elements :
 	});
 
 */
+
+    // TODO : Context CSS
+	Class.create("ContextCSS", {
+	
+		drawImage: function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
+				var array, array_buffer, buffer, _img = img;
+				if (!sx) sx = 0;
+				if (!sy) sy = 0;
+				if (typeof img === "string") {
+					_img = CanvasEngine.Materials.get(img);
+					if (!_img) {
+						return;
+					}
+					this.img.width = _img.width;
+					this.img.height = _img.height;
+				}
+				if (/%$/.test(sw)) {
+					dx = sx;
+					dy = sy;
+					sx = 0;
+					sy = 0;
+					sw = _img.width * parseInt(sw) / 100;
+					sh = _img.height;
+					dw = sw;
+					dh = sh;
+				}
+				
+				
+				// Hack SecurityError: DOM Exception 18 
+				if (/^http:/.test(_img.src)) {
+					buffer = _img;
+				}
+				else {
+					buffer = CanvasEngine.Materials.createBuffer(img);
+				}
+				// buffer = _img;
+				
+				//buffer = CanvasEngine.Materials.createBuffer(img, this.color_key);
+		
+				
+				/*function f(t) {
+					for (var i=1 ; i < t.length ; i++) {
+						t[i] = Math.round(t[i]);
+					}
+					return t;
+				}*/
+				
+				if (sw !== undefined) {
+					array = [_img, sx, sy, sw, sh, dx, dy, dw, dh];
+					array_buffer = [buffer, sx, sy, sw, sh, dx, dy, dw, dh];
+					this._buffer_img = {
+						params: array_buffer,
+						x: dx,
+						y: dy,
+						width: dw,
+						height: dh
+					};
+					//array_buffer = f([buffer, sx, sy, sw, sh, dx, dy, dw, dh]);
+				}
+				else {
+					array = [_img, sx, sy];
+					array_buffer = [buffer, sx, sy];
+					this._buffer_img = {
+						params: array_buffer,
+						x: sx,
+						y: sy,
+						width: _img.width,
+						height: _img.height
+					};
+					
+					//array_buffer = f([buffer, sx, sy]);
+				}
+				
+				this._addCmd("drawImage", array);
+			}
+	
+	});
+	
+	
 	Class.create("Context", {
 			_cmd: {},
 			img: {},
@@ -2475,12 +2651,64 @@ obsolete
 				
 			},*/
 			
+			_defaultRectParams: function(x, y, w, h, z) {
+				if (typeof x == "string") {
+					this.fillStyle = x;
+					x = y;
+					y = w;
+					w = h;
+					h = z;
+				}
+				if (x == undefined) {
+					x = 0;
+					y = 0;
+				}
+				if (w == undefined) {
+					w = this.width;
+					h = this.height;
+				}
+				return [x, y, w, h];
+			},
+			
 /**
 	@doc draw/
-	@method fillRect. See http://www.w3schools.com/html5/canvas_fillrect.asp
+	@method fillRect The fillRect() method draws a "filled" rectangle. The default color of the fill is black. Before the positions, you can specify the color of the rectangle
+	@param {Integer|String} x (optional) The x-coordinate of the upper-left corner of the rectangle. By default, 0.
+	@param {Integer} y (optional) The y-coordinate of the upper-left corner of the rectangle. By default, 0.
+	@param {Integer} width (optional) The width of the rectangle, in pixels. By default, width of the element. 
+	@param {Integer} height (optional) The height of the rectangle, in pixels. By default, height of the element. 
+	@example
+	
+In `ready` method.
+
+Example 1 :
+	
+	var el = this.createElement(100, 100);
+	el.fillStyle = "red";
+	el.fillRect();
+	
+Example 2 :
+
+	var el = this.createElement(100, 100);
+	el.fillRect("red");
+	
+Example 3 :
+
+	var el = this.createElement(100, 100);
+	el.fillRect("red", 10, 25);
+	
+Example 4 :
+
+	var el = this.createElement(100, 100);
+	el.fillRect(10, 25);
+	
+Example 5 :
+
+	var el = this.createElement();
+	el.fillRect(10, 25, 100, 100);
 */
 			fillRect: function(x, y, w, h) {
-				this._addCmd("fillRect", [x, y, w, h], ["fillStyle"]);
+				this._addCmd("fillRect", this._defaultRectParams.apply(this, arguments), ["fillStyle"]);
 			},
 /**
 	@doc draw/
@@ -2503,11 +2731,45 @@ obsolete
 			strokeText: function(text, x, y) {
 				this._addCmd("strokeText", [text, x, y], ["strokeStyle", "font", "textBaseline"]);
 			},
-			/**
-				@method strokeRect See http://www.w3schools.com/html5/canvas_strokerect.asp
-			*/
+/**
+	@doc draw/
+	@method strokeRect The strokeRect() method draws a rectangle (no fill). The default color of the stroke is black.
+	@param {Integer|String} x (optional) The x-coordinate of the upper-left corner of the rectangle. By default, 0.
+	@param {Integer} y (optional) The y-coordinate of the upper-left corner of the rectangle. By default, 0.
+	@param {Integer} width (optional) The width of the rectangle, in pixels. By default, width of the element. 
+	@param {Integer} height (optional) The height of the rectangle, in pixels. By default, height of the element. 
+	@example
+	
+In `ready` method.
+
+Example 1 :
+	
+	var el = this.createElement(100, 100);
+	el.strokeStyle = "red";
+	el.strokeRect();
+	
+Example 2 :
+
+	var el = this.createElement(100, 100);
+	el.strokeRect("red");
+	
+Example 3 :
+
+	var el = this.createElement(100, 100);
+	el.strokeRect("red", 10, 25);
+	
+Example 4 :
+
+	var el = this.createElement(100, 100);
+	el.strokeRect(10, 25);
+	
+Example 5 :
+
+	var el = this.createElement();
+	el.strokeRect(10, 25, 100, 100);
+*/
 			strokeRect: function(x, y, w, h) {
-				this._addCmd("strokeRect", [x, y, w, h], ["strokeStyle"]);
+				this._addCmd("strokeRect", this._defaultRectParams.apply(this, arguments), ["strokeStyle"]);
 			},
 			/**
 				@doc draw/
@@ -2576,6 +2838,17 @@ In the method "ready" in the scene class :
 					dh = sh;
 				}
 				
+
+				
+				// Hack SecurityError: DOM Exception 18 
+				var reg = new RegExp("^" + window.location.origin, "g");
+				if (!reg.test(_img.src)) {
+					buffer = _img;
+				}
+				else {
+					buffer = CanvasEngine.Materials.createBuffer(img);
+				}
+				// buffer = _img;
 				
 				//buffer = CanvasEngine.Materials.createBuffer(img, this.color_key);
 		
@@ -2589,7 +2862,9 @@ In the method "ready" in the scene class :
 				
 				if (sw !== undefined) {
 					array = [_img, sx, sy, sw, sh, dx, dy, dw, dh];
+					array_buffer = [buffer, sx, sy, sw, sh, dx, dy, dw, dh];
 					this._buffer_img = {
+						params: array_buffer,
 						x: dx,
 						y: dy,
 						width: dw,
@@ -2599,7 +2874,9 @@ In the method "ready" in the scene class :
 				}
 				else {
 					array = [_img, sx, sy];
+					array_buffer = [buffer, sx, sy];
 					this._buffer_img = {
+						params: array_buffer,
 						x: sx,
 						y: sy,
 						width: _img.width,
@@ -2623,7 +2900,7 @@ In the method "ready" in the scene class :
 				this._useClip = true;
 				this._addCmd.call(this, "clip", arguments); 
 			},
-			rect: function() { this._addCmd.call(this, "rect", arguments); },
+			rect: function() { this._addCmd("rect", this._defaultRectParams.apply(this, arguments)); },
 			arc: function() { this._addCmd.call(this, "arc", arguments); },
 			arcTo: function() { this._addCmd.call(this, "arcTo", arguments); },
 			addColorStop: function() { this._addCmd.call(this, "addColorStop", arguments); },
@@ -2738,12 +3015,17 @@ In the method "ready" in the scene class :
 			_bufferEvent: function(name, _params) {
 				var ctx_mouse = this._canvas[0]["_ctxMouseEvent"];
 				if (this.hasEvent() || this._useClip) {
-					ctx_mouse[name].apply(this._canvas[0]["_ctxMouseEvent"], _params);
-					if (name == "drawImage") {
+			
+					if (name == "drawImage" && !this._forceEvent) {
+						ctx_mouse[name].apply(this._canvas[0]["_ctxMouseEvent"], this._buffer_img.params);
 						ctx_mouse.globalCompositeOperation = 'source-atop';
 						ctx_mouse.fillStyle = '#' + this.color_key;
 						ctx_mouse.fillRect(this._buffer_img.x, this._buffer_img.y, this._buffer_img.width, this._buffer_img.height);
 					}
+					else {
+						ctx_mouse[name].apply(this._canvas[0]["_ctxMouseEvent"], _params);
+					}
+					
 				}
 			},
 			
@@ -2766,7 +3048,7 @@ In the method "ready" in the scene class :
 				
 				
 				var bufferProp = function(cmd_propreties, key, value) {
-					if (cmd_propreties[key] || this.forceEvent) {
+					if (cmd_propreties[key] || this._forceEvent) {
 						this._canvas[0]["_ctxMouseEvent"][key] = value;
 						return 0;
 					}
@@ -2821,7 +3103,7 @@ In the method "ready" in the scene class :
 						}
 						else {
 							this._canvas[j][layer][_name].apply(this._canvas[j][layer], cmd.params);
-							if (this.forceEvent) {
+							if (this._forceEvent) {
 								if (_name == "rect") {
 									this._bufferEvent("fillRect", cmd.params);
 								}
@@ -2920,6 +3202,13 @@ In `ready` method :
 		y: 0,
 		real_x: 0,
 		real_y: 0,
+		real_scale_x: 1,
+		real_scale_y: 1,
+		real_rotate: 0,
+		real_skew_x: 0,
+		real_skew_y: 0,
+		real_opacity: 1,
+		real_propagation: true,
 		/**
 			@doc manipulate/
 			@property scaleX Scale in X. Value 1 equivalent to 100%
@@ -3006,7 +3295,6 @@ In `ready` method :
 			@type CanvasEngine.Element
 		*/
 		parent: null,
-		// TODO
 		pause: false,
 		_index: 0,
 		_id: null,
@@ -3018,13 +3306,8 @@ In `ready` method :
 		_nbEvent: 0,
 		_onRender: [],
 		_pack: null,
-/**
-	@doc manipulate/
-	@property forceEvent Force applying an event on the element even if it is invisible. Assign the height and width or use the rect method before
-	@type Boolean
-	@default false
-*/
-		forceEvent: false,
+
+		_forceEvent: false,
 /**
 	@doc manipulate/
 	@property propagationOpacity If false, does not take into account the opacity of parent elements
@@ -3074,6 +3357,24 @@ In `ready` method :
 			this.scene.getCanvas()._elementsByScene(this.scene.name, key, this);
 			this._canvas = CanvasEngine.el_canvas;
 		},
+		
+		_initParams: function(init) {
+			if (init || !this.parent) {
+				this.parent = {
+					scaleX: 1,
+					scaleY: 1,
+					real_x: 0,
+					real_y: 0,
+					real_scale_x: 1,
+					real_scale_y: 1,
+					real_rotate: 0,
+					real_skew_x: 0,
+					real_skew_y: 0,
+					real_opacity: 1,
+					real_propagation: true
+				};
+			}
+		},
 /**
 @doc draw/
 @method refresh Refreshes the elements of the scene	
@@ -3098,6 +3399,8 @@ In `ready` method :
 		_refresh: function(init, children, ctx) {
 	
 			//children = children === undefined ? true : children;
+			
+			if (params.css) return;
 		
 			if (this.stage._onRefresh) this.stage._onRefresh(this);
 			
@@ -3109,29 +3412,14 @@ In `ready` method :
 			
 
 			if (!this.real_pause) {
-
-				if (init || !this.parent) {
-					this.parent = {
-						scaleX: 1,
-						scaleY: 1,
-						real_x: 0,
-						real_y: 0,
-						real_scale_x: 1,
-						real_scale_y: 1,
-						real_rotate: 0,
-						real_skew_x: 0,
-						real_skew_y: 0,
-						real_opacity: 1,
-						real_propagation: true
-					};
-				}
+			
+				this._initParams(init);
 				
 				this.real_propagation = this.parent.propagationOpacity == null ? true : this.parent.propagationOpacity;
 			
 				this.save();
 					
 				// this.setTransform(1, 0, 0, 1, 0, 0);
-				
 				this.real_scale_x = this.parent.real_scale_x * this.scaleX;
 				this.real_scale_y = this.parent.real_scale_y * this.scaleY;
 				// this.real_y = (this.parent.real_y + this.y) * (this.parent.scaleY == 1 ? 1 : this.parent.real_scale_x);
@@ -3146,9 +3434,9 @@ In `ready` method :
 					this.real_opacity = this.parent.real_opacity * this.opacity;
 				}
 				else {
+					
 					this.real_opacity = this.opacity;
 				}
-				
 				
 				
 				this.real_pause = init ? this.pause : this.parent.real_pause;
@@ -3164,24 +3452,30 @@ In `ready` method :
 				}
 				var regX = this.real_x + this.regX;
 				var regY = this.real_y + this.regY;
+					
 				if (this.regX != 0 || this.regY != 0) {
 					this.translate(regX, regY);
 				}
+				
 				if (this.real_rotate != 0) {
 					this.rotateDeg(this.real_rotate);
 				}
+				
 				if (this.real_scale_x != 1 || this.real_scale_y != 1) {
 					this.scale(this.real_scale_x, this.real_scale_y);
 				}
 				if (this.real_skew_x != 0 || this.real_skew_y != 0) {
 					this.transform(1, this.real_skew_x, this.real_skew_y, 1, 0, 0);
 				}
-				this.translate(this.real_x,  this.real_y);
+					
 				if (this.regX != 0 || this.regY != 0) {
 					this.translate(-regX, -regY);
 				}
+				
+				this.translate(this.real_x,  this.real_y);
+				
+				
 			} 
-			
 			
 			this.draw(ctx);
 			
@@ -3396,7 +3690,7 @@ In method ready :
 				this._children.push(el);
 				el.parent = this;
 				el._index = this._children.length-1;
-				el._refresh(false, true);				
+				el._refresh(false, true);
 			}
 			return arguments;
 		},
@@ -3421,7 +3715,7 @@ In method ready
 			return el;
 		},
 		
-		// TODO
+		// TODO insertAfter
 		/**
 			var el1 = this.createElement();
 			var el2 = this.createElement();
@@ -3477,7 +3771,7 @@ In method ready
 @doc manipulate/
 @method pack Compress all children in an HTML5Canvas
 @param {Integer} w Width of the compressed child
-@param {Height} h Height of the compressed child
+@param {Integer} h Height of the compressed child
 @param {Boolean} free_memory (optional) Do not keep the array in memory of the children if true. Unpack method can no longer be used out. (false by default)
 @example
 In method ready
@@ -3540,6 +3834,77 @@ In method ready
 			}
 			this._children = this._pack;
 			this._pack = null;
+			return this;
+		},
+		
+/**
+@doc manipulate/
+@method forceEvent `(>= 1.3.0)` Force applying an event on the element even if it is invisible. Assign the height and width
+
+In the case of an image, when the user clicks, the event will be triggered if he clicks on an opaque area of ​​the image.
+By cons, if you use the forceEvent() method, the entire area of the element that will be sensitive to click. The interest is to provide a larger area to click (useful for touch devices) or give clickable transparent areas
+
+@param {Boolean} (optional) activate activate all the clickable area (true by default)
+@return {CanvasEngine.Element}
+@example
+
+Code in `ready()` method of current scene :
+	
+Example 1 :
+	
+	var el = this.createElement(100, 100);
+	el.forceEvent();
+	el.click(function() {
+		console.log("foo");
+	});
+	
+Example 2, If the size of the element does not exist, it is the size of the image to be taken :
+	
+	var el = this.createElement();
+	el.drawImage("my_img");
+	el.forceEvent();
+	el.click(function() {
+		console.log("foo");
+	});
+	
+Example 3 :
+
+	var el = this.createElement();
+	el.drawImage("my_img");
+	el.forceEvent();
+	el.click(function() {
+		this.forceEvent(false);
+	});
+	
+	
+*/
+		forceEvent: function(bool) {
+			if (bool == undefined) bool = true;
+			
+			this._forceEvent = bool;
+			
+			if (!bool) {
+				this.removeCmd("rect");
+				return this;
+			}
+			
+			var w =  this.width,
+				h =  this.height;
+			
+			if (!w) {
+				w = this.img.width;
+			}
+			if (!h) {
+				h = this.img.height;
+			}
+			
+			if (!w || !h) {
+				throw "forceEvent() : Before, indicate the size of element !";
+			}
+			
+			this.beginPath();
+			this.rect(0, 0, w, h);
+			this.closePath();
 			return this;
 		},
 		
@@ -3969,6 +4334,17 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 			for (var i=0 ; i < events.length ; i++) {
 				event = events[i];
 				if (callback) {
+					if (event == "canvas:render") {
+						
+						for (var i=0 ; i < this._onRender.length ; i++) {
+							if (this._onRender[i] == callback) {
+								this._onRender.splice(i, 1);
+								break;
+							}
+						}
+		
+					}
+					
 					for (var i=0 ; i < this._listener[event].length ; i++) {
 						if (this._listener[event][i] == callback) {
 							this._listener[event].splice(i, 1);
@@ -3977,6 +4353,9 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 					}
 				}
 				else {
+					if (event == "canvas:render") {
+						this._onRender = [];
+					}
 					if (this._listener[event]) {
 						delete this._listener[event];
 						this._nbEvent--;
@@ -4104,7 +4483,7 @@ or
 		addLoopListener: function(callback) {
 			this.on("canvas:render", callback);
 		}
-	}).extend("Context");
+	}).extend("Context" + (params.css ? "CSS" : ""));
 	
 	Global_CE = CanvasEngine = Class["new"]("CanvasEngineClass");
 	return CanvasEngine;

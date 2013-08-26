@@ -358,7 +358,7 @@ Example :
 		var self = this, ret;
 		
 		this.el.addLoopListener(function() {
-		
+			
 			if (self._varTime.time === undefined) return;
 			
 			
@@ -415,7 +415,6 @@ Example :
 						result_val - self._timeline[last_t][type],
 						next_t - last_t
 					);
-					//console.log(next_t - last_t, time_tmp);
 					return value;
 				}
 				freq = 0;
@@ -426,6 +425,7 @@ Example :
 			if (self._stop) {
 				return;
 			}
+			
 			freq++;
 			if (freq >= self._frequence) {
 				if (time == 0) {
@@ -552,6 +552,9 @@ Example :
 			
 			this.el.addLoopListener(function() {
 				var t;
+				
+				
+				
 				var seq = self._animations[self._seq], loop = self._loop == "loop";
 				
 				function seqSize(img) {
@@ -568,6 +571,7 @@ Example :
 				if (freq == null && seq) {
 					freq = seq.frequence;
 				}
+				
 				if (self._stop) {
 					if (seq) freq = seq.frequence;
 					i = 0;
@@ -575,7 +579,6 @@ Example :
 				}
 				freq++;
 				
-
 				if (freq >= seq.frequence) {
 					if (self._images instanceof Array) {	
 						var img = self._images[img_seq];
@@ -601,7 +604,6 @@ Example :
 						
 						function drawImage(_el, id) {
 							var _img = self._images;
-							
 							if (seq.patternSize) {
 								seq.size = {
 									width: img.width / seq.patternSize.width,
@@ -622,6 +624,7 @@ Example :
 							if (!seq.position) seq.position = {};
 							if (!seq.position.left) seq.position.left = 0;
 							if (!seq.position.top) seq.position.top = 0;
+							
 							_el.drawImage(_img, w, h, seq.size.width, seq.size.height, seq.position.left, seq.position.top, seq.size.width, seq.size.height);
 						}
 						

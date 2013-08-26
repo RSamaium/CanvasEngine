@@ -121,17 +121,17 @@ Class.create("Effect", {
 			stage.append(el);
 			
 			var effect = canvas.Effect.new(this, el);
-			effect.screenShake(3, 5, 24);
+			effect.shake(3, 5, 24);
 		}
 	});
 	
 Other example :
 
-	effect.screenShake(3, 5, 24, "xy");
+	effect.shake(3, 5, 24, "xy");
 	
 or :
 
-	effect.screenShake(3, 5, 24, "xy", function() { // You can omit the parameter "axis" if you do a shake on the X axis
+	effect.shake(3, 5, 24, "xy", function() { // You can omit the parameter "axis" if you do a shake on the X axis
 		alert("finish"); 
 	});
 */
@@ -141,7 +141,7 @@ or :
 			callback = axis;
 			axis = false;
 		}
-		
+        
 		var current = 0, direction = 1;
 		axis = axis || "x";
 		

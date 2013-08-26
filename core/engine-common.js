@@ -127,9 +127,11 @@ Kernel.prototype = {
 /**
 @doc class/
 @method extend add object in this class
-@params {Object} object
+@params {Object|String} object or name of existing class
 @params {Boolean} clone (optional) Makes a clone of the object (false by default)
 @example
+
+Example 1 :
 
 	Class.create("Foo", {
 	
@@ -142,6 +144,24 @@ Kernel.prototype = {
 		
 		}
 	});
+	
+Example 2 :
+
+	Class.create("Bar", {
+	
+		initialize: function() {
+			
+		}
+	
+	});
+
+	Class.create("Foo", {
+	
+		mymethod: function() {
+			
+		}
+	
+	}).extend("Bar");
 
 @return {Object}
 */
@@ -339,10 +359,13 @@ CanvasEngine.arraySplice = function(val, array) {
 * success {Function}  (optional) Callback if the request was successful
 */
 CanvasEngine.ajax = function(options) {
-
-	if (!options) options = {};
-	options.url = options.url || "./";
-	options.type = options.type || "GET";
+	
+	options = CanvasEngine.extend({
+		url: "./",
+		type: "GET",
+		statusCode: {}
+	}, options);
+	
 	options.data = options.data ? JSON.stringify(options.data) : null;
 	
 	if (fs) {
@@ -368,26 +391,37 @@ CanvasEngine.ajax = function(options) {
 		catch (e3) {  xhr = false;   }
 		}
 	}
+	
+	function onSuccess() {
+		var ret;
+		if (options.success) {
+			ret = xhr.responseText;
+			if (options.dataType == 'json') {
+				ret = CanvasEngine.parseJSON(ret);
+			}
+			else if (options.dataType == 'xml') {
+				ret = xhr.responseXML;
+			}
+			options.success(ret);
+		}
+	}
 
-	xhr.onreadystatechange  = function() { 
-		 var ret;
-		 if(xhr.readyState  == 4)  {
-			  if(xhr.status  == 200) {
-					if (options.success) {
-						ret = xhr.responseText;
-						if (options.dataType == 'json') {
-							ret = CanvasEngine.parseJSON(ret);
-						}
-						else if (options.dataType == 'xml') {
-							ret = xhr.responseXML;
-						}
-						options.success(ret);
-					}
+	xhr.onreadystatechange  = function() {
+		 if (xhr.readyState  == 4)  {
+			  if (options.statusCode  && options.statusCode[xhr.status]) options.statusCode[xhr.status]();
+			  if (xhr.status  == 200) {
+				 onSuccess();
+			  }
+			  else  {
+				 if (options.error) options.error(xhr);
 			  }
 		 }
 	}; 
 	
    xhr.open(options.type, options.url,  true); 
+   if (options.mimeType) {
+		xhr.overrideMimeType(options.mimeType);
+   }
    xhr.send(options.data); 
 
 }
@@ -619,6 +653,107 @@ CanvasEngine.objectSize = function(obj) {
 };
 
 /**
+@doc utilities/
+@method extend `(>= 1.2.7)` Merging two objects
+@static
+@params {Object} target An object that will receive the new properties if additional objects are passed in.
+@params {Object} obj An object containing additional properties to merge in.
+@examples
+
+	CE.extend({a: 1}, {b: 2}); // =>{a: 1, b: 2}
+
+@return {Object} 
+*/
+// TODO : clone
+CanvasEngine.extend = function(obj1, obj2, clone) {
+	if (!obj1) obj1 = {};
+	if (!obj2) obj2 = {};
+	return Kernel._extend(obj1, obj2, clone);
+}
+
+/*CanvasEngine.browser = function() {
+	var ua = navigator.userAgent.toLowerCase();
+	var browser = {};
+	
+	function testNavigator(name) {
+		var patt = new RegExp (name);
+		browser[name] = {};
+		browser[name] = patt.test(ua) && (name == "mozilla" ? !/webkit/.test(ua) : true);
+		if (browser[name]
+	}
+	
+	
+	browser.webkit = /webkit/.test(ua);
+	browser.opera = /opera/.test(ua);
+	browser.msie = /msie/.test(ua);
+	/msie\/([^ ]+)/.exec();
+	return browser;
+}*/
+
+/**
+@doc utilities/
+@static
+@property browser `(>= 1.2.8)` Retrieves the methods and properties related to browser.  It contains flags for each of the four most prevalent browser classes (Internet Explorer, Mozilla, Webkit, and Opera) as well as version information.
+
+* `mozilla` : Tests if the browser is Mozilla
+* `webkit` : Tests if the browser is Webkit (Chrome, Safari)
+* `opera` : Tests if the browser is Opera
+* `msie` : Tests if the browser is Internet Explorer
+
+Example
+
+	if (CE.browser.msie) {
+		// if browser is Internet Explorer
+	}
+
+Knowing the browser version :
+
+* `version`
+
+Example
+
+	if (CE.browser.msie && parseInt(CE.browser.version) == 9) { // crop value
+		// if browser is Internet Explorer 9
+	}
+	
+Knowing the browser used by the user :
+
+* `which()`. Returns the object: `{ua: , version: }`
+
+Example
+	
+	CE.browser.which(); // returns {ua: "mozilla", version: "22.0"}
+
+@type Object
+*/
+
+if (typeof exports == "undefined") {
+	var _ua = navigator.userAgent.toLowerCase(),
+	_version = /(chrome|firefox|msie|version)(\/| )([0-9.]+)/.exec(_ua);
+	CanvasEngine.browser = {
+		mozilla: /mozilla/.test(_ua) && !/webkit/.test(_ua),
+		webkit: /webkit/.test(_ua),
+		opera: /opera/.test(_ua),
+		msie: /msie/.test(_ua),
+		version: _version ? _version[3] : null,
+		which: function() {
+			var is;
+			CanvasEngine.each(["mozilla", "webkit", "opera", "msie"], function(i, ua) {
+				if (CanvasEngine.browser[ua]) {
+					is = ua;
+				}
+			})
+			return {
+				ua: is,
+				version: CanvasEngine.browser.version
+			};
+		}
+	};
+}
+
+
+
+/**
 	@doc utilities/
 	@method moveArray Move one index to another location of an array
 	@static
@@ -661,6 +796,152 @@ CanvasEngine.moveArray = function(array, pos1, pos2) {
 	
 	return array;
 }
+
+/**
+@doc utilities/
+@method toTimer `(>= 1.3.0)` Converts seconds into a format {hour: "", min: "", sec: ""}
+@static
+@params {Integer} total_sec Secondes
+@return {Array} 
+@examples
+
+    CE.toTimer(136); // => {hour: "00", min: "02", sec: "16"}
+
+*/
+CanvasEngine.toTimer = function(total_sec) {
+	var hour = "" + Math.floor(total_sec / 60 / 60),
+		min =  "" + Math.floor(total_sec / 60 % 60),
+		sec =  "" + Math.floor(total_sec % 60);
+	if (hour.length == 1) hour = "0" + hour;
+	if (min.length == 1) min = "0" + min;
+	if (sec.length == 1) sec = "0" + sec;
+	return {
+		hour: hour,
+		min: min,
+		sec: sec
+	};
+}
+
+CanvasEngine.algo = {
+
+	pascalTriangle: function(max) {
+	
+		max = max || 10;
+	
+		var enchain = [[1,1], [1,2,1]],
+		nb_max_move = max - enchain.length;
+		
+		for (var i=enchain.length ; i <= nb_max_move ; i++) {
+			enchain[i] = [1]
+			for (var j=1 ; j <= i ; j++) {
+				enchain[i][j] = enchain[i-1][j] + enchain[i-1][j-1];
+			}
+			enchain[i][i+1] = 1;
+		}
+		
+		return enchain;
+		
+	},
+	
+
+	
+}
+
+/**
+@doc utilities/
+@method toMatrix `(>= 1.3.0)` Transforms a one-dimensional array to a table with two Diemension
+@static
+@params {Array} array The one-dimensional array to convert
+@params {Integer} width Width of the matrix created
+@params {Integer} height Height of the matrix created
+@return {Array} 
+@examples
+
+    CE.toMatrix([1, 2, 3, 4], 2, 2); // => [[1, 2], [3, 4]]
+    
+*/
+CanvasEngine.toMatrix = function(array, width, height) {
+	var matrix = [], k = 0;
+	for (var j=0 ; j < height ; j++) {
+		for (var i=0 ; i < width ; i++) {
+			if (!matrix[i]) matrix[i] = [];
+			matrix[i][j] =  array[k];
+			k++;
+		}
+	}
+	return matrix;
+}
+
+/**
+@doc utilities/
+@method rotateMatrix `(>= 1.3.0)` Change the positions of the array elements, the rotation matrix
+@static
+@params {Array} array The matrix in question
+@params {String} rotation (optional) Rotation in degree : `90` or `-90`, `180` (`90` by default)
+@return {Array} 
+@examples
+
+    var matrix = [
+        [1, 0],
+        [1, 1],
+        [1, 0]
+    ];
+
+    CE.rotateMatrix(matrix); 
+    
+    // => [
+            [1, 1, 1],
+            [0, 1, 0]
+        ]
+        
+    CE.rotateMatrix(matrix, "-90"); 
+    
+    // =>   [
+				[0, 1, 0],
+				[1, 1, 1]
+            ]
+            
+    CE.rotateMatrix(matrix, "180"); 
+    
+    // =>   [
+				[0, 1],
+				[1, 1],
+				[0, 1]
+			]
+*/
+CanvasEngine.rotateMatrix = function(array, rotation) {
+	var matrix = [], matrix2 = [];
+	
+	rotation = rotation || "90";
+	
+	if (rotation == "90" || rotation == "-90") {
+		for (var j=0 ; j < array[0].length ; j++) {
+			matrix[j] = [];
+			for (var i=0 ; i < array.length ; i++) {
+				matrix[j][i] = array[i][j];
+			}
+		}
+	}
+	
+	if (rotation == "-90") {
+		var j=0;
+		for (var i=matrix.length-1 ; i >= 0 ; i--) {
+			matrix2[j] = matrix[i];
+			j++;
+		}
+		return matrix2;
+	}
+	
+	if (rotation == "180") {
+		for (var i=0 ; i < array.length ; i++) {
+			matrix[i] = array[i].reverse();
+		}
+	}
+	
+	return matrix;
+
+}
+
 
 var _CanvasEngine = CanvasEngine;
 

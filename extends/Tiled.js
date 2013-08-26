@@ -20,6 +20,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+if (typeof exports != "undefined") {
+	var CE = require("canvasengine").listen(),
+		CanvasEngine = false,
+		Class = CE.Class;
+}
+
 Class.create("Tiled", {
 	el: null,
 	url: "",
@@ -51,11 +57,18 @@ Class.create("Tiled", {
 	 */
 	load: function(scene, el, url) {
 		var self = this;
-		this.el = el;
-		this.url = url;
-		this.scene = scene;
+		
+		if (typeof scene == "string") {
+			this.url = url = scene;
+		}
+		else {
+			this.el = el;
+			this.url = url;
+			this.scene = scene;
+		}
 		
 		function ready(data) {
+			var clone_data = CE.Core.extend({}, data);
 			self.tile_h = data.tileheight;
 			self.tile_w = data.tilewidth;
 			self.width = data.width;
@@ -79,11 +92,16 @@ Class.create("Tiled", {
 				_id = self.tilesetsIndexed[m] ? m : _id;
 				self.tilesetsIndexed[m] = self.tilesetsIndexed[_id];
 			}
-			self._draw();
+			if (typeof exports == "undefined") {
+				self._draw();
+			}
+			else {
+				if (self._ready) self._ready.call(self, clone_data);
+			}
 		}
 		
 		if (typeof url === 'string') {
-			CanvasEngine.getJSON(this.url, data);
+			(CanvasEngine || CE.Core).getJSON(this.url, ready);
 		}	
 		else {
 			ready(url);
@@ -101,9 +119,9 @@ Class.create("Tiled", {
 			if (this.layers[i].data) {
 				for (var k=0 ; k < this.layers[i].height ; k++) {
 					for (var j=0 ; j < this.layers[i].width ; j++) {
-						_tile = this.scene.createElement();
 						_id = this.layers[i].data[id];
 						if (_id != 0) {
+                            _tile = this.scene.createElement();
 							tileset = this.tilesetsIndexed[_id];
 							_id -= tileset.firstgid;
 							y = this.tile_h * Math.floor(_id / (Math.round(tileset.imagewidth / this.tile_h)));
@@ -238,7 +256,22 @@ Class.create("Tiled", {
 			return _getTileLayers(new_tile);
 		}
 		return tileset.tileproperties[this.layers[layerOrX].data[tile]];
+	},
+	
+	tileToProperty: function(prop_name) {
+		var layers = this.getDataLayers(), val;
+		var new_layers = [];
+		for (var i=0 ; i < layers.length ; i++) {
+			new_layers[i] = [];
+			for (var j=0 ; j < layers[i].length ; j++) {
+				val = this.tilesets[0].tileproperties[layers[i][j]]; // Hack Tiled Bug
+				new_layers[i][j] =  val ? +val[prop_name] : 0;
+			}
+		}
+		return new_layers;
 	}
+	
+	
 });
 
 /**
@@ -306,3 +339,6 @@ var Tiled = {
 	}
 };
 
+if (typeof exports != "undefined") {
+	exports.Class = Tiled.Tiled;
+}
