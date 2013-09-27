@@ -684,6 +684,12 @@ Using Sound :
             {foo: {path: "bar.png", transparentcolor: "#ff0000"}
         }
 
+    You can set the image as a scene transition :
+
+    	images: {
+            {foo: {path: "bar.png", transition: true}
+        }
+
 * sounds : Loading sound. Test if the browser supports the sound. If your browser does not support the format, it will take another file with the same name but with a different extension
 
         sounds: {
@@ -1373,6 +1379,40 @@ Here, CanvasEngine fetches the MP3 file in the `sound` folder. If the browser do
 	* when (optional) {String} : When should I leave the scenes calling the scene
 		* "afterPreload" : When the scene is called preloaded
 	* params (optional) {Object} Other params
+* transition {Object|Boolean} : Makes a transition to the scene called. If `true`, makes a simple fade to 30 frames. To specify the parameters of the melt :
+
+	    transition: {
+    		type: "fade",
+    		frames : 30,
+    		finish: function() {
+    			
+    		}
+    	}
+
+    For a complex animation :
+
+    1. Put the `workers` directory to the root of your project.
+    2. Place the image of transition in your project
+    3. Set the image as an image transition in loading scene :
+
+            materials: {
+    		    images: {
+        			"img": {path: "path/to/img.png", transition: true}
+        		}
+        	}
+
+    4. Set the parameters of the transition :
+        
+            transition: {
+				type: "image",
+				id: "img",
+				finish: function() {
+					
+				}
+			}
+
+		[Example](http://rsamaium.github.io/CanvasEngine/samples/transition/)
+
 @return {CanvasEngine.Scene}
 @example
 
@@ -2531,7 +2571,8 @@ Create two elements :
 							k++;
 							if (ev.data.finish) {
 								worker.terminate();
-								CanvasEngine.Scene.exitAll(self.name);
+								if (params.finish) params.finish.call(self);
+								if (!is_overlay) CanvasEngine.Scene.exitAll(self.name);
 							}
 						});
 						
