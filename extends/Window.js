@@ -211,6 +211,10 @@ In `ready` method
 				this.el.x = canvas.width / 2 - this.width / 2;
                 this.el.y = margin[1];
 			}
+			else if (margin = typeOrX.match(/bottom-([0-9]+)/)) {
+				this.el.x = canvas.width / 2 - this.width / 2;
+                this.el.y = canvas.height - margin[1];
+			}
         }
         else {
             this.el.x = typeOrX;
@@ -278,6 +282,16 @@ In `ready` method
         parent.append(this.el);
 		return this;
     },
+
+/**
+	@doc window/
+	@method remove `(>= 1.3.0)` Removes the window
+	@return {CanvasEngine.Window}
+*/
+	remove: function() {
+		this.el.remove();
+		return this;
+	},
 	
 /**
 @doc cursor
@@ -436,10 +450,7 @@ In `ready` method
 				var el = this.array_elements[index];
 				
 				if (el.width && el.height && this._enable) {
-					el.forceEvent = true;
-					el.beginPath();
-					el.rect(0, 0, el.width, el.height);
-					el.closePath();
+					el.forceEvent();
 					el.on("touch", function() {
 						self.setIndex(index);
 						self.update();

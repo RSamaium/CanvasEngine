@@ -238,11 +238,11 @@ Class.create("Scrolling", {
 			}
 			
 			if (canvas.width <= scroll.width) {
-				scroll.element.x = container.x;
+				scroll.element.x = container.x >> 0;
 			}
 			
 			if (canvas.height <= scroll.height) {
-				scroll.element.y = container.y;
+				scroll.element.y = container.y >> 0;
 			}
 			
 		}
@@ -286,7 +286,7 @@ In method `ready`
 		var  scroll_start = {};
 		var self = this;
 		
-		content.forceEvent = true;
+		content._forceEvent = true;
 	
 		clip.beginPath();
 		clip.rect(0, 0, clip.width, clip.height);
@@ -295,11 +295,10 @@ In method `ready`
 		
 		content.rect(0, 0, content.width, content.height);
 
-		content.on("dragstart", function(ev) {
+		 content.on("dragstart", function(ev) {
             scroll_start = this.offset();
             scroll_start.time = new Date().getTime();
 			if (callbacks.dragstart) callbacks.dragstart.call(this, ev);
-			
          });
 
 

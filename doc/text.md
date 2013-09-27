@@ -49,7 +49,7 @@ Shadow :
 
 ## Using fonts
 
-Since version 1.2.8, it is possible to load your own fonts and fonts externs before the opening of the scene
+Since version 1.3.0, it is possible to load your own fonts and fonts externs before the opening of the scene
 
 ### Your own fonts
 

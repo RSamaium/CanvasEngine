@@ -1,31 +1,31 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html>
-  <head>
-	<script src="http://canvasengine.net/cdn/canvasengine-latest.all.min.js"></script>
-	<script>
-		var Model = io.connect('http://127.0.0.1:8333');
+<head>
+<script src="../../canvasengine-1.3.0-dev.all.min.js"></script>
+<script src="../../extends/socket.io.min.js"></script>
 
-		var canvas = CE.defines("canvas").
-			   ready(function() {
-					canvas.Scene.call("MyScene");
-			   });
+<script>
+	var canvas = CE.defines("canvas").
+		ready(function() {
+		canvas.Scene.call("MyScene");
+	 });
 
-		canvas.Scene.new({
-		  name: "MyScene",
-		  model: Model,
-		  events: ["load"], 
-		  ready: function(stage) {
-			this.model.emit("start");
-		  },
-		  load: function(text) {
-			 console.log(text);
-		  }
-		});
+	canvas.Scene.new({
+	  name: "MyScene",
+	  events: ["load"], 
+	  ready: function(stage) {
+		   CE.connectServer('http://127.0.0.1', 8333);
+		   this.loadEvents();
+		   CE.io.emit("start");
+	  },
+	  load: function(text) {
+		 console.log(text);
+	  }
+	});
 
-	</script>
- </head>
-  <body>
+</script>
+</head>
+ <body>
 	<canvas id="canvas" width="675px" height="506px"></canvas>
-  </body>
+ </body>
 </html>
-

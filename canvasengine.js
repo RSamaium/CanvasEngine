@@ -128,7 +128,7 @@ var Model = Class["new"]("ModelClientClass"),
 	
 /**
 @doc server/
-@property io Object of Socket.io. View [https://github.com/LearnBoost/socket.io/wiki/Exposed-events#client](https://github.com/LearnBoost/socket.io/wiki/Exposed-events#client)
+@property io `(>= 1.3.0)` Object of Socket.io. View [https://github.com/LearnBoost/socket.io/wiki/Exposed-events#client](https://github.com/LearnBoost/socket.io/wiki/Exposed-events#client)
 
 @type Object
 @default null
@@ -147,6 +147,7 @@ CanvasEngine.socketIO = function() {
 	return io;
 };
 
+// TODO
 CanvasEngine.User = {
 
 	authentication: function(username, password, params) {
@@ -188,7 +189,7 @@ CanvasEngine.User = {
 
 /**
 @doc server/
-@method connectServer Allows you to connect to the server. Created a Socket object from socket.io. Use the property `io` then to perform methods of Socket.io
+@method connectServer `(>= 1.3.0)` Allows you to connect to the server. Created a Socket object from socket.io. Use the property `io` then to perform methods of Socket.io
 
 To use Socket.io , do not forget to put the JS file :
 
@@ -457,27 +458,12 @@ Using Sound :
 				return this._cache_canvas[id];
 			},
 			
-			// obsolete
-			createBuffer: function(id, color) {
-				
-				if (this._buffer[color]) {
-					return this._buffer[color];
+			createBuffer: function(real_id) {
+				var id = "_opaque_" + real_id;
+				if (!this._buffer[id]) {
+					this._buffer[id] = this.opaqueImage(real_id);
 				}
-				canvas =  this.get(id) ;
-				this._buffer[color] = canvas;
-				return canvas;
-				
-				var _canvas = this.imageToCanvas(id),
-					canvas = _canvas.canvas,
-					ctx = _canvas.ctx;
-				canvas.id = color;
-				ctx.globalCompositeOperation = 'source-atop';
-				ctx.fillStyle = "#" + color;
-				ctx.fillRect(0, 0, canvas.width, canvas.height);
-				
-				this._buffer[color] = canvas;
-
-				return canvas;
+				return this._buffer[id];
 			},
 			
 /**
@@ -564,8 +550,32 @@ Using Sound :
 				return canvas;
 			},
 			
-			// TODO
-			// Nearest-neighbor
+/**
+@doc materials/
+@method opaqueImage Makes transparent pixels (> 0 and < 255) opaque
+@param {String} id Image id
+@return {HTML5Canvas}
+*/
+			opaqueImage: function(id) {
+				var _canvas = this.imageToCanvas(id),
+					canvas = _canvas.canvas,
+					ctx = _canvas.ctx;
+					
+				imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+				data = imageData.data;
+
+				for (var i = 0; i < data.length; i += 4) {
+				
+					if (data[i+3] > 0) {
+						data[i+3] = 255;
+					}
+				}
+				
+				ctx.putImageData(imageData, 0, 0);
+				return canvas;
+			},
+			
+			// TODO Nearest-neighbor
 			
 /**
 @doc materials/
@@ -872,7 +882,12 @@ The value can be an object to give several parameters :
 								  url:  materials[i].path,
 								  autoLoad: true,
 								  autoPlay: false,
-								  onload: next
+								  onload: next,
+								  onfinish: function() {
+									 if (this._loop) {
+										this.play(); 
+									 }
+								  }
 								});
 							}
 						}
@@ -904,6 +919,11 @@ The value can be an object to give several parameters :
 							snd.addEventListener('canplaythrough', function() { 
 								self.sounds[materials[i].id] = this;
 								next();
+							}, false);
+							snd.addEventListener('ended', function() { 
+								if (!this._loop) return;
+								this.currentTime = 0;
+								this.play();
 							}, false);
 							snd.addEventListener('error', function (e) { 
 								if (params.ignoreLoadError) {
@@ -1151,9 +1171,39 @@ Here, CanvasEngine fetches the MP3 file in the `sound` folder. If the browser do
 				var sounds = CanvasEngine.Materials.sounds;
 				for (var key in sounds) {
 					if (key != sound) {
-						sounds[key].stop();
+						this.stop(key);
 					}
 				}
+				return this;
+			},
+
+/**
+@doc sound/
+@method stop `(>= 1.3.0)` Stop a sound. Breaks the sound loop
+@param {Integer} id Identifier of the music
+@return  {CanvasEngine.Sound}
+*/				
+			stop: function(id) {
+				var sdn = this.get(id);
+				if (params.soundmanager) {
+					sdn.stop();
+				}
+				else {
+					sdn.currentTime = 0;
+					sdn.pause();
+				}
+				sdn._loop = false;
+				return this;
+			},
+
+/**
+@doc sound/
+@method play `(>= 1.3.0)` Plays a sound
+@param {Integer} id Identifier of the music
+@return  {CanvasEngine.Sound}
+*/			
+			play: function(id) {
+				this.get(id).play();
 				return this;
 			},
 /**
@@ -1169,17 +1219,14 @@ Here, CanvasEngine fetches the MP3 file in the `sound` folder. If the browser do
 			},
 			
 /**
-TODO
-@method playLoop Plays a looping sound
+@doc sound/
+@method playLoop `(>= 1.3.0)` Plays a looping sound
 @param {Integer} id Identifier of the music
 @return  {CanvasEngine.Sound}
 */
 			playLoop: function(id) {
 				var snd = this.get(id);
-				snd.addEventListener('ended', function() {
-					this.currentTime = 0;
-					this.play();
-				}, false);
+				snd._loop = true;
 				snd.play();
 				return this;
 			},
@@ -1529,12 +1576,12 @@ and, in `ready` method :
 						requestAnimationFrame(loop);
 				 },
 				 
-				 // TODO
+				 // TODO getFPS
 				 getFPS: function() {
 					return ~~this.fps;
 				 },
 				 
-				 // TODO
+				 // TODO getPerformance
 				 getPerformance: function() {
 					return ~~(this.getFPS() / 60 * 100);
 				 }
@@ -1642,6 +1689,7 @@ and, in `ready` method :
 					"release"
 				];
 				
+
 			var _el = this._layerParent || this.element;
 			
 			var hammer = null, val;
@@ -1651,6 +1699,7 @@ and, in `ready` method :
 			
 			function bindEvent(type) {
 				_el.addEventListener(type, function(e) {
+					
 					callback(e, type);
 				}, false);
 			}
@@ -1694,6 +1743,7 @@ and, in `ready` method :
 					bindHammer.call(this, hammer_events[i]);
 				}
 			}
+			
 			for (var i=0 ; i < events.length ; i++) {
 				bindEvent.call(this, events[i]);
 			}
@@ -2305,6 +2355,24 @@ Create two elements :
 			this.getCanvas()._elementsByScene[this.name] = {};
 			if (this.exit) this.exit.call(this);
 		},
+		
+/**
+@doc scene/
+@method loadEvents `(>= 1.3.0)` Support client/server events.  If we connect before the opening of the scene, no need to call this method:
+
+@example
+
+	canvas.Scene.new({
+	  name: "MyScene",
+	  events: ["load"], 
+	  ready: function(stage) {
+		   CE.connectServer('http://127.0.0.1', 8333);
+		   this.loadEvents();
+		   CE.io.emit("load");
+	  }
+	});
+
+*/
 		loadEvents: function() {
 			var self = this;
 			if (_CanvasEngine.io && this._events) {
@@ -2502,6 +2570,7 @@ Create two elements :
 	});
 
 */
+
 	Class.create("Context", {
 			_cmd: {},
 			img: {},
@@ -2747,6 +2816,17 @@ In the method "ready" in the scene class :
 					dh = sh;
 				}
 				
+
+				
+				// Hack SecurityError: DOM Exception 18 
+				var reg = new RegExp("^" + window.location.origin, "g");
+				if (!reg.test(_img.src)) {
+					buffer = _img;
+				}
+				else {
+					buffer = CanvasEngine.Materials.createBuffer(img);
+				}
+				// buffer = _img;
 				
 				//buffer = CanvasEngine.Materials.createBuffer(img, this.color_key);
 		
@@ -2760,7 +2840,9 @@ In the method "ready" in the scene class :
 				
 				if (sw !== undefined) {
 					array = [_img, sx, sy, sw, sh, dx, dy, dw, dh];
+					array_buffer = [buffer, sx, sy, sw, sh, dx, dy, dw, dh];
 					this._buffer_img = {
+						params: array_buffer,
 						x: dx,
 						y: dy,
 						width: dw,
@@ -2770,7 +2852,9 @@ In the method "ready" in the scene class :
 				}
 				else {
 					array = [_img, sx, sy];
+					array_buffer = [buffer, sx, sy];
 					this._buffer_img = {
+						params: array_buffer,
 						x: sx,
 						y: sy,
 						width: _img.width,
@@ -2794,7 +2878,7 @@ In the method "ready" in the scene class :
 				this._useClip = true;
 				this._addCmd.call(this, "clip", arguments); 
 			},
-			rect: function() { this._addCmd.call(this, "rect", arguments); },
+			rect: function() { this._addCmd("rect", this._defaultRectParams.apply(this, arguments)); },
 			arc: function() { this._addCmd.call(this, "arc", arguments); },
 			arcTo: function() { this._addCmd.call(this, "arcTo", arguments); },
 			addColorStop: function() { this._addCmd.call(this, "addColorStop", arguments); },
@@ -2909,12 +2993,17 @@ In the method "ready" in the scene class :
 			_bufferEvent: function(name, _params) {
 				var ctx_mouse = this._canvas[0]["_ctxMouseEvent"];
 				if (this.hasEvent() || this._useClip) {
-					ctx_mouse[name].apply(this._canvas[0]["_ctxMouseEvent"], _params);
-					if (name == "drawImage") {
+			
+					if (name == "drawImage" && !this._forceEvent) {
+						ctx_mouse[name].apply(this._canvas[0]["_ctxMouseEvent"], this._buffer_img.params);
 						ctx_mouse.globalCompositeOperation = 'source-atop';
 						ctx_mouse.fillStyle = '#' + this.color_key;
 						ctx_mouse.fillRect(this._buffer_img.x, this._buffer_img.y, this._buffer_img.width, this._buffer_img.height);
 					}
+					else {
+						ctx_mouse[name].apply(this._canvas[0]["_ctxMouseEvent"], _params);
+					}
+					
 				}
 			},
 			
@@ -2937,7 +3026,7 @@ In the method "ready" in the scene class :
 				
 				
 				var bufferProp = function(cmd_propreties, key, value) {
-					if (cmd_propreties[key] || this.forceEvent) {
+					if (cmd_propreties[key] || this._forceEvent) {
 						this._canvas[0]["_ctxMouseEvent"][key] = value;
 						return 0;
 					}
@@ -2992,7 +3081,7 @@ In the method "ready" in the scene class :
 						}
 						else {
 							this._canvas[j][layer][_name].apply(this._canvas[j][layer], cmd.params);
-							if (this.forceEvent) {
+							if (this._forceEvent) {
 								if (_name == "rect") {
 									this._bufferEvent("fillRect", cmd.params);
 								}
@@ -3184,7 +3273,6 @@ In `ready` method :
 			@type CanvasEngine.Element
 		*/
 		parent: null,
-		// TODO
 		pause: false,
 		_index: 0,
 		_id: null,
@@ -3196,13 +3284,8 @@ In `ready` method :
 		_nbEvent: 0,
 		_onRender: [],
 		_pack: null,
-/**
-	@doc manipulate/
-	@property forceEvent Force applying an event on the element even if it is invisible. Assign the height and width or use the rect method before
-	@type Boolean
-	@default false
-*/
-		forceEvent: false,
+
+		_forceEvent: false,
 /**
 	@doc manipulate/
 	@property propagationOpacity If false, does not take into account the opacity of parent elements
@@ -3294,7 +3377,7 @@ In `ready` method :
 		_refresh: function(init, children, ctx) {
 	
 			//children = children === undefined ? true : children;
-		
+			
 			if (this.stage._onRefresh) this.stage._onRefresh(this);
 			
 			if (!this._visible) {
@@ -3345,14 +3428,14 @@ In `ready` method :
 				}
 				var regX = this.real_x + this.regX;
 				var regY = this.real_y + this.regY;
+					
 				if (this.regX != 0 || this.regY != 0) {
 					this.translate(regX, regY);
 				}
+				
 				if (this.real_rotate != 0) {
 					this.rotateDeg(this.real_rotate);
 				}
-				
-				this.translate(this.real_x,  this.real_y);
 				
 				if (this.real_scale_x != 1 || this.real_scale_y != 1) {
 					this.scale(this.real_scale_x, this.real_scale_y);
@@ -3360,10 +3443,14 @@ In `ready` method :
 				if (this.real_skew_x != 0 || this.real_skew_y != 0) {
 					this.transform(1, this.real_skew_x, this.real_skew_y, 1, 0, 0);
 				}
-				
+					
 				if (this.regX != 0 || this.regY != 0) {
 					this.translate(-regX, -regY);
 				}
+				
+				this.translate(this.real_x,  this.real_y);
+				
+				
 			} 
 			
 			this.draw(ctx);
@@ -3579,7 +3666,7 @@ In method ready :
 				this._children.push(el);
 				el.parent = this;
 				el._index = this._children.length-1;
-				el._refresh(false, true);				
+				el._refresh(false, true);
 			}
 			return arguments;
 		},
@@ -3604,7 +3691,7 @@ In method ready
 			return el;
 		},
 		
-		// TODO
+		// TODO insertAfter
 		/**
 			var el1 = this.createElement();
 			var el2 = this.createElement();
@@ -3660,7 +3747,7 @@ In method ready
 @doc manipulate/
 @method pack Compress all children in an HTML5Canvas
 @param {Integer} w Width of the compressed child
-@param {Height} h Height of the compressed child
+@param {Integer} h Height of the compressed child
 @param {Boolean} free_memory (optional) Do not keep the array in memory of the children if true. Unpack method can no longer be used out. (false by default)
 @example
 In method ready
@@ -3723,6 +3810,77 @@ In method ready
 			}
 			this._children = this._pack;
 			this._pack = null;
+			return this;
+		},
+		
+/**
+@doc manipulate/
+@method forceEvent `(>= 1.3.0)` Force applying an event on the element even if it is invisible. Assign the height and width
+
+In the case of an image, when the user clicks, the event will be triggered if he clicks on an opaque area of ​​the image.
+By cons, if you use the forceEvent() method, the entire area of the element that will be sensitive to click. The interest is to provide a larger area to click (useful for touch devices) or give clickable transparent areas
+
+@param {Boolean} (optional) activate activate all the clickable area (true by default)
+@return {CanvasEngine.Element}
+@example
+
+Code in `ready()` method of current scene :
+	
+Example 1 :
+	
+	var el = this.createElement(100, 100);
+	el.forceEvent();
+	el.click(function() {
+		console.log("foo");
+	});
+	
+Example 2, If the size of the element does not exist, it is the size of the image to be taken :
+	
+	var el = this.createElement();
+	el.drawImage("my_img");
+	el.forceEvent();
+	el.click(function() {
+		console.log("foo");
+	});
+	
+Example 3 :
+
+	var el = this.createElement();
+	el.drawImage("my_img");
+	el.forceEvent();
+	el.click(function() {
+		this.forceEvent(false);
+	});
+	
+	
+*/
+		forceEvent: function(bool) {
+			if (bool == undefined) bool = true;
+			
+			this._forceEvent = bool;
+			
+			if (!bool) {
+				this.removeCmd("rect");
+				return this;
+			}
+			
+			var w =  this.width,
+				h =  this.height;
+			
+			if (!w) {
+				w = this.img.width;
+			}
+			if (!h) {
+				h = this.img.height;
+			}
+			
+			if (!w || !h) {
+				throw "forceEvent() : Before, indicate the size of element !";
+			}
+			
+			this.beginPath();
+			this.rect(0, 0, w, h);
+			this.closePath();
 			return this;
 		},
 		
@@ -4152,6 +4310,17 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 			for (var i=0 ; i < events.length ; i++) {
 				event = events[i];
 				if (callback) {
+					if (event == "canvas:render") {
+						
+						for (var i=0 ; i < this._onRender.length ; i++) {
+							if (this._onRender[i] == callback) {
+								this._onRender.splice(i, 1);
+								break;
+							}
+						}
+		
+					}
+					
 					for (var i=0 ; i < this._listener[event].length ; i++) {
 						if (this._listener[event][i] == callback) {
 							this._listener[event].splice(i, 1);
@@ -4160,6 +4329,9 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 					}
 				}
 				else {
+					if (event == "canvas:render") {
+						this._onRender = [];
+					}
 					if (this._listener[event]) {
 						delete this._listener[event];
 						this._nbEvent--;

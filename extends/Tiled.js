@@ -48,13 +48,62 @@ Class.create("Tiled", {
 	ready: function(callback) {
 		this._ready = callback;
 	},
-	 /**
-		@doc tiled/
-		@method load Load JSON file and draw layers in the element of the scene. View Tiled class description for more informations (http://canvasengine.net/doc/?p=editor.tiled)
-		@param {CanvasEngine.Scene} scene
-		@param {CanvasEngine.Element} el The element containing layers of Tiled
-		@param {String} url Path to JSON file of Tiled Map Editor
-	 */
+/**
+@doc tiled/
+@method load Load JSON file and draw layers in the element of the scene. View Tiled class description for more informations (http://canvasengine.net/doc/?p=editor.tiled)
+@param {CanvasEngine.Scene} scene
+@param {CanvasEngine.Element} el The element containing layers of Tiled
+@param {String} url Path to JSON file of Tiled Map Editor
+@example
+
+Example with Node.js :
+
+Server :
+
+	var CE = require("canvasengine").listen(8333),
+		Tiled = CE.Core.requireExtend("Tiled").Class,
+		Class = CE.Class;
+	
+	CE.Model.init("Main", {
+
+		initialize: function(socket) {
+		
+			var tiled = Class.New("Tiled");
+			tiled.ready(function(map) {
+				socket.emit("Scene_Map.load", map);
+			});
+			tiled.load("Map/map.json");
+			
+		}
+	});
+	
+Client :
+
+	canvas.Scene.New({
+		name: "Scene_Map",
+		events: ["load"],
+		materials: {
+			images: {
+				tileset: "my_tileset.png"
+			}
+		},
+		load: function(data) {
+		
+		    var tiled = canvas.Tiled.New();
+
+			tiled.ready(function() {
+			 var tile_w = this.getTileWidth(),
+				 tile_h = this.getTileHeight(),
+				 layer_object = this.getLayerObject();
+			});
+			
+			tiled.load(this, this.getStage(), data);
+	
+		}
+	
+	});
+
+*/
 	load: function(scene, el, url) {
 		var self = this;
 		
@@ -111,8 +160,10 @@ Class.create("Tiled", {
 	_draw: function() {
 		this.map = this.scene.createElement();
 		this.el_layers = [];
-		var x, y, tileset;
-		var id, _tile, _id;
+		var x, y, tileset, self = this;
+		var id, _tile, _id, nb_tile = {}, tileoffset;
+		
+		
 		for (var i=0 ; i < this.layers.length ; i++) {
 			id = 0;
 			this.el_layers[i] = this.scene.createElement();
@@ -124,10 +175,18 @@ Class.create("Tiled", {
                             _tile = this.scene.createElement();
 							tileset = this.tilesetsIndexed[_id];
 							_id -= tileset.firstgid;
-							y = this.tile_h * Math.floor(_id / (Math.round(tileset.imagewidth / this.tile_h)));
-							x = this.tile_w * (_id % Math.round(tileset.imagewidth / this.tile_w));
 							
-							_tile.drawImage(tileset.name, x, y, this.tile_w, this.tile_h, j * this.tile_w, k * this.tile_h, this.tile_w, this.tile_h);
+							nb_tile = {
+								width: tileset.imagewidth / this.tile_w,
+								height: tileset.imageheight / this.tile_h
+							};
+							
+							tileoffset = tileset.tileoffset || {x: 0, y: 0};
+							
+							y = this.tile_h * Math.floor(_id / (Math.round((tileset.imagewidth - nb_tile.width / 2 * tileset.margin) / this.tile_h)));
+							x = this.tile_w * (_id % Math.round((tileset.imagewidth - nb_tile.height / 2 * tileset.margin) / this.tile_w));
+							
+							_tile.drawImage(tileset.name, x + tileset.spacing * x / this.tile_w + tileset.margin, y + tileset.spacing * y / this.tile_h + tileset.margin, this.tile_w, this.tile_h, j * this.tile_w + tileoffset.x, k * this.tile_h + tileoffset.y, this.tile_w, this.tile_h);
 							this.el_layers[i].append(_tile);
 						}
 						id++;

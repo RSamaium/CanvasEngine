@@ -1,11 +1,16 @@
 var CE = require("canvasengine").listen(8333);
 CE.Model.init("Main", ["start"], {
 
-  initialize: function() {
+  initialize: function(socket) {
 
   },
+  
   start: function() {
-	this.scene.emit("load", "Hello");
+	 CE.Core.io.sockets.emit("MyScene.load", "New User");
+  },
+  
+  disconnect: function() {
+  
   }
 
 });

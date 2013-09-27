@@ -215,11 +215,6 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 
 ## Roadmap (in order)
 
-### v1.3
-
-* Transition
-* UI
-
 ### v1.4
 
 * Box2d
@@ -243,7 +238,36 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 
 ## Changelog
 
-### v1.2.8
+### v1.3.0
+
+* Add transition effects in scenes
+* Add loading fonts, json and videos
+* Add using Google Fonts
+* Add Using WebCam
+* multiplayer model improved
+    * emit to specific scenes
+    * `assignEvents()`
+    * `loadEvents()` in Scene Class
+    * `CE.connectServer()` and `CE.io`
+    * Using `Tiled` and `Hit` classes
+    * Compatible with Express 3
+    * Documentation Improved
+    * Tested with Node.js > 0.10.0
+* Add `getImageData()`, `putImageData()`, `createImageData()` and `toDataURL()` in Canvas class
+* Add `arcTo()` and `isPointInPath()` in Context class
+* Add `opaqueImage()` in Materials class
+* Add `toTimer()` in CanvasEngine Core
+* Add `toMatrix()` and `rotateMatrix()` in CanvasEngine Core
+* Add `remove()` in Window class
+* Add to Tiled Map Editor : spacing, margin and tile offset
+* Add `setPropertyByCell()`, `passableCell()` and `pathfinding()` in Grid class
+* Fix `invertColor()` in Materials class
+* Fix flip an element
+* Fix click on transparent image
+* Removes `forceEvent` property and adding the method `forceEvent()`
+* Improve `imageToCanvas()` in Materials class
+* Improve `getBasePath()` in Materials class
+* Ability to use the DOM to display the canvas
 
 ### v1.2.7
 

@@ -797,6 +797,31 @@ CanvasEngine.moveArray = function(array, pos1, pos2) {
 	return array;
 }
 
+/**
+@doc utilities/
+@method toTimer `(>= 1.3.0)` Converts seconds into a format {hour: "", min: "", sec: ""}
+@static
+@params {Integer} total_sec Secondes
+@return {Array} 
+@examples
+
+    CE.toTimer(136); // => {hour: "00", min: "02", sec: "16"}
+
+*/
+CanvasEngine.toTimer = function(total_sec) {
+	var hour = "" + Math.floor(total_sec / 60 / 60),
+		min =  "" + Math.floor(total_sec / 60 % 60),
+		sec =  "" + Math.floor(total_sec % 60);
+	if (hour.length == 1) hour = "0" + hour;
+	if (min.length == 1) min = "0" + min;
+	if (sec.length == 1) sec = "0" + sec;
+	return {
+		hour: hour,
+		min: min,
+		sec: sec
+	};
+}
+
 CanvasEngine.algo = {
 
 	pascalTriangle: function(max) {
@@ -822,6 +847,19 @@ CanvasEngine.algo = {
 	
 }
 
+/**
+@doc utilities/
+@method toMatrix `(>= 1.3.0)` Transforms a one-dimensional array to a table with two Diemension
+@static
+@params {Array} array The one-dimensional array to convert
+@params {Integer} width Width of the matrix created
+@params {Integer} height Height of the matrix created
+@return {Array} 
+@examples
+
+    CE.toMatrix([1, 2, 3, 4], 2, 2); // => [[1, 2], [3, 4]]
+    
+*/
 CanvasEngine.toMatrix = function(array, width, height) {
 	var matrix = [], k = 0;
 	for (var j=0 ; j < height ; j++) {
@@ -834,41 +872,43 @@ CanvasEngine.toMatrix = function(array, width, height) {
 	return matrix;
 }
 
-/*
+/**
+@doc utilities/
+@method rotateMatrix `(>= 1.3.0)` Change the positions of the array elements, the rotation matrix
+@static
+@params {Array} array The matrix in question
+@params {String} rotation (optional) Rotation in degree : `90` or `-90`, `180` (`90` by default)
+@return {Array} 
+@examples
 
-	
+    var matrix = [
+        [1, 0],
+        [1, 1],
+        [1, 0]
+    ];
 
-	var array = [
-				[1, 0],
-				[1, 1],
-				[1, 0]
-			]
-			
-	// 90		
-			
-	=> 		[
-				[1, 1, 1],
-				[0, 1, 0]
-			]
-			
-			
-	// -90 
-	
-	=> 		[
+    CE.rotateMatrix(matrix); 
+    
+    // => [
+            [1, 1, 1],
+            [0, 1, 0]
+        ]
+        
+    CE.rotateMatrix(matrix, "-90"); 
+    
+    // =>   [
 				[0, 1, 0],
 				[1, 1, 1]
-			]
-			
-	// 180
-	
-		
-	=> 		[
+            ]
+            
+    CE.rotateMatrix(matrix, "180"); 
+    
+    // =>   [
 				[0, 1],
 				[1, 1],
 				[0, 1]
 			]
 */
-
 CanvasEngine.rotateMatrix = function(array, rotation) {
 	var matrix = [], matrix2 = [];
 	

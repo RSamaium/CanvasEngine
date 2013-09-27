@@ -844,7 +844,8 @@ Class.create("Grid", {
 	initialize: function(rows, cols) {
 		if (rows instanceof Array) {
 			this._matrix = rows;
-			cols = row[0].length;
+			this.cell.prop = rows;
+			cols = rows[0].length;
 			rows = rows.length;
 		}
 		this._rows = rows;
@@ -884,6 +885,7 @@ In `ready` method
 */	
 	setPropertyCell: function(prop) {
 		if (typeof(PF) != "undefined") {
+			this._pf_grid = false;
 			this._pf_prop = (CanvasEngine || CE.Core).rotateMatrix(prop);
 		}	
 		this.cell.prop = prop;
@@ -915,6 +917,40 @@ Returns `undefined` if column or row doesn't exist
 			return undefined;
 		}
 		return this.cell.prop[col][row];
+	},
+
+/**
+	@doc grid/
+	@method setPropertyByCell `(>= 1.3.0)` Change a value in a cell
+	@param {Integer} col Column
+	@param {Integer} row Row
+	@param {Object} prop Value
+	@return {Class.Hit}
+	@example
+	
+In `ready` method
+
+	var grid = Class.New("Grid", [2, 2]);
+	grid.setPropertyCell(
+		[
+			[0, 0], 
+			[1, 0]
+		]
+	);
+	grid.setPropertyByCell(1, 0, 0); // grid is [[0, 0], [0, 0]] now
+	
+Returns `undefined` if column or row doesn't exist
+*/	
+	setPropertyByCell: function(col, row, prop) {
+		if (!this.cell.prop[col]) {
+			return undefined;
+		}
+		this.cell.prop[col][row] = prop;
+		if (typeof(PF) != "undefined") {
+			this._pf_grid = false;
+			this._pf_prop = (CanvasEngine || CE.Core).rotateMatrix(this.cell.prop);
+		}	
+		return this;
 	},
 
 /**
@@ -1261,20 +1297,39 @@ In `ready` method
 	},
 	
 	
-	/*
- 
-	
-		var matrix = [
-			[0, 0, 0, 1, 0],
-			[1, 0, 0, 0, 1],
-			[0, 0, 1, 0, 0],
-		];
-		
-		CE.passableCell(matrix, 0, 0);
-	
-		=> [[x0, y0], [x1, y1]]
-*/
+/**
+@doc grid/
+@method passableCell `(>= 1.3.0`) Test tiles passable in an area. The array must contain only the value 0 or 1. Useful to know the movement of an entity as a part in a game of chess
+
+- 0 : passable
+- 1 : not passable
+
+Returns the columns and rows in grid passable
+
+@param {Integer} row Start position (row)
+@param {Integer} col Start position (col)
+@param {Integer} distance Maximum search distance (number of tiles)
+@param {Array} array_exception (optional) Two-dimensional array with the positions not to test : `[[x0, y0], [x1, y1], ...]`
+@return {Array}
+@example
+
+In `ready` method
+
+	var matrix = [
+		[0, 0, 0, 1, 0],
+		[1, 0, 0, 0, 1],
+		[0, 0, 1, 0, 0],
+	];
+
+	var grid = Class.New("Grid", [matrix]);
+	grid.passableCell(0, 0, 2);
+
+	// returns : [[0, 1], [0, 2], [1, 1], [0, 0]]
+
+*/	
 	passableCell: function(x, y, max, array_exception) {
+	
+		array_exception = array_exception || [];
 	
 		var H_MAP = this._cols;
 		var W_MAP = this._rows;
@@ -1302,6 +1357,16 @@ In `ready` method
 		var tab_move = [];
 		var id = 0;
 		init_tab_move();
+		
+		function inArray(x, y) {
+			
+			for (var j = 0 ; j < array_exception.length ; j++) {
+				if (array_exception[j][0] == x && array_exception[j][1] == y) {
+					return true;
+				}
+			}
+			return false;
+		}
 			
 		while (!pos_semi_tempor.length == 0 && path < max) {
 			pos_temporaire = [];
@@ -1315,7 +1380,7 @@ In `ready` method
 					switch (j) {
 						case 0: 	
 
-							if (mapData[new_pos_x][new_pos_y  + 1] != undefined && mapData[new_pos_x][new_pos_y  + 1] == id && tab_move_passable[tab_x][tab_y + 1] == -1) {
+							if (mapData[new_pos_x][new_pos_y  + 1] != undefined && mapData[new_pos_x][new_pos_y  + 1] == id && !inArray(new_pos_x, new_pos_y  + 1) && tab_move_passable[tab_x][tab_y + 1] == -1) {
 								  pos_temporaire.push([new_pos_x,new_pos_y + 1]);
 								  tab_move.push([new_pos_x,new_pos_y + 1]);
 								  tab_move_passable[tab_x][tab_y + 1] = 0;
@@ -1323,7 +1388,7 @@ In `ready` method
 						break;
 						case 1: 
 							
-							if (mapData[new_pos_x + 1]  != undefined && mapData[new_pos_x + 1][new_pos_y]  != undefined && mapData[new_pos_x + 1][new_pos_y] == id && tab_move_passable[tab_x + 1][tab_y] == -1) {
+							if (mapData[new_pos_x + 1]  != undefined && mapData[new_pos_x + 1][new_pos_y]  != undefined && mapData[new_pos_x + 1][new_pos_y] == id && !inArray(new_pos_x + 1, new_pos_y) && tab_move_passable[tab_x + 1][tab_y] == -1) {
 								  pos_temporaire.push([new_pos_x + 1,new_pos_y]);
 								  tab_move.push([new_pos_x + 1,new_pos_y]);
 								  tab_move_passable[tab_x + 1][tab_y] = 0;
@@ -1331,7 +1396,7 @@ In `ready` method
 							
 						break;
 						case 2: 		
-							if (mapData[new_pos_x][new_pos_y - 1]  != undefined && mapData[new_pos_x][new_pos_y - 1] == id && tab_move_passable[tab_x][tab_y - 1] == -1) {
+							if (mapData[new_pos_x][new_pos_y - 1]  != undefined && mapData[new_pos_x][new_pos_y - 1] == id && !inArray(new_pos_x, new_pos_y - 1) && tab_move_passable[tab_x][tab_y - 1] == -1) {
 								  pos_temporaire.push([new_pos_x,new_pos_y - 1]);
 								  tab_move.push([new_pos_x,new_pos_y - 1]);
 								  tab_move_passable[tab_x][tab_y - 1] = 0;
@@ -1339,7 +1404,7 @@ In `ready` method
 								
 						break;
 						case 3: 	
-							if (mapData[new_pos_x - 1]  != undefined && mapData[new_pos_x - 1][new_pos_y]  != undefined && mapData[new_pos_x - 1][new_pos_y] == id && tab_move_passable[tab_x - 1][tab_y] == -1) {
+							if (mapData[new_pos_x - 1]  != undefined && mapData[new_pos_x - 1][new_pos_y]  != undefined && mapData[new_pos_x - 1][new_pos_y] == id && !inArray(new_pos_x - 1, new_pos_y) && tab_move_passable[tab_x - 1][tab_y] == -1) {
 								  pos_temporaire.push([new_pos_x - 1,new_pos_y]);
 								  tab_move.push([new_pos_x - 1,new_pos_y]);
 								  tab_move_passable[tab_x - 1][tab_y] = 0;
@@ -1356,15 +1421,76 @@ In `ready` method
 		return tab_move;
 	},
 	
+/**
+@doc grid/
+@method pathfinding `(>= 1.3.0)` Find the shortest path. Using the library [Pathfinding.js](https://github.com/qiao/PathFinding.js). The array must contain only the value 0 or 1. Useful to know the movement of an entity as a part in a game of chess
+
+- 0 : passable
+- 1 : not passable
+
+> Before, Insert the script `pathfinding-browser.js` in header
+
+> Attention ! The matrix is different that matrix of the library. The columns are the rows and rows are the columns.
+
+Returns the columns and rows of path. If no arguments, returns the `PF.Grid`. You can use the API library.
+
+	var matrix = [
+		[0, 0, 0, 1, 0],
+		[1, 0, 0, 0, 1],
+		[0, 0, 1, 0, 0],
+	];
+	var grid = Class.New("Grid", [matrix]);
+	var pf_grid = grid.pathfinding();
+	pf_grid.setWalkableAt(1, 2, false);
+
+@param {Integer} row0 Start position (row)
+@param {Integer} col0 Start position (col)
+@param {Integer} row1 Final position (row)
+@param {Integer} col1 Final position (col)
+@param {String} type (optional) Type of the search algorithm
+
+*  `AStarFinder` (default)
+*  `BreadthFirstFinder` 
+*  `BestFirstFinder`
+*  `DijkstraFinder` 
+*  `BiAStarFinder`
+*  `BiBestFirstFinder`
+*  `BiDijkstraFinder` 
+*  `BiBreadthFirstFinder` 
+*  `JumpPointFinder` 
+
+@param {Object} options (optional) Library Options. See [https://github.com/qiao/PathFinding.js](https://github.com/qiao/PathFinding.js)
+@return {Array|PF.Grid}
+@example
+
+In `ready` method
+
+	var matrix = [
+		[0, 0, 0, 1, 0],
+		[1, 0, 0, 0, 1],
+		[0, 0, 1, 0, 0],
+	];
+
+	var grid = Class.New("Grid", [matrix]);
+	grid.pathfinding(0, 0, 2, 4);
+
+	// returns : [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [2, 3], [2, 4]]
+
+	grid.setPropertyByCell(0, 1, 1);
+	grid.pathfinding(0, 0, 2, 4);
+
+	// returns [];
+
+*/	
 	pathfinding: function(x0, y0, x1, y1, type, options) {
 		 type = type || "AStarFinder";
-		 this._pf_grid = new PF.Grid(this._rows, this._cols,  this._pf_prop);
-		 var path = new PF[type](options).findPath(x0, y0, x1, y1, this._pf_grid);
-		 return path;
-	},
-	
-	getPathfindingGrid: function() {
-		return this._pf_grid;
+		 if (!this._pf_grid) {
+		 	 this._pf_grid = new PF.Grid(this._rows, this._cols,  this._pf_prop);
+		 }
+		 if (x0 === undefined) {
+		 	 return this._pf_grid;
+		 }
+		return new PF[type](options).findPath(x0, y0, x1, y1, this._pf_grid.clone());
 	}
 	
 });
@@ -1381,4 +1507,3 @@ var Hit =  {
 if (typeof exports != "undefined") {
 	exports.Class = Hit;
 }
- 
