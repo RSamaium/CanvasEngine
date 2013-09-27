@@ -3,6 +3,7 @@
 - element: Create Element
 - extend: Extend Features
 - entity: Collision and Entities
+- text: Text and fonts
 - multitouch: MultiTouch with Hammer.js
 - nodejs: Multiplayer Model
 - cocoonjs: Export natively

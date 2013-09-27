@@ -1,8 +1,7 @@
 {
     "name": "canvasengine",
-    "version": "1.0.0",
+    "version": "1.3.0",
     "description": "Use a model for handling server-side events and develop a multiplayer game.",
-    "preferGlobal": "true",
     "main": "index.js",
     "bin": { "canvasengine": "index.js" },
     "author": "WebCreative5",
@@ -11,8 +10,9 @@
         "type": "git",
         "url": "https://github.com/RSamaium/CanvasEngine.git"
     },
+    "license": "MIT",
     "dependencies": {
-        "socket.io": "0.9.0"
+        "socket.io": "0.9.16"
     },
     "engines": { "node": "*" }
 }

@@ -1,4 +1,38 @@
-exports.Class = function(Class, CE) {
+/**
+@doc server/
+@method requireExtend `(>= 1.3.0)` Load a class
+@static
+@return {Class} 
+@examples
+
+   var CE = require("canvasengine").listen(8333),
+	   Tiled = CE.Core.requireExtend("Tiled").Class,
+	   Class = CE.Class;
+
+*/
+
+/**
+@doc server/
+@method io `(>= 1.3.0)` Reference Socket.io. To call an event on a stage, you must prefix the name of the event by the name of the scene
+@static
+@return {Socket.io} 
+@examples
+
+   var CE = require("canvasengine").listen(8333),
+		Class = CE.Class;
+	
+	CE.Model.init("Main", {
+
+		initialize: function(socket) {
+			CE.Core.io.emit("MyScene.load", {foo: bar});	
+		}
+	});
+
+*/
+
+
+
+exports.Class = function(Class, CE, Users) {
 	var io = CE.io;
 /**
 @doc server
@@ -12,21 +46,15 @@ exports.Class = function(Class, CE) {
 
 	CE.Model.init("Main", {
 
-		initialize: function() {
+		initialize: function(socket) {
 			// Code
 		}
 	});
 
 */
 	Class.create("ModelServer", {
-		/**
-			@doc server/
-			@property socket The socket user (socket.io)
-			@type Object
-			@default null
-		*/
-		socket: null,
 		_models: {},
+		_socket: null,
 /**
 @doc server/
 @method init Initializes the connection and call the class
@@ -34,7 +62,7 @@ exports.Class = function(Class, CE) {
 @params {Array} name (optional) Name of the methods that can be called by the client
 @params {Object} model (optional) Properties and methods of this class
 
-* the "initialize" method is called automatically when the connection
+* the "initialize" method is called automatically when the connection with socket parameter
 * the "disconnect" method is called when the user logs out
 
 @example
@@ -43,7 +71,7 @@ exports.Class = function(Class, CE) {
 
 	CE.Model.init("Main", {
 
-		initialize: function() {
+		initialize: function(soçcket) {
 			// Code
 		}
 	});
@@ -61,10 +89,15 @@ exports.Class = function(Class, CE) {
 			var self = this;
 			events.push("disconnect");
 			this.create(name, events, model);
+			
 			io.sockets.on('connection', function (socket) {
-				self.socket = socket;
-				self.new(name);
+				var _class;
+				self._socket = socket;
+				Users.add(socket);
+				Users._Model = _class = self.new(name, [socket], socket);	
+				_class.socket = socket;
 			});
+
 			return this;
 		},
 /**
@@ -77,26 +110,37 @@ exports.Class = function(Class, CE) {
 
 Module in "/mods/myclass.js" :
 
-	exports.Class = function(CE) {
-		return CE.Model.create("MyClass", {
+	 var CE = require("canvasengine").listen(),
+	    Class = CE.Class;
 
-			initialize: function() {
-				// Code
-			}
-			
-		});
-	}	
+    CE.Model.create("Player", ["start"], {
 
+        initialize: function(user_id, username) {
+
+        },
+
+        start: function() {
+
+        }
+
+    });
+
+    exports.New = function(socket, user_id, username) {
+       return CE.Model.new("Player", [user_id, username], socket);
+    };
+	
 In main JS file :
 
-	var CE = require("canvasengine").listen(8336);
-	CE.Model.init("Main", {
+	var CE = require("canvasengine").listen(8333),
+	    Class = CE.Class;
 
-		initialize: function() {
-			var Class = require('./mods/myclass').Class(CE),
-				myclass = Class.new("MyClass");
-		}
-	});
+    CE.Model.init("Main", {
+
+	  initialize: function(socket) {
+		 var player = require("./player").New(1, "Foo", socket);
+	  }
+	  
+   });
 
 @return {Class}
 */
@@ -109,7 +153,8 @@ In main JS file :
 			this._models[name] = events;
 			return Class.create(name, model).extend({
 /**
-@doc server/
+CanvasEngine < 1.3.0
+
 @property scene Sends data to the scene
 @type Object
 @example
@@ -146,44 +191,39 @@ Client :
 */
 				scene: {
 					/**
-						@doc server/
 						@method scene.emit (View Socket.io)
 					*/
 					emit: function(name, value) {
-						self.socket.emit(name, value);
+						self._socket.emit(name, value);
 					},
 					/**
-						@doc server/
 						@method scene.broadcast.emit (View Socket.io)
 					*/
 					/**
-						@doc server/
 						@method scene.broadcast.to (View Socket.io)
 					*/
 					broadcast: {
 						emit: function(name, value) {
-							self.socket.broadcast.emit(name, value);
+							self._socket.broadcast.emit(name, value);
 						},
 						to: function(room, name, value) {
-							self.socket.broadcast.to(room).emit(name, value);
+							self._socket.broadcast.to(room).emit(name, value);
 						}
 					},
 					/**
-						@doc server/
 						@method scene.join (View Socket.io)
 					*/
 					join: function(room) {
-						self.socket.join(room);
+						self._socket.join(room);
 					},
 					/**
-						@doc server/
+
 						@method scene.leave (View Socket.io)
 					*/
 					leave: function(room) {
-						self.socket.leave(room);
+						self._socket.leave(room);
 					},
 					/**
-						@doc server/
 						@method scene.disconnect (View Socket.io)
 					*/
 					disconnect: function(data) {
@@ -195,62 +235,113 @@ Client :
 		},
 /**
 @doc server/
-@method new Instantiating a model
+@method new (alias `New`) Instantiating a model
 @params {String} name Class name
+@params {Array} params Class params
+@params {Boolean|Null|Object} socket (optional) Assign events of a class to a user
+
+- `false` : The class takes the socket from a **single user** connected (by default)
+- `null` : does not assign events
+- an object : The socket assigned to the class to load events
+
 @example
 
 Module in "/mods/myclass.js" :
 
-	exports.Class = function(CE) {
-		var Class = CE.Model.create("MyClass", {
+	 var CE = require("canvasengine").listen(),
+	    Class = CE.Class;
 
-			initialize: function() {
-				// Code
-			},
-			
-			foo: function() {
-				console.log("Hello World");
-			}
-			
-		});
-		return Class.new("MyClass");
-	}	
+    CE.Model.create("Player", ["start"], {
 
+        initialize: function(user_id, username) {
+
+        },
+
+        start: function() {
+
+        }
+
+    });
+
+    exports.New = function(socket, user_id, username) {
+       return CE.Model.new("Player", [user_id, username], socket);
+    };
+	
 In main JS file :
 
-	var CE = require("canvasengine").listen(8336);
-	CE.Model.init("Main", {
+	var CE = require("canvasengine").listen(8333),
+	    Class = CE.Class;
 
-		initialize: function() {
-			var myclass = require('./mods/myclass').Class(CE);
-			myclass.foo();
-		}
-	});
+    CE.Model.init("Main", {
+
+	  initialize: function(socket) {
+		 var player = require("./player").New(1, "Foo", socket);
+	  }
+	  
+   });
+   
 @return {Class}
 */
-		new: function(name) {
-			var self = this;
-			var _class = Class.new(name);
-			var events = this._models[name];
-			if (events) {
-				for (var key in events) {
-					obj = _class[events[key]];
-					if (obj) {
-						setEvent.call(this, _class, key, obj);
+		New: function() { return this["new"].apply(this, arguments); },
+		new: function(name, params, socket) {
+		
+			socket = socket == null ? false : this._socket;
+		
+			var _class = Class.new(name, params);
+			_class._events_ =  this._models[name];
+			if (socket) this.assignEvents(_class, [socket]);
+			return _class;
+		},
+		
+/**
+@doc server/
+@method assignEvents (>= 1.3.0) Assign events of a class to a user
+@params {String} name Class name
+@params {Object} socket Socket
+@example
+
+	var Map = require("./map").New(null); // socket is null. It indicates that not assign an event to sockets
+    
+    CE.Model.init("Main", {
+
+         enterMap: function() {
+    		 CE.Model.assignEvents(Map, this.socket);
+    	 }
+
+    });
+   
+@return {Class}
+*/
+		assignEvents: function(_class, clients) {
+			
+			var self = this, socket;
+			var events = _class._events_;
+			var setEvent = function (method) {
+				obj = _class[method];
+				if (obj) {
+					if (!(clients instanceof Array)) {
+						clients = [clients];
+					}
+					for (var i=0 ; i < clients.length ; i++) {
+						socket = clients[i];
+						socket.on(method, function(data) {
+							if (!data) {
+								data = {};
+							}
+							obj = _class[method];
+							if (obj) obj.call(_class, data, this);
+						});
 					}
 				}
+				
 			}
-			
-			function setEvent(_class, key, obj) {
-				this.socket.on(events[key], function(data) {
-					if (!data) {
-						data = {};
-					}
-					if (obj) obj.call(_class, data);
-				});
+
+			if (events) {
+				for (var key in events) {
+					setEvent.call(this, events[key]);
+				}
 			}
-			
-			return _class;
+			return this;
 		}
 	});
 	return Class.new("ModelServer");
