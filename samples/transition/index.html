@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<title>Complex Transition - Canvas Engine</title>
+<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet">
+
+<link href="../../main.css" rel="stylesheet">
+
+<body onload="prettyPrint()">
+
+<header class="header">
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+            
+          <ul class="nav">
+            <li><a href="//canvasengine.net"><i class="icon-home icon-white"></i> Home</a></li>
+            <li class="divider-vertical"></li>
+            <li><a href="//canvasengine.net/doc">Documentation</a></li>
+            <li class="divider-vertical"></li>
+            <li class="active"><a href="../../">Examples List</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </header>
+
+<div role="main" class="container demo" style="margin-top: 50px">
+    
+    <div class="page-header">
+        <h1>Complex Animation</h1>
+    </div>
+	<div class="span12">
+	   <!-- If ZIP file exist -->
+	   <a href="example.zip" class="btn btn-primary">Download ZIP</a>
+
+       <a href="http://canvasengine.net/doc/?p=core.scene.call" class="btn">View documentation</a>
+       <a href="https://github.com/RSamaium/CanvasEngine/tree/gh-pages/samples/transition" class="btn">View in Github</a>
+    </div>
+	<br>
+	<br>
+    <h2>Result</h2>
+    <div class="span12">
+		<p>Click on this picture :</p>
+        <iframe src="example.html" width="1100" height="785"></iframe>
+    </div>
+    <h2>Code</h2>
+    <div class="span12">
+        <pre class="prettyprint">var canvas = CE.defines("canvas_id").
+extend(Animation). // for fade effect
+ready(function() {
+	canvas.Scene.call("Scene1");
+});
+
+canvas.Scene.New({
+	name: "Scene1",
+	materials: {
+		images: {
+			"a": "images/a.jpg",
+			"b": "images/b.jpg",
+			"img_transition": {path: "images/transitions/tra7.png", transition: true}
+		}
+	},
+	ready: function(stage) {
+		var content = this.createElement();
+		content.drawImage('a');
+
+		content.on("click", function() {
+			canvas.Scene.call("Scene2", {
+				transition: {
+					type: "image",
+					id: "img_transition",
+					finish: function() {
+						console.log('finish !');
+					}
+				}
+			});
+		});
+		
+		stage.append(content);
+	}
+});	
+
+canvas.Scene.New({
+	name: "Scene2",
+	ready: function(stage) {
+		var content = this.createElement();
+		content.drawImage('b');
+		
+		content.on("click", function() {
+			canvas.Scene.call("Scene1", {
+				transition: true // fade
+			});
+		});
+		
+		stage.append(content);
+	}
+});	</pre>
+    </div>
+</div>
+
+<script src="../../prettify.js"></script>
+<script src="//code.jquery.com/jquery-1.8.3.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/js/bootstrap.min.js"></script>
