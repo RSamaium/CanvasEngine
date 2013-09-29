@@ -25,6 +25,9 @@ if (typeof exports != "undefined") {
 		CanvasEngine = false,
 		Class = CE.Class;
 }
+var FlippedHorizontallyFlag = 0x80000000,
+	FlippedVerticallyFlag = 0x40000000,
+	FlippedAntiDiagonallyFlag = 0x20000000;
 
 Class.create("Tiled", {
 	el: null,
@@ -172,7 +175,18 @@ Client :
 					for (var j=0 ; j < this.layers[i].width ; j++) {
 						_id = this.layers[i].data[id];
 						if (_id != 0) {
-                            _tile = this.scene.createElement();
+							_tile = this.scene.createElement();
+							var flippedHorizontally = false, flippedVertically = false, flippedAntiDiagonally = false;
+							if (_id & FlippedHorizontallyFlag) {
+								flippedHorizontally = true;
+							}
+							if (_id & FlippedVerticallyFlag) {
+								flippedVertically = true;
+							}
+							if (_id & FlippedAntiDiagonallyFlag) {
+								flippedAntiDiagonally = true;
+							}
+							_id &= ~(FlippedHorizontallyFlag | FlippedVerticallyFlag | FlippedAntiDiagonallyFlag);
 							tileset = this.tilesetsIndexed[_id];
 							_id -= tileset.firstgid;
 							
@@ -186,7 +200,27 @@ Client :
 							y = this.tile_h * Math.floor(_id / (Math.round((tileset.imagewidth - nb_tile.width / 2 * tileset.margin) / this.tile_h)));
 							x = this.tile_w * (_id % Math.round((tileset.imagewidth - nb_tile.height / 2 * tileset.margin) / this.tile_w));
 							
-							_tile.drawImage(tileset.name, x + tileset.spacing * x / this.tile_w + tileset.margin, y + tileset.spacing * y / this.tile_h + tileset.margin, this.tile_w, this.tile_h, j * this.tile_w + tileoffset.x, k * this.tile_h + tileoffset.y, this.tile_w, this.tile_h);
+							var scaleX = (flippedHorizontally) ? -1 : 1,
+								scaleY = (flippedVertically) ? -1 : 1,
+								rotation = 0;
+							
+							if (flippedAntiDiagonally) {
+								rotation = 90;
+								scaleX *= -1;
+								
+								halfDiff = nb_tile.height/2 - nb_tile.width/2
+								y += halfDiff
+							}
+							_tile.drawImage(tileset.name, x + tileset.spacing * x / this.tile_w + tileset.margin, y + tileset.spacing * y / this.tile_h + tileset.margin, this.tile_w, this.tile_h, 0, 0, this.tile_w, this.tile_h);
+							_tile.x = j * this.tile_w + tileoffset.x
+							_tile.y = k * this.tile_h + tileoffset.y
+							_tile.width = this.tile_w
+							_tile.height = this.tile_h
+							_tile.setOriginPoint("middle");
+							_tile.scaleX = scaleX
+							_tile.scaleY = scaleY
+							_tile.rotation = rotation
+						
 							this.el_layers[i].append(_tile);
 						}
 						id++;
