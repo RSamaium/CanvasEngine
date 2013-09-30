@@ -3086,48 +3086,50 @@ In the method "ready" in the scene class :
 					array_cmd = this._cmd;
 				}
 				for (var _name in array_cmd) {
-					cmd = array_cmd[_name];
-					for (var j=0 ; j < this._canvas.length ; j++) {
-						cmd_propreties = cmd.propreties;
-						if (isCmd && _name == "restore") {	
-							this.clearPropreties();
-						}
-						if (cmd_propreties) {
-							for (var key in cmd_propreties) {
-								applyBuffer = 1;
-								
-								if (key == "globalAlpha") {
-									cmd_propreties[key] = this.real_opacity;
-								}
-								
-								if (ctx) {
-									ctx[key] = cmd_propreties[key];
-								}
-								else {
-									this._canvas[j][layer][key] = cmd_propreties[key];
-								}
-								
-								applyBuffer &= bufferProp.call(this, cmd_propreties, "globalAlpha", 1);
-								applyBuffer &= bufferProp.call(this, cmd_propreties, "strokeStyle", '#' + this.color_key);
-								applyBuffer &= bufferProp.call(this, cmd_propreties, "fillStyle", '#' + this.color_key);
-								
-								if (applyBuffer) {
-									bufferProp.call(this, cmd_propreties, key, cmd_propreties[key]);
-								}
-								
+					for (var _i in array_cmd[_name]) {
+                        cmd = array_cmd[_name][_i];
+						for (var j=0 ; j < this._canvas.length ; j++) {
+							cmd_propreties = cmd.propreties;
+							if (isCmd && _name == "restore") {	
+								this.clearPropreties();
 							}
-						}
-						if (ctx) {
-							ctx[_name].apply(ctx, cmd.params);
-						}
-						else {
-							this._canvas[j][layer][_name].apply(this._canvas[j][layer], cmd.params);
-							if (this._forceEvent) {
-								if (_name == "rect") {
-									this._bufferEvent("fillRect", cmd.params);
+							if (cmd_propreties) {
+								for (var key in cmd_propreties) {
+									applyBuffer = 1;
+									
+									if (key == "globalAlpha") {
+										cmd_propreties[key] = this.real_opacity;
+									}
+									
+									if (ctx) {
+										ctx[key] = cmd_propreties[key];
+									}
+									else {
+										this._canvas[j][layer][key] = cmd_propreties[key];
+									}
+									
+									applyBuffer &= bufferProp.call(this, cmd_propreties, "globalAlpha", 1);
+									applyBuffer &= bufferProp.call(this, cmd_propreties, "strokeStyle", '#' + this.color_key);
+									applyBuffer &= bufferProp.call(this, cmd_propreties, "fillStyle", '#' + this.color_key);
+									
+									if (applyBuffer) {
+										bufferProp.call(this, cmd_propreties, key, cmd_propreties[key]);
+									}
+									
 								}
 							}
-							this._bufferEvent(_name, cmd.params);
+							if (ctx) {
+								ctx[_name].apply(ctx, cmd.params);
+							}
+							else {
+								this._canvas[j][layer][_name].apply(this._canvas[j][layer], cmd.params);
+								if (this._forceEvent) {
+									if (_name == "rect") {
+										this._bufferEvent("fillRect", cmd.params);
+									}
+								}
+								this._bufferEvent(_name, cmd.params);
+							}
 						}
 					}
 				}
@@ -3145,7 +3147,11 @@ In the method "ready" in the scene class :
 					if (this[propreties[k]]) obj[propreties[k]] = this[propreties[k]];
 				}
 				obj["globalAlpha"] = 1;
-				this._cmd[name] = {params: params, propreties: obj};
+				if (typeof this._cmd[name] !== "undefined" && this._cmd[name] !== null) {
+                    this._cmd[name].push({params: params, propreties: obj});
+                } else {
+                    this._cmd[name] = [{params: params, propreties: obj}];
+                }
 			},
 			
 			hasCmd: function(name) {
