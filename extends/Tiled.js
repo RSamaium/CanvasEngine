@@ -25,9 +25,6 @@ if (typeof exports != "undefined") {
 		CanvasEngine = false,
 		Class = CE.Class;
 }
-var FlippedHorizontallyFlag = 0x80000000,
-	FlippedVerticallyFlag = 0x40000000,
-	FlippedAntiDiagonallyFlag = 0x20000000;
 
 Class.create("Tiled", {
 	el: null,
@@ -177,16 +174,16 @@ Client :
 						if (_id != 0) {
 							_tile = this.scene.createElement();
 							var flippedHorizontally = false, flippedVertically = false, flippedAntiDiagonally = false;
-							if (_id & FlippedHorizontallyFlag) {
+							if (_id & tiled.FlippedHorizontallyFlag) {
 								flippedHorizontally = true;
 							}
-							if (_id & FlippedVerticallyFlag) {
+							if (_id & tiled.FlippedVerticallyFlag) {
 								flippedVertically = true;
 							}
-							if (_id & FlippedAntiDiagonallyFlag) {
+							if (_id & tiled.FlippedAntiDiagonallyFlag) {
 								flippedAntiDiagonally = true;
 							}
-							_id &= ~(FlippedHorizontallyFlag | FlippedVerticallyFlag | FlippedAntiDiagonallyFlag);
+							_id &= ~(tiled.FlippedHorizontallyFlag | tiled.FlippedVerticallyFlag | tiled.FlippedAntiDiagonallyFlag);
 							tileset = this.tilesetsIndexed[_id];
 							_id -= tileset.firstgid;
 							
@@ -424,6 +421,9 @@ Consider adding inserting Tiled.js
 	
 */
 var Tiled = {
+    FlippedHorizontallyFlag = 0x80000000,
+    FlippedVerticallyFlag = 0x40000000,
+    FlippedAntiDiagonallyFlag = 0x20000000,
 	Tiled: {
 		New: function() { return this["new"].apply(this, arguments); },
 		"new": function(scene, el, url) {
