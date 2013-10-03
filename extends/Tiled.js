@@ -35,7 +35,7 @@ Class.create("Tiled", {
 	width: 0,
 	height: 0,
 	layers: [],
-	objects: [],
+	objects: {},
 	scene: null,
 	_ready: null,
 	initialize: function() {
@@ -157,46 +157,112 @@ Client :
 		}
 		
 	},
+
+	_drawTile: function(_id, layer_name, data) {
+		var _tile = this.scene.createElement(),
+			tileset, tileoffset, nb_tile = {};
+		
+		if (data.position != "absolute") {
+			data.x *= this.tile_w;
+			data.y *= this.tile_h;
+		}
+
+		var flippedHorizontally = false, flippedVertically = false, flippedAntiDiagonally = false;
+		if (_id & Tiled.FlippedHorizontallyFlag) {
+			flippedHorizontally = true;
+		}
+		if (_id & Tiled.FlippedVerticallyFlag) {
+			flippedVertically = true;
+		}
+		if (_id & Tiled.FlippedAntiDiagonallyFlag) {
+			flippedAntiDiagonally = true;
+		}
+		_id &= ~(Tiled.FlippedHorizontallyFlag | Tiled.FlippedVerticallyFlag | Tiled.FlippedAntiDiagonallyFlag);
+		tileset = this.tilesetsIndexed[_id];
+		_id -= tileset.firstgid;
+		
+		nb_tile = {
+			width: tileset.imagewidth / this.tile_w,
+			height: tileset.imageheight / this.tile_h
+		};
+		
+		tileoffset = tileset.tileoffset || {x: 0, y: 0};
+		
+		y = this.tile_h * Math.floor(_id / (Math.round((tileset.imagewidth - nb_tile.width / 2 * tileset.margin) / this.tile_h)));
+		x = this.tile_w * (_id % Math.round((tileset.imagewidth - nb_tile.height / 2 * tileset.margin) / this.tile_w));
+		
+		_tile.drawImage(tileset.name, x + tileset.spacing * x / this.tile_w + tileset.margin, y + tileset.spacing * y / this.tile_h + tileset.margin, this.tile_w, this.tile_h, data.x + tileoffset.x, data.y + tileoffset.y, this.tile_w, this.tile_h);
+		this.el_layers[layer_name].append(_tile);
+		var scaleX = (flippedHorizontally) ? -1 : 1,
+			scaleY = (flippedVertically) ? -1 : 1,
+			rotation = 0;
+		
+		if (flippedAntiDiagonally) {
+			rotation = 90;
+			scaleX *= -1;
+			
+			halfDiff = nb_tile.height/2 - nb_tile.width/2
+			y += halfDiff
+		}
+		_tile.drawImage(tileset.name, x + tileset.spacing * x / this.tile_w + tileset.margin, y + tileset.spacing * y / this.tile_h + tileset.margin, this.tile_w, this.tile_h, 0, 0, this.tile_w, this.tile_h);
+		_tile.x = data.x + tileoffset.x
+		_tile.y = data.y + tileoffset.y
+		_tile.width = this.tile_w
+		_tile.height = this.tile_h
+		_tile.setOriginPoint("middle");
+		_tile.scaleX = scaleX
+		_tile.scaleY = scaleY
+		_tile.rotation = rotation
+
+		if (data.visible === false) {
+			_tile.hide();
+		}
+	
+		this.el_layers[layer_name].append(_tile);
+
+		return _tile;
+	},
+
 	_draw: function() {
 		this.map = this.scene.createElement();
 		this.el_layers = {};
-		var x, y, tileset, layer_name, self = this;
-		var id, _tile, _id, nb_tile = {}, tileoffset;
+		var x, y, tileset, layer, self = this;
+		var id, _id, obj, layer_type, el_objs = {};
 
 		for (var i=0 ; i < this.layers.length ; i++) {
 			id = 0;
-			layer_name = this.layers[i].name;
-			this.el_layers[layer_name] = this.scene.createElement();
-			if (this.layers[i].data) {
-				for (var k=0 ; k < this.layers[i].height ; k++) {
-					for (var j=0 ; j < this.layers[i].width ; j++) {
-						_id = this.layers[i].data[id];
+			layer = this.layers[i];
+			this.el_layers[layer.name] = this.scene.createElement();
+			if (layer.type == "tilelayer") {
+				for (var k=0 ; k < layer.height ; k++) {
+					for (var j=0 ; j < layer.width ; j++) {
+						_id = layer.data[id];
 						if (_id != 0) {
-                            _tile = this.scene.createElement();
-							tileset = this.tilesetsIndexed[_id];
-							_id -= tileset.firstgid;
-							
-							nb_tile = {
-								width: tileset.imagewidth / this.tile_w,
-								height: tileset.imageheight / this.tile_h
-							};
-							
-							tileoffset = tileset.tileoffset || {x: 0, y: 0};
-							
-							y = this.tile_h * Math.floor(_id / (Math.round((tileset.imagewidth - nb_tile.width / 2 * tileset.margin) / this.tile_h)));
-							x = this.tile_w * (_id % Math.round((tileset.imagewidth - nb_tile.height / 2 * tileset.margin) / this.tile_w));
-							
-							_tile.drawImage(tileset.name, x + tileset.spacing * x / this.tile_w + tileset.margin, y + tileset.spacing * y / this.tile_h + tileset.margin, this.tile_w, this.tile_h, j * this.tile_w + tileoffset.x, k * this.tile_h + tileoffset.y, this.tile_w, this.tile_h);
-							this.el_layers[layer_name].append(_tile);
+							this._drawTile(_id, layer.name, {
+								x: j,
+								y: k
+							});
 						}
 						id++;
 					}
 				}
 			}
-			else {
-				this.objects.push(this.el_layers[layer_name]);
+			else if (layer.type == "objectgroup") {
+				for (var j=0 ; j < layer.objects.length ; j++) {
+					obj = layer.objects[j];
+					if (!el_objs[obj.name]) el_objs[obj.name] = [];
+					el_objs[obj.name].push(this._drawTile(obj.gid, layer.name, CE.extend(obj, {
+						y: obj.y - this.tile_h,
+						position: "absolute"
+					})));
+					
+				}
+				this.objects[layer.name] = {
+					layer: this.el_layers[layer.name],
+					objects: el_objs
+				};
 			}
-			this.map.append(this.el_layers[layer_name]);
+			this.map.append(this.el_layers[layer.name]);
 		}
 		this.el.append(this.map);
 		if (this._ready) this._ready.call(this);
@@ -204,13 +270,26 @@ Client :
 	 /**
 		@doc tiled/
 		@method getLayerObject Retrieves the object layer.
-		@param {Integer} pos (optional) Returns the layer depending on its position in the superposition (0 = very top). 0 by default
+		@param {Integer} name  Returns the layer by name
 		@return {CanvasEngine.Element}
 	 */
-	getLayerObject: function(pos) {
-		if (!pos) pos = 0;
-		return this.objects[pos];
+	getLayerObject: function(name) {
+		if (!name) {
+			for (var id in this.objects) {
+				name = id;
+				break;
+			}
+		}
+		return this.objects[name].layer;
 	},
+
+
+	// TODO
+	getObject: function(layer_name, obj_name, pos) {
+		if (!pos) pos = 0;
+		return this.objects[layer_name].objects[obj_name][pos];
+	},
+
 	 /**
 		@doc tiled/
 		@method getLayer Retrieves the layer by its identifier.
@@ -391,6 +470,9 @@ Consider adding inserting Tiled.js
 */
 var Tiled = {
 	Tiled: {
+		FlippedHorizontallyFlag: 0x80000000,
+		FlippedVerticallyFlag: 0x40000000,
+		FlippedAntiDiagonallyFlag: 0x20000000,
 		New: function() { return this["new"].apply(this, arguments); },
 		"new": function(scene, el, url) {
 			return Class["new"]("Tiled", [scene, el, url]);

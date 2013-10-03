@@ -1,0 +1,50 @@
+ <!DOCTYPE html>
+<html>
+<head>
+<script src="../../canvasengine-1.3.0.all.min.js"></script>
+<script src="../../extends/Tiled.js"></script>
+
+<script>
+	var canvas = CE.defines("canvas").
+		extend(Tiled).
+		ready(function() {
+		canvas.Scene.call("Scene_Map");
+	 });
+
+	canvas.Scene.New({
+		name: "Scene_Map",
+		materials: {
+			images: {
+				tileset: "images/tiles_spritesheet.png"
+			}
+		},
+		ready: function(stage) {
+			var self  = this;
+		    var el = this.createElement();
+			var tiled = canvas.Tiled.new();
+
+			tiled.ready(function() {
+				self.obj = this.getObject("objects", "foo");	 
+				stage.append(el);
+			});
+
+			
+			tiled.load(this, el, "map.json");
+	
+		},
+		
+		render: function(stage) {
+			if (this.obj) {
+				this.obj.x++;
+			}
+			stage.refresh();
+		}
+	
+	});
+
+</script>
+</head>
+ <body>
+	<canvas id="canvas" width="1050" height="700"></canvas>
+ </body>
+</html>

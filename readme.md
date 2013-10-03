@@ -235,8 +235,17 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 ## Contributors
 
 * [robwalch](https://github.com/robwalch) - [commit](https://github.com/robwalch/CanvasEngine/commit/e55909952c26ba1ec3e3d5bd6f733ddfffc4b647)
+* [TheOnly92](https://github.com/TheOnly92)
 
 ## Changelog
+
+
+### v1.3.1 (dev)
+
+* Add rotation and flip in Tiled class (TheOnly92)
+* Display objects in Tiled class
+* `getLayerObject()` changed in Tiled class
+* Fix `getLayer()` in Tiled class
 
 ### v1.3.0
 
