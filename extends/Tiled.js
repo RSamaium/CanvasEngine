@@ -159,14 +159,14 @@ Client :
 	},
 	_draw: function() {
 		this.map = this.scene.createElement();
-		this.el_layers = [];
-		var x, y, tileset, self = this;
+		this.el_layers = {};
+		var x, y, tileset, layer_name, self = this;
 		var id, _tile, _id, nb_tile = {}, tileoffset;
-		
-		
+
 		for (var i=0 ; i < this.layers.length ; i++) {
 			id = 0;
-			this.el_layers[i] = this.scene.createElement();
+			layer_name = this.layers[i].name;
+			this.el_layers[layer_name] = this.scene.createElement();
 			if (this.layers[i].data) {
 				for (var k=0 ; k < this.layers[i].height ; k++) {
 					for (var j=0 ; j < this.layers[i].width ; j++) {
@@ -187,16 +187,16 @@ Client :
 							x = this.tile_w * (_id % Math.round((tileset.imagewidth - nb_tile.height / 2 * tileset.margin) / this.tile_w));
 							
 							_tile.drawImage(tileset.name, x + tileset.spacing * x / this.tile_w + tileset.margin, y + tileset.spacing * y / this.tile_h + tileset.margin, this.tile_w, this.tile_h, j * this.tile_w + tileoffset.x, k * this.tile_h + tileoffset.y, this.tile_w, this.tile_h);
-							this.el_layers[i].append(_tile);
+							this.el_layers[layer_name].append(_tile);
 						}
 						id++;
 					}
 				}
 			}
 			else {
-				this.objects.push(this.el_layers[i]);
+				this.objects.push(this.el_layers[layer_name]);
 			}
-			this.map.append(this.el_layers[i]);
+			this.map.append(this.el_layers[layer_name]);
 		}
 		this.el.append(this.map);
 		if (this._ready) this._ready.call(this);
