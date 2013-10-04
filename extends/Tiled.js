@@ -280,6 +280,9 @@ Client :
 				break;
 			}
 		}
+		if (!this.objects[name]) {
+			return false;
+		}
 		return this.objects[name].layer;
 	},
 
