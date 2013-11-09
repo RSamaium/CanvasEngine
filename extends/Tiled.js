@@ -31,6 +31,8 @@ Class.create("Tiled", {
 	url: "",
 	tile_w: 0,
 	tile_h: 0,
+    tile_image_h:0,
+    tile_image_w:0,
 	tilesets: [],
 	width: 0,
 	height: 0,
@@ -136,6 +138,18 @@ Client :
 				}
 				self.tilesetsIndexed[self.tilesets[i].firstgid] = self.tilesets[i];
 			}
+            //
+            // Check to see if the tileset uses a different height/width to the layer
+            // For example, pseudo-3d tiles such as PlanetCute are 101x171 sprites 
+            // on a Tiled layer grid of 101x80
+            //
+            if (self.tilesets[0].tileheight && self.tilesets[0].tilewidth){
+                self.tile_image_h = self.tilesets[0].tileheight;
+                self.tile_image_w = self.tilesets[0].tilewidth;
+            } else {
+                self.tile_image_h = self.tile_h;
+                self.tile_image_w = self.tile_w;
+            }
 			var _id, length = self.tilesetsIndexed.length + (Math.round(self.tilesets[self.tilesets.length-1].imageheight / self.tile_h) * (Math.round(self.tilesets[self.tilesets.length-1].imagewidth / self.tile_w)));
 			for (var m=1; m < length; m++) {
 				_id = self.tilesetsIndexed[m] ? m : _id;
@@ -182,13 +196,13 @@ Client :
 		_id -= tileset.firstgid;
 		
 		nb_tile = {
-			width: tileset.imagewidth / this.tile_w,
-			height: tileset.imageheight / this.tile_h
+			width: tileset.imagewidth / this.tile_image_w,
+			height: tileset.imageheight / this.tile_image_h 
 		};
 		
 		tileoffset = tileset.tileoffset || {x: 0, y: 0};
 		
-		y = this.tile_h * Math.floor(_id / (Math.round((tileset.imagewidth - nb_tile.width / 2 * tileset.margin) / this.tile_h)));
+		y = this.tile_image_h * Math.floor(_id / (nb_tile.width - (nb_tile.width / 2 * tileset.margin)));        
 		x = this.tile_w * (_id % Math.round((tileset.imagewidth - nb_tile.height / 2 * tileset.margin) / this.tile_w));
 		
 		_tile.drawImage(tileset.name, x + tileset.spacing * x / this.tile_w + tileset.margin, y + tileset.spacing * y / this.tile_h + tileset.margin, this.tile_w, this.tile_h, data.x + tileoffset.x, data.y + tileoffset.y, this.tile_w, this.tile_h);
@@ -204,7 +218,7 @@ Client :
 			halfDiff = nb_tile.height/2 - nb_tile.width/2
 			y += halfDiff
 		}
-		_tile.drawImage(tileset.name, x + tileset.spacing * x / this.tile_w + tileset.margin, y + tileset.spacing * y / this.tile_h + tileset.margin, this.tile_w, this.tile_h, 0, 0, this.tile_w, this.tile_h);
+		_tile.drawImage(tileset.name, x + tileset.spacing * x / this.tile_image_w + tileset.margin, y + tileset.spacing * y / this.tile_image_h + tileset.margin, this.tile_image_w, this.tile_image_h, 0, 0, this.tile_image_w, this.tile_image_h);
 		_tile.x = data.x + tileoffset.x
 		_tile.y = data.y + tileoffset.y
 		_tile.width = this.tile_w
