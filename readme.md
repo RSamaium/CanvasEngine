@@ -235,6 +235,7 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 ## Contributors
 
 * [robwalch](https://github.com/robwalch) - [commit](https://github.com/robwalch/CanvasEngine/commit/e55909952c26ba1ec3e3d5bd6f733ddfffc4b647)
+* [scottbw](https://github.com/scottbw) - [commit](https://github.com/RSamaium/CanvasEngine/commit/9600681d945c3efb8cea04391c2df0e12f843716)
 * [TheOnly92](https://github.com/TheOnly92)
 
 ## Changelog
@@ -242,10 +243,12 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 
 ### v1.3.1 (dev)
 
+* Add support for tile image dimensions that differ from the tile layer dimensions in Tiled class (scottbw)
 * Add rotation and flip in Tiled class (TheOnly92)
 * Display objects in Tiled class
 * `getLayerObject()` changed in Tiled class
 * Fix `getLayer()` in Tiled class
+* Fix display when an object layer is present in Tiled class
 
 ### v1.3.0
 

@@ -127,6 +127,7 @@ Client :
 			self.tilesets = data.tilesets;
 			self.layers = data.layers;
 			self.tilesetsIndexed = [];
+			
 			for (var i=0 ; i < self.tilesets.length ; i++) {
 				var props = self.tilesets[i].tileproperties,
 					new_props = {};
@@ -138,12 +139,13 @@ Client :
 				}
 				self.tilesetsIndexed[self.tilesets[i].firstgid] = self.tilesets[i];
 			}
+			
             //
             // Check to see if the tileset uses a different height/width to the layer
             // For example, pseudo-3d tiles such as PlanetCute are 101x171 sprites 
             // on a Tiled layer grid of 101x80
             //
-            if (self.tilesets[0].tileheight && self.tilesets[0].tilewidth){
+            if (self.tilesets[0].tileheight && self.tilesets[0].tilewidth) {
                 self.tile_image_h = self.tilesets[0].tileheight;
                 self.tile_image_w = self.tilesets[0].tilewidth;
             } else {
@@ -151,16 +153,20 @@ Client :
                 self.tile_image_w = self.tile_w;
             }
 			var _id, length = self.tilesetsIndexed.length + (Math.round(self.tilesets[self.tilesets.length-1].imageheight / self.tile_h) * (Math.round(self.tilesets[self.tilesets.length-1].imagewidth / self.tile_w)));
-			for (var m=1; m < length; m++) {
+			
+			for (var m=0; m < length; m++) {
 				_id = self.tilesetsIndexed[m] ? m : _id;
 				self.tilesetsIndexed[m] = self.tilesetsIndexed[_id];
 			}
+			
 			if (typeof exports == "undefined") {
 				self._draw();
 			}
 			else {
 				if (self._ready) self._ready.call(self, clone_data);
 			}
+			
+			
 		}
 		
 		if (typeof url === 'string') {
@@ -191,7 +197,9 @@ Client :
 		if (_id & Tiled.FlippedAntiDiagonallyFlag) {
 			flippedAntiDiagonally = true;
 		}
+		
 		_id &= ~(Tiled.FlippedHorizontallyFlag | Tiled.FlippedVerticallyFlag | Tiled.FlippedAntiDiagonallyFlag);
+		
 		tileset = this.tilesetsIndexed[_id];
 		_id -= tileset.firstgid;
 		
@@ -251,7 +259,7 @@ Client :
 				for (var k=0 ; k < layer.height ; k++) {
 					for (var j=0 ; j < layer.width ; j++) {
 						_id = layer.data[id];
-						if (_id != 0) {
+						if (_id != 0) {						
 							this._drawTile(_id, layer.name, {
 								x: j,
 								y: k
@@ -265,11 +273,13 @@ Client :
 				for (var j=0 ; j < layer.objects.length ; j++) {
 					obj = layer.objects[j];
 					if (!el_objs[obj.name]) el_objs[obj.name] = [];
-					el_objs[obj.name].push(this._drawTile(obj.gid, layer.name, CE.extend(obj, {
-						y: obj.y - this.tile_h,
-						position: "absolute"
-					})));
 					
+					if (obj.gid) {
+						el_objs[obj.name].push(this._drawTile(obj.gid, layer.name, CE.extend(obj, {
+							y: obj.y - this.tile_h,
+							position: "absolute"
+						})));
+					}
 				}
 				this.objects[layer.name] = {
 					layer: this.el_layers[layer.name],
