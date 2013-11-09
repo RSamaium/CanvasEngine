@@ -150,14 +150,67 @@ CanvasEngine.socketIO = function() {
 // TODO
 CanvasEngine.User = {
 
-	authentication: function(username, password, params) {
+	autoAuthentication: function(cookie_name, params) {
 		CanvasEngine.socketIO();
+
+		if (typeof cookie_name != "string") {
+			params = cookie_name;
+			cookie_name = "canvasengine";
+		}
+
+		var regexp = new RegExp(cookie_name + "=(\{.*?\})" ,"i"),
+			match = document.cookie.match(regexp), data;
+
+		if (match && match[1])  {
+			
+			try {
+				data = JSON.parse(match[1]);
+
+				CanvasEngine.io.emit("_autoAuthentication", {
+					session: data.session_id
+				});
+				CanvasEngine.io.on("_autoAuthentication", function(ret) {
+					if (ret.ret == "success" && params.success) {
+						params.success();
+					}
+					else if (ret.ret == "failed" && params.failed) {
+						params.failed(ret.err);
+					}
+				});
+
+			}
+			catch (e) {
+				console.warn("Error session format in cookie ; ", e.stack);
+			}
+
+		}
+		
+	},
+
+	_setCookie: function(name, val) {
+		var del = val == undefined;
+
+		name = name || "canvasengine";
+
+		var date = new Date();
+		date.setTime(date.getTime() + ((del ? -1 : 2) *24*60*60*1000));
+		var expires = "; expires=" + date.toGMTString();
+		document.cookie = name + '=' + (del ? "" : JSON.stringify(val)) + expires + '; path=/';
+		
+	},
+
+	authentication: function(username, password, params) {
+		var self = this;
+
+		CanvasEngine.socketIO();
+
 		CanvasEngine.io.emit("_authentication", {
 			username: username,
 			password: password
 		});
 		CanvasEngine.io.on("_authentication", function(ret) {
 			if (ret.ret == "success" && params.success) {
+				self._setCookie(params.cookie_name, {session_id: ret.session_id });
 				params.success();
 			}
 			else if (ret.ret == "failed" && params.failed) {
@@ -183,6 +236,21 @@ CanvasEngine.User = {
 			}
 		});
 	
+	},
+
+	logout: function(params) {
+
+		params = params || {};
+
+		var self = this;
+
+		CanvasEngine.socketIO();
+		CanvasEngine.io.emit("_logout");
+		this._setCookie(params.cookie_name);
+	},
+
+	isLogged: function() {
+
 	}
 	
 };
@@ -1493,6 +1561,7 @@ and, in `ready` method :
 				  exit: function(name) {
 					var _class = this._scenesEnabled[name];
 					if (_class) {
+						_class.getCanvas()._layerDOM.innerHTML = "";
 						_class._exit.call(_class);
 						for (var i=0 ; i < this._scenesIndex.length ; i++) {
 							if (this._scenesIndex[i] == name) {
@@ -1684,7 +1753,7 @@ and, in `ready` method :
 				el.style.overflow = 
 				this._layerDOM.style.overflow = "hidden";
 				
-				this._layerDOM.style.width = "100%";
+				this._layerDOM.style.width = 
 				this._layerDOM.style.height = "100%";
 
 				el.appendChild(this.element);
@@ -2429,6 +2498,8 @@ Create two elements :
 			
 			options = options || {};
 			this._stage = CanvasEngine.Element["new"](this);
+			this._stage._dom = this.getCanvas()._layerDOM;
+			this._stage._name = "__stage__";
 			
 			this._index = CanvasEngine.Scene._scenesIndex.length-1;
 			for (var i=0 ; i < CanvasEngine.el_canvas.length ; i++) {
@@ -3325,7 +3396,7 @@ In `ready` method :
 		_nbEvent: 0,
 		_onRender: [],
 		_pack: null,
-
+		_useDOM: false,
 		_forceEvent: false,
 /**
 	@doc manipulate/
@@ -3335,42 +3406,24 @@ In `ready` method :
 */
 		propagationOpacity: null,
 		initialize: function(scene, layer, width, height) {
+			var canvas = scene.getCanvas();
+
 			this._id = _CanvasEngine.uniqid();
+
+			this._dom = document.createElement('div');
+
 			this.width = width;
 			this.height = height;
 			this.scene = scene;
 			this.stage = scene._stage;
 			this.layer = layer;
 			
-			var key, elements = this.scene.getCanvas()._elementsByScene(this.scene.name);
+			var key, elements = canvas._elementsByScene(this.scene.name);
 			do {
 				key = _CanvasEngine._getRandomColorKey();
 			}
 			while (key in elements);
 			
-			
-			/*this.addMethod([
-				"moveTo",
-				"lineTo",
-				"quadraticCurveTo",
-				"bezierCurveTo",
-				"clip",
-				"beginPath",
-				"closePath",
-				"rect",
-				"arc",
-				"addColorStop"
-			], "cmd");*/
-			
-			/*this.addMethod([
-				"rotate",
-				"translate",
-				"transform",
-				"setTransform",
-				"resetTransform",
-				"scale",
-				"clearRect"
-			], "draw");*/
 			
 			this.color_key = key;
 			this.scene.getCanvas()._elementsByScene(this.scene.name, key, this);
@@ -3409,6 +3462,33 @@ In `ready` method :
 			this._refresh(true, true);
 			this._canvas._event_mouse = null;
 		},
+
+
+		_refreshDOM: function() {
+
+			var obj = {
+				position: "absolute",
+				opacity: this.opacity,
+				width: this.width,
+				height: this.height
+			};
+
+			var style = {
+				transform: "rotate(" + this.rotation + "deg) scale(" + this.scaleX + ", " + this.scaleY + ") " +
+							"skew(" + this.skewX + "deg, " + this.skewY + "deg) translate(" + this.x + "px, " + this.y + "px)",
+				"transform-origin": this.regX + " " + this.regY
+			};
+
+			_CanvasEngine.each(["", "-webkit-", "-moz-", "-o-"], function(i, val) {
+				for (s in style) {
+					obj[val + s] = style[s];
+				}
+			});
+
+			_CanvasEngine.extend(this._dom.style, obj);
+
+		},
+
 		/**
 			Private
 			init : is parent ? default : false
@@ -3476,13 +3556,11 @@ In `ready` method :
 				
 				if (this.real_rotate != 0) {
 					this.rotateDeg(this.real_rotate);
-				}
-				
-				if (this.real_scale_x != 1 || this.real_scale_y != 1) {
-					this.scale(this.real_scale_x, this.real_scale_y);
-				}
-				if (this.real_skew_x != 0 || this.real_skew_y != 0) {
-					this.transform(1, this.real_skew_x, this.real_skew_y, 1, 0, 0);
+				}				
+
+				if (this.real_scale_x != 1 || this.real_scale_y != 1 || 
+					this.real_skew_x != 0 || this.real_skew_y != 0) {
+					this.transform(this.real_scale_x, this.real_skew_x, this.real_skew_y, this.real_scale_y, 0, 0);
 				}
 					
 				if (this.regX != 0 || this.regY != 0) {
@@ -3499,6 +3577,10 @@ In `ready` method :
 			
 			if (!this._useClip) {
 				this.restore();
+			}
+
+			if (this._useDOM) {
+				this._refreshDOM();
 			}
 		
 			
@@ -3598,6 +3680,10 @@ In `ready` method :
 		
 		_stageRefresh: function() {
 			this.stage.refresh();
+		},
+
+		isStage: function() {
+			return this._name == "__stage__";
 		},
 		
 		_mousemove: function(e, mouse) {
@@ -3700,18 +3786,45 @@ In method ready :
 	var el = this.createElement(["a", "b", "c"]);
 	stage.append(el.a, el.b, el.c);
 */
-		append: function() {
-			var el;
+		append: function(dom) {
+			var el, self = this;
+			var canvas = this.scene.getCanvas();
+
+
+			function recursiveUseDOM(_el) {
+				_el._useDOM = true;
+				if (!self.isStage) {
+					recursiveUseDOM(_el.parent);
+				}
+			}
+
+			if (dom instanceof Element) {
+				this._useDOM = true;
+				this._dom.appendChild(dom);
+				return this;
+			}
+			else if (dom instanceof jQuery) {
+				this._useDOM = true;
+				jQuery(this._dom).append(dom);
+				return this;
+			}
+
+
 			for (var i=0 ; i < arguments.length ; i++) {
 				el = arguments[i];
 				this._children.push(el);
 				el.parent = this;
 				el._index = this._children.length-1;
 				el._refresh(false, true);
+				if (el._useDOM) {
+					recursiveUseDOM(el.parent);
+					el._refreshDOM();
+					el.parent._dom.appendChild(el._dom);
+				}
 			}
 			return arguments;
 		},
-		
+
 /**
 @doc manipulate/
 @method prepend inserts the specified content as the first child of each element in the Element collection
@@ -4036,9 +4149,13 @@ In method ready
 */
 		remove: function() {
 			var child;
+			var canvas = this.scene.getCanvas();
 			for (var i=0 ; i < this.parent._children.length ; i++) {
 				child = this.parent._children[i];
 				if (this._id == child._id) {
+					if (canvas._layerDOM && child._useDOM) {
+						canvas._layerDOM.removeChild(child._dom);
+					}
 					this.parent._children.splice(i, 1);
 					this._stageRefresh();
 					return true;
@@ -4164,7 +4281,7 @@ In method ready
 		/*
 			TODO
 		*/
-		css: function(prop, val) {
+		/*css: function(prop, val) {
 			var obj = {};
 			var match;
 			if (typeof prop == "string") {
@@ -4199,7 +4316,8 @@ In method ready
 			if (obj.opacity) this.opacity = obj.opacity;
 			this.stage.refresh();
 			return this;
-		},
+		},*/
+
 		/**
 			@doc manipulate/
 			@method hide hide element and refresh the stage
@@ -4499,7 +4617,22 @@ or
 */
 		addLoopListener: function(callback) {
 			this.on("canvas:render", callback);
+		},
+
+
+		html: function(html) {
+			this._useDOM = true;
+			this._dom.innerHTML = html;
+			return this;
+		},
+
+		css: function(obj) {
+			this._useDOM = true;
+			_CanvasEngine.extend(this._dom.style, obj);
+			return this;
 		}
+
+
 	}).extend("Context");
 	
 	Global_CE = CanvasEngine = Class["new"]("CanvasEngineClass");
