@@ -290,7 +290,26 @@ CanvasEngine.connectServer = function(host, port) {
 */
  /**
 @doc engine/
-@method defines Initialize CanvasEngine  by setting the canvas 
+@method defines Initialize CanvasEngine  by setting the canvas. Note two ways to declare a canvas in HTML :
+
+1. <canvas>
+
+		<canvas id="canvas_id" width="640" height="480"></canvas>
+	
+2. <div>
+
+		<div id="canvas_id" width="640" height="480"></div>
+
+
+In case you use the div tag to add a layer of DOM elements is possible. For example, to add forms.
+
+In `ready` method, you can use jQuery (Do not forget to include the library in the header before) :
+
+		var el = $('<div>');
+		stage.append(el);
+
+> Valid for version >= 1.3.1
+
 @static
 @param {String} canvas canvas ID
 @param {Object} params (optional) additional parameters
@@ -3765,7 +3784,7 @@ In `ready` method :
 /**
 	@doc manipulate/
 	@method append inserts the specified content as the last child of each element in the Element collection
-	@param {CanvasEngine.Element} el 
+	@param {CanvasEngine.Element|Element|jQuery} el Element or a DOM element. [Use the DOM layer](?p=core.engine.defines)
 	@return CanvasEngine.Element
 	@example
 
@@ -3785,6 +3804,27 @@ In method ready :
 	
 	var el = this.createElement(["a", "b", "c"]);
 	stage.append(el.a, el.b, el.c);
+
+-- 
+
+DOM Element. Only >= 1.3.1
+
+	var el = this.createElement(),
+		div = document.createElement("div");
+	el.append(div);
+	el.x = 100;
+	stage.append(el);
+
+-- 
+
+jQuery Element. Only >= 1.3.1
+
+	var el = this.createElement(),
+		div = $('<div>');
+	el.append(div);
+	el.x = 100;
+	stage.append(el);
+
 */
 		append: function(dom) {
 			var el, self = this;
@@ -3792,20 +3832,29 @@ In method ready :
 
 
 			function recursiveUseDOM(_el) {
-				_el._useDOM = true;
-				if (!self.isStage) {
-					recursiveUseDOM(_el.parent);
+				if (_el._useDOM && _el.parent) {
+					_el.parent._dom.appendChild(_el._dom);
+					if (!self.isStage()) {
+						_el.parent._useDOM = true;
+						recursiveUseDOM(_el.parent);
+					}
 				}
 			}
 
+			function appendDOM(_el) {
+				_el._useDOM = true;
+				recursiveUseDOM(_el);
+				_el._refreshDOM();
+			}
+
 			if (dom instanceof Element) {
-				this._useDOM = true;
 				this._dom.appendChild(dom);
+				appendDOM(this);
 				return this;
 			}
 			else if (dom instanceof jQuery) {
-				this._useDOM = true;
 				jQuery(this._dom).append(dom);
+				appendDOM(this);
 				return this;
 			}
 
@@ -3816,12 +3865,9 @@ In method ready :
 				el.parent = this;
 				el._index = this._children.length-1;
 				el._refresh(false, true);
-				if (el._useDOM) {
-					recursiveUseDOM(el.parent);
-					el._refreshDOM();
-					el.parent._dom.appendChild(el._dom);
-				}
+				recursiveUseDOM(el);
 			}
+
 			return arguments;
 		},
 
@@ -4043,10 +4089,181 @@ Example 3 :
 			return this in this.parent.children();
 		},
 		
+/**
+@doc traversing/
+@method first `(>=1.3.1)` Find a first child
+@example
+
+In method ready
+
+	var el1 = this.createElement(),
+		el2 = this.createElement(),
+		el3 = this.createElement();
+
+	stage.append(el1, el2, el3);
+
+	stage.first(); // returns el1 element
+	
+@return {CanvasEngine.Element}
+*/	
 		first: function() {
-			return this.children()[0];
+			return this.eq(0);
+		},
+
+/**
+@doc traversing/
+@method last `(>=1.3.1)` Find a last child
+@example
+
+In method ready
+
+	var el1 = this.createElement(),
+		el2 = this.createElement(),
+		el3 = this.createElement();
+
+	stage.append(el1, el2, el3);
+
+	stage.last(); // returns el3 element
+	
+@return {CanvasEngine.Element}
+*/	
+		last: function() {
+			return this.eq(-1);
+		},
+
+/**
+@doc traversing/
+@method eq `(>=1.3.1)` Retrieves an element by its index in the array
+@param {Integer} index An integer indicating the 0-based position of the element. If index < 0, an integer indicating the position of the element, counting backwards from the last element in the set.
+@example
+
+In method ready
+
+	var el1 = this.createElement(),
+		el2 = this.createElement(),
+		el3 = this.createElement();
+
+	stage.append(el1, el2, el3);
+
+	stage.eq(1); // returns el2 element
+	stage.eq(-1); // returns el3 element
+	
+@return {CanvasEngine.Element}
+*/	
+		eq: function(index) {
+			var children = this.children(),
+				l = children.length;
+			if (Math.abs(index) >= l) {
+				index = -1;
+			}
+			if (index < 0) {
+				index = l + index;	
+			}
+			return children[index];
+		},
+
+/**
+@doc traversing/
+@method next `(>=1.3.1)` Gets the next element. It is possible to filter on an attribute. Return false if the element was not found
+@param {String}  attr (optional) Attribute name
+@param {Object}  val (optional) Attribute value
+@example
+
+In method ready
+
+	var el1 = this.createElement(),
+		el2 = this.createElement(),
+		el3 = this.createElement(),
+		el4 = this.createElement();
+
+	el3.attr("foo", "bar");
+	el4.attr("foo", "yoo");
+
+	stage.append(el1, el2, el3, el4);
+
+	stage.first().next(); 				// returns el2 element
+	stage.first().next("foo");			// returns el3 element
+	stage.first().next("foo", "yoo");	// returns el4 element
+	stage.first().next("foo", "hi");	// returns false
+
+	
+@return {CanvasEngine.Element|Boolean}
+*/
+		next: function(attr, val) {
+			if (attr) {
+				var children = this.parent.children(), attr_val, c;
+				for (var i=this._index+1 ; i < children.length ; i++) {
+					c = children[i];
+					attr_val = this._findAttr(attr, val, c);
+					if (attr_val) {
+						return c;
+					}
+				}
+				return false;
+			}
+			return this.parent.eq(this._index+1);
+		},
+
+/**
+@doc traversing/
+@method prev `(>=1.3.1)` Gets the previous element. It is possible to filter on an attribute. Return false if the element was not found
+@param {String}  attr (optional) Attribute name
+@param {Object}  val (optional) Attribute value
+@example
+
+In method ready
+
+	var el1 = this.createElement(),
+		el2 = this.createElement(),
+		el3 = this.createElement(),
+		el4 = this.createElement();
+
+	el1.attr("foo", "bar");
+	el2.attr("foo", "yoo");
+
+	stage.append(el1, el2, el3, el4);
+
+	stage.last().prev(); 				// returns el3 element
+	stage.last().prev("foo");			// returns el2 element
+	stage.last().prev("foo", "bar");	// returns el1 element
+	stage.last().prev("foo", "hi");		// returns false
+
+	
+@return {CanvasEngine.Element|Boolean}
+*/
+		prev: function(attr, val) {
+			if (attr) {
+				var children = this.parent.children(), attr_val, c;
+				for (var i=this._index-1 ; i >= 0 ; i--) {
+					c = children[i];
+					attr_val = this._findAttr(attr, val, c);
+					if (attr_val) {
+						return c;
+					}
+				}
+				return false;
+			}
+			return this.parent.eq(this._index-1);
 		},
 		
+/**
+@doc traversing/
+@method find Find a child by name. Returns an array of element found
+@param {String}  name Element name
+@example
+
+In method ready
+
+	var el1 = this.createElement("el1"),
+		el2 = this.createElement("el2"),
+		el3 = this.createElement("el3");
+
+	stage.append(el1, el2, el3);
+
+	stage.find('el1'); // returns el1 element
+	
+@return {Array}
+*/	
 		find: function(name) {
 			var children = this.children(),
 				_find = [];
@@ -4058,27 +4275,58 @@ Example 3 :
 			}
 			return _find;
 		},
-		
-		findAttr: function(attr, val) {
-			var children = this.children(),
-				c, attr_val;
-			for (var i=0 ; i < children.length ; i++) {
-				c = children[i];
-				console.log(attr, c.attr(attr));
-				attr_val = c.attr(attr);
-				if (attr_val) {
-					if (val != undefined) {
-						if (attr_val == val) {
-							return c;
-						}
-					}
-					else {
+	
+/**
+@doc traversing/
+@method findAttr Find a child by attribute. Returns an array of element found
+@param {String}  attr Attribute name
+@param {Object}  val (optional) Attribute value
+@example
+
+In method ready
+
+	var el1 = this.createElement(),
+		el2 = this.createElement(),
+		el3 = this.createElement();
+
+	el1.attr('prop', 'one');
+	el2.attr('name', 'foo');
+	el3.attr('name', 'bar');
+					
+	stage.append(el1, el2, el3);
+
+	stage.findAttr('name'); // returns el2 and el3 elements
+	stage.findAttr('name', 'foo'); // returns el2 element
+
+@return {Array}
+*/	
+
+		_findAttr: function(attr, val, c) {
+			var attr_val = c.attr(attr);
+			if (attr_val) {
+				if (val != undefined) {
+					if (attr_val == val) {
 						return c;
 					}
+				}
+				else {
+					return c;
 				}
 			}
 			return false;
 		},
+
+		findAttr: function(attr, val) {
+			var children = this.children(), attr_val, _find = [];
+			for (var i=0 ; i < children.length ; i++) {
+				attr_val = this._findAttr(attr, val, children[i]);
+				if (attr_val) {
+					_find.push(attr_val);
+				}
+			}
+			return _find;
+		},
+
 		
 /**
 @doc manipulate/
@@ -4620,12 +4868,44 @@ or
 		},
 
 
+/**
+	@doc dom/
+	@method html `(>= 1.3.1)` Adds an html element. [Use the DOM layer](?p=core.engine.defines)
+	@param {String} html
+	@return CanvasEngine.Element
+	@example
+
+In method ready :
+
+	var el = this.createElement();
+
+	el.html("<div><p>Hello</p></div>");
+	
+	stage.append(el);
+*/
 		html: function(html) {
 			this._useDOM = true;
 			this._dom.innerHTML = html;
 			return this;
 		},
 
+/**
+	@doc dom/
+	@method css `(>= 1.3.1)` Assigns a style sheet to the parent element. [Use the DOM layer](?p=core.engine.defines)
+	@param {Object} css 
+	@return CanvasEngine.Element
+	@example
+
+In method ready :
+
+	var el = this.createElement(100, 100);
+
+	el.html("<div><p>Hello</p></div>").css({
+		border: "1px red solid"
+	});
+	
+	stage.append(el);
+*/
 		css: function(obj) {
 			this._useDOM = true;
 			_CanvasEngine.extend(this._dom.style, obj);

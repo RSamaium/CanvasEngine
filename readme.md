@@ -243,6 +243,8 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 
 ### v1.3.1 (dev)
 
+* Add `html()` and `css()` in Element class for DOM layer
+* Add `next()`, `prev()`, `last()`, `first()`, `eq()`, `find()`, `findAttr()` in Element class for traversing
 * Add support for tile image dimensions that differ from the tile layer dimensions in Tiled class (scottbw)
 * Add rotation and flip in Tiled class (TheOnly92)
 * Display objects in Tiled class

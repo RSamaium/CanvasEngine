@@ -8,6 +8,10 @@ Follow the steps below to start:
 		<!DOCTYPE html>
 		<script src="canvasengine-X.Y.Z.all.min.js"></script>
 		<canvas id="canvas_id" width="640" height="480"></canvas>
+
+> To use a DOM layer `(>=1.3.1)`
+
+>      <div id="canvas_id" width="640" height="480"></div>
 		
        
 3. Initialize the canvas in your JS file :
