@@ -3852,7 +3852,7 @@ jQuery Element. Only >= 1.3.1
 				appendDOM(this);
 				return this;
 			}
-			else if (dom instanceof jQuery) {
+			else if (typeof jQuery != "undefined" && dom instanceof jQuery) {
 				jQuery(this._dom).append(dom);
 				appendDOM(this);
 				return this;
