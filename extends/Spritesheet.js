@@ -83,6 +83,17 @@ Here, there is a grid of rows and 5 columns of 107px width and height. The first
 		}
 
 	},
+
+/**
+@doc spritesheet/
+@method exist `(1.3.1)` Returns true if identifier in sprite sheet exists
+@param {String} id Sprite identifier
+@return {Boolean}
+*/
+	exist: function(id) {
+		return this._set[id] ? true : false;
+	},
+
 /**
 @doc spritesheet/
 @method draw Draw a Sprite on the element
@@ -138,6 +149,9 @@ In "ready" method of the current scene :
 
 */
 	pattern: function(el, id, repeatOption) {
+		if (!this._set[id]) {
+			throw "Spritesheet " + id + " don't exist";
+		}
 		var tile =  this._set[id],
 			img = Global_CE.Materials.cropImage(this.image, tile[0], tile[1], tile[2], tile[3]);
 			pattern = el.getScene().getCanvas().createPattern(img, repeatOption);

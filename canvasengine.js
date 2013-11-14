@@ -963,13 +963,13 @@ The value can be an object to give several parameters :
 						if (onLoad) onLoad.call(self, this);
 						loadSounds();
 					}
-					
+
 					if (materials[i]) {
-						if (CanvasEngine.Sound._manager) {
-							if (self.sounds[materials[i].id]) {
-								next();
-							}
-							else {
+						if (self.sounds[materials[i].id]) {
+							next();
+						}
+						else {
+							if (CanvasEngine.Sound._manager) {
 								self.sounds[materials[i].id] = soundManager.createSound({
 								  id: materials[i].id,
 								  url:  materials[i].path,
@@ -983,57 +983,57 @@ The value can be an object to give several parameters :
 								  }
 								});
 							}
-						}
-						else {
-							var snd = new Audio(), 
-								_p = materials[i].path,
-								base = self.getBasePath(_p),
-								filename = self.getFilename(_p),
-								ext = self.getExtension(_p);
+							else {
+								var snd = new Audio(), 
+									_p = materials[i].path,
+									base = self.getBasePath(_p),
+									filename = self.getFilename(_p),
+									ext = self.getExtension(_p);
+									
+								var audio_test = {
+									"mp3": snd.canPlayType('audio/mpeg'),
+									"ogg": snd.canPlayType('audio/ogg; codecs="vorbis"'),
+									"m4a": snd.canPlayType('audio/mp4; codecs="mp4a.40.2"')
+								};
 								
-							var audio_test = {
-								"mp3": snd.canPlayType('audio/mpeg'),
-								"ogg": snd.canPlayType('audio/ogg; codecs="vorbis"'),
-								"m4a": snd.canPlayType('audio/mp4; codecs="mp4a.40.2"')
-							};
-							
 
-							if (!audio_test[ext]) {
-								for (var key_ext in audio_test) {
-									if (ext == key_ext) continue;
-									if (audio_test[key_ext]) {
-										_p = base + "/" + filename + "." + key_ext;
-										break;
+								if (!audio_test[ext]) {
+									for (var key_ext in audio_test) {
+										if (ext == key_ext) continue;
+										if (audio_test[key_ext]) {
+											_p = base + "/" + filename + "." + key_ext;
+											break;
+										}
 									}
 								}
-							}
-							
-							snd.setAttribute("src", _p);
-							snd.addEventListener('canplaythrough', function() { 
-								self.sounds[materials[i].id] = this;
-								next();
-							}, false);
-							snd.addEventListener('ended', function() { 
-								if (!this._loop) return;
-								this.currentTime = 0;
-								this.play();
-							}, false);
-							snd.addEventListener('error', function (e) { 
-								if (params.ignoreLoadError) {
+								
+								snd.setAttribute("src", _p);
+								snd.addEventListener('canplaythrough', function() { 
+									self.sounds[materials[i].id] = this;
 									next();
+								}, false);
+								snd.addEventListener('ended', function() { 
+									if (!this._loop) return;
+									this.currentTime = 0;
+									this.play();
+								}, false);
+								snd.addEventListener('error', function (e) { 
+									if (params.ignoreLoadError) {
+										next();
+									}
+								}, false);
+								snd.load();
+								snd.pause();
+								document.body.appendChild(snd);
+								
+								// For iOS
+								// http://developer.apple.com/library/safari/#documentation/AudioVideo/Conceptual/Using_HTML5_Audio_Video/Device-SpecificConsiderations/Device-SpecificConsiderations.html
+								if (/^i/.test(_CanvasEngine.mobileUserAgent())) {
+									self.sounds[materials[i].id] = snd;
+									next(); // skip "canplaythrough"
 								}
-							}, false);
-							snd.load();
-							snd.pause();
-							document.body.appendChild(snd);
-							
-							// For iOS
-							// http://developer.apple.com/library/safari/#documentation/AudioVideo/Conceptual/Using_HTML5_Audio_Video/Device-SpecificConsiderations/Device-SpecificConsiderations.html
-							if (/^i/.test(_CanvasEngine.mobileUserAgent())) {
-								self.sounds[materials[i].id] = snd;
-								next(); // skip "canplaythrough"
+		
 							}
-	
 						}
 					}
 					else {
@@ -1578,9 +1578,12 @@ and, in `ready` method :
 
 */
 				  exit: function(name) {
-					var _class = this._scenesEnabled[name];
+					var _class = this._scenesEnabled[name],
+						_canvas = _class.getCanvas();
 					if (_class) {
-						_class.getCanvas()._layerDOM.innerHTML = "";
+						if (_canvas._layerDOM) {
+							_canvas._layerDOM.innerHTML = "";
+						}
 						_class._exit.call(_class);
 						for (var i=0 ; i < this._scenesIndex.length ; i++) {
 							if (this._scenesIndex[i] == name) {
@@ -3489,7 +3492,8 @@ In `ready` method :
 				position: "absolute",
 				opacity: this.opacity,
 				width: this.width,
-				height: this.height
+				height: this.height,
+				display: this._visible ? "block" : "none"
 			};
 
 			var style = {

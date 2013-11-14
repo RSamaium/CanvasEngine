@@ -236,6 +236,7 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 
 * [robwalch](https://github.com/robwalch) - [commit](https://github.com/robwalch/CanvasEngine/commit/e55909952c26ba1ec3e3d5bd6f733ddfffc4b647)
 * [scottbw](https://github.com/scottbw) - [commit](https://github.com/RSamaium/CanvasEngine/commit/9600681d945c3efb8cea04391c2df0e12f843716)
+* [SomeKittens](https://github.com/SomeKittens) - [commit](https://github.com/SomeKittens/CanvasEngine/commit/a934af7bf32799434a53876f346b80ef0da1b3e5)
 * [TheOnly92](https://github.com/TheOnly92)
 
 ## Changelog
@@ -243,6 +244,7 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 
 ### v1.3.1 (dev)
 
+* Add `exist()` in Spritesheet class
 * Add `html()` and `css()` in Element class for DOM layer
 * Add `next()`, `prev()`, `last()`, `first()`, `eq()`, `find()`, `findAttr()` in Element class for traversing
 * Add support for tile image dimensions that differ from the tile layer dimensions in Tiled class (scottbw)
@@ -251,6 +253,8 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 * `getLayerObject()` changed in Tiled class
 * Fix `getLayer()` in Tiled class
 * Fix display when an object layer is present in Tiled class
+* fix bug where variables would not properly reset in Animation class (SomeKittens)
+* Caching of sound already loaded
 
 ### v1.3.0
 
