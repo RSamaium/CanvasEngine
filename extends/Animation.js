@@ -547,15 +547,20 @@ Example :
 			var i = 0;
 			var freq = null;
 			var img_seq = 0;
+			var prevSeq;
 			
 			this.stop();
 			
 			this.el.addLoopListener(function() {
-				var t;
+				// Catch when we're interrupted and haven't had a chance to reset
+				if (self._seq !== prevSeq) {
+					prevSeq = self._seq;
+					i = 0;
+					freq = null;
+				}
 				
-				
-				
-				var seq = self._animations[self._seq], loop = self._loop == "loop";
+				var seq = self._animations[self._seq],
+						loop = self._loop == "loop";
 				
 				function seqSize(img) {
 					if (seq.size) return seq.size;
