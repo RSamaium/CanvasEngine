@@ -244,6 +244,9 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 
 ### v1.3.1 (dev)
 
+* Add `remove()` and `isStopped()` in Animation class and `add()` improved
+* Marshal class compatible with Node.js
+* Add `getStack()` ind Marshall class and `dump()`, `load()` improved
 * Add `exist()` in Spritesheet class
 * Add `html()` and `css()` in Element class for DOM layer
 * Add `next()`, `prev()`, `last()`, `first()`, `eq()`, `find()`, `findAttr()` in Element class for traversing
@@ -253,7 +256,8 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 * `getLayerObject()` changed in Tiled class
 * Fix `getLayer()` in Tiled class
 * Fix display when an object layer is present in Tiled class
-* fix bug where variables would not properly reset in Animation class (SomeKittens)
+* Fix bug where variables would not properly reset in Animation class (SomeKittens)
+* Fix bug with IE if gamepad
 * Caching of sound already loaded
 
 ### v1.3.0

@@ -533,13 +533,40 @@ Example :
 				this.add();
 			}
 		},
+
+/**
+@doc animation/
+@method remove `(>=1.3.1)` Removes the animation on this element
+@param {CanvasEngine.Element} el (optional) The element in question. If absent, takes the element assigned to the class
+@return {CanvasEngine.Animation}
+*/
+		remove: function(el) {
+			if (el) this.el = el;
+			this.el.off("canvas:render");
+			return this;
+		},
+
 /**
 @doc animation/
 @method add Adds a loop listener in a element to perform an animation (with addLoopListener). From the method call, the loop is started on the animation stop. Use the play method to start the animation
 @param {CanvasEngine.Element} el
+@param {Boolean} uniq (optional) `(>=1.3.1)` Indicates if the element has only an animation. false by default.
+
+Example :
+
+In `ready` method : 
+	
+	var el = this.createElement();
+	var animation = canvas.Animation.New({...});
+	
+	animation.add(el, true);
+	animation.add(el, true);
+
+	// Despite that adds twice the animation element, only the second assignment will be considered
+
 @event animation:draw Call each sequence. Id parameter sequence
 */
-		add: function(el) {
+		add: function(el, uniq) {
 			
 			if (el) this.el = el;
 			
@@ -548,6 +575,8 @@ Example :
 			var freq = null;
 			var img_seq = 0;
 			var prevSeq;
+
+			if (uniq) this.remove();
 			
 			this.stop();
 			
@@ -558,6 +587,7 @@ Example :
 					i = 0;
 					freq = null;
 				}
+
 				
 				var seq = self._animations[self._seq],
 						loop = self._loop == "loop";
@@ -585,6 +615,7 @@ Example :
 				freq++;
 				
 				if (freq >= seq.frequence) {
+
 					if (self._images instanceof Array) {	
 						var img = self._images[img_seq];
 						seqSize(img);
@@ -629,7 +660,7 @@ Example :
 							if (!seq.position) seq.position = {};
 							if (!seq.position.left) seq.position.left = 0;
 							if (!seq.position.top) seq.position.top = 0;
-							
+
 							_el.drawImage(_img, w, h, seq.size.width, seq.size.height, seq.position.left, seq.position.top, seq.size.width, seq.size.height);
 						}
 						
@@ -714,12 +745,24 @@ Example :
 		
 		
 		},
+
+/**
+@doc animation/
+@method isStopped `(1.3.1)` Whether the animation is stopped
+@return {Boolean}
+*/
+		isStopped: function() {
+			return this._stop;
+		},
+
 /**
 @doc animation/
 @method stop Stop animation
+@return {CanvasEngine.Animation}
 */
 		stop: function() {
 			this._stop = true;
+			return this;
 		},
 /**
 @doc animation/
@@ -730,11 +773,13 @@ Example :
 * loop : Animation loop
 * stop : The animation is done once and stops
 * remove : The animation is done once and removed at the end
+@return {CanvasEngine.Animation}
 */
 		play: function(seq, type) {
 			this._loop = type;
 			this._seq = seq;
 			this._stop = false;
+			return this;
 		}
 	});
 			

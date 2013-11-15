@@ -138,6 +138,11 @@
 	};
     Gamepad.getStates = function() {
         var rawPads = getField();
+
+        // Avoid bug in IE
+        if (!rawPads) {
+            return curData;
+        }
         var len = rawPads.length;
         for (var i = 0; i < len; ++i) {
             mapIndividualPad(rawPads, i);

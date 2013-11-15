@@ -19,6 +19,8 @@
   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   * THE SOFTWARE.
   */
+var BISON;
+  
 (function(array, undefined) {
 
     var BitStream = (function() {
@@ -509,6 +511,7 @@
     if (typeof window === 'undefined') {
         exports.encode = encode;
         exports.decode = decode;
+		BISON = exports;
 
     } else {
         window.BISON = {
@@ -518,6 +521,12 @@
     }
 
 })(Array);
+
+if (typeof exports != "undefined") {
+	var CE = require("canvasengine").listen(),
+		Class = CE.Class;
+}
+
 
 /**
 @doc save
@@ -556,14 +565,44 @@ Read the save from above :
 	test = Marshal.load("save_name");
 	console.log(test.qux); // 10
 
+--- 
+
+With Node.js `(>=1.3.1)`
+
+    var CE = require("canvasengine").listen(8333),
+        Marshal = CE.Core.requireExtend('Marshal'),
+        Class = CE.Class;
+
+    CE.Model.init("Main", {
+
+        Marshal: null,
+
+        initialize: function() {
+            // Create an instance only to the user
+            this.Marshal = Class.New('Marshal');
+        },
+
+        save: function() {
+            Class.create("Foo", {
+                bar: 2
+            });
+            var foo = Class.new("Foo");
+            this.Marshal.dump(foo, "save_name");
+
+            // Retrieves the encoded classes. It remains to store (database, file, etc..)
+            var data = this.Marshal.getStack(true);
+        }
+
+    });
+
 */
-Marshal = {
+Class.create("Marshal", {
 	_pointer: {},
 	_cache: {},
 	_stack_dump: [],
 	
 	_decode: function(val) {
-		if (navigator.appName == 'Microsoft Internet Explorer') {
+		if (typeof navigator != "undefined" && navigator.appName == 'Microsoft Internet Explorer') {
 			try {
 				return JSON.parse(val);
 			}
@@ -577,7 +616,7 @@ Marshal = {
 	},
 	
 	_encode: function(val) {
-		if (navigator.appName == 'Microsoft Internet Explorer') {
+		if (typeof navigator != "undefined" && navigator.appName == 'Microsoft Internet Explorer') {
 			try {
 				return JSON.stringify(val);
 			}
@@ -597,24 +636,24 @@ Marshal = {
 		@return Class
 	*/
 	exist: function(file) {
-		return localStorage && localStorage[file];
+		return typeof localStorage != "undefined" && localStorage[file];
 	},
 	
-	_recursiveData: function(data, type) {
+	_recursiveData: function(data, type, ignore) {
 		var _class_name, _class = {}, new_class = {}, val;
-
+		ignore = ignore || [];
 		if (data instanceof Object) {
 			for (var method in data) {
 				val = data[method];
-				if (typeof val != "function") {
+				if (typeof val != "function" && (CE.Core || CE).inArray(method, ignore) == -1) {
 					if (val instanceof Array) {
 						new_class[method] = [];
 						for (var i=0 ; i < val.length ; i++) {
-							new_class[method][i] = this._recursiveData(val[i], type);
+							new_class[method][i] = this._recursiveData(val[i], type, ignore);
 						}
 					}
 					else if (val instanceof Object) {
-						new_class[method] = this._recursiveData(val, type);
+						new_class[method] = this._recursiveData(val, type, ignore);
 					}
 					else if (val !== undefined) {
 						new_class[method] = val;
@@ -650,13 +689,14 @@ Marshal = {
 	},
 	
 	
-	/**
-		@doc save/
-		@method load Load data and restores the properties of the class the order of the stack of Marshal
-		@param {String} name Save name
-		@return Class
-	*/
-	load: function(file) {
+/**
+@doc save/
+@method load Load data and restores the properties of the class the order of the stack of Marshal
+@param {String} name Save name
+@param {Object} data (optional) `(>=1.3.1)` Load classes according to the data sent. Otherwise, it takes in the local storage
+@return Class
+*/
+	load: function(file, _data) {
 		var data, _class, _class_name;
 		
 		if (this._pointer[file] === undefined) {
@@ -666,25 +706,38 @@ Marshal = {
 		if (this._cache[file]) {
 			data = this._cache[file];
 		}
-		else if (localStorage) {
+		else if (_data) {
+			data = this._decode(_data) || [];
+			this._cache[file] = data;
+		}
+		else if (typeof localStorage != "undefined") {
 			data = this._decode(localStorage[file]) || [];
 			this._cache[file] = data;
 		}
 		_class = this._recursiveData(data[this._pointer[file]], "load");
-		if (!Marshal.exist(file)) {
+		if (!_data && !this.exist(file)) {
 			return false;
 		}
 		
 		this._pointer[file]++;
 		return _class;
 	},
-	/**
-		@doc save/
-		@method dump Saves the properties of a class in localStorage. The order is important for recovery with load method
-		@param {Class} _class Class
-		@param {String} name Save name
-	*/
-	dump: function(_class, file) {
+/**
+@doc save/
+@method dump Saves the properties of a class in localStorage. The order is important for recovery with load method
+@param {Class} _class Class
+@param {String} name Save name
+@param {Array} ignore (optional) `(>=1.3.1)` Ignores the attributes of a class.
+@example
+
+    Class.create("Test", {
+        foo: 1,
+        bar: 2
+    });
+    var test = Class.New("Test");
+    Marshal.dump(test, "slot", ["bar"]); // Saving only the foo property
+*/
+	dump: function(_class, file, ignore) {
 		var storage = [], new_data = {};
 		if (typeof _class == "number" ||
 			typeof _class == "string" ||
@@ -692,25 +745,38 @@ Marshal = {
 			new_data = _class;
 		}
 		else {
-			new_data = this._recursiveData(_class, "save");
+			new_data = this._recursiveData(_class, "save", ignore);
 		}
 		this._stack_dump.push(new_data);
-		if (localStorage) {
+		if (typeof localStorage != "undefined") {
 			localStorage[file] = this._encode(this._stack_dump);
 		}
 		
 	},
 	
-	/**
-		@doc save/
-		@method remove Remove save
-		@param {String} name Save name
-	*/
+/**
+@doc save/
+@method getStack `(>=1.3.1)` Retrieves the saved stack classes
+@param {Boolean} encode (optional) Returns the encoded table. false by default
+@return {Array}
+*/
+	getStack: function(encode) {
+		return !encode ? this._stack_dump : this._encode(this._stack_dump);
+	},
+	
+/**
+@doc save/
+@method remove Remove save
+@param {String} name Save name
+@return {Boolean}
+*/
 	remove: function(file) {
-		if (localStorage) {
+		if (typeof localStorage != "undefined") {
 			localStorage.removeItem(file);
 			return true;
 		}
 		return false;
 	}
-};
+});
+
+var Marshal = Class.New("Marshal");
