@@ -1736,6 +1736,7 @@ and, in `ready` method :
 		_layerDOM: null,
 		_layerParent: null,
 		_ctxMouseEvent: null,
+		_canvasMouseEvent: null,
 /**
 @doc canvas/
 @property width canvas width
@@ -1911,11 +1912,11 @@ and, in `ready` method :
 			return canvas;
 		},
 		_mouseEvent: function() {
-			var canvas =  document.createElement('canvas');
-			canvas.width = this.width;
-			canvas.height = this.height;
-			this._ctxMouseEvent = canvas.getContext('2d');
-			//document.body.appendChild(canvas);
+			this._canvasMouseEvent =  document.createElement('canvas');
+			this._canvasMouseEvent.width = this.width;
+			this._canvasMouseEvent.height = this.height;
+			this._ctxMouseEvent = this._canvasMouseEvent.getContext('2d');
+			//document.body.appendChild(this._canvasMouseEvent);
 		},
 		canvasReady: function() {
 		},
@@ -2158,8 +2159,10 @@ Example 5
 				old_h = this.element.height, 
 				type = width;
 			if (width == "reset") {
-				width = this._oldSize.width;
-				height = this._oldSize.height;
+				width = this.width = this._oldSize.width;
+				height = this.height = this._oldSize.height;
+				this._canvasMouseEvent.style.width = 
+				this._canvasMouseEvent.style.height = 
 				this.element.style.width =
 				this.element.style.height = null;
 				if (this._oldSize.type == "browser") {
@@ -2208,16 +2211,24 @@ Example 5
 				ratio = old_w / old_h;
 				width = height * ratio;
 				
+				this._canvasMouseEvent.style.width = 
 				this.element.style.width = width + 'px';
+				this._canvasMouseEvent.style.height = 
 				this.element.style.height = height + 'px';
 
 			}
 			else if (scale == "stretch") {
+				this._canvasMouseEvent.style.width = 
 				this.element.style.width = width + 'px';
+				this._canvasMouseEvent.style.height = 
 				this.element.style.height = height + 'px';
 			}
 			else {
+				this._canvasMouseEvent.width = 
+				this.width = 
 				this.element.width = width;
+				this._canvasMouseEvent.height = 
+				this.height = 
 				this.element.height = height;
 			}
 			
@@ -2227,8 +2238,7 @@ Example 5
 			}
 			
 			this._oldSize = {width: old_w, height: old_h, type: type};
-			this.width = width;
-			this.height = height;
+			
 			return this;
 		}
 	});

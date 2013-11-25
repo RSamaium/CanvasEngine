@@ -117,6 +117,7 @@ Class.create("Scrolling", {
 
 		x = Math.floor(x/multiple_w) * multiple_w ; 
 		y = Math.floor(y/multiple_h) * multiple_h;
+
 		return {x: x, y: y};
 	},
 	/**
@@ -145,8 +146,6 @@ Class.create("Scrolling", {
 			scroll.screen_y = this.main_el.y - canvas.height/2 + (canvas.height/2 % this.tile_h);
 			
 			//container.y -= Math.abs(container.y) == scroll.screen_y ? 0 : Math.floor((scroll.screen_y < Math.abs(container.y) ? -this.tile_h : this.tile_h) / scroll.speed);
-			
-			
 
 			var absx = Math.abs(container.x);
 			var absy = Math.abs(container.y);
@@ -226,13 +225,13 @@ Class.create("Scrolling", {
 					container.x = this._multipleScreen(scroll.speed, container.x, 0).x;
 					scroll.screen_x = Math.abs(container.x);
 				}
-
 				if (container.y > 0) {
 					scroll.screen_y = container.y = 0;
 				}
 				else if (container.y + scroll.height < canvas.height) {
 					container.y = canvas.height - scroll.height;
-					container.y = this._multipleScreen(scroll.speed, 0, container.y).y;
+					console.log(container.y, scroll.height, canvas.height);
+					//container.y = this._multipleScreen(scroll.speed, 0, container.y).y;
 					scroll.screen_y = Math.abs(container.y);
 				}
 			}

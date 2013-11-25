@@ -378,7 +378,7 @@ In `ready` method
 				array_elements = element;
 				element = null;
 			}
-			this.params = params || {};
+			this.params = CanvasEngine.extend(this.params, params);
 			this.array_elements = array_elements;
 			this.el = element;
 			this.update();
@@ -444,7 +444,7 @@ In `ready` method
 				if (self._select && el) self._select.call(self, el);
 			}
 			
-			Global_CE.Input.press([Input.Enter], enter);
+			Global_CE.Input.press(this.params.enter, enter);
 			
 			function assignTap(index) {
 				var el = this.array_elements[index];

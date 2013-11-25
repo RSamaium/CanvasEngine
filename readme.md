@@ -258,6 +258,7 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 * Fix display when an object layer is present in Tiled class
 * Fix bug where variables would not properly reset in Animation class (SomeKittens)
 * Fix bug with IE if gamepad
+* Fix click event and scrolling in fullscreen
 * Caching of sound already loaded
 
 ### v1.3.0
