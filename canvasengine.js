@@ -3016,7 +3016,10 @@ In the method "ready" in the scene class :
 			lineTo: function() { this._addCmd.call(this, "lineTo", arguments); },
 			quadraticCurveTo: function() { this._addCmd.call(this, "quadraticCurveTo", arguments); },
 			bezierCurveTo: function() { this._addCmd.call(this, "bezierCurveTo", arguments); },
-			beginPath: function() { this._addCmd.call(this, "beginPath", arguments); },
+			beginPath: function() { 
+				this.multiple = true;
+				this._addCmd.call(this, "beginPath", arguments); 
+			},
 			closePath: function() { this._addCmd.call(this, "closePath", arguments); },
 			clip: function() { 
 				this._useClip = true;
@@ -3182,7 +3185,7 @@ In the method "ready" in the scene class :
 					name = null;
 				}
 				if (name) {
-					array_cmd[name] = {params: params, propreties: propreties};
+					array_cmd[name] = [{params: params, propreties: propreties}];
 					isCmd = false;
 				}
 				else {
@@ -3250,7 +3253,7 @@ In the method "ready" in the scene class :
 					if (this[propreties[k]]) obj[propreties[k]] = this[propreties[k]];
 				}
 				obj["globalAlpha"] = 1;
-				if (typeof this._cmd[name] !== "undefined" && this._cmd[name] !== null) {
+				if (this.multiple && typeof this._cmd[name] !== "undefined" && this._cmd[name] !== null) {
                     this._cmd[name].push({params: params, propreties: obj});
                 } else {
                     this._cmd[name] = [{params: params, propreties: obj}];
@@ -4003,6 +4006,91 @@ In method ready
 			el = scene.createElement();
 			el.drawImage(canvas);
 			this.append(el);
+			return this;
+		},
+
+/**
+@doc manipulate/
+@method cache `(1.3.1)` Cache commands this element in a HTML5Canvas
+@param {Integer} w (optional) Width of the element cached (element width by default)
+@param {Integer} h (optinal) Height of the element cached (element height by default)
+@param {Boolean} free_memory (optional) Do not keep in mind the commands. `uncache` method can not be used
+@example
+
+In `ready` method : 
+
+		var el = this.createElement(120, 120); // do not forget to give a size to the element
+		el.beginPath();
+		el.strokeStyle = 'red';
+		el.lineWidth = 4;
+		el.moveTo(10,10);
+		el.lineTo(10,30);
+		el.lineTo(30,30);
+		el.stroke();
+		el.cache(); // cache element
+
+		el.uncache(); // uncache element
+
+		el.cache(true); // cache element without to put commands in memory
+
+		el.uncache(); // error
+
+@return {CanvasEngine.Element}
+*/
+		cache: function(w, h, free_memory) {
+			var canvas = document.createElement("canvas"),
+				ctx = canvas.getContext('2d'),
+				_canvas = this.scene.getCanvas();
+
+			if (typeof w == "boolean") {
+				free_memory = w;
+				w = null;
+			}
+			
+			canvas.width = w || this.width;
+			canvas.height = h || this.height;
+			
+			_canvas._ctxTmp = ctx;
+			this._refresh(true, true);
+			_canvas._ctxTmp = null;
+			if (!free_memory) this._cache = this._cmd;
+			this._cmd = [];
+			this.drawImage(canvas);
+			return this;
+		},
+
+/**
+@doc manipulate/
+@method uncache `(1.3.1)` Uncache commands this element. You must use the `cache()` method before
+@example
+
+In `ready` method : 
+
+		var el = this.createElement(120, 120);
+		el.beginPath();
+		el.strokeStyle = 'red';
+		el.lineWidth = 4;
+		el.moveTo(10,10);
+		el.lineTo(10,30);
+		el.stroke();
+		
+		el.cache(); 
+		el.lineTo(30,30); // does not work
+
+		el.uncache(); 
+		el.lineTo(30,30);
+		
+
+@return {CanvasEngine.Element}
+*/
+		uncache: function() {
+			if (!this._cache) {
+				throw "Use the method `cache` before or impossible because you release the memory with method `cache`";
+			}
+			this._cmd = [];
+			this._refresh(true, true);
+			this._cmd = this._cache;
+			this._cache = null;
 			return this;
 		},
 

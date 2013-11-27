@@ -237,13 +237,15 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 * [robwalch](https://github.com/robwalch) - [commit](https://github.com/robwalch/CanvasEngine/commit/e55909952c26ba1ec3e3d5bd6f733ddfffc4b647)
 * [scottbw](https://github.com/scottbw) - [commit](https://github.com/RSamaium/CanvasEngine/commit/9600681d945c3efb8cea04391c2df0e12f843716)
 * [SomeKittens](https://github.com/SomeKittens) - [commit](https://github.com/SomeKittens/CanvasEngine/commit/a934af7bf32799434a53876f346b80ef0da1b3e5)
-* [TheOnly92](https://github.com/TheOnly92)
+* [TheOnly92](https://github.com/TheOnly92) - [commit](https://github.com/RSamaium/CanvasEngine/commit/d83a2f5512efb206bef96cf76e68f438f1f45b16)
 
 ## Changelog
 
 
 ### v1.3.1 (dev)
 
+* Possibility to use several times the commands for drawing - (TheOnly92)
+* Add `cache()` and `uncache()` in Element class
 * Add `remove()` and `isStopped()` in Animation class and `add()` improved
 * Marshal class compatible with Node.js
 * Add `getStack()` ind Marshall class and `dump()`, `load()` improved
