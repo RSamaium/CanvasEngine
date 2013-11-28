@@ -3192,7 +3192,11 @@ In the method "ready" in the scene class :
 				this._useClip = true;
 				this._addCmd.call(this, "clip", arguments); 
 			},
-			rect: function() { this._addCmd("rect", this._defaultRectParams.apply(this, arguments.concat("fillStyle"))); },
+			rect: function() { 
+				var args = Array.prototype.slice.call(arguments, 0);
+				args = this._defaultRectParams.apply(this, args.concat("fillStyle"));
+				this._addCmd("rect", args); 
+			},
 			arc: function() { this._addCmd.call(this, "arc", arguments, true); },
 			arcTo: function() { this._addCmd.call(this, "arcTo", arguments, true); },
 			addColorStop: function() { this._addCmd.call(this, "addColorStop", arguments, true); },
@@ -3493,22 +3497,22 @@ In `ready` method :
 
 1. Create an element with the createElement method :
 
-	canvas.Scene.new({
-		name: "MyScene",
-		ready: function(stage) {
-			var element = this.createElement(); // new Element object
-		}
-	});
+		canvas.Scene.new({
+			name: "MyScene",
+			ready: function(stage) {
+				var element = this.createElement(); // new Element object
+			}
+		});
 
 2. Add this element in the stage :
 
-	canvas.Scene.new({
-		name: "MyScene",
-		ready: function(stage) {
-			var element = this.createElement();
-			stage.append(element); // add in the stage
-		}
-	});
+		canvas.Scene.new({
+			name: "MyScene",
+			ready: function(stage) {
+				var element = this.createElement();
+				stage.append(element); // add in the stage
+			}
+		});
 	
 @example
 <jsfiddle>cUEJ7/1</jsfiddle>
