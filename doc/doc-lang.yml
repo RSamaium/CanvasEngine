@@ -10,6 +10,7 @@ traversing: Traversing
 draw: Draw
 manipulate: Manipulate
 events: Events
+dom: DOM
 materials: Materials
 sound: Sound
 extends: Extends

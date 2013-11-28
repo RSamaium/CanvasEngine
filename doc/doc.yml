@@ -9,6 +9,7 @@ core:
      draw:
      manipulate:
      events:
+     dom:
     materials:
     sound:
     ajax:
