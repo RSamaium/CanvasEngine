@@ -242,9 +242,12 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 ## Changelog
 
 
-### v1.3.1 (dev)
+### v1.3.1
 
 * Possibility to use several times the commands for drawing - (TheOnly92)
+* Improves `fillRect()` and `strokeRect()` by adding rounded corners
+* Add `multiple` property in Context class
+* Add `fillCircle()` and `strokeCircle()` in Context class
 * Add `cache()` and `uncache()` in Element class
 * Add `remove()` and `isStopped()` in Animation class and `add()` improved
 * Marshal class compatible with Node.js
@@ -261,6 +264,7 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 * Fix bug where variables would not properly reset in Animation class (SomeKittens)
 * Fix bug with IE if gamepad
 * Fix click event and scrolling in fullscreen
+* Fix `textAlign` and `lineCap` properties
 * Caching of sound already loaded
 
 ### v1.3.0

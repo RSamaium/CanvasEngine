@@ -2717,12 +2717,45 @@ Create two elements :
 
 	Class.create("Context", {
 			_cmd: {},
+			_graphicCmd: [],
+			_graphicPointer: 0,
 			img: {},
 			_useClip: false,
 			globalAlpha: 1,
 			// private ; read only
-			_PROPS: ["shadowColor", "shadowBlur", "shadowOffsetX", "shadowOffsetY", "globalAlpha", "globalCompositeOperation", "lineJoin", "lineWidth", "miterLimit", "fillStyle", "font", "textBaseline", "strokeStyle"],
+			_PROPS: ["shadowColor", "shadowBlur", "shadowOffsetX", "shadowOffsetY", "globalAlpha", 
+			"globalCompositeOperation", "lineJoin", "lineCap", "lineWidth", "miterLimit", "fillStyle", 
+			"font", "textBaseline", "textAlign", "strokeStyle"],
 			
+/**
+@doc draw/
+@property multiple `(1.3.1)` If, true, enables the ability to use multiple commands on single element
+@type Boolean
+@default false
+@example
+
+In `ready` method.
+
+Here, only the second rectangle is displayed :
+	
+	var el = this.createElement();
+	el.fillRect("green", 0, 0, 100, 100);
+	el.fillRect("red", 50, 50, 100, 100);
+
+	stage.append(el);
+
+But, with `multiple` property, both are shown :
+
+	var el = this.createElement();
+	el.multiple = true;
+	el.fillRect("green", 0, 0, 100, 100);
+	el.fillRect("red", 50, 50, 100, 100);
+
+	stage.append(el);
+
+*/
+			multiple: false,
+
 			alpha: function(opacity) {
 				//this.globalAlpha = opacity;
 			},
@@ -2773,13 +2806,15 @@ obsolete
 				
 			},*/
 			
-			_defaultRectParams: function(x, y, w, h, z) {
+			_defaultRectParams: function(x, y, w, h, z, r) {
+				var type = arguments[arguments.length-1];
 				if (typeof x == "string") {
-					this.fillStyle = x;
+					this[type] = x;
 					x = y;
 					y = w;
 					w = h;
 					h = z;
+					z = r;
 				}
 				if (x == undefined) {
 					x = 0;
@@ -2789,7 +2824,7 @@ obsolete
 					w = this.width;
 					h = this.height;
 				}
-				return [x, y, w, h];
+				return [x, y, w, h, z];
 			},
 			
 /**
@@ -2799,6 +2834,7 @@ obsolete
 	@param {Integer} y (optional) The y-coordinate of the upper-left corner of the rectangle. By default, 0.
 	@param {Integer} width (optional) The width of the rectangle, in pixels. By default, width of the element. 
 	@param {Integer} height (optional) The height of the rectangle, in pixels. By default, height of the element. 
+	@param {Integer} radius `(1.3.1)` (optional) Defines a rounding on the corners of the rectangle.
 	@example
 	
 In `ready` method.
@@ -2828,31 +2864,22 @@ Example 5 :
 
 	var el = this.createElement();
 	el.fillRect(10, 25, 100, 100);
+
+Example 6 :
+
+	var el = this.createElement();
+	el.fillRect("red", 0, 0, 100, 100, 10);
 */
-			fillRect: function(x, y, w, h) {
-				this._addCmd("fillRect", this._defaultRectParams.apply(this, arguments), ["fillStyle"]);
+			fillRect: function(x, y, w, h, r) {
+				var args = Array.prototype.slice.call(arguments, 0);
+				args = this._defaultRectParams.apply(this, args.concat("fillStyle"));
+				if (typeof x != "string" && r !== undefined) {
+				  this._roundRect.apply(this, args.concat("fill"));
+				  return;
+				}
+				this._addCmd("fillRect", args, ["fillStyle"]);
 			},
-/**
-	@doc draw/
-	@method fill See http://www.w3schools.com/html5/canvas_fill.asp
-*/
-			fill: function() {
-				this._addCmd("fill", [], ["fillStyle"]);
-			},
-			/**
-				@doc draw/
-				@method fillText See http://www.w3schools.com/html5/canvas_filltext.asp
-			*/
-			fillText: function(text, x, y) {
-				this._addCmd("fillText", [text, x, y], ["fillStyle", "font", "textBaseline"]);
-			},
-			/**
-				@doc draw/
-				@method strokeText See http://www.w3schools.com/html5/canvas_stroketext.asp
-			*/
-			strokeText: function(text, x, y) {
-				this._addCmd("strokeText", [text, x, y], ["strokeStyle", "font", "textBaseline"]);
-			},
+
 /**
 	@doc draw/
 	@method strokeRect The strokeRect() method draws a rectangle (no fill). The default color of the stroke is black.
@@ -2860,6 +2887,7 @@ Example 5 :
 	@param {Integer} y (optional) The y-coordinate of the upper-left corner of the rectangle. By default, 0.
 	@param {Integer} width (optional) The width of the rectangle, in pixels. By default, width of the element. 
 	@param {Integer} height (optional) The height of the rectangle, in pixels. By default, height of the element. 
+	@param {Integer} radius `(1.3.1)` (optional) Defines a rounding on the corners of the rectangle.
 	@example
 	
 In `ready` method.
@@ -2889,10 +2917,146 @@ Example 5 :
 
 	var el = this.createElement();
 	el.strokeRect(10, 25, 100, 100);
+
+Example 6 :
+
+	var el = this.createElement();
+	el.strokeStyle = "red";
+	el.strokeRect(0, 0, 100, 100, 10);
 */
-			strokeRect: function(x, y, w, h) {
-				this._addCmd("strokeRect", this._defaultRectParams.apply(this, arguments), ["strokeStyle"]);
+			strokeRect: function(x, y, w, h, r) {
+				var args = Array.prototype.slice.call(arguments, 0);
+				args = this._defaultRectParams.apply(this, args.concat("strokeStyle"));
+				if (typeof x != "string" && r !== undefined) {
+				  this._roundRect.apply(this, args.concat("stroke"));
+				  return this;
+				}
+				this._addCmd("strokeRect", args, ["strokeStyle"]);
+				return this;
 			},
+
+/**
+	@doc draw/
+	@method fillCircle `(1.3.1)` The fillRect() method draws a "filled" circle. The default color of the fill is black.
+	@param {Integer} x (optional) The x-coordinate of circle center. By default, 0.
+	@param {Integer} y (optional) The y-coordinate of circle center. By default, 0.
+	@param {Integer} radius (optional) Length of the radius of the circle. By default, width of the element. 
+	@example
+	
+In `ready` method.
+
+Example 1 :
+	
+	var el = this.createElement();
+	el.fillStyle = "red";
+	el.fillCircle(30, 30, 15);
+	
+Example 2 :
+
+	var el = this.createElement();
+	el.fillCircle(15);
+
+Example 3 :
+
+	var el = this.createElement(60, 60);
+	el.fillCircle();
+	
+*/
+			fillCircle: function(x, y, r) {
+				this._circle(x, y, r, "fill");
+				return this;	
+			},
+
+/**
+	@doc draw/
+	@method strokeCircle `(1.3.1)` The strokeCircle() method draws a circle (no fill). The default color of the stroke is black.
+	@param {Integer} x (optional) The x-coordinate of circle center. By default, 0.
+	@param {Integer} y (optional) The y-coordinate of circle center. By default, 0.
+	@param {Integer} radius (optional) Length of the radius of the circle. By default, width of the element. 
+	@example
+	
+In `ready` method.
+
+Example 1 :
+	
+	var el = this.createElement();
+	el.strokeStyle = "red";
+	el.strokeCircle(30, 30, 15);
+	
+Example 2 :
+
+	var el = this.createElement();
+	el.strokeCircle(15);
+
+Example 3 :
+
+	var el = this.createElement(60, 60);
+	el.strokeCircle();
+	
+*/
+			strokeCircle: function(x, y, r) {
+				this._circle(x, y, r, "stroke");
+				return this;	
+			},
+
+			_circle: function(x, y, r, type) {
+				
+				if (y === undefined) {
+					r = x;
+				}
+
+				x = x || 0;
+				y = y || 0;
+				r = r || this.width / 2;
+
+				if (isNaN(r)) {
+					console.warn(type + "Circle() : Impossible to define the radius of the circle. Give a width to the element");
+				}
+
+				if (!this.strokeStyle) this.strokeStyle = "black";
+				this.beginPath();
+			    this.arc(x, y, r, 0, 2 * Math.PI, false);
+			    this[type]();
+			},
+
+			_roundRect:  function(x, y, w, h, r, type) {
+
+				 if (w < 2 * r) r = w / 2;
+			     if (h < 2 * r) r = h / 2;
+			     this.beginPath();
+				 this.moveTo(x+r, y);
+			     this.arcTo(x+w, y,   x+w, y+h, r);
+				 this.arcTo(x+w, y+h, x,   y+h, r);
+			     this.arcTo(x,   y+h, x,   y,   r);
+				 this.arcTo(x,   y,   x+w, y,   r);
+				 this.closePath();
+
+				 this[type]();
+				         
+			},
+
+/**
+	@doc draw/
+	@method fill See http://www.w3schools.com/html5/canvas_fill.asp
+*/
+			fill: function() {
+				this._addCmd("fill", [], ["fillStyle"]);
+			},
+			/**
+				@doc draw/
+				@method fillText See http://www.w3schools.com/html5/canvas_filltext.asp
+			*/
+			fillText: function(text, x, y) {
+				this._addCmd("fillText", [text, x, y], ["fillStyle", "font", "textBaseline", "textAlign"]);
+			},
+			/**
+				@doc draw/
+				@method strokeText See http://www.w3schools.com/html5/canvas_stroketext.asp
+			*/
+			strokeText: function(text, x, y) {
+				this._addCmd("strokeText", [text, x, y], ["strokeStyle", "font", "textBaseline", "textAlign"]);
+			},
+
 			/**
 				@doc draw/
 				@method stroke See http://www.w3schools.com/html5/canvas_stroke.asp
@@ -3012,24 +3176,27 @@ In the method "ready" in the scene class :
 			},
 			
 			// Do not make a loop for performance reasons
-			moveTo: function() { this._addCmd.call(this, "moveTo", arguments); },
-			lineTo: function() { this._addCmd.call(this, "lineTo", arguments); },
-			quadraticCurveTo: function() { this._addCmd.call(this, "quadraticCurveTo", arguments); },
-			bezierCurveTo: function() { this._addCmd.call(this, "bezierCurveTo", arguments); },
+			moveTo: function() { 
+				this._addCmd.call(this, "moveTo", arguments, true); 
+			},
+			lineTo: function() { this._addCmd.call(this, "lineTo", arguments, true); },
+			quadraticCurveTo: function() { this._addCmd.call(this, "quadraticCurveTo", arguments, true); },
+			bezierCurveTo: function() { this._addCmd.call(this, "bezierCurveTo", arguments, true); },
 			beginPath: function() { 
 				this.multiple = true;
+				this._graphicCmd.push([]);
 				this._addCmd.call(this, "beginPath", arguments); 
 			},
-			closePath: function() { this._addCmd.call(this, "closePath", arguments); },
+			closePath: function() { this._addCmd.call(this, "closePath", arguments, true); },
 			clip: function() { 
 				this._useClip = true;
 				this._addCmd.call(this, "clip", arguments); 
 			},
-			rect: function() { this._addCmd("rect", this._defaultRectParams.apply(this, arguments)); },
-			arc: function() { this._addCmd.call(this, "arc", arguments); },
-			arcTo: function() { this._addCmd.call(this, "arcTo", arguments); },
-			addColorStop: function() { this._addCmd.call(this, "addColorStop", arguments); },
-			isPointInPath: function() { this._addCmd.call(this, "isPointInPath", arguments); },
+			rect: function() { this._addCmd("rect", this._defaultRectParams.apply(this, arguments.concat("fillStyle"))); },
+			arc: function() { this._addCmd.call(this, "arc", arguments, true); },
+			arcTo: function() { this._addCmd.call(this, "arcTo", arguments, true); },
+			addColorStop: function() { this._addCmd.call(this, "addColorStop", arguments, true); },
+			isPointInPath: function() { this._addCmd.call(this, "isPointInPath", arguments, true); },
 			
 			rotate: function() { this.draw.call(this, "rotate", arguments); },
 			translate: function() { this.draw.call(this, "translate", arguments); },
@@ -3155,9 +3322,9 @@ In the method "ready" in the scene class :
 			},
 			
 			draw: function(name, params, propreties) {
-			
-				
 
+				this._graphicPointer = 0;
+			
 				var layer =  "ctx", ctx;
 				if (!params) params = [];
 				if (!propreties) propreties = {};
@@ -3191,58 +3358,79 @@ In the method "ready" in the scene class :
 				else {
 					array_cmd = this._cmd;
 				}
+
+				function _draw(cmd, _name) {
+					for (var j=0 ; j < this._canvas.length ; j++) {
+						cmd_propreties = cmd.propreties;
+						if (isCmd && _name == "restore") {	
+							this.clearPropreties();
+						}
+						if (cmd_propreties) {
+							for (var key in cmd_propreties) {
+								applyBuffer = 1;
+								
+								if (key == "globalAlpha") {
+									cmd_propreties[key] = this.real_opacity;
+								}
+								
+								if (ctx) {
+									ctx[key] = cmd_propreties[key];
+								}
+								else {
+									this._canvas[j][layer][key] = cmd_propreties[key];
+								}
+								
+								applyBuffer &= bufferProp.call(this, cmd_propreties, "globalAlpha", 1);
+								applyBuffer &= bufferProp.call(this, cmd_propreties, "strokeStyle", '#' + this.color_key);
+								applyBuffer &= bufferProp.call(this, cmd_propreties, "fillStyle", '#' + this.color_key);
+								
+								if (applyBuffer) {
+									bufferProp.call(this, cmd_propreties, key, cmd_propreties[key]);
+								}
+								
+							}
+						}
+						if (ctx) {
+							ctx[_name].apply(ctx, cmd.params);
+						}
+						else {
+							this._canvas[j][layer][_name].apply(this._canvas[j][layer], cmd.params);
+							if (this._forceEvent) {
+								if (_name == "rect") {
+									this._bufferEvent("fillRect", cmd.params);
+								}
+							}
+							this._bufferEvent(_name, cmd.params);
+						}
+					} // for canvas		
+				}
+
+				var _graphicCmd, g;
+
 				for (var _name in array_cmd) {
 					for (var _i in array_cmd[_name]) {
                         cmd = array_cmd[_name][_i];
-						for (var j=0 ; j < this._canvas.length ; j++) {
-							cmd_propreties = cmd.propreties;
-							if (isCmd && _name == "restore") {	
-								this.clearPropreties();
-							}
-							if (cmd_propreties) {
-								for (var key in cmd_propreties) {
-									applyBuffer = 1;
-									
-									if (key == "globalAlpha") {
-										cmd_propreties[key] = this.real_opacity;
-									}
-									
-									if (ctx) {
-										ctx[key] = cmd_propreties[key];
-									}
-									else {
-										this._canvas[j][layer][key] = cmd_propreties[key];
-									}
-									
-									applyBuffer &= bufferProp.call(this, cmd_propreties, "globalAlpha", 1);
-									applyBuffer &= bufferProp.call(this, cmd_propreties, "strokeStyle", '#' + this.color_key);
-									applyBuffer &= bufferProp.call(this, cmd_propreties, "fillStyle", '#' + this.color_key);
-									
-									if (applyBuffer) {
-										bufferProp.call(this, cmd_propreties, key, cmd_propreties[key]);
-									}
-									
-								}
-							}
-							if (ctx) {
-								ctx[_name].apply(ctx, cmd.params);
-							}
-							else {
-								this._canvas[j][layer][_name].apply(this._canvas[j][layer], cmd.params);
-								if (this._forceEvent) {
-									if (_name == "rect") {
-										this._bufferEvent("fillRect", cmd.params);
-									}
-								}
-								this._bufferEvent(_name, cmd.params);
-							}
-						}
+						_draw.call(this, cmd, _name);
+						 if (_name == "beginPath") {
+						 	_graphicCmd = this._graphicCmd[this._graphicPointer];
+                        	for (var j=0 ; j < _graphicCmd.length ; j++) {
+                        		g = _graphicCmd[j];
+                        		_draw.call(this, g, g.name);
+                        	}
+                        	this._graphicPointer++;
+                        }
 					}
 				}
-				//CE.benchmark("draw method");
 
 			},
-			_addCmd: function(name, params, propreties) {
+			
+			_addCmd: function(name, params, propreties, graphic) {
+				
+				if (typeof propreties == "boolean") {
+					graphic = propreties;
+					propreties = false;
+				}
+
 				params = params || [];
 				propreties = propreties || [];
 				
@@ -3253,11 +3441,22 @@ In the method "ready" in the scene class :
 					if (this[propreties[k]]) obj[propreties[k]] = this[propreties[k]];
 				}
 				obj["globalAlpha"] = 1;
-				if (this.multiple && typeof this._cmd[name] !== "undefined" && this._cmd[name] !== null) {
-                    this._cmd[name].push({params: params, propreties: obj});
-                } else {
-                    this._cmd[name] = [{params: params, propreties: obj}];
-                }
+				if (graphic) {
+					var lastBeginPath = this._graphicCmd[this._graphicCmd.length-1];
+					if (!lastBeginPath) {
+						throw "error";
+					}
+					else {
+						lastBeginPath.push({name: name, params: params, propreties: obj});
+					}
+				}
+				else {
+					if (this.multiple && typeof this._cmd[name] !== "undefined" && this._cmd[name] !== null) {
+	                    this._cmd[name].push({params: params, propreties: obj});
+	                } else {
+	                    this._cmd[name] = [{params: params, propreties: obj}];
+	                }
+	            }
 			},
 			
 			hasCmd: function(name) {
