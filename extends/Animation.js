@@ -356,8 +356,11 @@ Example :
 	},
 	_loop: function() {
 		var self = this, ret;
+
 		
 		this.el.addLoopListener(function() {
+
+
 			
 			if (self._varTime.time === undefined) return;
 			
@@ -372,7 +375,7 @@ Example :
 			function initValue() {
 					var obj = {};
 					for (var i=0 ; i < self._propreties.length ; i++) {
-						obj[self._propreties[i]] = this[self._propreties[i]];
+						obj[self._propreties[i]] = +this[self._propreties[i]];
 					}
 					self._timeline["0"] = obj;
 				}

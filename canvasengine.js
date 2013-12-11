@@ -1973,13 +1973,69 @@ In method "ready" of the scene :
 */
 		measureText: function(txt, font_size, font_family) {
 			var val;
+			if (/[ ]+/.test(font_size)) {
+				var font = font_size.split(' ');
+				font_size = font[0];
+				font_family = font[1];
+			}
 			font_family = font_family || "Arial";
 			font_size = font_size || "12px";
 			this.ctx.font = "normal " + font_size + " " + font_family;
 			val = this.ctx.measureText(txt);
 			this.ctx.font = null;
-			return val;
+			return {
+				width: val.width,
+				height: this._measureTextHeight(txt, font_size, font_family)
+			};
 		},
+
+		// http://stackoverflow.com/questions/1134586/how-can-you-find-the-height-of-text-on-an-html-canvas
+		_measureTextHeight: function (txt, font_size, font_family) {
+
+			var ctx = this.ctx;
+
+		    // Draw the text in the specified area
+		    ctx.save();
+		    ctx.translate(0, Math.round(this.height * 0.8));
+		    ctx.font = "normal " + font_size + " " + font_family;
+		    ctx.fillText(txt, 0, 0); // This seems like tall text...  Doesn't it?
+		    ctx.restore();
+
+		    // Get the pixel data from the canvas
+		    var data = ctx.getImageData(0, 0, this.width, this.height).data,
+		        first = false, 
+		        last = false,
+		        r = this.height,
+		        c = 0;
+
+		    // Find the last line with a non-white pixel
+		    while(!last && r) {
+		        r--;
+		        for(c = 0; c < this.width; c++) {
+		            if(data[r * this.width * 4 + c * 4 + 3]) {
+		                last = r;
+		                break;
+		            }
+		        }
+		    }
+
+		    // Find the first line with a non-white pixel
+		    while(r) {
+		        r--;
+		        for(c = 0; c < this.width; c++) {
+		            if(data[r * this.width * 4 + c * 4 + 3]) {
+		                first = r;
+		                break;
+		            }
+		        }
+
+		        // If we've got it then return the height
+		        if(first != r) return last - first;
+		    }
+
+		    // We screwed something up...  What do you expect from free code?
+		    return 0;
+},
 		
 /**
 @doc canvas/
@@ -2071,15 +2127,17 @@ In method "ready" of the scene :
 /**
 	TODO
 */	
-		cursor: function() {
+		cursor: function(type) {
 		
-			function handleMouseDown(evt) {
+			/*function handleMouseDown(evt) {
 			  evt.preventDefault();
 			  evt.stopPropagation();
 			  evt.target.style.cursor = 'move';
 			}
 
-			document.addEventListener('mousemove', handleMouseDown, false);
+			document.addEventListener('mousemove', handleMouseDown, false);*/
+
+			this.element.style.cursor = type;
 					
 		},
 		
@@ -3047,6 +3105,12 @@ Example 3 :
 				@method fillText See http://www.w3schools.com/html5/canvas_filltext.asp
 			*/
 			fillText: function(text, x, y) {
+				if (x == "middle" && this.width && this.height) {
+					var width = this.scene.getCanvas().measureText(text, this.font).width;
+					this.textBaseline = "middle";
+					x = this.width / 2 - width / 2;
+					y = this.height / 2;
+				}
 				this._addCmd("fillText", [text, x, y], ["fillStyle", "font", "textBaseline", "textAlign"]);
 			},
 			/**
@@ -3661,7 +3725,7 @@ In `ready` method :
 			this.scene = scene;
 			this.stage = scene._stage;
 			this.layer = layer;
-			
+
 			var key, elements = canvas._elementsByScene(this.scene.name);
 			do {
 				key = _CanvasEngine._getRandomColorKey();
@@ -3743,7 +3807,7 @@ In `ready` method :
 		_refresh: function(init, children, ctx) {
 	
 			//children = children === undefined ? true : children;
-			
+
 			if (this.stage._onRefresh) this.stage._onRefresh(this);
 			
 			if (!this._visible) {
@@ -4758,6 +4822,9 @@ In method ready
 			if (value === undefined) {
 				return this._attr[name];
 			}
+			if (this._attr[name] != value) {
+				this.trigger("element:attrChange", [name, value]);
+			}
 			this._attr[name] = value;
 			return this;
 		},
@@ -4793,7 +4860,24 @@ In method ready
 	console.log(el2.offset()); // {left: 100, top: 0}
 
 */
-		offset: function() {
+		offset: function(obj) {
+			if (obj) {
+				var parent = this.parent;
+				if (obj.left) {
+					this.x = obj.left;
+				}
+				if (obj.right && parent) {
+					this.x = parent.width - this.width;
+				}
+				if (obj.top) {
+					this.y = obj.top;
+				}
+				if (obj.bottom && parent) {
+					this.y = parent.height - this.height;
+				}
+				return this;
+			}
+
 			return {
 				left: this.x,
 				top: this.y

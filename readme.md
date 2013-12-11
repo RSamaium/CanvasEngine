@@ -215,7 +215,7 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 
 ## Roadmap (in order)
 
-### v1.4
+### v1.5
 
 * Box2d
 * Synchronized multi canvas (local multiplayer)
@@ -240,6 +240,18 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 * [TheOnly92](https://github.com/TheOnly92) - [commit](https://github.com/RSamaium/CanvasEngine/commit/d83a2f5512efb206bef96cf76e68f438f1f45b16)
 
 ## Changelog
+
+### v1.4.0 (dev)
+
+* Add functionality : User Interface
+    * Preset
+    * Add button
+    * Tooltip
+* Add weather effects : `rain()`, `snow()` and `storm()`
+* Add `element:attrChange` event
+* Improves `measureText()`. Returns text height
+* Improves `offset()`. Possibility of using `top` and `bottom` to place events
+* Improves `fillText()`. Ability to center the text in an element
 
 
 ### v1.3.1

@@ -228,6 +228,174 @@ or :
 				this.tone.opacity = opacity;
 			}
 		}
+	},
+
+	_weather: function(type, params) {
+
+
+		if (params.intensity == "stop") {
+			clearInterval(this._weather_.timer);
+			this._weather_.state = "stop";
+			return;
+		}
+
+		var intensity = params.intensity || 100;
+
+		var radius = 0;
+
+		var stage = this.scene.getStage(),
+			self = this;
+
+		this._weather_ = {
+			number: 0,
+			numberStop: 0,
+			state: "loop"
+		};
+
+		var w = this.el.width || this.canvas.width,
+			h = this.el.height || this.canvas.height;
+
+		var weatherTimer = setInterval(function() {
+			
+			if (self._weather_.number == intensity) {
+            	clearInterval(weatherTimer);
+            	return;
+        	}
+
+			var weather = self.scene.createElement();
+			weather.x = CanvasEngine.random(0, w);
+	        weather.y = -10;
+	       
+	        var gradient;
+
+	        if (type == "rain") {
+
+	        	weather.attr('drift', 0);
+		        weather.attr('speed',  CanvasEngine.random(4, 6)) * 8;
+		        weather.width = 
+		        weather.height = CanvasEngine.random(2, 6) * 5;
+
+	        	gradient = self.canvas.createRadialGradient(weather.height / 2, weather.height / 2, 0, 
+		        	weather.height / 2, weather.height / 2, weather.height);
+				gradient.addColorStop(0, 'rgba(125, 125, 255, 1)');
+				gradient.addColorStop(1, 'rgba(125, 125, 255, 0)');
+
+				weather.beginPath();
+				weather.moveTo(0,0);
+				weather.lineTo(radius, weather.height);
+				weather.strokeStyle = gradient;
+				weather.stroke();
+	        }
+	        else if (type = "snow") {
+	        	
+	        	weather.attr('drift', Math.random());
+		        weather.attr('speed',  CanvasEngine.random(1, 6));
+		        weather.width = 
+		        weather.height = CanvasEngine.random(2, 6);
+
+				if (params.use_gradient) {
+					gradient = self.canvas.createRadialGradient(0, 0, 0, 0, 0, weather.width);
+					gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+					gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+				}
+				else {
+					gradient = "white";
+				}
+				
+
+		        weather.fillStyle = gradient;
+	            weather.fillCircle();
+	        }
+
+	        weather.name = "weather";
+	        self.el.append(weather);
+
+	        self._weather_.number++;
+		}, 200);
+
+		this._weather_.timer = weatherTimer;
+
+		var refresh = function(el) {
+
+			if (el.name != "weather") return;
+
+			if (self._weather_.state == "finish") {
+				self.el.empty();
+				self.el.off("canvas:refresh", refresh);
+				return;
+			}
+
+			if (el.attr('flake_state') == "stop") return;
+
+			if (el.y < h) {
+                el.y += el.attr('speed');
+            }
+            if (el.y > h - 3) {
+            	el.y = type == "snow" ? -5 : -30;
+            	if (self._weather_.state == "stop") {
+            		el.attr("flake_state", "stop");
+            		self._weather_.numberStop++;
+            		if (self._weather_.number == self._weather_.numberStop) {
+            			self._weather_.state = "finish";
+            		}
+            		return;
+            	}
+            }
+
+             el.x += el.attr('drift');
+            
+            if (el.x > w) {
+            	el.x = 0;
+            }
+ 
+		};
+		
+
+		this.el.on("canvas:refresh", refresh);
+
+		return this;
+
+	},
+
+	rain: function(intensity) {
+		return this._weather("rain", {
+			intensity: intensity
+		});
+	},
+
+	snow: function(intensity, use_gradient) {
+		return this._weather("snow", {
+			intensity: intensity,
+			use_gradient: use_gradient
+		});
+	},
+
+	storm: function(intensity, callback, color) {
+		var self = this;
+
+		color = color || "#FCFFE6";
+		
+		this.rain(intensity);
+
+		if (intensity == "stop") return this;
+
+		function flash() {
+			var sec = CanvasEngine.random(4, 10);
+			setTimeout(function() {
+				if (self._weather_.state == "loop") {
+					if (callback) callback();
+					self.screenFlash(color, 10);
+					flash();
+				}
+			}, sec * 1000);
+		}
+
+		flash();
+	},
+
+	particles: function() {
+
+
 	}
 	
 }); 
