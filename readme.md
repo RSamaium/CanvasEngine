@@ -245,13 +245,17 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 
 * Add functionality : User Interface
     * Preset
-    * Add button
+    * Button
     * Tooltip
+    * Drag&Drop
 * Add weather effects : `rain()`, `snow()` and `storm()`
 * Add `element:attrChange` event
 * Improves `measureText()`. Returns text height
 * Improves `offset()`. Possibility of using `top` and `bottom` to place events
 * Improves `fillText()`. Ability to center the text in an element
+* Improves `each()`. Possible to iterate an object
+* Improves `set()` in Spritesheet class. `tile` parameter is optional
+* Fix change size of a DOM element
 
 
 ### v1.3.1

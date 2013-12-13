@@ -54,14 +54,24 @@ regX and regY are origin points
 Here, there is a grid of rows and 5 columns of 107px width and height. The first box is called "play". We have another area placed at positions (433, 33), width is 215px and height is 188px. The ID of this area is "btn_play"
 */
 	set: function(set) {
-		var gridset, gridname, x, y, regX, regY;
+		var gridset, gridname, x, y, regX, regY, 
+			img = Global_CE.Materials.get(this.image, "image");
+
+		if (!img) {
+			return false;
+		}
+
 		for (var id in set) {
 			if (id == "grid") {
 				for (var i=0 ; i < set.grid.length ; i++) {
 					for (var j=0 ; j < set.grid[i].set.length ; j++) {
 						gridname = set.grid[i].set[j];
 						gridset = set.grid[i];
-						
+
+						if (!gridset.tile) {
+							gridset.tile = [img.width / gridset.size[0], img.height / gridset.size[1]];
+						}
+
 						y = gridset.tile[1] * parseInt(j / Math.round(gridset.size[0]));
 						//y = gridset.tile[1] * parseInt(j / Math.round(gridset.size[1]));
 						x = gridset.tile[0] * (j % Math.round(gridset.size[0]));
@@ -70,8 +80,8 @@ Here, there is a grid of rows and 5 columns of 107px width and height. The first
 							gridset.reg = [0, 0];
 						}
 						
-						regX = gridset.reg[0];
-						regY = gridset.reg[1];
+						regX = gridset.reg[0] || +"0";
+						regY = gridset.reg[1] || +"0";
 											
 						this._set[gridname] = [x, y, gridset.tile[0], gridset.tile[1], 0, regX, regY];
 					}

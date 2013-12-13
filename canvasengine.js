@@ -3777,8 +3777,8 @@ In `ready` method :
 			var obj = {
 				position: "absolute",
 				opacity: this.opacity,
-				width: this.width,
-				height: this.height,
+				width: this.width + "px",
+				height: this.height + "px",
 				display: this._visible ? "block" : "none"
 			};
 

@@ -462,7 +462,7 @@ CanvasEngine.parseJSON = function(json) {
 @doc utilities/
 @method each The array is read and sent to a callback function
 @static
-@params {Array|Integer} array If the value is an integer, it returns to perform a number of loop iteration
+@params {Array|Object|Integer} array If the value is an integer, it returns to perform a number of loop iteration
 @params {Function} callback  two parameters :
 
 * index
@@ -481,13 +481,25 @@ CanvasEngine.parseJSON = function(json) {
 		console.log(foo[i]);
 	});
 
+	var foo = {bar: "bar", test: "test"};
+	CE.each(foo, function(i, val) {
+		console.log(val);
+	});
+
 */
 CanvasEngine.each = function(array, callback) {
 	var i, l;
+	if (!(array instanceof Array) &&
+		!(typeof array == "number")) {
+		for (i in array) {
+			callback.call(array, i, array[i]);
+		}
+		return;
+	}
 	if (array instanceof Array) {
 		l = array.length;
 	}
-	else {
+	else if (typeof array == "number") {
 		l = array;
 		array = [];
 	}
