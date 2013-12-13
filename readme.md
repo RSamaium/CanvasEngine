@@ -256,6 +256,7 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 * Improves `each()`. Possible to iterate an object
 * Improves `set()` in Spritesheet class. `tile` parameter is optional
 * Fix change size of a DOM element
+* Fix arguments of `fillRect()`
 
 
 ### v1.3.1

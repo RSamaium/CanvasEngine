@@ -40,8 +40,57 @@ Class.create("Preset", {
 
 });
 
+/**
+@doc ui
+@static
+@class UI Create elements for a user interface
+
+1. Add functionality in CanvasEngine :
+
+		var canvas = CE.defines("canvas_id").
+		extend(UI).
+		ready(function() {
+			canvas.Scene.call("MyScene");
+		});
+
+2. Use methods in `ready` of current scene
+
+		var tooltip = canvas.UI.tooltip();
+		stage.append(tooltip);
+
+The class includes a Preset notion. The interest is to reuse a configuration several times in your game or application.
+
+	var preset = Class.New("Preset", ["mypreset", {
+		img: "my_button"
+	}]);
+
+	var el1 = canvas.UI.button(preset),
+		el2 = canvas.UI.button(preset);
+
+Here we have created two buttons with the same image. Note that it is possible to use the identifier of the preset on any scene :
+
+	var el3 = canvas.UI.button("mypreset");
+
+> In the case of the button, do not forget to load the image prior to use
+
+Another way to create a preset :
+
+	var preset = Class.New("Preset").set("mypreset", {
+		img: "my_button"
+	});
+	
+*/
 Class.create("UI", {
 
+/**
+@doc ui/
+@property scene Change the scene to create the elements
+@type CanvasEngine.Scene
+@default current scene
+@example
+
+	canvas.UI.scene = canvas.Scene.get("MyScene");
+*/
 	scene: null,
 
 	_getScene: function() {
@@ -65,6 +114,7 @@ Class.create("UI", {
 		return params;
 	},
 
+	// Maybe
 	setGraphic: function(els, graphic) {
 
 		var f;
@@ -79,6 +129,7 @@ Class.create("UI", {
 		}
 	},
 
+	// TODO
 	progressBar: function(id, pourcent, graphic) {
 		
 		this._getScene();
@@ -105,6 +156,52 @@ Class.create("UI", {
 	dialog: function() {
 
 	},
+
+
+	background: function(params) {
+		this._getScene();
+
+		params = this._getParams(params);
+
+		params = CanvasEngine.extend({
+			repeat: true
+		}, params);
+
+		var img = Global_CE.Materials.get(params.img),
+			self = this,
+			_canvas, w, h,
+			background = this.scene.createElement();
+
+		if (params.repeat) {
+
+			_canvas = this.scene.getCanvas();
+			w = _canvas.width;
+			h = _canvas.height;
+
+			var elements = {};
+
+			CanvasEngine.each(["lt", "t", "rt", "l", "c", "r", "lb", "b", "rb"], function(i, val) {
+				var el = self.scene.createElement(w, h);
+			    el.fillStyle = _canvas.createPattern(params.img);
+			    el.fillRect();
+			    el.x = w * ~~(i / 3) - w;
+			    el.y = h * (i % 3) - h;
+			    elements[val] = el;
+			    background.append(el);
+			});
+
+			background.width = w * 3;
+			background.height = h * 3;
+
+			background.on("canvas:render", function(el) {
+
+			});
+
+		}
+
+		return background;
+	},
+
 
 /**
 @doc ui/
@@ -329,6 +426,7 @@ Example 2
 	}]);
 
 	var el = canvas.UI.button(preset);
+	// or canvas.UI.button("mypreset");
 	
 	stage.append(el);
 */
@@ -421,6 +519,52 @@ Example 2
 		return btn;
 	},
 	
+/**
+@doc ui/
+@method tooltip Create a tooltip
+@param {Object|String|Pattern} params Parameters, pattern name or pattern object
+
+* {String} position : Position of the arrow. `bottom` (default), `top`, `left` or `right`
+* {String|Integer} gap : Spacing of the arrow with respect to the pixel top end or left. Put `middle` (by default) to place in the middle
+* {Integer} width : Width (px)
+* {Integer} height : Height (px)
+* {Integer} radius : Rounding corners of the tooltip
+* {String} type : `fill` or `stroke` (default)
+* {String} color: Color (black by default)
+* {Object} arrow : Parameters of the arrow `{base, height, skew}`
+	* {Integer} base : Width of the base of the triangle (10 by default)
+	* {Integer} height : Triangle Height (10 by default)
+	* {Integer} skew : Skew (0 by default)
+
+@return {CanvasEngine.Element}
+
+@example	
+
+In `ready` method.
+
+Example 1
+
+	 var el = canvas.UI.tooltip({
+		 position: "top",
+		 width: 150,
+		 height: 30
+	 });
+	
+	 stage.append(el);
+
+Example 2
+
+	var preset = Class.New("Preset", ["mypreset", {
+		 arrow: {
+			skew: 10
+		 }
+	}]);
+
+	var el = canvas.UI.tooltip(preset);
+	// or canvas.UI.tooltip("mypreset");
+	
+	stage.append(el);
+*/
 	tooltip: function(params) {
 	
 		this._getScene();
@@ -517,5 +661,3 @@ Example 2
 var UI = {
 	UI: Class.New("UI")
 };
-
- 

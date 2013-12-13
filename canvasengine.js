@@ -2866,7 +2866,8 @@ obsolete
 			
 			_defaultRectParams: function(x, y, w, h, z, r) {
 				var type = arguments[arguments.length-1];
-				if (typeof x == "string") {
+				arguments = Array.prototype.slice.call(arguments, 0, arguments.length-1);
+				if (typeof arguments[0] == "string") {
 					this[type] = x;
 					x = y;
 					y = w;
@@ -2874,11 +2875,11 @@ obsolete
 					h = z;
 					z = r;
 				}
-				if (x == undefined) {
+				if (arguments[0] == undefined) {
 					x = 0;
 					y = 0;
 				}
-				if (w == undefined) {
+				if (arguments[3] == undefined) {
 					w = this.width;
 					h = this.height;
 				}
