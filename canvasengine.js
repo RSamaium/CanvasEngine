@@ -853,15 +853,28 @@ Using Sound :
 	
 * If object, the key is the identifier and value is the path :
 	
-	{img1: "path/to/img1.png", img2: "path/to/im2.png"}
+		{img1: "path/to/img1.png", img2: "path/to/im2.png"}
 	
-The value can be an object to give several parameters :
+	The value can be an object to give several parameters :
 	
-	{img1: {path: "path/to/img1.png", transparentcolor: "#ff0000"}, img2: "path/to/im2.png"}
+	    {img1: {path: "path/to/img1.png", transparentcolor: "#ff0000"}, img2: "path/to/im2.png"}
 	
-"path" is the path and "transparentcolor" the color that will be transparent image
+    `path` is the path and "transparentcolor" the color that will be transparent image
+
+    By default, the order is done alphabetically. But since version 1.3.2, you can choosethe order of loading. Here, the `img2` image forced to load first
+
+	     {img2: {path: "path/to/img1.png", index: 0}, img1: "path/to/im2.png", index: 1}
+
+    So use `index` to define an order. The smaller will be loaded first. The index starts at 0 (order of an array)
+
 
 @param {Function} onLoad (optional) Callback when a resource is loaded
+
+Two parameters are returned :
+
+1. {Image|Sound|Video|Font|JSON} The element loaded
+2. {Object} : The information of the resource (path, index, etc.)
+
 @param {Function} onFinish (optional) Callback when all resources are loaded
 */
 			load: function(type, path, onLoad, onFinish) {
@@ -891,7 +904,10 @@ The value can be an object to give several parameters :
 							img_data.id = key;
 
 							materials.push(img_data);
-							
+
+							if (img_data.index != undefined) {
+								_CanvasEngine.moveArray(materials, materials.length-1, img_data.index);
+							}	
 						}
 					}
 				}
@@ -936,15 +952,14 @@ The value can be an object to give several parameters :
 							if (materials[i].transition) {
 								self.Transition.set(materials[i].id);
 							}
-							
+							if(onLoad) onLoad.call(self, _img, materials[i]);
 							i++;
-							if(onLoad) onLoad.call(self, _img);
 							load();
 						};
 						img.onerror = function(e) {
 							if (params.ignoreLoadError) {
-								i++;
 								if (onLoad) onLoad.call(self, e);
+								i++;
 								load();
 							}
 						}
@@ -959,8 +974,8 @@ The value can be an object to give several parameters :
 					var img;
 					
 					function next() {
+						if (onLoad) onLoad.call(self, this, materials[i]);
 						i++;
-						if (onLoad) onLoad.call(self, this);
 						loadSounds();
 					}
 
@@ -1065,7 +1080,7 @@ The value can be an object to give several parameters :
 						}
 						
 						i++;
-						if (onLoad) onLoad.call(self, this);
+						if (onLoad) onLoad.call(self, this, materials[i]);
 						loadFont();
 					}
 					else {
@@ -1086,8 +1101,8 @@ The value can be an object to give several parameters :
 				function loadVideos() {
 				
 					function next() {
+						if (onLoad) onLoad.call(self, this, materials[i]);
 						i++;
-						if (onLoad) onLoad.call(self, this);
 						loadVideos();
 					}
 					
@@ -1166,8 +1181,8 @@ The value can be an object to give several parameters :
 				function loadData() {
 				
 					function next() {
+						if (onLoad) onLoad.call(self, this, materials[i]);
 						i++;
-						if (onLoad) onLoad.call(self, this);
 						loadData();
 					}
 				
@@ -1958,7 +1973,7 @@ and, in `ready` method :
 		},
 /**
 @doc canvas/
-@method measureText Returns an object that contains the width of the specified text
+@method measureText Returns an object that contains the width and height (only >=1.3.2) of the specified text
 @param {String} txt Text
 @param {String} font_size (optional) Font Size (default 12px);
 @param {String} font_family (optional) Font Family (default Arial);
@@ -1967,8 +1982,10 @@ and, in `ready` method :
 	
 In method "ready" of the scene : 
 	
-		var _canvas = this.getCanvas();
-		_canvas.measureText("Hello World").width;
+	var _canvas = this.getCanvas();
+	var size = _canvas.measureText("Hello World");
+
+	console.log(size.with, size.height);
 	
 */
 		measureText: function(txt, font_size, font_family) {
@@ -2311,7 +2328,10 @@ Example 5
 			images: {},
 			sounds: {}
 		},
-		preload: function(stage, pourcent) {
+		called: function(stage) {
+	
+		},
+		preload: function(stage, pourcent, material) {
 		
 		},
 		ready: function(stage) {
@@ -2341,7 +2361,7 @@ The resources defined in "Materials" are loaded and regularly calls the method "
 		_index: 0,
 /**
 @doc scene/
-@property model Model reference. The methods of this property are the same as scoket.io
+@property model (Obsolete) Model reference. The methods of this property are the same as scoket.io
 @type Object
 @default null
 @example
@@ -2379,19 +2399,19 @@ The resources defined in "Materials" are loaded and regularly calls the method "
 			this._events = obj.events;
 		},
 		_loop: function() {
-			if (this._isReady) {
+			//if (this._isReady) {
 				if (this._pause) {
 					this._stage.refresh();
 				}
 				else {
-					if (this.render) {
+					if (this._isReady && this.render) {
 						this.render.call(this, this._stage);
 					}
 					else {
 						this._stage.refresh();
 					}
 				}
-			}
+			//}
 		},
 		// deprecated
 		emit: function(name, data) {
@@ -2481,7 +2501,7 @@ The resources defined in "Materials" are loaded and regularly calls the method "
 ----------
 
 	var scene_title = canvas.Scene.get("Scene_Title"),
-		scene_map = canvas.Scene.get("Scene_Map")
+		scene_map = canvas.Scene.get("Scene_Map");
 	scene_map.zIndex(scene_title);
 
 @return {Integer|CanvasEngine.Scene}
@@ -2596,7 +2616,6 @@ Create two elements :
 				CanvasEngine.el_canvas[i].stage = this._stage;
 			}
 
-			
 			if (this.model) {		
 				if (this._events) {
 					CE.each(this._events, function(i, val) {
@@ -2608,6 +2627,8 @@ Create two elements :
 			}
 
 			this.loadEvents();
+
+			if (this.called) this.called(this._stage);
 			
 			var images_length = materialLength("images"),
 				sound_length = materialLength("sounds"),
@@ -2637,14 +2658,19 @@ Create two elements :
 			}
 			
 			function materialLoad(type) {
-				CanvasEngine.Materials.load(type, self.materials[type], function() {
-					preload();
+				CanvasEngine.Materials.load(type, self.materials[type], function(dom, material) {
+					preload(dom, material, type);
 				});
 			}
 			
-			function preload() {
+			function preload(dom, material, type) {
 				current++;
-				if (self.preload) self.preload(self._stage, current / total * 100);
+				if (self.preload) self.preload(self._stage, current / total * 100, {
+					material: dom, 
+					type: type, 
+					index: current,
+					data: material
+				});
 				if (total == current) {
 					canvasReady();
 				}
@@ -2663,18 +2689,16 @@ Create two elements :
 				return i;
 			}
 			
-			
 			function canvasReady() {
 	
 				if (params.when == "afterPreload") {
 					CanvasEngine.Scene.exitAll(params.allExcept);
 				}
 				
-				if (self.ready) self.ready(self._stage, self.getElement, options);
+				if (self.ready) self.ready(self._stage, options);
 				self._stage.trigger("canvas:readyEnd");
 				if (self.model && self.model.ready) self.model.ready.call(self.model);
 				self._isReady = true;
-				
 				
 				
 				if (params.transition) {
@@ -2894,6 +2918,7 @@ obsolete
 	@param {Integer} width (optional) The width of the rectangle, in pixels. By default, width of the element. 
 	@param {Integer} height (optional) The height of the rectangle, in pixels. By default, height of the element. 
 	@param {Integer} radius `(1.3.1)` (optional) Defines a rounding on the corners of the rectangle.
+	@return {CanvasEngine.Element}
 	@example
 	
 In `ready` method.
@@ -2937,6 +2962,7 @@ Example 6 :
 				  return;
 				}
 				this._addCmd("fillRect", args, ["fillStyle"]);
+				return this;
 			},
 
 /**
@@ -2947,6 +2973,7 @@ Example 6 :
 	@param {Integer} width (optional) The width of the rectangle, in pixels. By default, width of the element. 
 	@param {Integer} height (optional) The height of the rectangle, in pixels. By default, height of the element. 
 	@param {Integer} radius `(1.3.1)` (optional) Defines a rounding on the corners of the rectangle.
+	@return {CanvasEngine.Element}
 	@example
 	
 In `ready` method.
@@ -3000,6 +3027,7 @@ Example 6 :
 	@param {Integer} x (optional) The x-coordinate of circle center. By default, 0.
 	@param {Integer} y (optional) The y-coordinate of circle center. By default, 0.
 	@param {Integer} radius (optional) Length of the radius of the circle. By default, width of the element. 
+	@return {CanvasEngine.Element}
 	@example
 	
 In `ready` method.
@@ -3032,6 +3060,7 @@ Example 3 :
 	@param {Integer} x (optional) The x-coordinate of circle center. By default, 0.
 	@param {Integer} y (optional) The y-coordinate of circle center. By default, 0.
 	@param {Integer} radius (optional) Length of the radius of the circle. By default, width of the element. 
+	@return {CanvasEngine.Element}
 	@example
 	
 In `ready` method.
@@ -3091,7 +3120,7 @@ Example 3 :
 				 this.closePath();
 
 				 this[type]();
-				         
+				        
 			},
 
 /**
@@ -3100,11 +3129,24 @@ Example 3 :
 */
 			fill: function() {
 				this._addCmd("fill", [], ["fillStyle"]);
+				return this;
 			},
-			/**
-				@doc draw/
-				@method fillText See http://www.w3schools.com/html5/canvas_filltext.asp
-			*/
+/**
+@doc draw/
+@method fillText The fillText() method draws filled text on the canvas. The default color of the text is black.
+@param {String} text Text
+@param {Integer|String} x (optional)  Position X. If `middle` value, he text is placed in the middle of the element. It is necessary that the element is a size (width and height)
+@param {Integer} y (optional) Position Y
+@return {CanvasEngine.Element}
+@example
+
+In `ready()` method :
+
+	var el = this.createElement(100, 100);
+	el.font = "20px Arial";
+	el.fillText("My Text", "middle");
+	stage.append(el);
+*/
 			fillText: function(text, x, y) {
 				if (x == "middle" && this.width && this.height) {
 					var width = this.scene.getCanvas().measureText(text, this.font).width;
@@ -3112,7 +3154,10 @@ Example 3 :
 					x = this.width / 2 - width / 2;
 					y = this.height / 2;
 				}
+				if (!x) x = 0;
+				if (!y) y = 0;
 				this._addCmd("fillText", [text, x, y], ["fillStyle", "font", "textBaseline", "textAlign"]);
+				return this;
 			},
 			/**
 				@doc draw/
@@ -3120,6 +3165,7 @@ Example 3 :
 			*/
 			strokeText: function(text, x, y) {
 				this._addCmd("strokeText", [text, x, y], ["strokeStyle", "font", "textBaseline", "textAlign"]);
+				return this;
 			},
 
 			/**
@@ -3128,6 +3174,7 @@ Example 3 :
 			*/
 			stroke: function() {
 				this._addCmd("stroke", [], ["strokeStyle"]);
+				return this;
 			},
 			/**
 				@doc draw/
@@ -3212,8 +3259,15 @@ In the method "ready" in the scene class :
 				}*/
 				
 				if (sw !== undefined) {
-					array = [_img, sx, sy, sw, sh, dx, dy, dw, dh];
-					array_buffer = [buffer, sx, sy, sw, sh, dx, dy, dw, dh];
+					if (dx === undefined) {
+						array = [_img, sx, sy, sw, sh];	
+						array_buffer = [buffer, sx, sy, sw, sh];
+					}
+					else {
+						array = [_img, sx, sy, sw, sh, dx, dy, dw, dh];
+						array_buffer = [buffer, sx, sy, sw, sh, dx, dy, dw, dh];
+					}
+						
 					this._buffer_img = {
 						params: array_buffer,
 						x: dx,
@@ -3236,44 +3290,48 @@ In the method "ready" in the scene class :
 					
 					//array_buffer = f([buffer, sx, sy]);
 				}
-				
 				this._addCmd("drawImage", array);
+				return this;
 			},
 			
 			// Do not make a loop for performance reasons
 			moveTo: function() { 
 				this._addCmd.call(this, "moveTo", arguments, true); 
+				return this;
 			},
-			lineTo: function() { this._addCmd.call(this, "lineTo", arguments, true); },
-			quadraticCurveTo: function() { this._addCmd.call(this, "quadraticCurveTo", arguments, true); },
-			bezierCurveTo: function() { this._addCmd.call(this, "bezierCurveTo", arguments, true); },
+			lineTo: function() { this._addCmd.call(this, "lineTo", arguments, true); return this; },
+			quadraticCurveTo: function() { this._addCmd.call(this, "quadraticCurveTo", arguments, true); return this; },
+			bezierCurveTo: function() { this._addCmd.call(this, "bezierCurveTo", arguments, true); return this; },
 			beginPath: function() { 
 				this.multiple = true;
 				this._graphicCmd.push([]);
 				this._addCmd.call(this, "beginPath", arguments); 
+				return this;
 			},
-			closePath: function() { this._addCmd.call(this, "closePath", arguments, true); },
+			closePath: function() { this._addCmd.call(this, "closePath", arguments, true); return this; },
 			clip: function() { 
 				this._useClip = true;
 				this._addCmd.call(this, "clip", arguments); 
+				return this;
 			},
 			rect: function() { 
 				var args = Array.prototype.slice.call(arguments, 0);
 				args = this._defaultRectParams.apply(this, args.concat("fillStyle"));
 				this._addCmd("rect", args); 
+				return this;
 			},
-			arc: function() { this._addCmd.call(this, "arc", arguments, true); },
-			arcTo: function() { this._addCmd.call(this, "arcTo", arguments, true); },
-			addColorStop: function() { this._addCmd.call(this, "addColorStop", arguments, true); },
-			isPointInPath: function() { this._addCmd.call(this, "isPointInPath", arguments, true); },
+			arc: function() { this._addCmd.call(this, "arc", arguments, true); return this; },
+			arcTo: function() { this._addCmd.call(this, "arcTo", arguments, true); return this; },
+			addColorStop: function() { this._addCmd.call(this, "addColorStop", arguments, true); return this; },
+			isPointInPath: function() { this._addCmd.call(this, "isPointInPath", arguments, true); return this; },
 			
-			rotate: function() { this.draw.call(this, "rotate", arguments); },
-			translate: function() { this.draw.call(this, "translate", arguments); },
-			transform: function() { this.draw.call(this, "transform", arguments); },
-			setTransform: function() { this.draw.call(this, "setTransform", arguments); },
-			resetTransform: function() { this.draw.call(this, "resetTransform", arguments); },
-			clearRect: function() { this.draw.call(this, "clearRect", arguments); },
-			scale: function() { this.draw.call(this, "scale", arguments); },
+			rotate: function() { this.draw.call(this, "rotate", arguments); return this; },
+			translate: function() { this.draw.call(this, "translate", arguments); return this; },
+			transform: function() { this.draw.call(this, "transform", arguments); return this; },
+			setTransform: function() { this.draw.call(this, "setTransform", arguments); return this; },
+			resetTransform: function() { this.draw.call(this, "resetTransform", arguments); return this; },
+			clearRect: function() { this.draw.call(this, "clearRect", arguments); return this; },
+			scale: function() { this.draw.call(this, "scale", arguments); return this; },
 
 			
 			/**
@@ -4154,7 +4212,7 @@ jQuery Element. Only >= 1.3.1
 				el = arguments[i];
 				this._children.push(el);
 				el.parent = this;
-				el._index = this._children.length-1;
+				//el._index = this._children.length-1;
 				el._refresh(false, true);
 				recursiveUseDOM(el);
 			}
@@ -4191,7 +4249,7 @@ In method ready
 		insertAfter: function(el) {
 			var children = el.parent.children();
 			children.push(this);
-			this._index = children.length-1;
+			//this._index = children.length-1;
 			return this;
 		},
 		
@@ -4566,9 +4624,10 @@ In method ready
 @return {CanvasEngine.Element|Boolean}
 */
 		next: function(attr, val) {
+			var index = this.zIndex();
 			if (attr) {
 				var children = this.parent.children(), attr_val, c;
-				for (var i=this._index+1 ; i < children.length ; i++) {
+				for (var i=index+1 ; i < children.length ; i++) {
 					c = children[i];
 					attr_val = this._findAttr(attr, val, c);
 					if (attr_val) {
@@ -4577,7 +4636,7 @@ In method ready
 				}
 				return false;
 			}
-			return this.parent.eq(this._index+1);
+			return this.parent.eq(index+1);
 		},
 
 /**
@@ -4608,9 +4667,10 @@ In method ready
 @return {CanvasEngine.Element|Boolean}
 */
 		prev: function(attr, val) {
+			var index = this.zIndex();
 			if (attr) {
 				var children = this.parent.children(), attr_val, c;
-				for (var i=this._index-1 ; i >= 0 ; i--) {
+				for (var i=index-1 ; i >= 0 ; i--) {
 					c = children[i];
 					attr_val = this._findAttr(attr, val, c);
 					if (attr_val) {
@@ -4619,7 +4679,7 @@ In method ready
 				}
 				return false;
 			}
-			return this.parent.eq(this._index-1);
+			return this.parent.eq(index-1);
 		},
 		
 /**
@@ -4706,7 +4766,8 @@ In method ready
 		
 /**
 @doc manipulate/
-@method zIndex Change or get the index of the item. The index used to define the superposition. By default, the first element has index 0. If an item is created at the same level, it will overlay the previous element and its index will be 1
+@method zIndex Change or get the index of the item. The index used to define the superposition. By default, the first element has index 0. If an item is created at the same level, it will overlay the previous element and its index will be 1.
+First, assign the element to a parent before using the method
 @param {Integer|Element}  index (optional) If the value is not specified, the current index of the element is returned. If the value is negative, you change the index from the end. If the value is an element, that element is placed after the element indicated
 @example
 
@@ -4715,6 +4776,9 @@ In method ready
 	var el1 = this.createElement(),
 		el2 = this.createElement(),
 		el3 = this.createElement();
+
+	stage.append(el1, el2, el3);
+
 					// Original order : el1 ; el2 ; el3
 	el1.zIndex(1);  // New order : el2 ; el1 ; el3
 	el2.zIndex(-1); // New order : el1 ; el3 ; el2
@@ -4726,8 +4790,11 @@ In method ready
 */
 		zIndex: function(index) {
 			var l;
+			if (!this.parent) {
+				throw "zIndex: No parent known for this element. Assign a parent of this element with append()";
+			}
 			if (index === undefined) {
-				return this._index;
+				return this.parent._children.indexOf(this);
 			}
 			if (index instanceof Class) {
 				index = index.zIndex();
@@ -4739,8 +4806,7 @@ In method ready
 			if (index < 0) {
 				index = l + index;	
 			}
-			_CanvasEngine.moveArray(this.parent._children, this._index, index);
-			this._index = index;
+			_CanvasEngine.moveArray(this.parent._children, this.zIndex(), index);
 			this._stageRefresh();
 			return this;
 		},
@@ -4807,18 +4873,26 @@ In method ready
 			//this.stage.refresh();
 			return this;
 		},
-		/**
-			@doc manipulate/
-			@method attr Get the value of an attribute for the element
-			@param  {String} name
-			@return {Object}
-		*/
-		/**
-			@method attr Set the value of an attribute for the element
-			@param  {String} name
-			@param  {Object} value
-			@return {CanvasEngine.Element}
-		*/
+/**
+	@doc manipulate/
+	@method attr Get the value of an attribute for the element
+	@param  {String} name
+	@return {Object}
+*/
+/**
+@method attr Set the value of an attribute for the element
+@param  {String} name
+@param  {Object} value
+@event element:attrChange `(>=1.3.2)` Called when an attribute of an element is changed
+
+	el.on("element:attrChange", function(name, value) {
+		if (name == "my_attr") {
+			console.log("new value : " + value);
+		}
+	});
+	
+@return {CanvasEngine.Element}
+*/
 		attr: function(name, value) {
 			if (value === undefined) {
 				return this._attr[name];
@@ -5005,6 +5079,15 @@ At each refresh of the scene, to display each element is returned.
 * `canvas:refresh` Calling the event *only* `stage` to each refresh of an element
 * `canvas:render` Call each rendering the element
 * `canvas:readyEnd` Call at the end of the execution of the `ready` method in the scene
+* `element:attrChange` `(>=1.3.2)` Called when an attribute of an element is changed
+
+	el.on("element:attrChange", function(name, value) {
+		if (name == "my_attr") {
+			console.log("new value : " + value);
+		}
+	});
+	el.attr("my_attr", "foo");
+
 * `animation:draw` Call each sequence. Id parameter sequence
 
         el.on("animation:draw", function(id) {

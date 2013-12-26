@@ -35,7 +35,7 @@ Class.create("Spritesheet", {
 @param {Object} set : If the key is called `grid`, the image is cut from a grid. Set the grid with
 
 * size: [Line number, column number]
-* tile : [Width of the box, Height of the box]
+* tile (optional) : [Width of the box, Height of the box]
 * set : Each identifier in array starting from the firt case in top left of the grid
 * reg : [Position X of origin point, Position Y of origin point]
 

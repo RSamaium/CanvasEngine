@@ -1287,6 +1287,7 @@ In `ready` method
 		return this._cols;
 	},
 
+
 /**
 	@doc grid/
 	@method getNbCell Get the total number of cell (rows * columns)

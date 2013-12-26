@@ -325,7 +325,7 @@ To avoid latency before repeating the movement, use `isPressed()` in render meth
 	},
 
 	/**
-	  @doc keyboard/
+	  deleted
 	  @method memorize  Stores the keys pressed
 	*/
 	memorize: function() {
@@ -333,7 +333,7 @@ To avoid latency before repeating the movement, use `isPressed()` in render meth
 	},
 
 	/**
-	  @doc keyboard/
+	  deleted
 	  @method restore Reassigns the keys pressed cached (see "Input.memorize()")
 	*/
 	restore: function() {

@@ -248,15 +248,24 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
     * Button
     * Tooltip
     * Drag&Drop
+    * Background
 * Add weather effects : `rain()`, `snow()` and `storm()`
-* Add `element:attrChange` event
-* Improves `measureText()`. Returns text height
 * Improves `offset()`. Possibility of using `top` and `bottom` to place events
+
+### v1.3.2
+
+* Add `element:attrChange` event
+* Add of `called()` method in the scene
+* Improves `measureText()`. Returns text height
 * Improves `fillText()`. Ability to center the text in an element
 * Improves `each()`. Possible to iterate an object
 * Improves `set()` in Spritesheet class. `tile` parameter is optional
+* Improves `Scene.preload()` and `Materials.load()` with a parameter `material` in callback function
 * Fix change size of a DOM element
 * Fix arguments of `fillRect()`
+* Fix using the method of traversing if index of an element is changed
+* Fix display elements in the `preload()` method of the scene
+* `Input.restore()` and `Input.memorize` deleted
 
 
 ### v1.3.1

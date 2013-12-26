@@ -180,20 +180,135 @@ Class.create("UI", {
 
 			var elements = {};
 
-			CanvasEngine.each(["lt", "t", "rt", "l", "c", "r", "lb", "b", "rb"], function(i, val) {
+			/*CanvasEngine.each(["tl", "tr", "bl", "br"], function(i, val) {
 				var el = self.scene.createElement(w, h);
 			    el.fillStyle = _canvas.createPattern(params.img);
 			    el.fillRect();
-			    el.x = w * ~~(i / 3) - w;
-			    el.y = h * (i % 3) - h;
+			    el.x = w * (i % 2);
+			    el.y = h * ~~(i / 2); 
 			    elements[val] = el;
 			    background.append(el);
+			});*/
+
+			var el1 = this.scene.createElement(w, h);
+			var el2 = this.scene.createElement(w, h);
+
+			var el3 = this.scene.createElement(w, h);
+			var el4 = this.scene.createElement(w, h);
+
+			background.append(el1, el2, el3, el4);
+
+			background.width = w; 
+			background.height = h;            
+
+			var scroll_p = {
+				left: 0,
+				top: 0
+			};
+
+			background_x = background.x;
+
+			background.real_pause = true;
+
+			/*background.width = w * 2;
+			background.height = h * 2;*/
+ 
+ 			//var old_x = 0, old_coef = null, neg = null, old_neg;
+
+ 			var init = {}, dir;
+ 			background.on("dragstart", function(e, mouse) {
+				init.left = scroll_p.left;
+				init.top = scroll_p.top;
 			});
 
-			background.width = w * 3;
-			background.height = h * 3;
+    		background.on("drag", function(e, mouse) {
 
+    			//dir = e.gesture.direction;
+
+				scroll_p.left = init.left + e.gesture.deltaX;
+				scroll_p.top = init.top + e.gesture.deltaY;
+				
+	
+			});
+
+			//el1.drawImage(params.img);
+
+			var old_dir = {};
 			background.on("canvas:render", function(el) {
+
+				if (scroll_p.left >= w){
+			        scroll_p.left = 0;
+			    }
+			    else if (scroll_p.left < -w) {
+			    	scroll_p.left = 0;
+			    }
+			    if (scroll_p.top >= h){
+			        scroll_p.top = 0;
+			    }
+			    else if (scroll_p.top < -h) {
+			    	scroll_p.top = 0;
+			    }
+
+
+			    if (scroll_p.left != old_dir.left) {
+				    if (scroll_p.left > old_dir.left) {
+				    	
+				    	if (scroll_p.left < 0) {
+				    		scroll_p.left = w + scroll_p.left;
+				    	}
+				    	el1.drawImage(params.img, w-scroll_p.left, 0,scroll_p.left,img.height, 0, scroll_p.top, scroll_p.left, img.height);
+						old_dir.top -= 1;
+				    }
+					
+					else {
+
+						if ( scroll_p.left > 0) {
+				    		scroll_p.left = -w + scroll_p.left;
+				    	}
+						el1.drawImage(params.img, 0, 0, -scroll_p.left, img.height, w-Math.abs(scroll_p.left), scroll_p.top, 
+							Math.abs(scroll_p.left), img.height);
+						old_dir.top += 1;
+					}
+
+					old_dir.left =  scroll_p.left;
+	    			 	
+					
+				}
+
+				if (scroll_p.top != old_dir.top) {
+
+					console.log(w-scroll_p.left,  h-scroll_p.top ,scroll_p.left, scroll_p.top, 0,
+				    	 0, scroll_p.left,  scroll_p.top);
+					if ( scroll_p.left > 0)
+				    	el4.drawImage(params.img, w-scroll_p.left,  h-scroll_p.top ,scroll_p.left, scroll_p.top, 0,
+				    	 0, scroll_p.left,  scroll_p.top);
+			
+				  
+
+					if (scroll_p.top > old_dir.top) {
+				    	
+				    	if ( scroll_p.top < 0) {
+				    		scroll_p.top = h + scroll_p.top;
+				    	}
+				    	el3.drawImage(params.img, 0, h-scroll_p.top, img.width, scroll_p.top, 
+				    		scroll_p.left, 0, img.width, scroll_p.top);
+						
+				    }
+					
+					else {
+
+						if ( scroll_p.top > 0) {
+				    		scroll_p.top = -h + scroll_p.top;
+				    	}
+						el3.drawImage(params.img, 0, 0, img.width, -scroll_p.top, scroll_p.left, h-Math.abs(scroll_p.top), 
+							img.width, Math.abs(scroll_p.top));
+	    			 	
+					}
+					old_dir.top =  scroll_p.top;
+				}
+				el2.drawImage(params.img,  scroll_p.left, scroll_p.top,  img.width, img.height);
+
+
 
 			});
 
