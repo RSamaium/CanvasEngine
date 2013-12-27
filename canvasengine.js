@@ -547,6 +547,10 @@ Using Sound :
 			
 			createBuffer: function(real_id) {
 				var id = "_opaque_" + real_id;
+				var video = this.get(real_id, "video") || real_id instanceof HTMLVideoElement;
+				if (video) {
+					return video;
+				}
 				if (!this._buffer[id]) {
 					this._buffer[id] = this.opaqueImage(real_id);
 				}
@@ -1152,7 +1156,9 @@ Two parameters are returned :
 						}
 						else {
 							v.src = materials[i].path;
-							v.addEventListener("loadeddata", function() {
+							v.addEventListener("loadeddata", function(e) {
+								v.width = (e.srcElement || e.target).videoWidth;
+								v.height = (e.srcElement || e.target).videoHeight;
 								self.videos[materials[i].id] = v;
 								next();
 							 }, false);
@@ -3218,6 +3224,7 @@ In the method "ready" in the scene class :
 				if (!sx) sx = 0;
 				if (!sy) sy = 0;
 				if (typeof img === "string") {
+
 					_img = CanvasEngine.Materials.get(img);
 					if (!_img) {
 						return;
@@ -4893,11 +4900,12 @@ In method ready
 	
 @return {CanvasEngine.Element}
 */
-		attr: function(name, value) {
+		attr: function(name, value, event) {
+			event = event == undefined ? true : event;
 			if (value === undefined) {
 				return this._attr[name];
 			}
-			if (this._attr[name] != value) {
+			if (this._attr[name] != value && event) {
 				this.trigger("element:attrChange", [name, value]);
 			}
 			this._attr[name] = value;

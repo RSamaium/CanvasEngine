@@ -164,155 +164,160 @@ Class.create("UI", {
 		params = this._getParams(params);
 
 		params = CanvasEngine.extend({
-			repeat: true
+			repeat: "xy",
+			drag: false
 		}, params);
 
 		var img = Global_CE.Materials.get(params.img),
 			self = this,
 			_canvas, w, h,
-			background = this.scene.createElement();
+			background = this.scene.createElement(),
+			_canvas = this.scene.getCanvas(),
+			w =  Math.ceil(_canvas.width / img.width) * img.width,
+			h = Math.ceil(_canvas.height / img.height) * img.height;
 
-		if (params.repeat) {
 
-			_canvas = this.scene.getCanvas();
-			w = _canvas.width;
-			h = _canvas.height;
 
-			var elements = {};
+		/* var img_canvas = document.createElement("canvas");
+		
+		img_canvas.width = w;
+		img_canvas.height = h;
 
-			/*CanvasEngine.each(["tl", "tr", "bl", "br"], function(i, val) {
-				var el = self.scene.createElement(w, h);
-			    el.fillStyle = _canvas.createPattern(params.img);
-			    el.fillRect();
-			    el.x = w * (i % 2);
-			    el.y = h * ~~(i / 2); 
-			    elements[val] = el;
-			    background.append(el);
-			});*/
+		var ctx = img_canvas.getContext('2d'),
+			pattern = ctx.createPattern(img, "repeat");
 
-			var el1 = this.scene.createElement(w, h);
-			var el2 = this.scene.createElement(w, h);
+		ctx.fillStyle = pattern;
+		ctx.fillRect(0, 0, w, h); */
 
-			var el3 = this.scene.createElement(w, h);
-			var el4 = this.scene.createElement(w, h);
+		var img_canvas = img;
 
-			background.append(el1, el2, el3, el4);
+		var el1 = this.scene.createElement(w, h);
+		var el2 = this.scene.createElement(w, h);
 
-			background.width = w; 
-			background.height = h;            
+		var el3 = this.scene.createElement(w, h);
+		var el4 = this.scene.createElement(w, h);
 
-			var scroll_p = {
-				left: 0,
-				top: 0
-			};
+		background.append(el1, el2, el3, el4);
 
-			background_x = background.x;
+		background.width = w; 
+		background.height = h;  
 
-			background.real_pause = true;
 
-			/*background.width = w * 2;
-			background.height = h * 2;*/
- 
- 			//var old_x = 0, old_coef = null, neg = null, old_neg;
+		background.attr("x", 0);
+		background.attr("y", 0); 
+		background.attr("real_x", 0);
+		background.attr("real_y", 0); 
 
- 			var init = {}, dir;
+		background.clip();    
+
+		var scroll_p = {
+			left: 0,
+			top: 0
+		};
+
+			var init = {}, pos = {}, gesture = {x: 0, y:0};
+
+			if (params.drag) {
  			background.on("dragstart", function(e, mouse) {
 				init.left = scroll_p.left;
 				init.top = scroll_p.top;
+				pos.y = this.attr("real_y");
+				pos.x = this.attr("real_x");
 			});
 
     		background.on("drag", function(e, mouse) {
 
-    			//dir = e.gesture.direction;
-
-				scroll_p.left = init.left + e.gesture.deltaX;
-				scroll_p.top = init.top + e.gesture.deltaY;
-				
-	
-			});
-
-			//el1.drawImage(params.img);
-
-			var old_dir = {};
-			background.on("canvas:render", function(el) {
-
-				if (scroll_p.left >= w){
-			        scroll_p.left = 0;
+    			var real_y = this.attr("real_y");
+ 
+    			if (init.left + e.gesture.deltaX >= w || init.left + e.gesture.deltaX < -w){
+			       init.left = -e.gesture.deltaX;
 			    }
-			    else if (scroll_p.left < -w) {
-			    	scroll_p.left = 0;
+				if (init.top + e.gesture.deltaY >= h || init.top + e.gesture.deltaY < -h){
+			       init.top = -e.gesture.deltaY;
 			    }
-			    if (scroll_p.top >= h){
-			        scroll_p.top = 0;
+			    if (/x/.test(params.drag)) {
+			    	this.attr("real_x", pos.x + e.gesture.deltaX);
+			    	scroll_p.left = init.left + e.gesture.deltaX;
 			    }
-			    else if (scroll_p.top < -h) {
-			    	scroll_p.top = 0;
-			    }
+				if (/y/.test(params.drag)) {
 
-
-			    if (scroll_p.left != old_dir.left) {
-				    if (scroll_p.left > old_dir.left) {
-				    	
-				    	if (scroll_p.left < 0) {
-				    		scroll_p.left = w + scroll_p.left;
-				    	}
-				    	el1.drawImage(params.img, w-scroll_p.left, 0,scroll_p.left,img.height, 0, scroll_p.top, scroll_p.left, img.height);
-						old_dir.top -= 1;
-				    }
-					
-					else {
-
-						if ( scroll_p.left > 0) {
-				    		scroll_p.left = -w + scroll_p.left;
-				    	}
-						el1.drawImage(params.img, 0, 0, -scroll_p.left, img.height, w-Math.abs(scroll_p.left), scroll_p.top, 
-							Math.abs(scroll_p.left), img.height);
-						old_dir.top += 1;
+					if (!/y/.test(params.repeat) && real_y + e.gesture.deltaY >= 0 && e.gesture.deltaY - gesture.y > 0) {
+						this.attr("real_y", 0);
 					}
-
-					old_dir.left =  scroll_p.left;
-	    			 	
+					else if (!/y/.test(params.repeat) && -(real_y + e.gesture.deltaY - _canvas.height) > h && e.gesture.deltaY - gesture.y < 0) {
+						this.attr("real_y", -h + _canvas.height);
+					}
+					else {
+						this.attr("real_y", pos.y + e.gesture.deltaY);
+						scroll_p.top = init.top + e.gesture.deltaY;
+					}
 					
 				}
-
-				if (scroll_p.top != old_dir.top) {
-
-					console.log(w-scroll_p.left,  h-scroll_p.top ,scroll_p.left, scroll_p.top, 0,
-				    	 0, scroll_p.left,  scroll_p.top);
-					if ( scroll_p.left > 0)
-				    	el4.drawImage(params.img, w-scroll_p.left,  h-scroll_p.top ,scroll_p.left, scroll_p.top, 0,
-				    	 0, scroll_p.left,  scroll_p.top);
-			
-				  
-
-					if (scroll_p.top > old_dir.top) {
-				    	
-				    	if ( scroll_p.top < 0) {
-				    		scroll_p.top = h + scroll_p.top;
-				    	}
-				    	el3.drawImage(params.img, 0, h-scroll_p.top, img.width, scroll_p.top, 
-				    		scroll_p.left, 0, img.width, scroll_p.top);
-						
-				    }
-					
-					else {
-
-						if ( scroll_p.top > 0) {
-				    		scroll_p.top = -h + scroll_p.top;
-				    	}
-						el3.drawImage(params.img, 0, 0, img.width, -scroll_p.top, scroll_p.left, h-Math.abs(scroll_p.top), 
-							img.width, Math.abs(scroll_p.top));
-	    			 	
-					}
-					old_dir.top =  scroll_p.top;
-				}
-				el2.drawImage(params.img,  scroll_p.left, scroll_p.top,  img.width, img.height);
-
-
-
+				gesture.y = e.gesture.deltaY;
 			});
-
 		}
+
+		background.on("element:attrChange", function(name, value) {
+			if (name == "x") {
+				scroll_p.left = value;
+			}
+			else if (name == "y") {
+				scroll_p.top = value;
+			}
+		});
+
+		background.on("canvas:render", function() {
+
+			if (scroll_p.left >= w){
+		        scroll_p.left = 0;
+		    }
+		    else if (scroll_p.left < -w) {
+		    	scroll_p.left = 0;
+		    }
+		    if (scroll_p.top >= h){
+		        scroll_p.top = 0;
+		    }
+		    else if (scroll_p.top < -h) {
+		    	scroll_p.top = 0;
+		    }
+
+		    if (scroll_p.left < 0) {
+	    		scroll_p.left = w + scroll_p.left;
+	    	}
+	    	if ( scroll_p.top < 0) {
+	    		scroll_p.top = h + scroll_p.top;
+	    	}
+
+	    	if (scroll_p.left != 0) el1.drawImage(img_canvas, w-scroll_p.left, 0,scroll_p.left,h, 0, scroll_p.top, scroll_p.left, h);
+		    if (scroll_p.top != 0) el3.drawImage(img_canvas, 0, h-scroll_p.top, w, scroll_p.top, 
+		    		scroll_p.left, 0, w, scroll_p.top);
+
+		    if ( scroll_p.left > 0 && scroll_p.top > 0) {
+		    	el4.drawImage(img_canvas, w-scroll_p.left,  h-scroll_p.top ,scroll_p.left, scroll_p.top, 0,
+			    	 0, scroll_p.left,  scroll_p.top);
+		    }
+			else if ( scroll_p.left < 0 && scroll_p.top < 0) {
+			   	el4.drawImage(img_canvas, 0,  0 ,-scroll_p.left, -scroll_p.top, w+scroll_p.left,
+			    	 h+scroll_p.top, -scroll_p.left,  -scroll_p.top);
+			}
+			else if ( scroll_p.left > 0 && scroll_p.top < 0) {
+			    el4.drawImage(img_canvas,  w-scroll_p.left,  0 , scroll_p.left, -scroll_p.top, 0,
+			    	 h+scroll_p.top, scroll_p.left,  -scroll_p.top);
+			}
+			else if ( scroll_p.left < 0 && scroll_p.top > 0) {
+				 el4.drawImage(img_canvas, 0,  h-scroll_p.top , -scroll_p.left, scroll_p.top, w+scroll_p.left,
+			    	 0, -scroll_p.left,  scroll_p.top);
+			}
+
+			el2.drawImage(img_canvas,  scroll_p.left, scroll_p.top,  w, h);
+
+
+			this.attr("x", scroll_p.left, false);
+			this.attr("y", scroll_p.top, false);
+
+		});
+
+		
 
 		return background;
 	},
