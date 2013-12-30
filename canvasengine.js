@@ -2281,7 +2281,7 @@ Example 5
 				}
 				el.style.position = "fixed";
 				el.style.top =
-				el.style.left = 0;
+				el.style.left = "50%";
 				window.onresize = function(event) {
 					if (type == "browser") self.setSize("browser", scale);
 				};
@@ -2311,6 +2311,9 @@ Example 5
 				this._canvasMouseEvent.height = 
 				this.height = 
 				this.element.height = height;
+			}
+			if (type == "browser") {
+				el.style.margin = (-height/2) + "px 0 0 " + (-width/2) + "px";
 			}
 			
 			if (this._layerParent) {
@@ -4090,7 +4093,13 @@ In `ready` method :
 		_select: function(mouse, callback) {
 			var el_real, imgData;
 			var canvas = this.scene.getCanvas();
-			imgData = this._canvas[0]["_ctxMouseEvent"].getImageData(mouse.x, mouse.y, 1, 1).data;
+			var _canvas =  this._canvas[0],
+				sw = _canvas.element.style.width,
+				sh = _canvas.element.style.height,
+				mouse_x = sw != "" ? ~~(mouse.x * _canvas.width / parseInt(sw)) : mouse.x,
+				mouse_y = sh != "" ? ~~(mouse.y * _canvas.height / parseInt(sh)) : mouse.y;
+
+			imgData = _canvas["_ctxMouseEvent"].getImageData(mouse_x, mouse_y, 1, 1).data;
 			if (imgData[3] > 0) {
 				el_real = canvas._elementsByScene(this.scene.name, _CanvasEngine.rgbToHex(imgData[0], imgData[1], imgData[2]));
 				if (el_real) callback(el_real);

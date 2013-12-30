@@ -215,54 +215,80 @@ Class.create("UI", {
 			top: 0
 		};
 
-			var init = {}, pos = {}, gesture = {x: 0, y:0};
+			var init = {}, pos = {x: 0, y: 0}, gesture = {x: 0, y:0}, move = 0;
 
 			if (params.drag) {
+ 			
  			background.on("dragstart", function(e, mouse) {
 				init.left = scroll_p.left;
 				init.top = scroll_p.top;
-				pos.y = this.attr("real_y");
-				pos.x = this.attr("real_x");
+				gesture.x = 0;
+				gesture.y = 0;
+				console.log("start");
 			});
 
     		background.on("drag", function(e, mouse) {
 
-    			var real_y = this.attr("real_y");
+    			var real_y = this.attr("real_y"),
+    				real_x = this.attr("real_x");
  
-    			if (init.left + e.gesture.deltaX >= w || init.left + e.gesture.deltaX < -w){
+    			/*if (init.left + e.gesture.deltaX >= w || init.left + e.gesture.deltaX < -w){
 			       init.left = -e.gesture.deltaX;
 			    }
 				if (init.top + e.gesture.deltaY >= h || init.top + e.gesture.deltaY < -h){
 			       init.top = -e.gesture.deltaY;
-			    }
+			    }*/
+
+			    
 			    if (/x/.test(params.drag)) {
-			    	this.attr("real_x", pos.x + e.gesture.deltaX);
-			    	scroll_p.left = init.left + e.gesture.deltaX;
+			    	move = e.gesture.deltaX - gesture.x;
+
+			    	 console.log(real_x, e.gesture.deltaX, gesture.x);
+
+					if (!/x/.test(params.repeat) && real_x + move >= 0) {
+						this.attr("real_x", 0);
+					}
+					else if (!/x/.test(params.repeat) && -(real_x + move - _canvas.width) > w) {
+						this.attr("real_x", -w + _canvas.width);
+					}
+					else {
+						scroll_p.left += move;
+						pos.x += move;
+						this.attr("real_x", pos.x);
+						
+					}
 			    }
 				if (/y/.test(params.drag)) {
 
-					if (!/y/.test(params.repeat) && real_y + e.gesture.deltaY >= 0 && e.gesture.deltaY - gesture.y > 0) {
+					move = e.gesture.deltaY - gesture.y;
+
+					if (!/y/.test(params.repeat) && real_y + move >= 0) {
 						this.attr("real_y", 0);
 					}
-					else if (!/y/.test(params.repeat) && -(real_y + e.gesture.deltaY - _canvas.height) > h && e.gesture.deltaY - gesture.y < 0) {
+					else if (!/y/.test(params.repeat) && -(real_y + move - _canvas.height) > h) {
 						this.attr("real_y", -h + _canvas.height);
 					}
 					else {
-						this.attr("real_y", pos.y + e.gesture.deltaY);
-						scroll_p.top = init.top + e.gesture.deltaY;
+						scroll_p.top += move;
+						pos.y += move;
+						this.attr("real_y", pos.y);
+						
 					}
 					
 				}
 				gesture.y = e.gesture.deltaY;
+				gesture.x = e.gesture.deltaX;
 			});
 		}
 
 		background.on("element:attrChange", function(name, value) {
 			if (name == "x") {
 				scroll_p.left = value;
+				pos.x = value;
 			}
 			else if (name == "y") {
 				scroll_p.top = value;
+				pos.y = value;
 			}
 		});
 

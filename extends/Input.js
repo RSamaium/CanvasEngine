@@ -232,12 +232,19 @@ To avoid latency before repeating the movement, use `isPressed()` in render meth
 		}
 		
 		function onkeydown(e) {
+			var ret;
 			if (!self._keyPress[e.which]) self._keyPress[e.which] = 0;
 			self._keyPress[e.which]++;
 			if (self._keyPress[e.which] > 1 && self._keyType[e.which] == 'keyPress') return;
 			self._keyPressed[e.which] = true;
 		//	self.keyUp(e.which);
-			if (self._keyFunctions[e.which]) self._keyFunctions[e.which](e);
+			if (self._keyFunctions[e.which]) ret = self._keyFunctions[e.which](e);
+			if (ret !== undefined) {
+				return ret;
+			}
+			else {
+				return false;
+			}
 		}
 		
 		function assignKey(_key, type) {

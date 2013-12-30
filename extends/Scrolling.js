@@ -230,8 +230,7 @@ Class.create("Scrolling", {
 				}
 				else if (container.y + scroll.height < canvas.height) {
 					container.y = canvas.height - scroll.height;
-					console.log(container.y, scroll.height, canvas.height);
-					//container.y = this._multipleScreen(scroll.speed, 0, container.y).y;
+					container.y = this._multipleScreen(scroll.speed, 0, container.y).y;
 					scroll.screen_y = Math.abs(container.y);
 				}
 			}
