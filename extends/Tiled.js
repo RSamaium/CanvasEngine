@@ -211,7 +211,7 @@ Client :
 		tileoffset = tileset.tileoffset || {x: 0, y: 0};
 		
 		y = this.tile_image_h * Math.floor(_id / (nb_tile.width - (nb_tile.width / 2 * tileset.margin)));        
-		x = this.tile_w * (_id % Math.round((tileset.imagewidth - nb_tile.height / 2 * tileset.margin) / this.tile_w));
+		x = this.tile_image_w * (_id % Math.round((tileset.imagewidth - nb_tile.height / 2 * tileset.margin) / this.tile_image_w));
 		
 		_tile.drawImage(tileset.name, x + tileset.spacing * x / this.tile_w + tileset.margin, y + tileset.spacing * y / this.tile_h + tileset.margin, this.tile_w, this.tile_h, data.x + tileoffset.x, data.y + tileoffset.y, this.tile_w, this.tile_h);
 		this.el_layers[layer_name].append(_tile);
