@@ -595,6 +595,10 @@ In `ready` method :
 				var seq = self._animations[self._seq],
 						loop = self._loop == "loop";
 				
+				if (!seq) {
+					throw new Error('No animation of type ' + self._seq + ' found');
+				}
+
 				function seqSize(img) {
 					if (seq.size) return seq.size;
 					var data_img = Global_CE.Materials.get(img);
