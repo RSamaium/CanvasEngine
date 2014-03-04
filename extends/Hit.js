@@ -24,6 +24,7 @@ THE SOFTWARE.
 if (typeof exports != "undefined") {
 	var CE = require("canvasengine").listen(),
 		CanvasEngine = false,
+		PF = require('pathfinding'),
 		Class = CE.Class;
 }
 

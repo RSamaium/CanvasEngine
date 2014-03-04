@@ -40,6 +40,20 @@ Class.create("Preset", {
 
 });
 
+Class.create("Lang", {
+	current: "en",
+	data: {},
+	init: function() {
+		this.data = Global_CE.Materials.get("languages");
+	},
+	get: function(id) {
+		return this.data[this.current][id];
+	},
+	setLang: function(lang) {
+		this.current = lang;
+	}
+});
+
 /**
 @doc ui
 @static
@@ -94,12 +108,10 @@ Class.create("UI", {
 	scene: null,
 
 	_getScene: function() {
-		if (!this.scene) {
-			var scenes = Global_CE.Scene.getEnabled();
-			for (var name in scenes) {
-			    this.scene = scenes[name];
-			    break;
-			}
+		var scenes = Global_CE.Scene.getEnabled();
+		for (var name in scenes) {
+		    this.scene = scenes[name];
+		    break;
 		}
 		return this.scene;
 	},
@@ -170,6 +182,7 @@ Class.create("UI", {
 
 		var img = Global_CE.Materials.get(params.img),
 			self = this,
+			drag_move = /m/.test(params.drag),
 			_canvas, w, h,
 			background = this.scene.createElement(),
 			_canvas = this.scene.getCanvas(),
@@ -208,7 +221,7 @@ Class.create("UI", {
 		background.attr("real_x", 0);
 		background.attr("real_y", 0); 
 
-		background.clip();    
+		//background.clip();    
 
 		var scroll_p = {
 			left: 0,
@@ -224,28 +237,27 @@ Class.create("UI", {
 				init.top = scroll_p.top;
 				gesture.x = 0;
 				gesture.y = 0;
-				console.log("start");
 			});
 
-    		background.on("drag", function(e, mouse) {
+			function _move(e) {
+				var freq = 1;
+				if (!e) {
+					e = {
+						gesture: {
+							deltaX: 0,
+							deltaY: 0
+						}
+					};
+					freq = 10;
+				}
 
-    			var real_y = this.attr("real_y"),
+				var real_y = this.attr("real_y"),
     				real_x = this.attr("real_x");
- 
-    			/*if (init.left + e.gesture.deltaX >= w || init.left + e.gesture.deltaX < -w){
-			       init.left = -e.gesture.deltaX;
-			    }
-				if (init.top + e.gesture.deltaY >= h || init.top + e.gesture.deltaY < -h){
-			       init.top = -e.gesture.deltaY;
-			    }*/
+				
+				if (/x/.test(params.drag)) {
+			    	move = (e.gesture.deltaX - gesture.x) / freq;
 
-			    
-			    if (/x/.test(params.drag)) {
-			    	move = e.gesture.deltaX - gesture.x;
-
-			    	 console.log(real_x, e.gesture.deltaX, gesture.x);
-
-					if (!/x/.test(params.repeat) && real_x + move >= 0) {
+			    	if (!/x/.test(params.repeat) && real_x + move >= 0) {
 						this.attr("real_x", 0);
 					}
 					else if (!/x/.test(params.repeat) && -(real_x + move - _canvas.width) > w) {
@@ -257,10 +269,11 @@ Class.create("UI", {
 						this.attr("real_x", pos.x);
 						
 					}
+
 			    }
 				if (/y/.test(params.drag)) {
 
-					move = e.gesture.deltaY - gesture.y;
+					move = (e.gesture.deltaY - gesture.y) / freq;
 
 					if (!/y/.test(params.repeat) && real_y + move >= 0) {
 						this.attr("real_y", 0);
@@ -276,8 +289,18 @@ Class.create("UI", {
 					}
 					
 				}
-				gesture.y = e.gesture.deltaY;
+			}
+
+    		background.on("drag", function(e, mouse) {
+    			if (!drag_move) _move.call(this, e);
+			    gesture.y = e.gesture.deltaY;
 				gesture.x = e.gesture.deltaX;
+
+			});
+
+			background.on("dragend", function(e, mouse) {
+				gesture.x = 0;
+				gesture.y = 0;
 			});
 		}
 
@@ -292,7 +315,14 @@ Class.create("UI", {
 			}
 		});
 
+		var toggle = true;
+
 		background.on("canvas:render", function() {
+
+
+			if (drag_move && (gesture.x != 0 || gesture.y != 0)) {
+				_move.call(this);
+			}
 
 			if (scroll_p.left >= w){
 		        scroll_p.left = 0;
@@ -319,15 +349,15 @@ Class.create("UI", {
 		    		scroll_p.left, 0, w, scroll_p.top);
 
 		    if ( scroll_p.left > 0 && scroll_p.top > 0) {
-		    	el4.drawImage(img_canvas, w-scroll_p.left,  h-scroll_p.top ,scroll_p.left, scroll_p.top, 0,
+		    	 el4.drawImage(img_canvas, w-scroll_p.left,  h-scroll_p.top ,scroll_p.left, scroll_p.top, 0,
 			    	 0, scroll_p.left,  scroll_p.top);
 		    }
 			else if ( scroll_p.left < 0 && scroll_p.top < 0) {
-			   	el4.drawImage(img_canvas, 0,  0 ,-scroll_p.left, -scroll_p.top, w+scroll_p.left,
+			   	 el4.drawImage(img_canvas, 0,  0 ,-scroll_p.left, -scroll_p.top, w+scroll_p.left,
 			    	 h+scroll_p.top, -scroll_p.left,  -scroll_p.top);
 			}
 			else if ( scroll_p.left > 0 && scroll_p.top < 0) {
-			    el4.drawImage(img_canvas,  w-scroll_p.left,  0 , scroll_p.left, -scroll_p.top, 0,
+			     el4.drawImage(img_canvas,  w-scroll_p.left,  0 , scroll_p.left, -scroll_p.top, 0,
 			    	 h+scroll_p.top, scroll_p.left,  -scroll_p.top);
 			}
 			else if ( scroll_p.left < 0 && scroll_p.top > 0) {
@@ -337,9 +367,9 @@ Class.create("UI", {
 
 			el2.drawImage(img_canvas,  scroll_p.left, scroll_p.top,  w, h);
 
-
 			this.attr("x", scroll_p.left, false);
 			this.attr("y", scroll_p.top, false);
+
 
 		});
 
@@ -804,6 +834,13 @@ Example 2
 	
 	
 });
+CE.Lang = Class.New("Lang");
 var UI = {
-	UI: Class.New("UI")
+	UI: Class.New("UI"),
+	Lang: function(id) {
+		if (id) {
+			return CE.Lang.get(id);
+		}
+		return CE.Lang;
+	}
 };

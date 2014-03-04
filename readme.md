@@ -252,6 +252,7 @@ See [http://canvasengine.net/doc](http://canvasengine.net/doc)
 * Add weather effects : `rain()`, `snow()` and `storm()`
 * Improves `offset()`. Possibility of using `top` and `bottom` to place events
 * Fix event mouse when canvas resized and center the canvas in full screen
+* Fix using of several parameters in `to()` in Timeline class
 * Avoid event propagation of key pressed
 
 ### v1.3.2

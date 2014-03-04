@@ -166,12 +166,15 @@ CanvasEngine.User = {
 			try {
 				data = JSON.parse(match[1]);
 
-				CanvasEngine.io.emit("_autoAuthentication", {
-					session: data.session_id
-				});
+				setTimeout(function() {
+					CanvasEngine.io.emit("_autoAuthentication", {
+						session: data.session_id
+					});
+				}, 200);
+				
 				CanvasEngine.io.on("_autoAuthentication", function(ret) {
 					if (ret.ret == "success" && params.success) {
-						params.success();
+						params.success(ret.data_empty);
 					}
 					else if (ret.ret == "failed" && params.failed) {
 						params.failed(ret.err);
@@ -208,10 +211,11 @@ CanvasEngine.User = {
 			username: username,
 			password: password
 		});
+
 		CanvasEngine.io.on("_authentication", function(ret) {
 			if (ret.ret == "success" && params.success) {
 				self._setCookie(params.cookie_name, {session_id: ret.session_id });
-				params.success();
+				params.success(ret.data_empty);
 			}
 			else if (ret.ret == "failed" && params.failed) {
 				params.failed(ret.err);
@@ -1156,7 +1160,9 @@ Two parameters are returned :
 						}
 						else {
 							v.src = materials[i].path;
-							v.addEventListener("loadeddata", function(e) {
+
+							v.addEventListener("canplay", function(e) {
+
 								v.width = (e.srcElement || e.target).videoWidth;
 								v.height = (e.srcElement || e.target).videoHeight;
 								self.videos[materials[i].id] = v;
@@ -1172,6 +1178,7 @@ Two parameters are returned :
 							}
 							v.load();
 						}
+
 						document.body.appendChild(v);
 						v.setAttribute("style", "display:none;");
 						
@@ -1703,8 +1710,6 @@ and, in `ready` method :
 						var lastCalledTime = new Date().getTime(), delta;
 						
 
-						 
-
 						function loop() {
 							
 							var key,  i=0;
@@ -1717,6 +1722,7 @@ and, in `ready` method :
 							
 							canvas[i].clear();
 							canvas[i]._ctxMouseEvent.clearRect(0, 0, canvas[i].width, canvas[i].height);
+
 							for (j=0 ; j < self._scenesIndex.length ; j++) {
 								s = self._scenesEnabled[self._scenesIndex[j]];
 								if (s) s._loop();
@@ -3223,6 +3229,7 @@ In the method "ready" in the scene class :
 @link http://www.whatwg.org/specs/web-apps/current-work/multipage/the-canvas-element.html#dom-context-2d-drawimage
 */
 			drawImage: function(img, sx, sy, sw, sh, dx, dy, dw, dh) {
+
 				var array, array_buffer, buffer, _img = img;
 				if (!sx) sx = 0;
 				if (!sy) sy = 0;
@@ -3459,6 +3466,9 @@ In the method "ready" in the scene class :
 			},
 			
 			draw: function(name, params, propreties) {
+
+				
+			
 
 				this._graphicPointer = 0;
 			
@@ -3945,6 +3955,7 @@ In `ready` method :
 					this.translate(-regX, -regY);
 				}
 				
+				
 				this.translate(this.real_x,  this.real_y);
 				
 				
@@ -4096,8 +4107,8 @@ In `ready` method :
 			var _canvas =  this._canvas[0],
 				sw = _canvas.element.style.width,
 				sh = _canvas.element.style.height,
-				mouse_x = sw != "" ? ~~(mouse.x * _canvas.width / parseInt(sw)) : mouse.x,
-				mouse_y = sh != "" ? ~~(mouse.y * _canvas.height / parseInt(sh)) : mouse.y;
+				mouse_x = sw && sw != "" ? ~~(mouse.x * _canvas.width / parseInt(sw)) : ~~mouse.x,
+				mouse_y = sh && sh != "" ? ~~(mouse.y * _canvas.height / parseInt(sh)) : ~~mouse.y;
 
 			imgData = _canvas["_ctxMouseEvent"].getImageData(mouse_x, mouse_y, 1, 1).data;
 			if (imgData[3] > 0) {
@@ -4107,6 +4118,7 @@ In `ready` method :
 		},
 		
 		_click: function(e, mouse, type) {
+			
 			this._select(mouse, function(el_real) {
 				 el_real.trigger("click", e, mouse);
 			});

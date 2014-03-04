@@ -360,8 +360,6 @@ Example :
 		
 		this.el.addLoopListener(function() {
 
-
-			
 			if (self._varTime.time === undefined) return;
 			
 			
@@ -392,6 +390,7 @@ Example :
 							result_val += self._timeline[last_t][type];
 						break;
 					}
+					
 					return result_val;
 				}
 				
@@ -399,6 +398,9 @@ Example :
 					var ease, value, _cal, next_val, result_val;
 					if (self._timeline[next_t][type] === undefined) {
 						return this[type];
+					}
+					if (self._timeline[last_t][type] === undefined) {
+						self._timeline[last_t][type] = self.el[type];
 					}
 					ease = self._timeline[next_t]._ease_;
 					_cal = self._timeline[next_t]._cal;

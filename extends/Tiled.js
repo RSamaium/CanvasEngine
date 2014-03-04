@@ -351,6 +351,7 @@ Client :
 		return this.tile_h;
 	},
 	 /**
+	 	@doc tiled/
 		@method getWidthPixel Returns the width of the map in pixels
 		@return {Integer}
 	 */
