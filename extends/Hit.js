@@ -671,7 +671,7 @@ In `ready` method
 			this.el.y = pos.y;
 			
 		}
-		return {x: pos.y,  y: pos.y};
+		return {x: pos.x,  y: pos.y};
 	},
 	
 /**
