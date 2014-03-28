@@ -326,7 +326,7 @@ var CanvasEngine = {};
 */
 CanvasEngine.uniqid = function() {
    // return new Date().getTime();
-   return Math.random();
+   return (Math.random()+"").replace(/^0./g, "");
 };
 
 /**

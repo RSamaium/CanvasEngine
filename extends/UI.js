@@ -40,19 +40,6 @@ Class.create("Preset", {
 
 });
 
-Class.create("Lang", {
-	current: "en",
-	data: {},
-	init: function() {
-		this.data = Global_CE.Materials.get("languages");
-	},
-	get: function(id) {
-		return this.data[this.current][id];
-	},
-	setLang: function(lang) {
-		this.current = lang;
-	}
-});
 
 /**
 @doc ui
@@ -141,26 +128,57 @@ Class.create("UI", {
 		}
 	},
 
-	// TODO
-	progressBar: function(id, pourcent, graphic) {
-		
+/*
+	init : var el = canvas.UI.progressBar("bar", 0);
+*/
+	_progressBar: {},
+	progressBar: function(id, params, percent) {
+		var bar;
+
 		this._getScene();
 
-		graphic = CanvasEngine.extend(graphic, {
-			"width": 100,
-			"height": 50,
-			"@empty": {
-				"fillStyle": 		"black",
-				"fillRect": 		""
-			},
-			"@full": {
-				"fillStyle": 		"red"
-			}
-		});
+		if (params == "delete" && this._progressBar[id]) {
+			bar = this._progressBar[id][0];
+			bar.full.remove();
+			delete this._progressBar[id];
+		}
 
-		var bar = this.scene.createElement(["full", "empty"]);
+		if (typeof params == "number") {
+			percent = params;
+			params = null;
+		}
 
-		bar.empty.append(bar.full);
+		if (!percent) percent = 0;
+
+		if (!this._progressBar[id]) {
+			this._progressBar[id] = [this.scene.createElement(["full", "empty"]), params];
+			bar = this._progressBar[id][0];
+			bar.empty.append(bar.full);
+		}
+		bar = this._progressBar[id][0];
+
+		params = this._getParams(this._progressBar[id][1]);
+		params = CanvasEngine.extend({
+			width: 100,
+			height: 5,
+			orientation: "horizontal"
+		}, params);
+
+		bar.full.width = 
+		bar.empty.width = params.width;
+		bar.full.height = 
+		bar.empty.height = params.height;
+
+		if (params.orientation == "horizontal") {
+			bar.full.width = params.width * percent / 100;
+		}
+
+		if (params.empty) {
+			params.empty.call(bar.empty);
+		}
+		if (params.full) {
+			params.full.call(bar.full);
+		}
 
 		return bar.full;
 	},
@@ -312,6 +330,9 @@ Class.create("UI", {
 			else if (name == "y") {
 				scroll_p.top = value;
 				pos.y = value;
+			}
+			else if (name == "img") {
+				img_canvas = value;
 			}
 		});
 
@@ -834,13 +855,6 @@ Example 2
 	
 	
 });
-CE.Lang = Class.New("Lang");
 var UI = {
-	UI: Class.New("UI"),
-	Lang: function(id) {
-		if (id) {
-			return CE.Lang.get(id);
-		}
-		return CE.Lang;
-	}
+	UI: Class.New("UI")
 };

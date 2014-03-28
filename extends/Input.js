@@ -243,7 +243,7 @@ To avoid latency before repeating the movement, use `isPressed()` in render meth
 				return ret;
 			}
 			else {
-				return false;
+				
 			}
 		}
 		
