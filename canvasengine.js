@@ -1051,7 +1051,8 @@ Two parameters are returned :
 								}
 								
 								snd.setAttribute("src", _p);
-								snd.addEventListener('canplaythrough', function() { 
+								snd.addEventListener('canplay', function() { 
+									if (!materials[i]) return;
 									self.sounds[materials[i].id] = this;
 									next();
 								}, false);
@@ -1788,6 +1789,7 @@ and, in `ready` method :
 		stage: null,
 		ctx: null,
 		_globalElements: {},
+		_globalElementsMouseEvent: [],
 		_ctxTmp: null,
 		_layerDOM: null,
 		_layerParent: null,
@@ -1942,6 +1944,24 @@ and, in `ready` method :
 				});
 			}
 		},
+
+		_setGlobalElementsMouseEvent: function(type, el) {
+			var e;
+			if (type == "add") {
+				this._globalElementsMouseEvent.push(el);
+			}
+			else if (type == "remove") {
+				for (var i=0 ; i < this._globalElementsMouseEvent.length ; i++) {
+					e = this._globalElementsMouseEvent[i];
+					if (e == el) {
+						e.splice(i, 1);
+						break;
+					}
+				}
+			}
+			return this;
+		},
+
 		_elementsByScene: function(name, key, val) {
 			if (!this._globalElements[name]) this._globalElements[name] = {};
 			if (!val) {
@@ -2441,6 +2461,7 @@ The resources defined in "Materials" are loaded and regularly calls the method "
 			var ev, self = this;
 			this.id = _CanvasEngine.uniqid();
 			this._events = obj.events;
+
 		},
 		_loop: function() {
 			//if (this._isReady) {
@@ -2649,6 +2670,8 @@ Create two elements :
 		_load: function(params, options) {
 			var self = this;
 			params = params || {};
+
+			this.getCanvas()._globalElementsMouseEvent = [];
 			
 			options = options || {};
 			this._stage = CanvasEngine.Element["new"](this);
@@ -4103,30 +4126,39 @@ In `ready` method :
 		isStage: function() {
 			return this._name == "__stage__";
 		},
+
+		_mouseTrigger: function(e, mouse) {
+			var _trigger;
+			var over = mouse.x > this.real_x && mouse.x < this.real_x + this.width &&
+					mouse.y > this.real_y && mouse.y < this.real_y + this.height;	
+			if (over) {
+				if (this._out == 1) {
+					this._out++;
+					this._out++;
+					this._over = 1;
+					_trigger = this.trigger("mouseover", e);
+				}
+				
+			}
+			else {
+				if (this._over == 1) {
+					this._out = 1;
+					this._over++;
+					_trigger = this.trigger("mouseout", e);
+				}
+			}
+			if (_trigger) return true;
+		},
 		
 		_mousemove: function(e, mouse) {
-			var el_real, over;
-			for (var i=0 ; i < this._children.length ; i++) {
-				el_real = this._children[i];
-				over = mouse.x > el_real.real_x && mouse.x < el_real.real_x + el_real.width &&
-						mouse.y > el_real.real_y && mouse.y < el_real.real_y + el_real.height;	
-				if (over) {
-					if (el_real._out == 1) {
-						el_real._out++;
-						el_real._out++;
-						el_real._over = 1;
-						_trigger = el_real.trigger("mouseover", e);
-					}
-					if (_trigger) return;
+			var _canvas = this.scene.getCanvas(), ret,
+				els = _canvas._globalElementsMouseEvent;
+			
+			for (var i=0 ; i < els.length ; i++) {
+				ret = els[i]._mouseTrigger(e, mouse);
+				if (ret) {
+					return;
 				}
-				else {
-					if (el_real._over == 1) {
-						el_real._out = 1;
-						el_real._over++;
-						_trigger = el_real.trigger("mouseout", e);
-					}
-				}
-					
 			}
 		},
 
@@ -5225,7 +5257,7 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 */
 		bind: function(event, callback) { this.on(event, callback); },
 		on: function(events, callback) {
-			var event;
+			var event, _canvas = this.scene.getCanvas();
 			events = events.split(" ");
 			for (var i=0 ; i < events.length ; i++) {
 				event = events[i];
@@ -5233,6 +5265,7 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 				if (event == "canvas:refresh") this.stage._onRefresh = callback;
 				else if (event == "canvas:render") this._onRender.push(callback);
 				else if (CanvasEngine.mobileUserAgent && event == "click") event = "touch";
+				else if (event == "mouseover" || event == "mouseout") _canvas._setGlobalElementsMouseEvent("add", this);
 				if (!this._listener[event]) {
 					this._listener[event] = [];
 					this._nbEvent++;
@@ -5249,7 +5282,7 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 */
 		unbind: function(events, callback) { this.off(events, callback); },
 		off: function(events, callback) {
-			var event;
+			var event, _canvas = this.scene.getCanvas();
 			events = events.split(" ");
 			for (var i=0 ; i < events.length ; i++) {
 				event = events[i];
@@ -5283,6 +5316,9 @@ See [https://github.com/EightMedia/hammer.js/wiki/Getting-Started](https://githu
 				}
 				if (this._listener[event] && this._listener[event].length == 0) {
 					delete this._listener[event];
+					if (event == "mouseover" || event == "mouseout") {
+						_canvas._setGlobalElementsMouseEvent.push("remove", this);
+					} 
 					this._nbEvent--;
 				}
 			}
