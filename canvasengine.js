@@ -511,6 +511,26 @@ Using Sound :
 				
 				throw "Cannot to get the data \"" + id + "\" because it does not exist";
 			},
+
+			setLang: function(id, path, callback) {
+				if (typeof(Languages) == "undefined") {
+					console.warn("Languages script doesn't exist. See https://github.com/RSamaium/Languages");
+					if (callback) callback();
+					return this;
+				}
+				var self = this;
+
+				if (this.data["languages_" + id]) {
+					callback();
+					return this;
+				}
+				
+				Languages.init(id, path, function() {
+			 		self.data["languages_" + this.current] = this;
+					callback();
+				});
+				return this;
+			},
 			
 /**
 @doc materials/
@@ -1200,19 +1220,28 @@ Two parameters are returned :
 					}
 				
 					if (materials[i]) {
-						_CanvasEngine.ajax({
-							url: materials[i].path, 
-							dataType: "json",
-							success: function(data) {
-								 self.data[materials[i].id] = data;
-								 next();
-							},
-							error: function() {
-								if (params.ignoreLoadError) {
-									next();
+						 if (self.data[materials[i].id]) {
+						 	next();
+						 }
+						 else if (materials[i].id == "languages") {
+						 	self.setLang(materials[i].lang, materials[i].path, next);
+						 }
+						 else {
+						 	_CanvasEngine.ajax({
+								url: materials[i].path, 
+								dataType: "json",
+								success: function(data) {
+									 self.data[materials[i].id] = data;
+									 next();
+								},
+								error: function() {
+									if (params.ignoreLoadError) {
+										next();
+									}
 								}
-							}
-						});
+							});
+						 }
+						
 					}
 					else {
 						if (onFinish) onFinish.call(self);

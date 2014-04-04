@@ -528,15 +528,31 @@ Example :
 		_els: null,
 		el: null,
 		initialize: function(options) {
-			this._options = options;
-			this._images = options.images;
 			this._animations = options.animations;
+			this._images = options.images;
 			this._timeline = options.timeline;
+			
+			this._options = options;
+			
+			for (var name in this._animations) {
+				this.addAnim(name, this._animations[name]);
+			}
 			if (options.addIn) {
 				this.el = options.addIn.scene.createElement();
 				options.addIn.append(this.el);
 				this.add();
 			}
+		},
+
+/**
+(dev)
+@method addAnim `(>=1.4.0)` 
+@param 
+@return {CanvasEngine.Animation}
+*/
+		addAnim: function(name, val) {
+			this._animations[name] = CanvasEngine.extend(CanvasEngine.clone(this._options), val);
+			return this;
 		},
 
 /**
@@ -584,6 +600,10 @@ In `ready` method :
 			if (uniq) this.remove();
 			
 			this.stop();
+
+			function getOption() {
+				this._options
+			}
 			
 			this.el.addLoopListener(function() {
 				// Catch when we're interrupted and haven't had a chance to reset
@@ -596,7 +616,7 @@ In `ready` method :
 				
 				var seq = self._animations[self._seq],
 						loop = self._loop == "loop";
-				
+
 				function seqSize(img) {
 					if (seq.size) return seq.size;
 					var data_img = Global_CE.Materials.get(img);
@@ -729,17 +749,18 @@ In `ready` method :
 							
 						}
 						else {
-							id = seq.frames[0] + i;
-							
-							if (id > seq.frames[1]) {
+							var left = seq.frames[0] < seq.frames[1]; // animation left->right or top->bottom> 
+						
+							id = seq.frames[0] + (left ? i : -i);
+							if (left ? id > seq.frames[1] : id < seq.frames[1]) {
 								i = 0;
 								finish.call(this);
-								drawImage(this, seq.frames[0]);
+								drawImage(this, seq.frames[left ? 0 : 1]);
 							}
 							else {
 								drawImage(this, id);
 							}
-							
+
 						}
 
 						i++;
