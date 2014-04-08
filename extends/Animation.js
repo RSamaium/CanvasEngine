@@ -690,7 +690,7 @@ In `ready` method :
 						}
 						
 						function finish() {
-							if (self._loop == "stop") {
+							if (/stop/.test(self._loop)) {
 								if (seq.finish) seq.finish.call(self);
 								self.stop();
 								return true;
@@ -755,7 +755,9 @@ In `ready` method :
 							if (left ? id > seq.frames[1] : id < seq.frames[1]) {
 								i = 0;
 								finish.call(this);
-								drawImage(this, seq.frames[left ? 0 : 1]);
+								if (!/no_restart/.test(self._loop)) {
+									drawImage(this, seq.frames[left ? 0 : 1]);
+								}	
 							}
 							else {
 								drawImage(this, id);
