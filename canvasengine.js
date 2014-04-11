@@ -4134,7 +4134,6 @@ In `ready` method :
 			if (over) {
 				if (this._out == 1) {
 					this._out++;
-					this._out++;
 					this._over = 1;
 					_trigger = this.trigger("mouseover", e);
 				}
