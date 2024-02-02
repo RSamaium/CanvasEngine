@@ -10,8 +10,8 @@ function App() {
   return (
     <Canvas>
       <Container width={'100%'} height={300} flexDirection="row" justifyContent="center">
-        <Rectangle x={0} y={0} width={'10%'} height={100} color={0x00ff00} />
-        <Rectangle x={0} y={0} width={'90%'} height={100} color={0x0000ff} />
+        <Rectangle x={0} y={0} width={'90%'} height={100} color={0x00ff00} />
+        <Rectangle x={0} y={0} width={100} height={100} color={0xff0000} />
       </Container>
     </Canvas>)
 }

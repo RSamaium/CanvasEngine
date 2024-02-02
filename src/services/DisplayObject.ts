@@ -1,19 +1,24 @@
 import { Node } from "yoga-layout";
-import { YogaContext } from "../contexts/YogaContext";
+import { YogaContext } from "../contexts/YogaContext";
+import { $changeLayout } from "../stores/canvas";
 
 export function DisplayObject(extendClass) {
     return class DisplayObject extends extendClass {
         public node: Node;
-        
+
         constructor() {
             super();
             this.node = YogaContext.Node.create();
+
+            $changeLayout.listen(() => {
+                this.applyComputedLayout();
+            })
         }
 
         insertChild<U extends DisplayObject[]>(...children: U): U[0] {
             const child = super.addChild(...children);
             this.node.insertChild(child.node, this.node.getChildCount());
-            
+
             return child;
         }
 
@@ -28,7 +33,7 @@ export function DisplayObject(extendClass) {
         }
 
         calculateLayout() {
-            this.node.calculateLayout(800, 600);
+            this.node.calculateLayout()
         }
 
         setFlexDirection(direction: "row" | "column") {
@@ -54,20 +59,24 @@ export function DisplayObject(extendClass) {
             super.calculateBounds();
             if (!this._geometry) return;
             const bounds = this._geometry.bounds
-            const width  = Math.abs(bounds.minX - bounds.maxX)
+            const width = Math.abs(bounds.minX - bounds.maxX)
             const height = Math.abs(bounds.minY - bounds.maxY)
-            this.node.setWidth(width);
-            this.node.setHeight(height);
+            // this.node.setWidth(width);
+            // this.node.setHeight(height);
         }
 
         setWidth(width: number) {
             this.node.setWidth(width);
-         //   this.width = width;
+            //   this.width = width;
         }
 
         setHeight(height: number) {
             this.node.setHeight(height);
-          //  this.height = height;
+            //  this.height = height;
+        }
+
+        getWidth() {
+            return this.node.getWidth();
         }
     }
 } 

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useContext, useState } from 'react';
 import { PixiAppContext } from '../contexts/CanvasContext';
 import { ContainerContext } from '../contexts/ContainerContext';
+import { setChangeLayout } from '../stores/canvas';
 
 export interface DisplayObjectProps {
     x?: number;
@@ -53,12 +54,7 @@ export function useDisplayObject(object, { children, x, y, width, height, flexDi
         }
 
         pixiApp.calculateLayout();
-        for (let child of pixiApp.children) {
-            child.applyComputedLayout()
-            for (let a of child.children) {
-                a.applyComputedLayout()
-            }
-        }
+        setChangeLayout()
 
         return () => {
             if (parentContainerRef) {

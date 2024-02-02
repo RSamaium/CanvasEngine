@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@nanostores/react": "^0.7.1",
+    "nanostores": "^0.9.5",
     "pixi.js": "^7.4.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
