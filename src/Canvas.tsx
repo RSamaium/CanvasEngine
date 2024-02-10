@@ -1,15 +1,21 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, memo } from 'react';
 import { autoDetectRenderer, Container, Graphics } from 'pixi.js';
 import { PixiAppContext } from './contexts/CanvasContext';
 import { setYoyaContext } from "./contexts/YogaContext";
 import { loadYoga } from 'yoga-layout';
 import { CanvasContainer } from './services/Container';
+import { Scheduler } from './services/Scheduler';
+import { setChangeLayout } from './stores/canvas';
 
 
-export function Canvas({ children, ...props }) {
+
+
+export const Canvas =  memo(({ children, ...props }) => {
     const canvasRef = useRef<HTMLDivElement | null>(null);
+    const schedulerRef = useRef<Scheduler | null>(null);
     let [pixiApp, setPixiApp] = React.useState<Container | null>(null);
     const [isReady, setIsReady] = React.useState(false);
+
 
     useEffect(() => {
         async function run() {
@@ -21,24 +27,48 @@ export function Canvas({ children, ...props }) {
             pixiApp.setHeight(props.height ?? 600)
             setPixiApp(pixiApp)
 
-            setInterval(() => {
+            schedulerRef.current = new Scheduler()
+            schedulerRef.current.start()
+            schedulerRef.current.tick.listen(() => {
                 renderer.render(pixiApp)
-            }, 16)
+            })
+
+            console.log(children)
+
+            const container = children.type()
+            pixiApp.addChild(container)
+
+        
+            const handler = {
+                set(target, prop, value) {
+                    console.log(value)
+                    return value; // Retourne le résultat de l'opération d'origine
+                }
+            };
+
+
+            // for (let child of children.props.children) {
+            //     container.addChild(child.type(child.props))
+            // }
 
             canvasRef.current.appendChild(renderer.view);
 
             setIsReady(true)
+
+            setTimeout(() => {
+                console.time()
+                // pixiApp.calculateLayout();
+                // setChangeLayout();
+                console.timeEnd()
+            }, 100)
         }
         run()
-        return () => {
-            canvasRef.current.removeChild(renderer.view);
-        };
+        return () => { };
     }, []);
 
     return (
-        <PixiAppContext.Provider value={{ pixiApp: pixiApp, isRootCanvas: true }}>
+        <PixiAppContext.Provider value={{ pixiApp: pixiApp, isRootCanvas: true, scheduler: schedulerRef.current }}>
             <div ref={canvasRef} />
-            {isReady && children}
         </PixiAppContext.Provider>
     )
-}
+})

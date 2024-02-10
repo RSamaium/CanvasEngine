@@ -2,69 +2,58 @@ import React, { useRef, useEffect, useContext, useState } from 'react';
 import { PixiAppContext } from '../contexts/CanvasContext';
 import { ContainerContext } from '../contexts/ContainerContext';
 import { setChangeLayout } from '../stores/canvas';
+import { DisplayObjectProps } from '../types/DisplayObject';
+import { MouseEvent } from '../types/MouseEvent';
 
-export interface DisplayObjectProps {
-    x?: number;
-    y?: number;
-    width?: number | string;
-    height?: number | string;
-    children?: React.ReactNode
-    flexDirection?: 'row' | 'column'
-    justifyContent?: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around'
-    alpha?: number
-}
-
-export function useDisplayObject(object, { children, x, y, width, height, flexDirection, justifyContent, alpha }: DisplayObjectProps) {
+export function useDisplayObject(object, props: DisplayObjectProps & MouseEvent) {
+    const { children, ...otherProps } = props;
     const { pixiApp, isRootCanvas } = useContext(PixiAppContext);
     const parentContainerRef = useContext(ContainerContext);
     const containerRef = useRef(object);
     const [renderChild, setRenderChild] = useState(false);
 
     useEffect(() => {
-        if (width !== undefined) {
-            containerRef.current.setWidth(width)
-        }
-        if (height !== undefined) {
-            containerRef.current.setHeight(height)
-        }
-    }, [width, height]);
+        // Gérer les événements et les styles en fonction des changements de props
+        const applyPropsToContainer = (container, props) => {
+            const { onClick, width, height, x, y, absolute, alpha, flexDirection, justifyContent } = props;
 
-    useEffect(() => {
-        if (x != undefined) containerRef.current.x = x
-        if (y != undefined) containerRef.current.y = y
-        if (alpha != undefined) containerRef.current.alpha = alpha
-    }, [x, y, alpha]);
+            if (onClick) {
+                container.eventMode = 'static';
+                container.on('click', onClick); 
+            }
 
-    useEffect(() => {
-        if (flexDirection) {
-            containerRef.current.setFlexDirection(flexDirection)
-        }
-        if (justifyContent) {
-            containerRef.current.setJustifyContent(justifyContent)
-        }
-        setRenderChild(true);
-    }, [flexDirection, justifyContent]);
+            if (width !== undefined) container.setWidth(width);
+            if (height !== undefined) container.setHeight(height);
+            if (x !== undefined) {
+                container.setX(x);
+                
+            }
+            if (y !== undefined) container.setY(y);
+            if (absolute) container.setPositionType('absolute');
+            else container.setPositionType('relative');
+            if (alpha !== undefined) container.alpha = alpha;
+            if (flexDirection) container.setFlexDirection(flexDirection);
+            if (justifyContent) container.setJustifyContent(justifyContent);
+        };
+
+        applyPropsToContainer(containerRef.current, otherProps);
+
+    }, [...Object.values(otherProps)]);
 
     useEffect(() => {
         if (parentContainerRef) {
             parentContainerRef.insertChild(containerRef.current);
-        }
-        else {
+        } else {
             pixiApp.insertChild(containerRef.current);
         }
 
-        pixiApp.calculateLayout();
-        setChangeLayout()
+        // pixiApp.calculateLayout();
+        // setChangeLayout();
 
-        return () => {
-            if (parentContainerRef) {
-                parentContainerRef.removeChild(containerRef.current);
-            }
-            else {
-                pixiApp.removeChild(containerRef.current);
-            }
-        };
-    }, [pixiApp]);
+        setRenderChild(true);
+
+        return () => { };
+    }, []);
 
     return {
         element: (
@@ -72,5 +61,5 @@ export function useDisplayObject(object, { children, x, y, width, height, flexDi
                 {renderChild && children}
             </ContainerContext.Provider>
         )
-    }
+    };
 }

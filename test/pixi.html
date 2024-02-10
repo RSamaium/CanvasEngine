@@ -1,0 +1,46 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js"
+    integrity="sha512-NVWPDocxwt9T3NhwBzx3c8vhg2WqGVgehZ100xOySkvbfdhqQDJbvzlSBWyFkFJEPwta89jdpldx2BlggNURVQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <body></body>
+
+<script>
+    // Assurez-vous d'avoir inclus PixiJS dans votre projet
+    // Création de l'application Pixi
+    const app = new PIXI.Application({
+        width: window.innerWidth, // La largeur de la zone de rendu
+        height: 1000 // Hauteur suffisante pour voir la ligne de rectangles
+    });
+    document.body.appendChild(app.view); // Ajoutez le canvas de PixiJS au document
+
+    const rectangles = []; // Stockez vos rectangles ici
+
+    // Créez 10 000 rectangles
+    for (let i = 0; i < 10000; i++) {
+        const rect = new PIXI.Graphics();
+        rect.beginFill(0xff0000); // Couleur des rectangles
+        rect.drawRect(0, 0, 1, 1); // Dessinez un rectangle (1px de large, 50px de haut)
+        rect.endFill();
+
+        rect.x = 0; // Positionner chaque rectangle côte à côte
+        rect.y = i; // Y est constant pour les aligner en une ligne
+
+        app.stage.addChild(rect); // Ajoutez le rectangle à la scène
+        rectangles.push(rect); // Ajoutez le rectangle au tableau pour le référencer plus tard
+    }
+
+    // Fonction pour déplacer les rectangles
+    function moveRectangles() {
+        console.time()
+        rectangles.forEach(rect => {
+            rect.x += 1; // Déplacez chaque rectangle de 1 pixel sur l'axe X
+            if (rect.x > window.innerWidth) {
+                rect.x = -1; // Réinitialisez la position si elle sort de l'écran
+            }
+        });
+        console.timeEnd()
+    }
+
+    // Déplacez les rectangles toutes les 16ms (~60fps)
+    setInterval(moveRectangles, 1000);
+</script>
