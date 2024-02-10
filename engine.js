@@ -32,7 +32,7 @@ class CanvasEngine {
      */
     h(tag, props) {
         const instance = new this.components[tag]();
-        const element = { tag, props: {}, componentInstance: instance, reactive: null};
+        const element = { tag, props: {}, componentInstance: instance, reactive: null };
 
         const reactiveAllProps = []
 
@@ -46,7 +46,7 @@ class CanvasEngine {
                 reactiveAllProps.push(
                     combineLatest(subjects.map(subject => subject.asObservable()))
                         .pipe(
-                            tap((latestValues) => {
+                            map((latestValues) => {
                                 element.props[key] = fn(...latestValues);
                             })
                         )
@@ -58,24 +58,27 @@ class CanvasEngine {
 
         instance.onInit?.(element.props);
 
-        element.reactive = combineLatest(reactiveAllProps).subscribe(() => {
-            if (instance.onUpdate) {
-                instance.onUpdate(element.props);
-            }
+        element.reactive = combineLatest(reactiveAllProps).subscribe((propsChanged) => {
+            instance.onUpdate?.(element.props);
         })
+
+        instance.onUpdate?.(element.props);
 
         if (props.children) {
             props.children.forEach((child) => {
-                // child id BehaviorSubject
-                if (child instanceof BehaviorSubject) {
-                    for (let comp of child.value) {
-                        this.insertElement(instance, comp)
-                    }
-                }
-                else if (child instanceof Observable) {
+                if (child instanceof Observable) {
                     child.subscribe(({ destroyed, value: comp }) => {
                         if (destroyed) {
                             this.destroyElement(comp)
+                            return
+                        }
+                        if (Array.isArray(comp)) {
+                            comp.forEach(c => {
+                                if (c.inCache) {
+                                    return
+                                }
+                                this.insertElement(instance, c)
+                            })
                             return
                         }
                         this.insertElement(instance, comp)
@@ -83,7 +86,7 @@ class CanvasEngine {
                 }
                 else
                     this.insertElement(instance, child)
-                }
+            }
             );
         }
 
@@ -92,6 +95,9 @@ class CanvasEngine {
     }
 
     destroyElement(element) {
+        if (!element) {
+            return
+        }
         element.reactive?.unsubscribe()
         element.componentInstance.onDestroy?.(element.parent)
     }
@@ -109,25 +115,36 @@ class CanvasEngine {
      * @returns {Observable} An observable that emits the list of created child elements.
      */
     loop(itemsSubject, createElementFn) {
-        const children = itemsSubject.value.map(item => {
-            return createElementFn(item);
-        });
-        itemsSubject.next(children)
-        return itemsSubject
+        const cacheKeys = {}
+        return itemsSubject.pipe(
+            map(items => ({
+                destroyed: false,
+                value: items.map((item, index) => {
+                    const key = item.key || index
+                    if (cacheKeys[key]) {
+                        return {
+                            inCache: true,
+                        }
+                    }
+                    cacheKeys[key] = true
+                    return createElementFn(item)
+                })
+            })),
+        ).asObservable()
     }
 
-    cond(createElementFn, props) {
+    cond(createElementFn, condition, props) {
         let element = null
         return combineLatest(props.map(subject => subject.asObservable()))
             .pipe(
                 map((latestValues) => {
-                    if (latestValues.every((value) => value)) {
+                    if (condition(latestValues)) {
                         const _el = createElementFn()
                         element = _el
                         return {
                             destroyed: false,
                             value: _el
-                        
+
                         }
                     }
                     else {
@@ -157,7 +174,7 @@ const bool = new BehaviorSubject(true);
 
 let sprites = new BehaviorSubject([]);
 const val = Array(1).fill(0).map((_, i) => {
-    return { x, y: new BehaviorSubject(i) }
+    return { x, y: new BehaviorSubject(i * 10) }
 })
 sprites.next(val)
 
@@ -167,13 +184,14 @@ const pixiApp = new Container()
 document.body.appendChild(renderer.view)
 
 class MyContainer {
-    constructor() {
+    onInit() {
         this.container = new Container();
     }
 
     onUpdate(props) {
-        this.container.x = props.x;
-        this.container.y = props.y;
+        
+        // this.container.x = props.x;
+        // this.container.y = props.y;
     }
 
     onInsert() {
@@ -186,10 +204,10 @@ class Rectangle {
     onInit(props) {
         this.graphic = new Graphics();
         this.graphic.beginFill(0xff0000);
-        this.graphic.drawRect(0, 0, 100, 100);
+        this.graphic.drawRect(0, 0, 10, 10);
         this.graphic.endFill();
         if (props.click) {
-            this.graphic.interactive = true;
+            this.graphic.eventMode = 'static';
             this.graphic.on('click', props.click)
         }
     }
@@ -213,23 +231,39 @@ const engine = new CanvasEngine();;
 engine.registerComponent('Rectangle', Rectangle);
 engine.registerComponent('Container', MyContainer);
 
+const click = () => {
+    // add new sprite
+    sprites.next([...sprites.value, { x, y: new BehaviorSubject(200), key: Math.random() }])
+}
+
 const Game = engine.h('Container', {
     children: [
-        /*engine.loop(sprites, (sprite) => {
+        engine.loop(sprites, (sprite) => {
             return engine.h('Rectangle', {
                 x: [(x) => x, [sprite.x]],
-                y: [(y) => y, [sprite.y]]
+                y: [(y) => y, [sprite.y]],
+                key: Math.random(),
             })
-        }),*/
-        engine.cond(() => {
+        }),
+        engine.h('Rectangle', {
+            x: 100,
+            y: 100,
+            click
+        })
+        /*engine.cond(() => {
             return engine.h('Rectangle', {
                 x: [(x) => x, [x]],
                 y: [(y) => y, [y]],
-                click: () => {
-                    console.log('plop')
-                }
+                click
             })
-        }, [bool])
+        }, ([bool]) => bool, [bool]),
+        engine.cond(() => {
+            return engine.h('Rectangle', {
+                x: 100,
+                y: 100,
+                click
+            })
+        }, ([bool]) => !bool, [bool])*/
     ]
 });
 
@@ -241,7 +275,7 @@ document.body.appendChild(stats.dom);
 
 setInterval(() => {
     stats.begin()
-    //x.next(x.value + 1);
+    x.next(x.value + 1);
     renderer.render(pixiApp)
     stats.end()
-}, 16)
+}, 1000)
