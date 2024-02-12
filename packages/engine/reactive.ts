@@ -17,6 +17,9 @@ export interface Element<T = ComponentInstance> {
     props: Props;
     componentInstance: T;
     propSubscriptions: Subscription[];
+    effectSubscriptions: Subscription[];
+    effectMounts: (() => void)[];
+    effectUnmounts: (() => void)[];
     propObservables: {
         [key: string]: Signal<any>;
     } | undefined
@@ -44,16 +47,14 @@ function destroyElement(element: Element) {
         return
     }
     element.propSubscriptions.forEach(sub => sub.unsubscribe())
+    element.effectSubscriptions.forEach(sub => sub.unsubscribe())
     for (let name in element.directives) {
         element.directives[name].onDestroy?.()
     }
     element.componentInstance.onDestroy?.(element.parent as any)
+    element.effectUnmounts.forEach(fn => fn())
 }
 
-function insertElement(parent: Element, element: Element) {
-    element.parent = parent
-    element.componentInstance.onInsert?.(parent)
-}
 
 /**
 * Creates a virtual element or a representation thereof, with properties that can be dynamically updated based on BehaviorSubjects.
@@ -65,7 +66,7 @@ function insertElement(parent: Element, element: Element) {
 *                         using the combineLatest RxJS operator to wait for all BehaviorSubjects to emit.
 * @returns {Object} An object representing the created element, including tag name and dynamic properties.
 */
-export function h(tag: string, props?: Props): Element {
+export function createComponent(tag: string, props?: Props): Element {
     if (!components[tag]) {
         throw new Error(`Component ${tag} is not registered`)
     }
@@ -77,7 +78,10 @@ export function h(tag: string, props?: Props): Element {
         propSubscriptions: [],
         propObservables: props,
         parent: null,
-        directives: {}
+        directives: {},
+        effectUnmounts: [],
+        effectSubscriptions: [],
+        effectMounts: []
     };
 
     // Iterate over each property in the props object
@@ -103,35 +107,13 @@ export function h(tag: string, props?: Props): Element {
     instance.onInit?.(element.props);
     instance.onUpdate?.(element.props);
 
-    if (props?.children) {
-        props.children.forEach((child) => {
-            if (child instanceof Observable) {
-                child.subscribe(({ destroyed, value: comp }) => {
-                    if (destroyed) {
-                        destroyElement(comp)
-                        return
-                    }
-                    if (Array.isArray(comp)) {
-                        comp.forEach(c => {
-                            if (c.inCache) {
-                                return
-                            }
-                            insertElement(element, c)
-                        })
-                        return
-                    }
-                    insertElement(element, comp)
-                })
-            }
-            else {
-                insertElement(element, child)
-            }
-        });
-    }
-
     const onMount = (parent, element) => {
         element.props.context = parent.props.context
+        element.parent = parent
         element.componentInstance.onMount?.(element)
+        element.effectMounts.forEach(fn => {
+            element.effectUnmounts.push(fn(element))
+        })
     }
 
     if (props?.context) {
@@ -142,11 +124,23 @@ export function h(tag: string, props?: Props): Element {
             }
             for (let child of element.props.children) {
                 if (child instanceof Observable) {
-                    child.subscribe((array) => {
-                        for (let val of array.value) {
-                            onMount(element, val.inCache)
-                            propagateContext(val.inCache)
+                    child.subscribe(({ destroyed, value: comp }) => {
+                        if (destroyed) {
+                            destroyElement(comp)
+                            return
                         }
+                        if (Array.isArray(comp)) {
+                            comp.forEach(c => {
+                                if (c.inCache) {
+                                    return
+                                }
+                                onMount(element, c)
+                                propagateContext(c)
+                            })
+                            return
+                        }
+                        onMount(element, comp)
+                        propagateContext(comp)
                     })
                 }
                 else {

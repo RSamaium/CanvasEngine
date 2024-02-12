@@ -1,6 +1,6 @@
 import { Container as PixiContainer, Renderer, autoDetectRenderer } from 'pixi.js';
 import { DisplayObject } from './DisplayObject';
-import { Props, h, registerComponent } from '../engine/reactive';
+import { Props, createComponent, registerComponent } from '../engine/reactive';
 import { loadYoga } from 'yoga-layout';
 import { Scheduler } from '../directives/Scheduler';
 import { effect, signal } from '../engine/signal';
@@ -20,7 +20,7 @@ export async function Canvas(props: Props) {
     if (!props.tick) {
         options.tick = signal(null)
     }
-    const canvasElement = h('Canvas', options)
+    const canvasElement = createComponent('Canvas', options)
     effect(() => {
         canvasElement.propObservables.tick()
         renderer.render(canvasElement.componentInstance as any)

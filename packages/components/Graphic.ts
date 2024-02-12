@@ -1,9 +1,9 @@
-import { Graphics } from 'pixi.js';
+import { Graphics as PixiGraphics } from 'pixi.js';
 import { DisplayObject } from './DisplayObject';
-import { registerComponent } from '../engine/reactive';
+import { createComponent, registerComponent } from '../engine/reactive';
 import { effect } from '../engine/signal';
 
-class CanvasGraphics extends DisplayObject(Graphics) {
+class CanvasGraphics extends DisplayObject(PixiGraphics) {
     onInit(props) {
         super.onInit(props)
         if (props.draw) {
@@ -14,6 +14,10 @@ class CanvasGraphics extends DisplayObject(Graphics) {
     }
 }
 
-interface CanvasGraphics extends Graphics { }
+interface CanvasGraphics extends PixiGraphics { }
 
-registerComponent('Graphic', CanvasGraphics)
+registerComponent('Graphics', CanvasGraphics)
+
+export function Graphics(props) {
+    return createComponent('Graphics', props)
+}
