@@ -1,9 +1,8 @@
 import { Observable, Subject, Subscription, combineLatest, map } from 'rxjs';
-import { loadYoga } from 'yoga-layout';
-import { Scheduler } from './Scheduler';
-import { Signal, isSignal } from './signal';
+import { Signal, isSignal, signal } from './signal';
+import { ComponentInstance } from '../components/DisplayObject';
 
-interface Props {
+export interface Props {
     [key: string]: any;
 }
 
@@ -12,17 +11,11 @@ type ElementObservable = Observable<{
     value: Element | Element[];
 }>;
 
-interface ComponentInstance {
-    onInit?(props: Props): void;
-    onUpdate?(props: Props): void;
-    onDestroy?(parent: Element): void;
-    onInsert?(parent?: Element): void;
-}
 
-interface Element {
+export interface Element<T = ComponentInstance> {
     tag: string;
     props: Props;
-    componentInstance: ComponentInstance;
+    componentInstance: T;
     propSubscriptions: Subscription[];
     parent: Element | null;
     context?: {
@@ -31,6 +24,10 @@ interface Element {
 }
 
 const components: { [key: string]: any } = {}
+
+export const isPrimitive = (value) => {
+    return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null || value === undefined
+}
 
 export function registerComponent(name, component) {
     components[name] = component;
@@ -46,7 +43,6 @@ function destroyElement(element: Element) {
 
 function insertElement(parent: Element, element: Element) {
     element.parent = parent
-    element.context = parent.context
     element.componentInstance.onInsert?.(parent)
 }
 
@@ -83,9 +79,9 @@ export function h(tag: string, props?: Props): Element {
                         [key]: value
                     }, element.props);
                 }))
-
-            } else {
-                element.props[key] = value;
+            }
+            else {
+                element.props[key] = value
             }
         });
     }
@@ -106,17 +102,46 @@ export function h(tag: string, props?: Props): Element {
                             if (c.inCache) {
                                 return
                             }
-                            insertElement(instance, c)
+                            insertElement(element, c)
                         })
                         return
                     }
-                    insertElement(instance, comp)
+                    insertElement(element, comp)
                 })
             }
-            else
-                insertElement(instance, child)
+            else {
+                insertElement(element, child)
+            }
+        });
+    }
+
+    if (props?.context) {
+        // propagate recrusively context in all children
+        const propagateContext = (element) => {
+            if (!element.props.children) {
+                return
+            }
+            for (let child of element.props.children) {
+                if (Array.isArray(child)) {
+                    child.forEach(c => {
+                        if (c.inCache) {
+                            return
+                        }
+                        c.props.context = element.props.context
+                        child.componentInstance.onContext?.(c)
+                        propagateContext(c)
+                    })
+                }
+                else {
+                    child.props.context = element.props.context
+                    child.componentInstance.onContext?.(child)
+                    propagateContext(child)
+                }
+            }
         }
-        );
+
+        element.componentInstance.onContext?.(element)
+        propagateContext(element)
     }
 
     // Return the created element representation
@@ -170,22 +195,4 @@ export function cond(condition: Signal, createElementFn) {
                 }
             })
         )
-}
-
-
-export async function render(element: Element) {
-    const scheduler = new Scheduler()
-    const Yoga = await loadYoga()
-    element.context = {
-        scheduler,
-        Yoga
-    }
-    const instance = element.componentInstance
-    instance.onInsert?.()
-    if (instance['renderer']) {
-        scheduler.start()
-        scheduler.tick.subscribe(() => {
-            instance['renderer'].render(instance)
-        })
-    }
 }

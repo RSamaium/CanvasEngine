@@ -1,35 +1,59 @@
 import { Node } from "yoga-layout";
 import type { AlignContent, EdgeSize, FlexDirection, Size } from "./types/DisplayObject";
+import { Element, Props } from "../engine/reactive";
+
+export interface ComponentInstance {
+    onInit?(props: Props): void;
+    onUpdate?(props: Props): void;
+    onDestroy?(parent: Element): void;
+    onInsert?(parent?: Element | { context: any }): void;
+    onContext?(context: Element): void;
+}
 
 export function DisplayObject(extendClass) {
     return class DisplayObject extends extendClass {
+        private context: {
+            [key: string]: any
+        } | null = null
+        private props: Props = {};
+
         public node: Node;
 
-        // insertChild<U extends DisplayObject[]>(...children: U): U[0] {
-        //     const child = super.addChild(...children);
-        //     this.node.insertChild(child.node, this.node.getChildCount());
-
-        //     return child;
-        // }
-
-        onInit(props) {
-           if (props.click) {
-                this.eventMode = 'static';
-                this.on('click', props.click)
-           }
+        get yoga() {
+            return this.context?.Yoga
         }
 
-        onInsert(parent) {
-            //this.node = YogaContext.Node.create();
+        onInit(props) {
+            if (props.click) {
+                this.eventMode = 'static';
+                this.on('click', props.click)
+            }
+        }
+
+        onContext({ props }) {
+            this.context = props.context
+            this.node = this.yoga.Node.create();
+            this.onUpdate(props)
+            if (this.parent) {
+                this.parent.node.insertChild(this.node, this.parent.node.getChildCount());
+            }
+        }
+
+        onInsert(parent?: Element<DisplayObject>) {
             if (!parent) {
                 return
             }
-            parent.addChild(this);
+            const instance = parent.componentInstance
+            instance.addChild(this);
         }
 
         onUpdate(props) {
-            if (props.x) this.x = props.x
-            if (props.y) this.y = props.y
+            if (!this.context) return;
+            if (props.x) this.setX(props.x)
+            if (props.y) this.setY(props.y)
+            if (props.width) this.setWidth(props.width)
+            if (props.height) this.setHeight(props.height)
+            if (props.flexDirection) this.setFlexDirection(props.flexDirection)
         }
 
         onDestroy() {
@@ -53,33 +77,33 @@ export function DisplayObject(extendClass) {
 
         setFlexDirection(direction: FlexDirection) {
             const mapping = {
-                row: YogaContext.FLEX_DIRECTION_ROW,
-                column: YogaContext.FLEX_DIRECTION_COLUMN,
-                'row-reverse': YogaContext.FLEX_DIRECTION_ROW_REVERSE,
-                'column-reverse': YogaContext.FLEX_DIRECTION_COLUMN_REVERSE
+                row: this.yoga.FLEX_DIRECTION_ROW,
+                column: this.yoga.FLEX_DIRECTION_COLUMN,
+                'row-reverse': this.yoga.FLEX_DIRECTION_ROW_REVERSE,
+                'column-reverse': this.yoga.FLEX_DIRECTION_COLUMN_REVERSE
             }
             this.node.setFlexDirection(mapping[direction]);
         }
 
         setFlexWrap(wrap: "wrap" | "nowrap" | "wrap-reverse") {
             const mapping = {
-                wrap: YogaContext.WRAP_WRAP,
-                nowrap: YogaContext.WRAP_NO_WRAP,
-                'wrap-reverse': YogaContext.WRAP_WRAP_REVERSE
+                wrap: this.yoga.WRAP_WRAP,
+                nowrap: this.yoga.WRAP_NO_WRAP,
+                'wrap-reverse': this.yoga.WRAP_WRAP_REVERSE
             }
             this.node.setFlexWrap(mapping[wrap]);
         }
 
         private setAlign(methodName: string, align: AlignContent) {
             const mapping = {
-                auto: YogaContext.ALIGN_AUTO,
-                "flex-start": YogaContext.ALIGN_FLEX_START,
-                "flex-end": YogaContext.ALIGN_FLEX_END,
-                center: YogaContext.ALIGN_CENTER,
-                stretch: YogaContext.ALIGN_STRETCH,
-                baseline: YogaContext.ALIGN_BASELINE,
-                "space-between": YogaContext.ALIGN_SPACE_BETWEEN,
-                "space-around": YogaContext.ALIGN_SPACE_AROUND
+                auto: this.yoga.ALIGN_AUTO,
+                "flex-start": this.yoga.ALIGN_FLEX_START,
+                "flex-end": this.yoga.ALIGN_FLEX_END,
+                center: this.yoga.ALIGN_CENTER,
+                stretch: this.yoga.ALIGN_STRETCH,
+                baseline: this.yoga.ALIGN_BASELINE,
+                "space-between": this.yoga.ALIGN_SPACE_BETWEEN,
+                "space-around": this.yoga.ALIGN_SPACE_AROUND
             }
             const method = (this.node as any)[methodName].bind(this.node);
             method(mapping[align]);
@@ -99,11 +123,11 @@ export function DisplayObject(extendClass) {
 
         setJustifyContent(justifyContent: "flex-start" | "flex-end" | "center" | "space-between" | "space-around") {
             const mapping = {
-                "flex-start": YogaContext.JUSTIFY_FLEX_START,
-                "flex-end": YogaContext.JUSTIFY_FLEX_END,
-                "center": YogaContext.JUSTIFY_CENTER,
-                "space-between": YogaContext.JUSTIFY_SPACE_BETWEEN,
-                "space-around": YogaContext.JUSTIFY_SPACE_AROUND
+                "flex-start": this.yoga.JUSTIFY_FLEX_START,
+                "flex-end": this.yoga.JUSTIFY_FLEX_END,
+                "center": this.yoga.JUSTIFY_CENTER,
+                "space-between": this.yoga.JUSTIFY_SPACE_BETWEEN,
+                "space-around": this.yoga.JUSTIFY_SPACE_AROUND
             }
             this.node.setJustifyContent(mapping[justifyContent]);
         }
@@ -112,17 +136,17 @@ export function DisplayObject(extendClass) {
             const method = (this.node as any)[methodName].bind(this.node);
             if (size instanceof Array) {
                 if (size.length === 2) {
-                    method(YogaContext.EDGE_VERTICAL, size[0]);
-                    method(YogaContext.EDGE_HORIZONTAL, size[1]);
+                    method(this.yoga.EDGE_VERTICAL, size[0]);
+                    method(this.yoga.EDGE_HORIZONTAL, size[1]);
                 } else if (size.length === 4) {
-                    method(YogaContext.EDGE_TOP, size[0]);
-                    method(YogaContext.EDGE_RIGHT, size[1]);
-                    method(YogaContext.EDGE_BOTTOM, size[2]);
-                    method(YogaContext.EDGE_LEFT, size[3]);
+                    method(this.yoga.EDGE_TOP, size[0]);
+                    method(this.yoga.EDGE_RIGHT, size[1]);
+                    method(this.yoga.EDGE_BOTTOM, size[2]);
+                    method(this.yoga.EDGE_LEFT, size[3]);
                 }
             }
             else {
-                method(YogaContext.EDGE_ALL, size);
+                method(this.yoga.EDGE_ALL, size);
             }
         }
 
@@ -131,11 +155,11 @@ export function DisplayObject(extendClass) {
         }
 
         setX(x: number) {
-            this.node.setPosition(YogaContext.EDGE_LEFT, x);
+            this.node.setPosition(this.yoga.EDGE_LEFT, x);
         }
 
         setY(y: number) {
-            this.node.setPosition(YogaContext.EDGE_TOP, y);
+            this.node.setPosition(this.yoga.EDGE_TOP, y);
         }
 
         setPadding(padding: EdgeSize) {
@@ -152,8 +176,8 @@ export function DisplayObject(extendClass) {
 
         setPositionType(positionType: "relative" | "absolute") {
             const mapping = {
-                relative: YogaContext.POSITION_TYPE_RELATIVE,
-                absolute: YogaContext.POSITION_TYPE_ABSOLUTE
+                relative: this.yoga.POSITION_TYPE_RELATIVE,
+                absolute: this.yoga.POSITION_TYPE_ABSOLUTE
             }
             this.node.setPositionType(mapping[positionType]);
         }

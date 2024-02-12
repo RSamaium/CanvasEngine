@@ -1,6 +1,6 @@
 import Stats from 'stats.js'
 import { computed, signal } from './packages/engine/signal';
-import { cond, h, loop, render } from './packages';
+import { Canvas, Container, cond, h, isPrimitive, loop } from './packages';
 import { animate } from "popmotion"
 
 
@@ -12,12 +12,19 @@ const sprites = signal([
 const bool = signal(true)
 const color = signal('#00ff00')
 
+const useProps = (props): any => {
+    const obj = {}
+    for (let key in props) {
+        const value = props[key]
+        obj[key] = isPrimitive(value) ? signal(value) : value
+    }
+    return obj
+}
 
-
-function Rectangle({ color, x }) {
+function Rectangle(props) {
+    const { color } = useProps(props)
     return h('Graphic', {
         color,
-        x,
         click: () => {
             animate({
                 from: color(), to: '#0000ff',
@@ -36,10 +43,16 @@ function Rectangle({ color, x }) {
     })
 }
 
-render(
-    h('Canvas', {
-        children: [
-            Rectangle({ color, x })
-        ]
-    })
-)
+Canvas({
+    width: 600,
+    height: 300,
+    children: [
+        Container({
+            flexDirection: 'row',
+            children: [
+                Rectangle({ color }),
+                Rectangle({ color: '#ff0000' })
+            ]
+        })
+    ]
+})

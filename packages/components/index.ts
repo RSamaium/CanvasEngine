@@ -1,2 +1,3 @@
-import './Canvas'
+export { Canvas } from './Canvas'
 import './Graphic'
+export { Container } from './Container'
