@@ -1,6 +1,7 @@
 import { Observable, Subject, Subscription, combineLatest, map } from 'rxjs';
 import { Signal, isSignal, signal } from './signal';
 import { ComponentInstance } from '../components/DisplayObject';
+import { Directive, applyDirective } from './directive';
 
 export interface Props {
     [key: string]: any;
@@ -11,15 +12,20 @@ type ElementObservable = Observable<{
     value: Element | Element[];
 }>;
 
-
 export interface Element<T = ComponentInstance> {
     tag: string;
     props: Props;
     componentInstance: T;
     propSubscriptions: Subscription[];
+    propObservables: {
+        [key: string]: Signal<any>;
+    } | undefined
     parent: Element | null;
     context?: {
         [key: string]: any;
+    },
+    directives: {
+        [key: string]: Directive;
     }
 }
 
@@ -38,6 +44,9 @@ function destroyElement(element: Element) {
         return
     }
     element.propSubscriptions.forEach(sub => sub.unsubscribe())
+    for (let name in element.directives) {
+        element.directives[name].onDestroy?.()
+    }
     element.componentInstance.onDestroy?.(element.parent as any)
 }
 
@@ -66,7 +75,9 @@ export function h(tag: string, props?: Props): Element {
         props: {},
         componentInstance: instance,
         propSubscriptions: [],
-        parent: null
+        propObservables: props,
+        parent: null,
+        directives: {}
     };
 
     // Iterate over each property in the props object
@@ -75,6 +86,9 @@ export function h(tag: string, props?: Props): Element {
             if (isSignal(value)) {
                 element.propSubscriptions.push(value.observable.subscribe((value) => {
                     element.props[key] = value
+                    if (element.directives[key]) {
+                        element.directives[key].onUpdate?.(value)
+                    }
                     instance.onUpdate?.({
                         [key]: value
                     }, element.props);
@@ -115,6 +129,11 @@ export function h(tag: string, props?: Props): Element {
         });
     }
 
+    const onMount = (parent, element) => {
+        element.props.context = parent.props.context
+        element.componentInstance.onMount?.(element)
+    }
+
     if (props?.context) {
         // propagate recrusively context in all children
         const propagateContext = (element) => {
@@ -122,26 +141,30 @@ export function h(tag: string, props?: Props): Element {
                 return
             }
             for (let child of element.props.children) {
-                if (Array.isArray(child)) {
-                    child.forEach(c => {
-                        if (c.inCache) {
-                            return
+                if (child instanceof Observable) {
+                    child.subscribe((array) => {
+                        for (let val of array.value) {
+                            onMount(element, val.inCache)
+                            propagateContext(val.inCache)
                         }
-                        c.props.context = element.props.context
-                        child.componentInstance.onContext?.(c)
-                        propagateContext(c)
                     })
                 }
                 else {
-                    child.props.context = element.props.context
-                    child.componentInstance.onContext?.(child)
+                    onMount(element, child)
                     propagateContext(child)
                 }
             }
         }
 
-        element.componentInstance.onContext?.(element)
+        element.componentInstance.onMount?.(element)
         propagateContext(element)
+    }
+
+    if (props) {
+        for (let key in props) {
+            const directive = applyDirective(element, key)
+            if (directive) element.directives[key] = directive
+        }
     }
 
     // Return the created element representation
@@ -155,7 +178,7 @@ export function h(tag: string, props?: Props): Element {
     * @param {Function} createElementFn - A function that takes an item and returns an element representation.
     * @returns {Observable} An observable that emits the list of created child elements.
     */
-export function loop(itemsSubject: Signal<any[]>, createElementFn): ElementObservable {
+export function loop(itemsSubject: Signal<any[]>, createElementFn: (item: any) => Element): ElementObservable {
     const cacheKeys = {}
     return itemsSubject.observable.pipe(
         map(items => ({
@@ -164,13 +187,14 @@ export function loop(itemsSubject: Signal<any[]>, createElementFn): ElementObser
                 const key = item.key || index
                 if (cacheKeys[key]) {
                     return {
-                        inCache: true,
+                        inCache: cacheKeys[key],
                     }
                 }
-                cacheKeys[key] = true
-                return createElementFn(item)
+                const element = createElementFn(item)
+                cacheKeys[key] = element
+                return element
             })
-        })),
+        }))
     )
 }
 

@@ -7,7 +7,7 @@ export interface ComponentInstance {
     onUpdate?(props: Props): void;
     onDestroy?(parent: Element): void;
     onInsert?(parent?: Element | { context: any }): void;
-    onContext?(context: Element): void;
+    onMount?(context: Element): void;
 }
 
 export function DisplayObject(extendClass) {
@@ -15,12 +15,16 @@ export function DisplayObject(extendClass) {
         private context: {
             [key: string]: any
         } | null = null
-        private props: Props = {};
+        private isFlex: boolean = false;
 
         public node: Node;
 
         get yoga() {
             return this.context?.Yoga
+        }
+
+        get deltaRatio() {
+            return this.context?.scheduler?.tick.value.deltaRatio
         }
 
         onInit(props) {
@@ -30,30 +34,58 @@ export function DisplayObject(extendClass) {
             }
         }
 
-        onContext({ props }) {
+        onMount({ parent, props }) {
             this.context = props.context
             this.node = this.yoga.Node.create();
-            this.onUpdate(props)
-            if (this.parent) {
+            if (parent) {
+                const instance = parent.componentInstance
+                instance.addChild(this);
+                this.onUpdate(props)
                 this.parent.node.insertChild(this.node, this.parent.node.getChildCount());
+                if (parent.props.flexDirection) {
+                    this.parent.node.calculateLayout()
+                    for (let child of this.parent.children) {
+                        const { left, top } = child.node.getComputedLayout()
+                        child.x = left
+                        child.y = top
+                    }
+                }
             }
         }
 
-        onInsert(parent?: Element<DisplayObject>) {
-            if (!parent) {
-                return
+        private flexRender(props) {
+            if (!this.parent) return
+
+            // flex has changed, compute new layout
+            if (props.flexDirection || props.justifyContent) {
+                this.isFlex = true
+                this.node.calculateLayout()
+                for (let child of this.children) {
+                    const { left, top } = child.node.getComputedLayout()
+                    child.x = left
+                    child.y = top
+                }
             }
-            const instance = parent.componentInstance
-            instance.addChild(this);
+            
+           /* if () {
+                this.parent.node.calculateLayout()
+                for (let child of this.parent.children) {
+                    const { left, top } = child.node.getComputedLayout()
+                    child.x = left
+                    child.y = top
+                }
+            }*/
         }
 
         onUpdate(props) {
-            if (!this.context) return;
+            if (!this.context || !this.parent) return;
             if (props.x) this.setX(props.x)
             if (props.y) this.setY(props.y)
             if (props.width) this.setWidth(props.width)
             if (props.height) this.setHeight(props.height)
             if (props.flexDirection) this.setFlexDirection(props.flexDirection)
+            if (props.justifyContent) this.setJustifyContent(props.justifyContent)
+            this.flexRender(props)
         }
 
         onDestroy() {
@@ -155,10 +187,16 @@ export function DisplayObject(extendClass) {
         }
 
         setX(x: number) {
+            if (!this.parent.isFlex) {
+                this.x = x;
+            }
             this.node.setPosition(this.yoga.EDGE_LEFT, x);
         }
 
         setY(y: number) {
+            if (!this.parent.isFlex) {
+                this.y = y;
+            }
             this.node.setPosition(this.yoga.EDGE_TOP, y);
         }
 

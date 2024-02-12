@@ -1,8 +1,10 @@
-import * as Utils from './utils'
-import { BehaviorSubject, Observable } from 'rxjs';
+import * as Utils from '../engine/utils'
 import Stats from 'stats.js'
+import { Directive, registerDirective } from '../engine/directive';
+import { Element } from '../engine/reactive';
+import { WritableSignal, signal } from '../engine/signal';
 
-export class Scheduler {
+export class Scheduler extends Directive {
     private maxFps?: number
     private fps: number = 60
     private deltaTime: number = 0
@@ -11,21 +13,30 @@ export class Scheduler {
     private requestedDelay: number = 0
     private lastTimestamp: number = 0
     private _stop: boolean = false
+    private tick: WritableSignal<{
+        timestamp: number
+        deltaTime: number
+        frame: number
+        deltaRatio: number
+    } | null>
+    
     private stats = new Stats()
 
-    tick: BehaviorSubject<any> = new BehaviorSubject({
-        timestamp: 0,
-        deltaTime: 0,
-        frame: 0,
-        deltaRatio: 0
-    })
+    onInit(element: Element) { 
+        this.tick = element.propObservables?.tick as any
+        this.start()
+    }
+
+    onDestroy() { }
+    onMount(element: Element) { }
+    onUpdate(props: any) { }
 
     nextTick(timestamp: number) {
         this.lastTimestamp = this.lastTimestamp || this.timestamp // first
         this.deltaTime = Utils.preciseNow() - this.timestamp
         this.timestamp = timestamp
         this.stats.begin()
-        this.tick.next({
+        this.tick.set({
             timestamp: this.timestamp,
             deltaTime: this.deltaTime,
             frame: this.frame,
@@ -97,3 +108,5 @@ export class Scheduler {
         this._stop = true
     }
 }
+
+registerDirective('tick', Scheduler)

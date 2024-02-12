@@ -2,25 +2,27 @@ import { Container as PixiContainer, Renderer, autoDetectRenderer } from 'pixi.j
 import { DisplayObject } from './DisplayObject';
 import { Props, h, registerComponent } from '../engine/reactive';
 import { loadYoga } from 'yoga-layout';
-import { Scheduler } from '../engine/Scheduler';
+import { Scheduler } from '../directives/Scheduler';
+import { effect, signal } from '../engine/signal';
 
 registerComponent('Canvas', class Canvas extends DisplayObject(PixiContainer) { })
 
 export async function Canvas(props: Props) {
-    const scheduler = new Scheduler()
     const Yoga = await loadYoga()
-    const renderer = autoDetectRenderer()
+    const renderer = autoDetectRenderer(props)
     document.body.appendChild(renderer.view)
-    const canvasElement = h('Canvas', {
+    const options: any = {
         ...props,
         context: {
-            scheduler,
             Yoga
         },
-    })
-    const instance = canvasElement.componentInstance
-    scheduler.start()
-    scheduler.tick.subscribe(() => {
-        renderer.render(instance as any)
+    }
+    if (!props.tick) {
+        options.tick = signal(null)
+    }
+    const canvasElement = h('Canvas', options)
+    effect(() => {
+        canvasElement.propObservables.tick()
+        renderer.render(canvasElement.componentInstance as any)
     })
 }
