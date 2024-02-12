@@ -12,12 +12,24 @@ export function DisplayObject(extendClass) {
         //     return child;
         // }
 
+        onInit(props) {
+           if (props.click) {
+                this.eventMode = 'static';
+                this.on('click', props.click)
+           }
+        }
+
         onInsert(parent) {
             //this.node = YogaContext.Node.create();
             if (!parent) {
                 return
             }
             parent.addChild(this);
+        }
+
+        onUpdate(props) {
+            if (props.x) this.x = props.x
+            if (props.y) this.y = props.y
         }
 
         onDestroy() {

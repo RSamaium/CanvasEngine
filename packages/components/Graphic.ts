@@ -1,17 +1,19 @@
 import { Graphics } from 'pixi.js';
 import { DisplayObject } from './DisplayObject';
 import { registerComponent } from '../engine/reactive';
+import { effect } from '../engine/signal';
 
-registerComponent('Graphic', class CanvasGraphics extends DisplayObject(Graphics) {
+class CanvasGraphics extends DisplayObject(Graphics) {
     onInit(props) {
-        this.beginFill(0xFF0000)
-        this.drawRect(0, 0, 100, 100)
-        this.endFill()
+        super.onInit(props)
+        if (props.draw) {
+            effect(() => {
+                props.draw(this)
+            })
+        }
     }
+}
 
-    onUpdate(props) {
-        this.x = props.x ?? 0
-        this.y = props.y ?? 0
-        
-    }
-})
+interface CanvasGraphics extends Graphics { }
+
+registerComponent('Graphic', CanvasGraphics)

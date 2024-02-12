@@ -1,6 +1,8 @@
 import Stats from 'stats.js'
 import { computed, signal } from './packages/engine/signal';
 import { cond, h, loop, render } from './packages';
+import { animate } from "popmotion"
+
 
 const x = signal(100);
 const sprites = signal([
@@ -8,54 +10,36 @@ const sprites = signal([
     { x: 200, y: 100 },
 ])
 const bool = signal(true)
+const color = signal('#00ff00')
 
 
 
+function Rectangle({ color, x }) {
+    return h('Graphic', {
+        color,
+        x,
+        click: () => {
+            animate({
+                from: color(), to: '#0000ff',
+                onUpdate: latest => {
+                    color.set(latest)
+                }
+            })
 
-// const Game = engine.h('Container', {
-//     children: [
-//         engine.loop(sprites, (sprite) => {
-//             return engine.h('Rectangle', {
-//                 x: [(x) => x, [sprite.x]],
-//                 y: [(y) => y, [sprite.y]],
-//                 key: Math.random()
-//             })
-//         }),
-//         engine.h('Rectangle', {
-//             x: 100,
-//             y: 100,
-//             click
-//         })
-//         /*engine.cond(() => {
-//             return engine.h('Rectangle', {
-//                 x: [(x) => x, [x]],
-//                 y: [(y) => y, [y]],
-//                 click
-//             })
-//         }, ([bool]) => bool, [bool]),
-//         engine.cond(() => {
-//             return engine.h('Rectangle', {
-//                 x: 100,
-//                 y: 100,
-//                 click
-//             })
-//         }, ([bool]) => !bool, [bool])*/
-//     ]
-// });
-
+        },
+        draw: (g) => {
+            g.clear()
+            g.beginFill(color())
+            g.drawRect(0, 0, 100, 100)
+            g.endFill()
+        }
+    })
+}
 
 render(
     h('Canvas', {
         children: [
-            cond(bool, () => {
-                return h('Graphic', {
-                    color: 0xFF0000,
-                })
-            }),
+            Rectangle({ color, x })
         ]
     })
 )
-
-setInterval(() => {
-    //sprites()[0].x++
-}, 2000)

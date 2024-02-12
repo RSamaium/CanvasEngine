@@ -65,51 +65,10 @@ export function computed<T = any>(computeFunction: () => T): ComputedSignal<T> {
     return fn
 }
 
-export function effect(effectFunction) {
-    let dependencies = new Set(); 
-
-    const executeEffect = () => {
-
-        let newDependencies = new Set();
-
-
-        currentDependencyTracker = (signal) => {
-            newDependencies.add(signal);
-            if (!dependencies.has(signal)) {
-                
-                signal.observable.subscribe(() => {
-                    executeEffect();
-                });
-            }
-        };
-
-        effectFunction()
-
-
-        dependencies.forEach(dep => {
-            if (!newDependencies.has(dep)) {
-                
-            }
-        });
-
-
-        dependencies = newDependencies;
-
-        currentDependencyTracker = null;
-    };
-
-
-    executeEffect();
+export function effect(fn: () => void) {
+    return computed(fn);
 }
 
 export function isSignal(value) {
     return value && value.observable
 }
-
-const count = signal(1);
-
-effect(() => {
-    console.log(`La valeur actuelle de count est ${count()}`);
-});
-
-count.set(2); 

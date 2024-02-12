@@ -23,7 +23,7 @@ interface Element {
     tag: string;
     props: Props;
     componentInstance: ComponentInstance;
-    reactive: Subscription | null;
+    propSubscriptions: Subscription[];
     parent: Element | null;
     context?: {
         [key: string]: any;
@@ -40,7 +40,7 @@ function destroyElement(element: Element) {
     if (!element) {
         return
     }
-    element.reactive?.unsubscribe()
+    element.propSubscriptions.forEach(sub => sub.unsubscribe())
     element.componentInstance.onDestroy?.(element.parent as any)
 }
 
@@ -65,27 +65,25 @@ export function h(tag: string, props?: Props): Element {
         throw new Error(`Component ${tag} is not registered`)
     }
     const instance = new components[tag]();
-    const element = {
+    const element: Element = {
         tag,
         props: {},
         componentInstance: instance,
-        reactive: (null as unknown as Subscription),
+        propSubscriptions: [],
         parent: null
     };
-
-    const reactiveAllProps: Observable<any>[] = []
 
     // Iterate over each property in the props object
     if (props) {
         Object.entries(props).forEach(([key, value]: [string, Signal]) => {
             if (isSignal(value)) {
-                reactiveAllProps.push(
-                    value.observable.pipe(
-                        map(value => {
-                            element.props[key] = value
-                        })
-                    )
-                )
+                element.propSubscriptions.push(value.observable.subscribe((value) => {
+                    element.props[key] = value
+                    instance.onUpdate?.({
+                        [key]: value
+                    }, element.props);
+                }))
+
             } else {
                 element.props[key] = value;
             }
@@ -93,11 +91,6 @@ export function h(tag: string, props?: Props): Element {
     }
 
     instance.onInit?.(element.props);
-
-    element.reactive = combineLatest(reactiveAllProps).subscribe((propsChanged) => {
-        instance.onUpdate?.(element.props);
-    })
-
     instance.onUpdate?.(element.props);
 
     if (props?.children) {
