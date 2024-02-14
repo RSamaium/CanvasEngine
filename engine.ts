@@ -14,7 +14,7 @@ function getRandomColor() {
 }
 
 const sprites = signal(Array(10).fill(0).map((_, i) => {
-    return { color: getRandomColor(), y: i * 10, key: Math.random() }
+    return { color: getRandomColor(), y: i * 10 }
 }))
 
 const bool = signal(true)
@@ -106,15 +106,26 @@ function RectangeSprite(props) {
         color: getRandomColor(),
         x: props.x,
         y: props.y,
+        key: props.index
     })
 }
+
+
+
 
 h(Canvas, {
     width: 800,
     height: 600
 },
-    loop(sprites, (sprite) => h(RectangeSprite, sprite)),
-    h(Rectangle, { color, width: 100, height: 100, x: 100, y: 100, click: () => {
-        sprites().push({ x: 100, y: 100 })
-    } })
+    h(Rectangle, {
+        color, width: 100, height: 100, x: 100, y: 100, click: () => {
+            sprites().shift()
+            bool.update(bool => !bool)
+        }
+    }),
+    loop(sprites, (sprite, index) => h(RectangeSprite, {
+        index,
+        ...sprite
+    })),
+    cond(bool, () => h(MoveableRectangle, { x: 100, y: 100 })),
 )

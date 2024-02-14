@@ -1,12 +1,20 @@
 import { BehaviorSubject, Observable, Subscription, combineLatest, finalize, map } from 'rxjs';
 import type { Element } from './reactive';
-import { ArraySubject } from './ArraySubject';
+import { ArrayChange, ArraySubject } from './ArraySubject';
 
 export interface WritableSignal<T = any> {
     (): T;
     set(value: T): void;
     update(updateFn: (value: T) => T): void;
     observable: Observable<T>;
+}
+
+export interface WritableArraySignal<T = any> {
+    (): T;
+    set(value: T): void;
+    update(updateFn: (value: T) => T): void;
+    observable: Observable<ArrayChange<T>>;
+    _subject: ArraySubject<T>;
 }
 
 export interface ComputedSignal<T = any> {
@@ -29,7 +37,11 @@ const trackDependency = (signal) => {
     }
 };
 
-export function signal<T = any>(defaultValue: T): WritableSignal<T> {
+export function signal<T extends any[]>(defaultValue: T): WritableArraySignal<T>;
+export function signal<T>(defaultValue: T): WritableSignal<T>;
+export function signal<T = any>(
+    defaultValue: T
+  ): T extends Array<any> ? WritableArraySignal<T> : WritableSignal<T> {
     let subject
     if (Array.isArray(defaultValue)) {
         subject = new ArraySubject(defaultValue)
@@ -44,10 +56,17 @@ export function signal<T = any>(defaultValue: T): WritableSignal<T> {
         }
         return subject.value;
     };
-    fn.set = (value) => subject.next(value);
-    fn.update = (updateFn) => subject.next(updateFn(subject.value));
+    fn.set = (value) => {
+        if (subject instanceof ArraySubject) {
+            subject.items = value;
+            return 
+        }
+        subject.next(value);
+    }
+    fn.update = (updateFn) => fn.set(updateFn(subject.value));
     fn.observable = subject.asObservable();
-    return fn;
+    fn._subject = subject;
+    return fn as any;
 }
 
 export function computed<T = any>(computeFunction: () => T, disposableFn?: () => void): ComputedSignal<T> {

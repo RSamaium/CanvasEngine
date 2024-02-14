@@ -1,8 +1,8 @@
 import { BehaviorSubject } from 'rxjs';
 
-type ArrayChange<T> = {
+export type ArrayChange<T> = {
   type: 'add' | 'remove' | 'update' | 'init';
-  index: number | null; // Index concerned by the change, null for bulk updates
+  index?: number;
   items: T[];
 };
 
@@ -14,8 +14,11 @@ export class ArraySubject<T> extends BehaviorSubject<ArrayChange<T>> {
   private _items: T[] = [];
 
   constructor(items: T[] = []) {
-    super({ type: 'init', index: null, items }); // Initial dummy emission
+    super({ type: 'init', items }); // Initial dummy emission
+    this.createProxy(items);
+  }
 
+  private createProxy(items) {
     this._items = new Proxy(items, {
       get: (target, prop, receiver) => {
         const origMethod = target[prop];
@@ -23,7 +26,7 @@ export class ArraySubject<T> extends BehaviorSubject<ArrayChange<T>> {
         if (typeof origMethod === 'function') {
           return (...args) => {
             let changeType: 'add' | 'remove' | 'update' = 'update';
-            let index: number | null = null;
+            let index: number | undefined = undefined;
 
             switch (prop) {
               case 'push':
@@ -46,9 +49,6 @@ export class ArraySubject<T> extends BehaviorSubject<ArrayChange<T>> {
                 index = args[0];
                 changeType = args.length > 2 ? 'add' : 'remove';
                 break;
-              default:
-                index = null; // Bulk update or non-standard operation
-                break;
             }
 
             const result = origMethod.apply(target, args);
@@ -62,19 +62,21 @@ export class ArraySubject<T> extends BehaviorSubject<ArrayChange<T>> {
         return Reflect.get(target, prop, receiver);
       },
       set: (target, prop, value) => {
-        const index = !isNaN(Number(prop)) ? Number(prop) : null;
+        const index = !isNaN(Number(prop)) ? Number(prop) : undefined;
         target[prop] = value;
         this.next({ type: 'update', index, items: [value] });
         return true; // Indicate success
       }
     });
   }
+
+
   get items(): T[] {
     return this._items;
   }
 
   set items(newItems: T[]) {
-    this._items = new Proxy(newItems, this._items);
+    this.createProxy(newItems);
     this.next({ type: 'init', items: newItems });
   }
 }

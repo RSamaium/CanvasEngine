@@ -6,8 +6,7 @@ export interface ComponentInstance {
     onInit?(props: Props): void;
     onUpdate?(props: Props): void;
     onDestroy?(parent: Element): void;
-    onInsert?(parent?: Element | { context: any }): void;
-    onMount?(context: Element): void;
+    onMount?(context: Element, index?: number): void;
 }
 
 export function DisplayObject(extendClass) {
@@ -34,12 +33,17 @@ export function DisplayObject(extendClass) {
             }
         }
 
-        onMount({ parent, props }) {
+        onMount({ parent, props }: Element<DisplayObject>, index?: number) {
             this.context = props.context
             this.node = this.yoga.Node.create();
             if (parent) {
-                const instance = parent.componentInstance
-                instance.addChild(this);
+                const instance = parent.componentInstance as DisplayObject
+                if (index !== undefined) {
+                    instance.addChild(this);
+                }
+                else {
+                    instance.addChildAt(this, index);
+                }
                 this.onUpdate(props)
                 this.parent.node.insertChild(this.node, this.parent.node.getChildCount());
                 if (parent.props.flexDirection) {

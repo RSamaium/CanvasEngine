@@ -1,16 +1,15 @@
 import { Observable, Subject, Subscription, combineLatest, map } from 'rxjs';
-import { Signal, isSignal, signal } from './signal';
+import { Signal, WritableArraySignal, WritableSignal, isSignal, signal } from './signal';
 import { ComponentInstance } from '../components/DisplayObject';
 import { Directive, applyDirective } from './directive';
-import { ArraySubject } from './ArraySubject';
+import { type ArrayChange, ArraySubject } from './ArraySubject';
 
 export interface Props {
     [key: string]: any;
 }
 
-type ElementObservable = Observable<{
-    destroyed: boolean;
-    value: Element | Element[];
+type ElementObservable<T> = Observable<ArrayChange<T> & {
+    value: Element | Element[]
 }>;
 
 export interface Element<T = ComponentInstance> {
@@ -20,7 +19,7 @@ export interface Element<T = ComponentInstance> {
     propSubscriptions: Subscription[];
     effectSubscriptions: Subscription[];
     effectMounts: (() => void)[];
-    effectUnmounts: (() => void)[];
+    effectUnmounts: ((element?: Element) => void)[];
     propObservables: {
         [key: string]: Signal<any>;
     } | undefined
@@ -32,6 +31,11 @@ export interface Element<T = ComponentInstance> {
         [key: string]: Directive;
     }
 }
+
+type FlowObservable = Observable<{
+    elements: Element[]
+    prev?: Element
+}>
 
 const components: { [key: string]: any } = {}
 
@@ -108,11 +112,11 @@ export function createComponent(tag: string, props?: Props): Element {
     instance.onInit?.(element.props);
     instance.onUpdate?.(element.props);
 
-    const onMount = (parent, element) => {
+    const onMount = (parent: Element, element: Element, index?: number) => {
         element.props.context = parent.props.context
         element.parent = parent
-        element.componentInstance.onMount?.(element)
-        element.effectMounts.forEach(fn => {
+        element.componentInstance.onMount?.(element, index)
+        element.effectMounts.forEach((fn: any) => {
             element.effectUnmounts.push(fn(element))
         })
     }
@@ -125,23 +129,20 @@ export function createComponent(tag: string, props?: Props): Element {
             }
             for (let child of element.props.children) {
                 if (child instanceof Observable) {
-                    child.subscribe(({ destroyed, value: comp }) => {
-                        if (destroyed) {
-                            destroyElement(comp)
-                            return
-                        }
-                        if (Array.isArray(comp)) {
+                    child.subscribe(({ elements: comp, prev }: { elements: Element[], prev?: Element }) => {
+                        // if prev, insert element after this
+                        if (prev) {
                             comp.forEach(c => {
-                                if (c.inCache) {
-                                    return
-                                }
-                                onMount(element, c)
+                                const index = element.props.children.indexOf(prev.props.key)
+                                onMount(element, c, index + 1)
                                 propagateContext(c)
                             })
                             return
                         }
-                        onMount(element, comp)
-                        propagateContext(comp)
+                        comp.forEach(c => {
+                            onMount(element, c)
+                            propagateContext(c)
+                        })
                     })
                 }
                 else {
@@ -173,28 +174,59 @@ export function createComponent(tag: string, props?: Props): Element {
     * @param {Function} createElementFn - A function that takes an item and returns an element representation.
     * @returns {Observable} An observable that emits the list of created child elements.
     */
-export function loop(itemsSubject: Signal<any[]>, createElementFn: (item: any) => Element): ElementObservable {
-    const cacheKeys = {}
+export function loop<T = any>(itemsSubject: WritableArraySignal<T>, createElementFn: (item: any, index: number) => Element): FlowObservable {
+    let elements: Element[] = []
+    let initialItems = [...itemsSubject._subject.items]
+
+    const addAt = (items, insertIndex: number) => {
+        return items.map((item, index) => {
+            const element = createElementFn(item, insertIndex + index)
+            elements.splice(insertIndex + index, 0, element)
+            return element
+        })
+    }
+
     return itemsSubject.observable.pipe(
-       map(event => ({
-            destroyed: false,
-            value: event.items.map((item, index) => {
-                const key = item.key || index
-                if (cacheKeys[key]) {
-                    return {
-                        inCache: cacheKeys[key],
-                    }
+        map((event: ArrayChange<T>) => {
+            const { type, items, index } = event
+            if (type == 'init' || initialItems.length > 0) {
+                if (elements.length! = 0) {
+                    elements.forEach((element) => {
+                        destroyElement(element)
+                    })
+                    elements = []
                 }
-                const element = createElementFn(item)
-                cacheKeys[key] = element
-                return element
-            })
-        }))
+                const newElements = addAt(initialItems, 0)
+                initialItems = []
+                return {
+                    elements: newElements
+                }
+            }
+            else if (type == 'add' && index != undefined) {
+                const lastElement = elements[index - 1]
+                const newElements = addAt(items, index)
+                return {
+                    prev: lastElement,
+                    elements: newElements
+                }
+            }
+            else if (index != undefined && type == 'remove') {
+                const currentElement = elements[index]
+                destroyElement(currentElement)
+                elements.splice(index, 1)
+                return {
+                    elements: []
+                }
+            }
+            return {
+                elements: []
+            }
+        })
     )
 }
 
-export function cond(condition: Signal, createElementFn) {
-    let element = null
+export function cond(condition: Signal, createElementFn: () => Element): FlowObservable {
+    let element: Element | null = null
     return condition.observable
         .pipe(
             map((bool) => {
@@ -202,15 +234,15 @@ export function cond(condition: Signal, createElementFn) {
                     const _el = createElementFn()
                     element = _el
                     return {
-                        destroyed: false,
-                        value: _el
+                        type: 'init',
+                        elements: [element]
                     }
                 }
-                else {
-                    return {
-                        destroyed: true,
-                        value: element
-                    }
+                else if (element) {
+                    destroyElement(element)
+                }
+                return {
+                    elements: []
                 }
             })
         )
