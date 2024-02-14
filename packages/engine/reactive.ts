@@ -2,6 +2,7 @@ import { Observable, Subject, Subscription, combineLatest, map } from 'rxjs';
 import { Signal, isSignal, signal } from './signal';
 import { ComponentInstance } from '../components/DisplayObject';
 import { Directive, applyDirective } from './directive';
+import { ArraySubject } from './ArraySubject';
 
 export interface Props {
     [key: string]: any;
@@ -175,9 +176,9 @@ export function createComponent(tag: string, props?: Props): Element {
 export function loop(itemsSubject: Signal<any[]>, createElementFn: (item: any) => Element): ElementObservable {
     const cacheKeys = {}
     return itemsSubject.observable.pipe(
-        map(items => ({
+       map(event => ({
             destroyed: false,
-            value: items.map((item, index) => {
+            value: event.items.map((item, index) => {
                 const key = item.key || index
                 if (cacheKeys[key]) {
                     return {

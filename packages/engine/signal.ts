@@ -1,5 +1,6 @@
 import { BehaviorSubject, Observable, Subscription, combineLatest, finalize, map } from 'rxjs';
-import { Element } from './reactive';
+import type { Element } from './reactive';
+import { ArraySubject } from './ArraySubject';
 
 export interface WritableSignal<T = any> {
     (): T;
@@ -29,9 +30,18 @@ const trackDependency = (signal) => {
 };
 
 export function signal<T = any>(defaultValue: T): WritableSignal<T> {
-    const subject = new BehaviorSubject(defaultValue);
+    let subject
+    if (Array.isArray(defaultValue)) {
+        subject = new ArraySubject(defaultValue)
+    }
+    else {
+        subject = new BehaviorSubject(defaultValue);
+    }
     const fn = function () {
         trackDependency(fn);
+        if (subject instanceof ArraySubject) {
+            return subject.items;
+        }
         return subject.value;
     };
     fn.set = (value) => subject.next(value);

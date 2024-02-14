@@ -13,16 +13,14 @@ function getRandomColor() {
     return color;
 }
 
-const sprites = signal(Array(1).fill(0).map((_, i) => {
-    return { color: getRandomColor(), y: i * 10 }
+const sprites = signal(Array(10).fill(0).map((_, i) => {
+    return { color: getRandomColor(), y: i * 10, key: Math.random() }
 }))
 
 const bool = signal(true)
 const color = signal('#00ff00')
 const flexDirection = signal('row')
 const tick = signal(null)
-
-
 
 const useProps = (props): any => {
     const obj = {}
@@ -52,14 +50,12 @@ function MoveableRectangle(props) {
     const y = signal(0)
     const double = computed(() => x() * 2)
 
-    console.log(props)
-
-    mount((element) => {
-        console.log(element)
-        return () => {
-            console.log('unmount')
-        }
-    })
+    // mount((element) => {
+    //     console.log(element)
+    //     return () => {
+    //         console.log('unmount')
+    //     }
+    // })
 
     // effect(() => {
     //     console.log('mount', double())
@@ -103,12 +99,22 @@ function MoveableRectangle(props) {
     return Rectangle({ color: getRandomColor(), width: 100, height: 100, y, x, controls })
 }
 
+function RectangeSprite(props) {
+    return h(Rectangle, {
+        width: 10,
+        height: 10,
+        color: getRandomColor(),
+        x: props.x,
+        y: props.y,
+    })
+}
+
 h(Canvas, {
     width: 800,
     height: 600
 },
-    cond(bool, () => h(MoveableRectangle)),
-    Rectangle({ color: color, width: 100, height: 100, y: 100, x: 100, click: () => {
-        bool.update(bool => !bool)
-    } }),
+    loop(sprites, (sprite) => h(RectangeSprite, sprite)),
+    h(Rectangle, { color, width: 100, height: 100, x: 100, y: 100, click: () => {
+        sprites().push({ x: 100, y: 100 })
+    } })
 )
