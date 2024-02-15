@@ -2,17 +2,18 @@ import { BehaviorSubject, Observable, Subscription, combineLatest, finalize, map
 import type { Element } from './reactive';
 import { ArrayChange, ArraySubject } from './ArraySubject';
 
-export interface WritableSignal<T = any> {
+interface BaseWritableSignal<T = any> {
     (): T;
     set(value: T): void;
+    mutate(mutateFn: (value: T) => void): void;
     update(updateFn: (value: T) => T): void;
+}
+
+export interface WritableSignal<T = any> extends BaseWritableSignal<T> {
     observable: Observable<T>;
 }
 
-export interface WritableArraySignal<T = any> {
-    (): T;
-    set(value: T): void;
-    update(updateFn: (value: T) => T): void;
+export interface WritableArraySignal<T = any> extends BaseWritableSignal<T> {
     observable: Observable<ArrayChange<T>>;
     _subject: ArraySubject<T>;
 }
@@ -49,12 +50,15 @@ export function signal<T = any>(
     else {
         subject = new BehaviorSubject(defaultValue);
     }
-    const fn = function () {
-        trackDependency(fn);
+    const getValue = () => {
         if (subject instanceof ArraySubject) {
             return subject.items;
         }
         return subject.value;
+    }
+    const fn = function () {
+        trackDependency(fn);
+        return getValue()
     };
     fn.set = (value) => {
         if (subject instanceof ArraySubject) {
@@ -62,6 +66,11 @@ export function signal<T = any>(
             return 
         }
         subject.next(value);
+    }
+    fn.mutate = (mutateFn) => {
+        const value = getValue()
+        mutateFn(value)
+        fn.set(value)
     }
     fn.update = (updateFn) => fn.set(updateFn(subject.value));
     fn.observable = subject.asObservable();

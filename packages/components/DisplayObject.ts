@@ -11,7 +11,7 @@ export interface ComponentInstance {
 
 export function DisplayObject(extendClass) {
     return class DisplayObject extends extendClass {
-        private context: {
+        private _context: {
             [key: string]: any
         } | null = null
         private isFlex: boolean = false;
@@ -19,11 +19,11 @@ export function DisplayObject(extendClass) {
         public node: Node;
 
         get yoga() {
-            return this.context?.Yoga
+            return this._context?.Yoga
         }
 
         get deltaRatio() {
-            return this.context?.scheduler?.tick.value.deltaRatio
+            return this._context?.scheduler?.tick.value.deltaRatio
         }
 
         onInit(props) {
@@ -34,7 +34,7 @@ export function DisplayObject(extendClass) {
         }
 
         onMount({ parent, props }: Element<DisplayObject>, index?: number) {
-            this.context = props.context
+            this._context = props.context
             this.node = this.yoga.Node.create();
             if (parent) {
                 const instance = parent.componentInstance as DisplayObject
@@ -82,12 +82,15 @@ export function DisplayObject(extendClass) {
         }
 
         onUpdate(props) {
-            if (!this.context || !this.parent) return;
+            if (!this._context || !this.parent) return;
             if (props.x) this.setX(props.x)
             if (props.y) this.setY(props.y)
             if (props.width) this.setWidth(props.width)
             if (props.height) this.setHeight(props.height)
             if (props.scale) this.scale.set(props.scale)
+            if (props.anchor) this.anchor.set(props.anchor)
+            if (props.tint) this.tint = props.tint
+            if (props.rotation) this.rotation = props.rotation
             if (props.flexDirection) this.setFlexDirection(props.flexDirection)
             if (props.justifyContent) this.setJustifyContent(props.justifyContent)
             this.flexRender(props)

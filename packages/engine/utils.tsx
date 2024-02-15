@@ -67,3 +67,7 @@ export function get(obj, path) {
 
     return current;
 }
+
+export function log(text) {
+    console.log(text)
+}

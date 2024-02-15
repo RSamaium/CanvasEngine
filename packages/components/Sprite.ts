@@ -106,7 +106,6 @@ class CanvasSprite extends DisplayObject(PixiSprite) {
         const { props } = params
         const tick: Signal = props.context.tick
         const sheet = props.sheet
-        console.log(sheet)
         if (sheet.onFinish) {
             this.onFinish = sheet.onFinish
         }
@@ -119,6 +118,7 @@ class CanvasSprite extends DisplayObject(PixiSprite) {
     }
 
     onUpdate(props) {
+        super.onUpdate(props)
         const sheet = props.sheet
         if (props.sheet?.definition) {
             this.spritesheet = props.sheet.definition

@@ -7,14 +7,16 @@ import { effect, signal } from '../engine/signal';
 
 registerComponent('Canvas', class Canvas extends DisplayObject(PixiContainer) { })
 
-export async function Canvas(props: Props) {
+export async function Canvas(props: Props = {}) {
     const Yoga = await loadYoga()
     const renderer = autoDetectRenderer(props)
     document.body.appendChild(renderer.view)
+    props.isRoot = true
     const options: any = {
         ...props,
         context: {
-            Yoga
+            Yoga,
+            renderer
         },
     }
     if (!props.tick) {

@@ -1,5 +1,5 @@
 import Stats from 'stats.js'
-import { Canvas, Container, cond, createComponent, isPrimitive, loop, h, computed, signal, effect, Graphics, mount, Scene, Sprite } from './packages';
+import { Canvas, Text, Container, cond, createComponent, isPrimitive, loop, h, computed, signal, effect, Graphics, mount, Scene, Sprite, ParticlesEmitter, Viewport } from './packages';
 import { animate } from "popmotion"
 
 
@@ -97,7 +97,7 @@ function MoveableRectangle(props) {
         }
     })
 
-    return Rectangle({ color: getRandomColor(), width: 100, height: 100, y, x, controls })
+    return Rectangle({ color: getRandomColor(), width: 100, height: 100, y, x, controls, viewportFollow: props.viewportFollow })
 }
 
 function RectangeSprite(props) {
@@ -115,8 +115,8 @@ const to = () => {
     const array: any = []
     let k = 0
     const durationFrame = 5
-    for (let i=0 ; i < 4 ; i++) {
-        for (let j=0 ; j < 5 ; j++) {
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 5; j++) {
             array.push({ time: k * durationFrame, frameX: j, frameY: i })
             k++
         }
@@ -137,34 +137,147 @@ const spritesheet = signal({
     anchor: [0.5],
     textures: {
         default: {
-            animations: [ to() ]
+            animations: [to()]
         }
     }
 })
 
+const config = {
+    "lifetime": {
+        "min": 4,
+        "max": 4
+    },
+    "ease": [
+        {
+            "s": 0,
+            "cp": 0.379,
+            "e": 0.548
+        },
+        {
+            "s": 0.548,
+            "cp": 0.717,
+            "e": 0.676
+        },
+        {
+            "s": 0.676,
+            "cp": 0.635,
+            "e": 1
+        }
+    ],
+    "frequency": 0.004,
+    "emitterLifetime": 0,
+    "maxParticles": 10000,
+    "addAtBack": false,
+    "pos": {
+        "x": 0,
+        "y": 0
+    },
+    "behaviors": [
+        {
+            "type": "alpha",
+            "config": {
+                "alpha": {
+                    "list": [
+                        {
+                            "time": 0,
+                            "value": 0.73
+                        },
+                        {
+                            "time": 1,
+                            "value": 0.46
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "moveSpeedStatic",
+            "config": {
+                "min": 200,
+                "max": 200
+            }
+        },
+        {
+            "type": "scale",
+            "config": {
+                "scale": {
+                    "list": [
+                        {
+                            "time": 0,
+                            "value": 0.15
+                        },
+                        {
+                            "time": 1,
+                            "value": 0.2
+                        }
+                    ]
+                },
+                "minMult": 0.5
+            }
+        },
+        {
+            "type": "rotation",
+            "config": {
+                "accel": 0,
+                "minSpeed": 0,
+                "maxSpeed": 200,
+                "minStart": 50,
+                "maxStart": 70
+            }
+        },
+        {
+            "type": "textureRandom",
+            "config": {
+                "textures": [
+                    "Snow100.png"
+                ]
+            }
+        },
+        {
+            "type": "spawnShape",
+            "config": {
+                "type": "rect",
+                "data": {
+                    "x": -500,
+                    "y": -300,
+                    "w": 900,
+                    "h": 20
+                }
+            }
+        }
+    ]
+}
+
+const fontSize = signal(36)
+const text = signal('Hello World')
 
 h(Canvas, {
     width: 800,
     height: 600
 },
-    loop(sprites, (sprite) => {
-        return h(Sprite, {
-            sheet: {
-                definition: spritesheet,
-                playing: 'default',
-                onFinish: () => {
-                    console.log('finish')
-                }
-            },
-            x,
-            y: sprite.y
-        })
-    }),
-    h(Rectangle, {
-        color, width: 100, height: 100, x: 100, y: 100, click: () => {
-           
+    /*h(Sprite, {
+        sheet: {
+            definition: spritesheet,
+            playing: 'default',
+            onFinish: () => {
+                console.log('finish')
+            }
+        },
+        x: 200,
+        y: 200
+    }),*/
+    h(Viewport, {
+        clamp: {
+            direction: 'all'
         }
-    })
+    },
+        h(MoveableRectangle, {
+            color, width: 100, height: 100, x: 100, y: 100, viewportFollow: true, click: () => {
+                fontSize.set(10)
+            }
+        })
+    )
+
     /*h(Rectangle, {
         color, width: 100, height: 100, x: 100, y: 100, click: () => {
             sprites().shift()

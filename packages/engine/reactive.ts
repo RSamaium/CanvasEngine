@@ -101,7 +101,7 @@ export function createComponent(tag: string, props?: Props): Element {
                 }
                 set(element.props, path + '.' + key, value)
             }
-
+            
             Object.entries(props).forEach(([key, value]: [string, Signal]) => {
                 if (isSignal(value)) {
                     element.propSubscriptions.push(value.observable.subscribe((value) => {
@@ -109,9 +109,9 @@ export function createComponent(tag: string, props?: Props): Element {
                         if (element.directives[key]) {
                             element.directives[key].onUpdate?.(value)
                         }
-                        instance.onUpdate?.({
+                        instance.onUpdate?.(path == '' ? {
                             [key]: value
-                        }, element.props);
+                        } : set({}, path + '.' + key, value))
                     }))
                 }
                 else {
@@ -134,12 +134,15 @@ export function createComponent(tag: string, props?: Props): Element {
         element.props.context = parent.props.context
         element.parent = parent
         element.componentInstance.onMount?.(element, index)
+        for (let name in element.directives) {
+            element.directives[name].onMount?.(element)
+        }
         element.effectMounts.forEach((fn: any) => {
             element.effectUnmounts.push(fn(element))
         })
     }
 
-    if (props?.context) {
+    if (props?.isRoot) {
         // propagate recrusively context in all children
         const propagateContext = async (element) => {
             if (!element.props.children) {
@@ -195,14 +198,14 @@ export function createComponent(tag: string, props?: Props): Element {
     * @param {Function} createElementFn - A function that takes an item and returns an element representation.
     * @returns {Observable} An observable that emits the list of created child elements.
     */
-export function loop<T = any>(itemsSubject: WritableArraySignal<T>, createElementFn: (item: any, index: number) => Element): FlowObservable {
+export function loop<T = any>(itemsSubject: WritableArraySignal<T>, createElementFn: (item: any, index: number) => Element | Promise<Element>): FlowObservable {
     let elements: Element[] = []
     let initialItems = [...itemsSubject._subject.items]
 
     const addAt = (items, insertIndex: number) => {
         return items.map((item, index) => {
             const element = createElementFn(item, insertIndex + index)
-            elements.splice(insertIndex + index, 0, element)
+            elements.splice(insertIndex + index, 0, element as Element)
             return element
         })
     }
