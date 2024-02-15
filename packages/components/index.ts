@@ -1,3 +1,5 @@
 export { Canvas } from './Canvas'
 export { Graphics } from './Graphic'
 export { Container } from './Container'
+export { Scene } from './Scene'
+export { Sprite } from './Sprite'

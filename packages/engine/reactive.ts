@@ -1,8 +1,9 @@
-import { Observable, Subject, Subscription, combineLatest, map } from 'rxjs';
+import { Observable, Subject, Subscription, combineLatest, from, map, of, switchMap } from 'rxjs';
 import { Signal, WritableArraySignal, WritableSignal, isSignal, signal } from './signal';
 import { ComponentInstance } from '../components/DisplayObject';
 import { Directive, applyDirective } from './directive';
 import { type ArrayChange, ArraySubject } from './ArraySubject';
+import { isPromise } from './utils';
 
 export interface Props {
     [key: string]: any;
@@ -123,11 +124,14 @@ export function createComponent(tag: string, props?: Props): Element {
 
     if (props?.context) {
         // propagate recrusively context in all children
-        const propagateContext = (element) => {
+        const propagateContext = async (element) => {
             if (!element.props.children) {
                 return
             }
             for (let child of element.props.children) {
+                if (isPromise(child)) {
+                    child = await child
+                }
                 if (child instanceof Observable) {
                     child.subscribe(({ elements: comp, prev }: { elements: Element[], prev?: Element }) => {
                         // if prev, insert element after this
@@ -147,7 +151,7 @@ export function createComponent(tag: string, props?: Props): Element {
                 }
                 else {
                     onMount(element, child)
-                    propagateContext(child)
+                    await propagateContext(child)
                 }
             }
         }
@@ -225,25 +229,38 @@ export function loop<T = any>(itemsSubject: WritableArraySignal<T>, createElemen
     )
 }
 
-export function cond(condition: Signal, createElementFn: () => Element): FlowObservable {
+export function cond(condition: Signal, createElementFn: () => Element | Promise<Element>): FlowObservable {
     let element: Element | null = null
     return condition.observable
         .pipe(
-            map((bool) => {
+            switchMap((bool) => {
                 if (bool) {
-                    const _el = createElementFn()
-                    element = _el
-                    return {
+                    let _el = createElementFn()
+                    if (isPromise(_el)) {
+                        return from(_el as Promise<Element>)
+                            .pipe(
+                                map((el) => {
+                                    element = _el as Element
+                                    return {
+                                        type: 'init',
+                                        elements: [el]
+                                    }
+                                })
+                            )
+
+                    }
+                    element = _el as Element
+                    return of({
                         type: 'init',
                         elements: [element]
-                    }
+                    })
                 }
                 else if (element) {
                     destroyElement(element)
                 }
-                return {
+                return of({
                     elements: []
-                }
+                })
             })
         )
 }

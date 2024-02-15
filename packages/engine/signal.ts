@@ -116,7 +116,7 @@ export function mount(fn: MountFunction) {
     mountTracker?.(fn);
 }
 
-export function h(componentFunction, props = {}, ...children) {
+export function h(componentFunction, props = {}, ...children): Element | Promise<Element> {
     const allSubscriptions = new Set<Subscription>();
     const allMounts = new Set<MountFunction>();
 

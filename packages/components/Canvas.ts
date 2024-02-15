@@ -18,11 +18,16 @@ export async function Canvas(props: Props) {
         },
     }
     if (!props.tick) {
-        options.tick = signal(null)
+        options.context.tick = options.tick = signal({
+            timestamp: 0,
+            deltaTime: 0,
+            frame: 0,
+            deltaRatio: 1
+        })
     }
     const canvasElement = createComponent('Canvas', options)
     effect(() => {
-        canvasElement.propObservables.tick()
+        canvasElement.propObservables!.tick()
         renderer.render(canvasElement.componentInstance as any)
     })
 }

@@ -1,5 +1,5 @@
 import Stats from 'stats.js'
-import { Canvas, Container, cond, createComponent, isPrimitive, loop, h, computed, signal, effect, Graphics, mount } from './packages';
+import { Canvas, Container, cond, createComponent, isPrimitive, loop, h, computed, signal, effect, Graphics, mount, Scene, Sprite } from './packages';
 import { animate } from "popmotion"
 
 
@@ -13,14 +13,15 @@ function getRandomColor() {
     return color;
 }
 
-const sprites = signal(Array(10).fill(0).map((_, i) => {
-    return { color: getRandomColor(), y: i * 10 }
+const sprites = signal(Array(1).fill(0).map((_, i) => {
+    return { color: getRandomColor(), x: 0, y: 100 }
 }))
 
 const bool = signal(true)
 const color = signal('#00ff00')
 const flexDirection = signal('row')
 const tick = signal(null)
+const x = signal(0)
 
 const useProps = (props): any => {
     const obj = {}
@@ -110,14 +111,61 @@ function RectangeSprite(props) {
     })
 }
 
+const to = () => {
+    const array: any = []
+    let k = 0
+    const durationFrame = 5
+    for (let i=0 ; i < 4 ; i++) {
+        for (let j=0 ; j < 5 ; j++) {
+            array.push({ time: k * durationFrame, frameX: j, frameY: i })
+            k++
+        }
+    }
+    // This last beat allows the last frame to be played, otherwise the animation ends abruptly at the last frame. This can be considered as the total animation time.
+    array.push({ time: k * durationFrame })
+    return array
+}
 
+const spritesheet = signal({
+    id: 'shield',
+    image: './animation.png',
+    framesWidth: 5,
+    framesHeight: 4,
+    width: 960,
+    height: 768,
+    opacity: 1,
+    anchor: [0.5],
+    textures: {
+        default: {
+            animations: [ to() ]
+        }
+    }
+})
 
 
 h(Canvas, {
     width: 800,
     height: 600
 },
+    loop(sprites, (sprite) => {
+        return h(Sprite, {
+            sheet: {
+                definition: spritesheet,
+                playing: 'default',
+                onFinish: () => {
+                    console.log('finish')
+                }
+            },
+            x,
+            y: sprite.y
+        })
+    }),
     h(Rectangle, {
+        color, width: 100, height: 100, x: 100, y: 100, click: () => {
+           
+        }
+    })
+    /*h(Rectangle, {
         color, width: 100, height: 100, x: 100, y: 100, click: () => {
             sprites().shift()
             bool.update(bool => !bool)
@@ -127,5 +175,6 @@ h(Canvas, {
         index,
         ...sprite
     })),
-    cond(bool, () => h(MoveableRectangle, { x: 100, y: 100 })),
+    ,*/
+    //cond(bool, () => lazy)
 )

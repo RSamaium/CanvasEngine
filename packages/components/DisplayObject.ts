@@ -70,15 +70,15 @@ export function DisplayObject(extendClass) {
                     child.y = top
                 }
             }
-            
-           /* if () {
-                this.parent.node.calculateLayout()
-                for (let child of this.parent.children) {
-                    const { left, top } = child.node.getComputedLayout()
-                    child.x = left
-                    child.y = top
-                }
-            }*/
+
+            /* if () {
+                 this.parent.node.calculateLayout()
+                 for (let child of this.parent.children) {
+                     const { left, top } = child.node.getComputedLayout()
+                     child.x = left
+                     child.y = top
+                 }
+             }*/
         }
 
         onUpdate(props) {
@@ -87,6 +87,7 @@ export function DisplayObject(extendClass) {
             if (props.y) this.setY(props.y)
             if (props.width) this.setWidth(props.width)
             if (props.height) this.setHeight(props.height)
+            if (props.scale) this.scale.set(props.scale)
             if (props.flexDirection) this.setFlexDirection(props.flexDirection)
             if (props.justifyContent) this.setJustifyContent(props.justifyContent)
             this.flexRender(props)
