@@ -91,6 +91,7 @@ export function DisplayObject(extendClass) {
             if (props.anchor) this.anchor.set(props.anchor)
             if (props.tint) this.tint = props.tint
             if (props.rotation) this.rotation = props.rotation
+            if (props.visible !== undefined) this.visible = props.visible
             if (props.flexDirection) this.setFlexDirection(props.flexDirection)
             if (props.justifyContent) this.setJustifyContent(props.justifyContent)
             this.flexRender(props)

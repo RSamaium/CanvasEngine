@@ -1,7 +1,7 @@
 import { BehaviorSubject } from 'rxjs';
 
 export type ArrayChange<T> = {
-  type: 'add' | 'remove' | 'update' | 'init';
+  type: 'add' | 'remove' | 'update' | 'init' | 'reset';
   index?: number;
   items: T[];
 };
@@ -77,6 +77,6 @@ export class ArraySubject<T> extends BehaviorSubject<ArrayChange<T>> {
 
   set items(newItems: T[]) {
     this.createProxy(newItems);
-    this.next({ type: 'init', items: newItems });
+    this.next({ type: 'reset', items: newItems });
   }
 }

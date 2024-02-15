@@ -101,7 +101,7 @@ export function createComponent(tag: string, props?: Props): Element {
                 }
                 set(element.props, path + '.' + key, value)
             }
-            
+
             Object.entries(props).forEach(([key, value]: [string, Signal]) => {
                 if (isSignal(value)) {
                     element.propSubscriptions.push(value.observable.subscribe((value) => {
@@ -116,7 +116,7 @@ export function createComponent(tag: string, props?: Props): Element {
                 }
                 else {
                     if (isObject(value) && key != 'context') {
-                        recursiveProps(value,(path ? path + '.'  : '') + key)
+                        recursiveProps(value, (path ? path + '.' : '') + key)
                     }
                     else {
                         _set(path, key, value)
@@ -214,14 +214,20 @@ export function loop<T = any>(itemsSubject: WritableArraySignal<T>, createElemen
         map((event: ArrayChange<T>) => {
             const { type, items, index } = event
             if (type == 'init' || initialItems.length > 0) {
-                if (elements.length! = 0) {
+                const newElements = addAt(initialItems, 0)
+                initialItems = []
+                return {
+                    elements: newElements
+                }
+            }
+            else if (type == 'reset') {
+                if (elements.length != 0) {
                     elements.forEach((element) => {
                         destroyElement(element)
                     })
                     elements = []
                 }
-                const newElements = addAt(initialItems, 0)
-                initialItems = []
+                const newElements = addAt(items, 0)
                 return {
                     elements: newElements
                 }

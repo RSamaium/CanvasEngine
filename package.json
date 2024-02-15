@@ -10,12 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@nanostores/react": "^0.7.1",
     "@pixi/particle-emitter": "^5.0.8",
     "@pixi/react": "^7.1.1",
+    "@pixi/tilemap": "^4.1.0",
     "@react-spring/web": "^9.7.3",
+    "@rpgjs/tiled": "^4.3.0",
     "d-path-parser": "^1.0.0",
-    "nanostores": "^0.9.5",
     "peggy": "^3.0.2",
     "pixi-viewport": "^5.0.2",
     "pixi-virtual-joystick": "^0.4.1",
@@ -39,6 +39,7 @@
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "rollup-plugin-node-polyfills": "^0.2.1",
     "typescript": "^5.2.2",
     "vite": "^5.0.8"
   }

@@ -1,5 +1,5 @@
 import Stats from 'stats.js'
-import { Canvas, Text, Container, cond, createComponent, isPrimitive, loop, h, computed, signal, effect, Graphics, mount, Scene, Sprite, ParticlesEmitter, Viewport } from './packages';
+import { Canvas, Text, Container, cond, createComponent, isPrimitive, loop, h, computed, signal, effect, Graphics, mount, Scene, Sprite, ParticlesEmitter, Viewport, TiledMap } from './packages';
 import { animate } from "popmotion"
 
 
@@ -266,17 +266,9 @@ h(Canvas, {
         x: 200,
         y: 200
     }),*/
-    h(Viewport, {
-        clamp: {
-            direction: 'all'
-        }
-    },
-        h(MoveableRectangle, {
-            color, width: 100, height: 100, x: 100, y: 100, viewportFollow: true, click: () => {
-                fontSize.set(10)
-            }
-        })
-    )
+    h(TiledMap, {
+        map: './maps/map.tmx'
+    })
 
     /*h(Rectangle, {
         color, width: 100, height: 100, x: 100, y: 100, click: () => {
