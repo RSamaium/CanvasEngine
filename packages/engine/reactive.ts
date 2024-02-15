@@ -3,7 +3,7 @@ import { Signal, WritableArraySignal, WritableSignal, isSignal, signal } from '.
 import { ComponentInstance } from '../components/DisplayObject';
 import { Directive, applyDirective } from './directive';
 import { type ArrayChange, ArraySubject } from './ArraySubject';
-import { isPromise } from './utils';
+import { get, isObject, isPromise, set } from './utils';
 
 export interface Props {
     [key: string]: any;
@@ -92,22 +92,39 @@ export function createComponent(tag: string, props?: Props): Element {
 
     // Iterate over each property in the props object
     if (props) {
-        Object.entries(props).forEach(([key, value]: [string, Signal]) => {
-            if (isSignal(value)) {
-                element.propSubscriptions.push(value.observable.subscribe((value) => {
+        const recursiveProps = (props, path = '') => {
+
+            const _set = (path, key, value) => {
+                if (path == '') {
                     element.props[key] = value
-                    if (element.directives[key]) {
-                        element.directives[key].onUpdate?.(value)
+                    return
+                }
+                set(element.props, path + '.' + key, value)
+            }
+
+            Object.entries(props).forEach(([key, value]: [string, Signal]) => {
+                if (isSignal(value)) {
+                    element.propSubscriptions.push(value.observable.subscribe((value) => {
+                        _set(path, key, value)
+                        if (element.directives[key]) {
+                            element.directives[key].onUpdate?.(value)
+                        }
+                        instance.onUpdate?.({
+                            [key]: value
+                        }, element.props);
+                    }))
+                }
+                else {
+                    if (isObject(value) && key != 'context') {
+                        recursiveProps(value,(path ? path + '.'  : '') + key)
                     }
-                    instance.onUpdate?.({
-                        [key]: value
-                    }, element.props);
-                }))
-            }
-            else {
-                element.props[key] = value
-            }
-        });
+                    else {
+                        _set(path, key, value)
+                    }
+                }
+            });
+        }
+        recursiveProps(props)
     }
 
     instance.onInit?.(element.props);

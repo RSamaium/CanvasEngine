@@ -21,3 +21,49 @@ export function arrayEquals(a: any[], b: any[]): boolean {
 export function isFunction(val: unknown): boolean {
     return {}.toString.call(val) === '[object Function]'
 }
+
+export function isObject(val: unknown): boolean {
+    return typeof val == 'object' && val != null && !Array.isArray(val)
+}
+
+export function set(obj, path, value, onlyPlainObject = false) {
+    if (Object(obj) !== obj) return obj;
+
+    if (typeof path === 'string') {
+        path = path.split('.');
+    }
+
+    let len = path.length;
+    if (!len) return obj;
+
+    let current = obj;
+    for (let i = 0; i < len - 1; i++) {
+        let segment = path[i];
+        let nextSegment = path[i + 1];
+        let isNextNumeric = !isNaN(nextSegment) && isFinite(nextSegment);
+
+        if (!current[segment] || typeof current[segment] !== 'object') {
+            current[segment] = (isNextNumeric && !onlyPlainObject) ? [] : {};
+        }
+
+        current = current[segment];
+    }
+
+    current[path[len - 1]] = value;
+
+    return obj;
+}
+
+export function get(obj, path) {
+    const keys = path.split('.');
+    let current = obj;
+
+    for (let key of keys) {
+        if (current[key] === undefined) {
+            return undefined;
+        }
+        current = current[key];
+    }
+
+    return current;
+}
