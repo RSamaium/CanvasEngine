@@ -13,8 +13,8 @@ function getRandomColor() {
     return color;
 }
 
-const sprites = signal(Array(1).fill(0).map((_, i) => {
-    return { color: getRandomColor(), x: 0, y: 100 }
+const sprites = signal(Array(2).fill(0).map((_, i) => {
+    return { color: getRandomColor(), x: 0, y: 100 * i + 100 }
 }))
 
 const bool = signal(true)
@@ -40,10 +40,10 @@ function Rectangle(props) {
         draw: (g) => {
             g.clear()
             g.beginFill(color())
-            g.drawRect(0, 0, width(), height())
+            g.drawRect(0, 0, width?.() ?? 10, height?.() ?? 10)
             g.endFill()
         }
-    })
+    }, ...(props.children ?? []))
 }
 
 function MoveableRectangle(props) {
@@ -108,7 +108,7 @@ function RectangeSprite(props) {
         x: props.x,
         y: props.y,
         key: props.index
-    })
+    }, props.children)
 }
 
 const to = () => {
@@ -268,7 +268,7 @@ h(Canvas, {
     }),*/
     h(TiledMap, {
         map: './maps/map.tmx'
-    })
+    }),
 
     /*h(Rectangle, {
         color, width: 100, height: 100, x: 100, y: 100, click: () => {
@@ -276,10 +276,24 @@ h(Canvas, {
             bool.update(bool => !bool)
         }
     }),
-    loop(sprites, (sprite, index) => h(RectangeSprite, {
-        index,
-        ...sprite
-    })),
+   
     ,*/
     //cond(bool, () => lazy)
+    /*h(Container, {}, loop(sprites, (sprite, index) =>
+        h(Rectangle, {
+            color: getRandomColor(),
+            x: 0,
+            y: sprite.y
+        },
+
+            h(Container, {}, loop(signal([1]), (sprite, index) => {
+                return h(Rectangle, {
+                    color: getRandomColor(),
+                    x: 100,
+                    y: 100
+                })
+            }))
+
+        )
+    ))*/
 )

@@ -4,10 +4,11 @@ import { Tile } from './Tile';
 import { TileSet } from './TileSet';
 import { createComponent, registerComponent } from '../../engine/reactive';
 import { DisplayObject } from '../DisplayObject';
+import { error } from '../../engine/utils';
 
 settings.use32bitIndex = true
 
-export class CanvasTileLayer extends DisplayObject(CompositeTilemap)  {
+export class CanvasTileLayer extends DisplayObject(CompositeTilemap) {
     private _tiles: any = {}
     tiles: (TileClass | null)[]
     layer: Layer
@@ -72,7 +73,7 @@ export class CanvasTileLayer extends DisplayObject(CompositeTilemap)  {
 
     /** @internal */
     changeTile(x: number, y: number) {
-        const { tilewidth, tileheight } = this.map.getData()
+        const { tilewidth, tileheight } = this.layer
         x = Math.floor(x / tilewidth)
         y = Math.floor(y / tileheight)
         const oldTile: Tile = this._tiles[x + ';' + y]
@@ -87,13 +88,13 @@ export class CanvasTileLayer extends DisplayObject(CompositeTilemap)  {
                 newTile.setAnimation(frame)
                 this._tiles[x + ';' + y] = newTile
                 // @ts-ignore
-                const pointsBufComposite = (bufComposite.children[0]  as Tilemap).pointsBuf
+                const pointsBufComposite = (bufComposite.children[0] as Tilemap).pointsBuf
                     // Change Texture (=0, 1 and 7, rotate (=4), animX (=5), animY (=6))
                     ;[0, 1, 4, 6, 7, 8].forEach((i) => {
                         if (this.pointsBuf) this.pointsBuf[oldTile.pointsBufIndex + i] = pointsBufComposite[i]
                     })
                 // @ts-ignore
-                this.tilemap.children[0].modificationMarker = 0
+                this.children[0].modificationMarker = 0
                 this._addFrame(newTile, x, y)
                 this['modificationMarker'] = 0
             }
@@ -134,13 +135,15 @@ export class CanvasTileLayer extends DisplayObject(CompositeTilemap)  {
 
     onUpdate(props) {
         super.onUpdate(props)
-        if (!this.tileSets) return
+        if (!this.isMounted) return
         if (props.tileheight) this.layer.tileheight = props.tileheight
         if (props.tilewidth) this.layer.tilewidth = props.tilewidth
         if (props.width) this.layer.width = props.width
         if (props.height) this.layer.height = props.height
 
-        for (let y = 0; y <this.layer.height; y++) {
+        this.removeChildren()
+
+        for (let y = 0; y < this.layer.height; y++) {
             for (let x = 0; x < this.layer.width; x++) {
                 const tile = this.createTile(x, y)
                 if (tile) {

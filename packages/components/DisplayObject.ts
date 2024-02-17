@@ -15,6 +15,7 @@ export function DisplayObject(extendClass) {
             [key: string]: any
         } | null = null
         private isFlex: boolean = false;
+        protected isMounted: boolean = false;
 
         public node: Node;
 
@@ -38,12 +39,13 @@ export function DisplayObject(extendClass) {
             this.node = this.yoga.Node.create();
             if (parent) {
                 const instance = parent.componentInstance as DisplayObject
-                if (index !== undefined) {
+                if (index === undefined) {
                     instance.addChild(this);
                 }
                 else {
                     instance.addChildAt(this, index);
                 }
+                this.isMounted = true;
                 this.onUpdate(props)
                 this.parent.node.insertChild(this.node, this.parent.node.getChildCount());
                 if (parent.props.flexDirection) {

@@ -1,15 +1,19 @@
-import { Layer, TiledLayer, TiledParserFile } from "@rpgjs/tiled"
+import { Layer, TiledLayer, TiledLayerType, TiledMap, TiledParserFile, TiledTileset } from "@rpgjs/tiled"
 import { effect, h, mount, signal } from "../../engine/signal"
 import { useProps } from "../../hooks/useProps"
 import { Container } from "../Container"
 import { TileSet } from "./TileSet"
 import { loop } from "../../engine/reactive"
 import { CompositeTileLayer } from "./TileLayer"
+import { Sprite } from "../Sprite"
+import { TilingSprite } from "../TilingSprite"
 
 
 export function TiledMap(props) {
     const { map } = useProps(props)
     const layers = signal<TiledLayer[]>([])
+    let tilesets: TiledTileset[] = []
+    let mapData: TiledMap = {} as TiledMap
 
     const parseTmx = async (file: string, relativePath: string = '') => {
         // @ts-ignore
@@ -29,22 +33,40 @@ export function TiledMap(props) {
     }
 
     effect(async () => {
-        const data = await parseTmx(map())
-        const tilesets = data.tilesets.map((tileSet) => new TileSet(tileSet).load(tileSet.image.source))
-        layers.set(data.layers.map((layer) => {
-            return {
-                ...layer,
-                tilewidth: data.tilewidth,
-                tileheight: data.tileheight,
-                tilesets
-            }
-        }))
+        mapData = await parseTmx(map())
+        tilesets = mapData.tilesets.map((tileSet) => new TileSet(tileSet).load(tileSet.image.source))
+        layers.set(mapData.layers)
     })
 
-    return h(Container, {}, loop(layers, (layer) => {
-        if (layer.type == 'tilelayer') {
-            return h(CompositeTileLayer, layer)
-        }
-        return h(Container)
-    }))
+    const createLayer = (layers, props = {}) => {
+        return h(Container, props, loop(layers, (layer) => {
+            switch (layer.type) {
+                case TiledLayerType.Tile:
+                    return h(CompositeTileLayer, {
+                        tilewidth: mapData.tilewidth,
+                        tileheight: mapData.tileheight,
+                        // @ts-ignore
+                        width: mapData.width,
+                        // @ts-ignore
+                        height: mapData.height,
+                        ...layer,
+                        tilesets
+                    })
+                case TiledLayerType.Image:
+                    const { width, height, source } = layer.image
+                    return h(TilingSprite, {
+                        image: source,
+                        ...layer,
+                        width: layer.repeatx ? layer.width * layer.tilewidth : width,
+                        height: layer.repeaty ? layer.height * layer.tileheight : height
+                    })
+                case TiledLayerType.Group:
+                    return createLayer(signal(layer.layers), layer)
+                default:
+                    return h(Container)
+            }
+        }))
+    }
+
+    return createLayer(layers)
 }

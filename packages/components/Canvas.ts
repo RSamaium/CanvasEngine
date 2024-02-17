@@ -28,6 +28,8 @@ export async function Canvas(props: Props = {}) {
         })
     }
     const canvasElement = createComponent('Canvas', options)
+    globalThis.__PIXI_STAGE__ = canvasElement.componentInstance;
+    globalThis.__PIXI_RENDERER__ = renderer;
     effect(() => {
         canvasElement.propObservables!.tick()
         renderer.render(canvasElement.componentInstance as any)

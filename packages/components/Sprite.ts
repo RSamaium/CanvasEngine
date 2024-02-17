@@ -5,7 +5,6 @@ import { arrayEquals, isFunction } from '../engine/utils'
 import { createComponent, registerComponent } from '../engine/reactive'
 import { Signal } from '../engine/signal'
 import { Subscription } from 'rxjs'
-import { useProps } from '../hooks/useProps'
 
 const log = console.log
 
@@ -31,7 +30,7 @@ type AnimationDataFrames = {
     data: TextureOptionsMerging
 }
 
-class CanvasSprite extends DisplayObject(PixiSprite) {
+export class CanvasSprite extends DisplayObject(PixiSprite) {
     public hitbox: { w: number, h: number }
     public applyTransform: (
         frame: FrameOptionsMerging,
@@ -106,7 +105,7 @@ class CanvasSprite extends DisplayObject(PixiSprite) {
         const { props } = params
         const tick: Signal = props.context.tick
         const sheet = props.sheet
-        if (sheet.onFinish) {
+        if (sheet?.onFinish) {
             this.onFinish = sheet.onFinish
         }
         if (sheet?.playing) {
@@ -292,7 +291,7 @@ class CanvasSprite extends DisplayObject(PixiSprite) {
     }
 }
 
-interface CanvasSprite extends PixiSprite { }
+export interface CanvasSprite extends PixiSprite { }
 
 registerComponent('Sprite', CanvasSprite)
 
