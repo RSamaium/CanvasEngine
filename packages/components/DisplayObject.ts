@@ -1,6 +1,7 @@
 import { Node } from "yoga-layout";
 import type { AlignContent, EdgeSize, FlexDirection, Size } from "./types/DisplayObject";
 import { Element, Props } from "../engine/reactive";
+import { setObservablePoint } from "../engine/utils";
 
 export interface ComponentInstance {
     onInit?(props: Props): void;
@@ -8,6 +9,77 @@ export interface ComponentInstance {
     onDestroy?(parent: Element): void;
     onMount?(context: Element, index?: number): void;
 }
+
+const EVENTS = [
+    'added',
+    'childAdded',
+    'childRemoved',
+    'click',
+    'clickcapture',
+    'destroyed',
+    'globalmousemove',
+    'globalpointermove',
+    'globaltouchmove',
+    'mousedown',
+    'mousedowncapture',
+    'mouseenter',
+    'mouseentercapture',
+    'mouseleave',
+    'mouseleavecapture',
+    'mousemove',
+    'mousemovecapture',
+    'mouseout',
+    'mouseoutcapture',
+    'mouseover',
+    'mouseovercapture',
+    'mouseup',
+    'mouseupcapture',
+    'mouseupoutside',
+    'mouseupoutsidecapture',
+    'pointercancel',
+    'pointercancelcapture',
+    'pointerdown',
+    'pointerdowncapture',
+    'pointerenter',
+    'pointerentercapture',
+    'pointerleave',
+    'pointerleavecapture',
+    'pointermove',
+    'pointermovecapture',
+    'pointerout',
+    'pointeroutcapture',
+    'pointerover',
+    'pointerovercapture',
+    'pointertap',
+    'pointertapcapture',
+    'pointerup',
+    'pointerupcapture',
+    'pointerupoutside',
+    'pointerupoutsidecapture',
+    'removed',
+    'rightclick',
+    'rightclickcapture',
+    'rightdown',
+    'rightdowncapture',
+    'rightup',
+    'rightupcapture',
+    'rightupoutside',
+    'rightupoutsidecapture',
+    'tap',
+    'tapcapture',
+    'touchcancel',
+    'touchcancelcapture',
+    'touchend',
+    'touchendcapture',
+    'touchendoutside',
+    'touchendoutsidecapture',
+    'touchmove',
+    'touchmovecapture',
+    'touchstart',
+    'touchstartcapture',
+    'wheel',
+    'wheelcapture'
+]
 
 export function DisplayObject(extendClass) {
     return class DisplayObject extends extendClass {
@@ -28,9 +100,11 @@ export function DisplayObject(extendClass) {
         }
 
         onInit(props) {
-            if (props.click) {
-                this.eventMode = 'static';
-                this.on('click', props.click)
+            for (let event of EVENTS) {
+                if (props[event]) {
+                    this.eventMode = 'static';
+                    this.on(event, props[event])
+                }
             }
         }
 
@@ -89,10 +163,13 @@ export function DisplayObject(extendClass) {
             if (props.y) this.setY(props.y)
             if (props.width) this.setWidth(props.width)
             if (props.height) this.setHeight(props.height)
-            if (props.scale) this.scale.set(props.scale)
-            if (props.anchor) this.anchor.set(props.anchor)
+            if (props.scale) setObservablePoint(this.scale, props.scale)
+            if (props.anchor) setObservablePoint(this.anchor, props.anchor)
+            if (props.skew) setObservablePoint(this.skew, props.skew)
             if (props.tint) this.tint = props.tint
             if (props.rotation) this.rotation = props.rotation
+            if (props.angle) this.angle = props.angle
+            if (props.zIndex !== undefined) this.zIndex = props.zIndex
             if (props.visible !== undefined) this.visible = props.visible
             if (props.flexDirection) this.setFlexDirection(props.flexDirection)
             if (props.justifyContent) this.setJustifyContent(props.justifyContent)

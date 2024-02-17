@@ -1,3 +1,5 @@
+import { ObservablePoint } from "pixi.js"
+
 export function isBrowser(): boolean {
     return typeof window !== 'undefined'
 }
@@ -74,4 +76,13 @@ export function log(text) {
 
 export function error(text) {
     console.error(text)
+}
+
+export function setObservablePoint(observablePoint: ObservablePoint, point: { x: number, y: number } |  number): void {
+    if (typeof point === 'number') {
+        observablePoint.set(point)
+    }
+    else {
+        observablePoint.set(point.x, point.y)
+    }
 }
