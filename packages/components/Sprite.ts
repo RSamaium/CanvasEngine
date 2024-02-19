@@ -111,9 +111,9 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         if (sheet?.playing) {
             this.play(sheet.playing)
         }
-        this.subscriptionTick = tick.observable.subscribe((value) => {
-            this.update(value)
-        })
+        // this.subscriptionTick = tick.observable.subscribe((value) => {
+        //     this.update(value)
+        // })
     }
 
     onUpdate(props) {

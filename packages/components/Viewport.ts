@@ -45,6 +45,15 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
         if (props.screenWidth) {
             this.screenWidth = props.screenWidth
         }
+        if (props.screenHeight) {
+            this.screenHeight = props.screenHeight
+        }
+        if (props.worldWidth) {
+            this.worldWidth = props.worldWidth
+        }
+        if (props.worldHeight) {
+            this.worldHeight = props.worldHeight
+        }
         if (props.clamp) {
             this.clamp(props.clamp)
         }

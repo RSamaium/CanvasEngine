@@ -13,8 +13,42 @@ function getRandomColor() {
     return color;
 }
 
-const sprites = signal(Array(2).fill(0).map((_, i) => {
-    return { color: getRandomColor(), x: 0, y: 100 * i + 100 }
+const RMSpritesheet = (framesWidth: number, framesHeight: number, frameStand: number = 1) => {
+
+    if (framesWidth <= frameStand) {
+        frameStand = framesWidth - 1
+    }
+
+    const stand = (direction: number) => [{ time: 0, frameX: frameStand, frameY: 0 }]
+    const walk = direction => {
+        const array: any = []
+        const durationFrame = 10
+        for (let i = 0; i < framesWidth; i++) {
+            array.push({ time: i * durationFrame, frameX: i, frameY: 0 })
+        }
+        array.push({ time: array[array.length - 1].time + durationFrame })
+        return array
+    }
+
+    return {
+        textures: {
+            'stand': {
+                animations: direction => [stand(direction)]
+            },
+            'walk': {
+                animations: direction => [walk(direction)]
+            }
+        },
+        framesHeight,
+        framesWidth
+    }
+}
+
+
+const randomRange = (min, max) => Math.random() * (max - min) + min
+
+const sprites = signal(Array(100).fill(0).map((_, i) => {
+    return { color: getRandomColor(), x: randomRange(0, 32 * 20), y: randomRange(0, 32 * 20) }
 }))
 
 const bool = signal(true)
@@ -46,25 +80,9 @@ function Rectangle(props) {
     }, ...(props.children ?? []))
 }
 
-function MoveableRectangle(props) {
+function MoveableSprite(props) {
     const x = signal(0)
     const y = signal(0)
-    const double = computed(() => x() * 2)
-
-    // mount((element) => {
-    //     console.log(element)
-    //     return () => {
-    //         console.log('unmount')
-    //     }
-    // })
-
-    // effect(() => {
-    //     console.log('mount', double())
-
-    //     return () => {
-    //         console.log('stop')
-    //     }
-    // })
 
     const controls = signal({
         'down': {
@@ -97,7 +115,7 @@ function MoveableRectangle(props) {
         }
     })
 
-    return Rectangle({ color: getRandomColor(), width: 100, height: 100, y, x, controls, viewportFollow: props.viewportFollow })
+    return Sprite({ image: 'hero.png', y, x, zIndex: y, controls, viewportFollow: props.viewportFollow })
 }
 
 function RectangeSprite(props) {
@@ -250,6 +268,7 @@ const config = {
 
 const fontSize = signal(36)
 const text = signal('Hello World')
+let player = false
 
 h(Canvas, {
     width: 800,
@@ -266,9 +285,48 @@ h(Canvas, {
         x: 200,
         y: 200
     }),*/
-    h(TiledMap, {
-        map: './maps/map.tmx'
-    }),
+    h(Viewport, {
+        clamp: {
+            direction: 'all'
+        },
+        screenWidth: 800,
+        screenHeight: 600,
+        worldWidth: 40 * 32,
+        worlHeight: 40 * 32,
+    },
+        h(TiledMap, {
+            map: './maps/map.tmx',
+            objectLayer: (layer) => {
+                return h(Container, {
+                    sortableChildren: true,
+                    viewportCull: true
+                }, loop(sprites, (obj) => {
+                    if (!player) {
+                        player = true
+                        return h(MoveableSprite)
+                    }
+                    return h(Sprite, {
+                       /* sheet: {
+                            definition: {
+                                ...RMSpritesheet(3, 4, 1),
+                                image: './hero.png',
+                                width: 96,
+                                height: 128,
+                            },
+                            playing: 'stand',
+
+                        },
+                        x: obj.x,
+                        y: obj.y*/
+                        image: './hero.png',
+                        x: obj.x,
+                        y: obj.y,
+                        zIndex: obj.y
+                    })
+                }))
+            }
+        }),
+    )
 
     /*h(Rectangle, {
         color, width: 100, height: 100, x: 100, y: 100, click: () => {

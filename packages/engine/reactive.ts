@@ -1,4 +1,4 @@
-import { Observable, Subject, Subscription, combineLatest, from, map, of, switchMap } from 'rxjs';
+import { Observable, Subject, Subscription, combineLatest, defer, from, map, of, switchMap } from 'rxjs';
 import { Signal, WritableArraySignal, WritableSignal, isSignal, signal } from './signal';
 import { ComponentInstance } from '../components/DisplayObject';
 import { Directive, applyDirective } from './directive';
@@ -149,6 +149,7 @@ export function createComponent(tag: string, props?: Props): Element {
                 return
             }
             for (let child of element.props.children) {
+                if (!child) continue
                 if (isPromise(child)) {
                     child = await child
                 }
@@ -175,7 +176,7 @@ export function createComponent(tag: string, props?: Props): Element {
                 }
             }
         }
-
+        element.props.context.rootElement = element
         element.componentInstance.onMount?.(element)
         propagateContext(element)
     }
@@ -200,8 +201,7 @@ export function createComponent(tag: string, props?: Props): Element {
     */
 export function loop<T = any>(itemsSubject: WritableArraySignal<T>, createElementFn: (item: any, index: number) => Element | Promise<Element>): FlowObservable {
     let elements: Element[] = []
-    let initialItems = [...itemsSubject._subject.items]
-
+    
     const addAt = (items, insertIndex: number) => {
         return items.map((item, index) => {
             const element = createElementFn(item, insertIndex + index)
@@ -210,49 +210,63 @@ export function loop<T = any>(itemsSubject: WritableArraySignal<T>, createElemen
         })
     }
 
-    return itemsSubject.observable.pipe(
-        map((event: ArrayChange<T>) => {
-            const { type, items, index } = event
-            if (type == 'init' || initialItems.length > 0) {
-                const newElements = addAt(initialItems, 0)
-                initialItems = []
+    return defer(() => {
+        let initialItems = [...itemsSubject._subject.items]
+        let init = true
+        return itemsSubject.observable.pipe(
+            map((event: ArrayChange<T>) => {
+                const { type, items, index } = event
+                if (init) {
+                    if (elements.length > 0) {
+                        return {
+                            elements: elements,
+                            fullElements: elements
+                        }
+                    }
+                    const newElements = addAt(initialItems, 0)
+                    initialItems = []
+                    init = false
+                    return {
+                        elements: newElements,
+                        fullElements: elements
+                    }
+                }
+                else if (type == 'reset') {
+                    if (elements.length != 0) {
+                        elements.forEach((element) => {
+                            destroyElement(element)
+                        })
+                        elements = []
+                    }
+                    const newElements = addAt(items, 0)
+                    return {
+                        elements: newElements,
+                        fullElements: elements
+                    }
+                }
+                else if (type == 'add' && index != undefined) {
+                    const lastElement = elements[index - 1]
+                    const newElements = addAt(items, index)
+                    return {
+                        prev: lastElement,
+                        elements: newElements
+                    }
+                }
+                else if (index != undefined && type == 'remove') {
+                    const currentElement = elements[index]
+                    destroyElement(currentElement)
+                    elements.splice(index, 1)
+                    return {
+                        elements: []
+                    }
+                }
                 return {
-                    elements: newElements
+                    elements: [],
+                    fullElements: elements
                 }
-            }
-            else if (type == 'reset') {
-                if (elements.length != 0) {
-                    elements.forEach((element) => {
-                        destroyElement(element)
-                    })
-                    elements = []
-                }
-                const newElements = addAt(items, 0)
-                return {
-                    elements: newElements
-                }
-            }
-            else if (type == 'add' && index != undefined) {
-                const lastElement = elements[index - 1]
-                const newElements = addAt(items, index)
-                return {
-                    prev: lastElement,
-                    elements: newElements
-                }
-            }
-            else if (index != undefined && type == 'remove') {
-                const currentElement = elements[index]
-                destroyElement(currentElement)
-                elements.splice(index, 1)
-                return {
-                    elements: []
-                }
-            }
-            return {
-                elements: []
-            }
-        })
-    )
+            })
+        )
+    })
 }
 
 export function cond(condition: Signal, createElementFn: () => Element | Promise<Element>): FlowObservable {

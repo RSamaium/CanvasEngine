@@ -4,8 +4,9 @@ import { Props, createComponent, registerComponent } from '../engine/reactive';
 import { loadYoga } from 'yoga-layout';
 import { Scheduler } from '../directives/Scheduler';
 import { effect, signal } from '../engine/signal';
+import { Layer, Stage } from '@pixi/layers';
 
-registerComponent('Canvas', class Canvas extends DisplayObject(PixiContainer) { })
+registerComponent('Canvas', class Canvas extends DisplayObject(Stage) { })
 
 export async function Canvas(props: Props = {}) {
     const Yoga = await loadYoga()

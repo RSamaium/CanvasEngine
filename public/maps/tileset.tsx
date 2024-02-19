@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.9" tiledversion="1.9.2" name="[Base]BaseChip_pipo" tilewidth="32" tileheight="32" tilecount="1000" columns="8">
+<tileset version="1.9" tiledversion="1.9.0" name="[Base]BaseChip_pipo" tilewidth="32" tileheight="32" tilecount="1000" columns="8">
  <image source="base.png" width="256" height="4000"/>
  <tile id="0">
   <properties>
@@ -44,24 +44,28 @@
  <tile id="8">
   <properties>
    <property name="collision" type="bool" value="false"/>
+   <property name="id" value="tree"/>
    <property name="z" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="9">
   <properties>
    <property name="collision" type="bool" value="false"/>
+   <property name="id" value="tree"/>
    <property name="z" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="10">
   <properties>
    <property name="collision" type="bool" value="false"/>
+   <property name="id" value="tree2"/>
    <property name="z" type="int" value="1"/>
   </properties>
  </tile>
  <tile id="11">
   <properties>
    <property name="collision" type="bool" value="false"/>
+   <property name="id" value="tree2"/>
    <property name="z" type="int" value="1"/>
   </properties>
  </tile>
@@ -92,6 +96,7 @@
  <tile id="16">
   <properties>
    <property name="collision" type="bool" value="false"/>
+   <property name="id" value="tree"/>
    <property name="z" type="int" value="0"/>
   </properties>
   <objectgroup draworder="index" id="2">
@@ -101,6 +106,7 @@
  <tile id="17">
   <properties>
    <property name="collision" type="bool" value="true"/>
+   <property name="id" value="tree"/>
    <property name="z" type="int" value="0"/>
   </properties>
   <objectgroup draworder="index" id="2">
@@ -110,12 +116,14 @@
  <tile id="18">
   <properties>
    <property name="collision" type="bool" value="true"/>
+   <property name="id" value="tree2"/>
    <property name="z" type="int" value="0"/>
   </properties>
  </tile>
  <tile id="19">
   <properties>
    <property name="collision" type="bool" value="true"/>
+   <property name="id" value="tree2"/>
    <property name="z" type="int" value="0"/>
   </properties>
  </tile>

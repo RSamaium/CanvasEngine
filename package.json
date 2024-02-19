@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@pixi/layers": "^2.1.0",
     "@pixi/particle-emitter": "^5.0.8",
     "@pixi/react": "^7.1.1",
     "@pixi/tilemap": "^4.1.0",
@@ -17,6 +18,7 @@
     "@rpgjs/tiled": "^4.3.0",
     "d-path-parser": "^1.0.0",
     "peggy": "^3.0.2",
+    "pixi-cull": "^2.1.1",
     "pixi-viewport": "^5.0.2",
     "pixi-virtual-joystick": "^0.4.1",
     "pixi.js": "^7.4.0",

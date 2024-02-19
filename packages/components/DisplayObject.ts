@@ -2,12 +2,20 @@ import { Node } from "yoga-layout";
 import type { AlignContent, EdgeSize, FlexDirection, Size } from "./types/DisplayObject";
 import { Element, Props } from "../engine/reactive";
 import { setObservablePoint } from "../engine/utils";
+import { Layer } from '@pixi/layers';
 
 export interface ComponentInstance {
     onInit?(props: Props): void;
     onUpdate?(props: Props): void;
     onDestroy?(parent: Element): void;
     onMount?(context: Element, index?: number): void;
+}
+
+type AABB = {
+    x: number,
+    y: number,
+    width: number,
+    height: number
 }
 
 const EVENTS = [
@@ -88,6 +96,7 @@ export function DisplayObject(extendClass) {
         } | null = null
         private isFlex: boolean = false;
         protected isMounted: boolean = false;
+        private AABB: AABB = { x: 0, y: 0, width: 0, height: 0 }
 
         public node: Node;
 
@@ -119,6 +128,7 @@ export function DisplayObject(extendClass) {
                 else {
                     instance.addChildAt(this, index);
                 }
+                if (instance.layer) this.parentLayer = instance.layer;
                 this.isMounted = true;
                 this.onUpdate(props)
                 this.parent.node.insertChild(this.node, this.parent.node.getChildCount());
@@ -169,8 +179,12 @@ export function DisplayObject(extendClass) {
             if (props.tint) this.tint = props.tint
             if (props.rotation) this.rotation = props.rotation
             if (props.angle) this.angle = props.angle
-            if (props.zIndex !== undefined) this.zIndex = props.zIndex
+            if (props.zIndex !== undefined) {
+                this.zOrder = props.zIndex
+            }
             if (props.visible !== undefined) this.visible = props.visible
+            if (props.alpha !== undefined) this.alpha = props.alpha
+            if (props.pivot) setObservablePoint(this.pivot, props.pivot)
             if (props.flexDirection) this.setFlexDirection(props.flexDirection)
             if (props.justifyContent) this.setJustifyContent(props.justifyContent)
             this.flexRender(props)
@@ -331,5 +345,26 @@ export function DisplayObject(extendClass) {
         getWidth() {
             return this.node.getWidth();
         }
+
+      /*  updateAABB() {
+            const box = this.getLocalBounds()
+            this.AABB.x = this.x + (box.x - this.pivot.x) * Math.abs(this.scale.x)
+            this.AABB.y = this.y + (box.y - this.pivot.y) * Math.abs(this.scale.y)
+            this.AABB.width = box.width * Math.abs(this.scale.x)
+            this.AABB.height = box.height * Math.abs(this.scale.y)
+        }
+
+        render(args) {
+            super.render(args);
+            this.updateAABB()
+            if (this._boundsViewport) {
+                const bounds = this._context.viewport.getVisibleBounds()
+                const box = this.AABB
+                this.visible =
+                    box.x + box.width > bounds.x && box.x < bounds.x + bounds.width &&
+                    box.y + box.height > bounds.y && box.y < bounds.y + bounds.height
+            }
+            
+        }*/
     }
 } 

@@ -12,6 +12,7 @@ import { TilingSprite } from "../TilingSprite"
 export function TiledMap(props) {
     const { map } = useProps(props)
     const layers = signal<TiledLayer[]>([])
+    const objectLayer = props.objectLayer
     let tilesets: TiledTileset[] = []
     let mapData: TiledMap = {} as TiledMap
 
@@ -62,6 +63,9 @@ export function TiledMap(props) {
                     })
                 case TiledLayerType.Group:
                     return createLayer(signal(layer.layers), layer)
+                case TiledLayerType.ObjectGroup:
+                    const child = objectLayer?.(layer)
+                    return h(Container, layer, child)
                 default:
                     return h(Container)
             }

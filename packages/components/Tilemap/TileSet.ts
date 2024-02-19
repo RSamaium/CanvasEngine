@@ -4,9 +4,16 @@ import { Texture, BaseTexture, Rectangle } from 'pixi.js'
 export class TileSet extends TiledTilesetClass {
     private baseTexture: BaseTexture
     public textures: Texture[] = []
+    private tileGroups = {}
 
     constructor(tileSet: TiledTileset) {
         super(tileSet)
+    }
+
+    loadGroup() {
+        // for (let tile of this.tileset.tiles) {
+           
+        // }
     }
 
     /** @internal */
@@ -30,6 +37,7 @@ export class TileSet extends TiledTilesetClass {
                 )
             }
         }
+        this.loadGroup()
         return this
     }
 }

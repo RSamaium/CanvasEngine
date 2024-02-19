@@ -7,13 +7,13 @@ export class ViewportFollow extends Directive {
     onInit(element: Element<ComponentInstance>) {
 
     }
-    onMount(element) {
+    onMount(element: Element) {
         const { viewportFollow } = element.props
         const { viewport } = element.props.context
         if (!viewport) {
             throw error('ViewportFollow directive requires a Viewport component to be mounted in the same context')
         }
-        viewport.follow(this)
+        viewport.follow(element.componentInstance)
     }
     onUpdate(props: any) {
 
