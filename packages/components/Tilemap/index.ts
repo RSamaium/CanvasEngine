@@ -5,7 +5,7 @@ import { Container } from "../Container"
 import { TileSet } from "./TileSet"
 import { loop } from "../../engine/reactive"
 import { CompositeTileLayer } from "./TileLayer"
-import { Sprite } from "../Sprite"
+import { Sprite } from "../Spritesheet"
 import { TilingSprite } from "../TilingSprite"
 
 

@@ -21,7 +21,6 @@ type SpritesheetOptionsMerging = TextureOptionsMerging & SpritesheetOptions
 type TransformOptionsAsArray = Pick<TransformOptions, 'anchor' | 'scale' | 'skew' | 'pivot'>
 
 type AnimationDataFrames = {
-    container: Container,
     sprites: FrameOptionsMerging[],
     frames: Texture[][],
     name: string,
@@ -89,7 +88,6 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
             optionsTextures.spriteWidth = rectWidth ? rectWidth : width / framesWidth
             optionsTextures.spriteHeight = rectHeight ? rectHeight : height / framesHeight
             this.animations.set(animationName, {
-                container: new PixiSprite(),
                 frames: this.createTextures(optionsTextures as Required<TextureOptionsMerging>),
                 name: animationName,
                 animations: textures[animationName].animations,
@@ -111,9 +109,9 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         if (sheet?.playing) {
             this.play(sheet.playing)
         }
-        // this.subscriptionTick = tick.observable.subscribe((value) => {
-        //     this.update(value)
-        // })
+        this.subscriptionTick = tick.observable.subscribe((value) => {
+            this.update(value)
+        })
     }
 
     onUpdate(props) {
@@ -124,7 +122,13 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
             this.createAnimations()
         }
         else if (props.image) {
-            this.texture = Texture.from(props.image)
+            if (props.rectangle === undefined) {
+                this.texture = Texture.from(props.image)
+            }
+            else {
+                const { x, y, width, height } = props.rectangle
+                this.texture = new Texture(Texture.from(props.image).baseTexture, new Rectangle(x, y, width, height))
+            }
         }
     }
 
@@ -169,7 +173,6 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         this.currentAnimation.params = params
         this.time = 0
         this.frameIndex = 0
-
         let animations: any = animation.animations;
         animations = isFunction(animations) ? (animations as Function)(...params) : animations
 
@@ -189,12 +192,13 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
             //RpgSound.get(sound).play()
         }
 
-        this.addChild(this.currentAnimation.container)
+        // this.addChild(this.currentAnimation.container)
         // Updates immediately to avoid flickering
         this.update({
             deltaRatio: 1
         })
     }
+
 
     update({ deltaRatio }) {
         if (!this.isPlaying() || !this.currentAnimation) return
@@ -210,10 +214,12 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
                 continue
             }
 
-            sprite.texture = frames[frame.frameY][frame.frameX]
+            this.texture = frames[frame.frameY][frame.frameX]
 
-            const getVal = <T extends keyof TransformOptions>(prop: T): TransformOptions[T] | undefined =>
-                frame[prop] || data[prop] || this.spritesheet[prop]
+            const getVal = <T extends keyof TransformOptions>(prop: T): TransformOptions[T] | undefined => {
+                return frame[prop] ?? data[prop] ?? this.spritesheet[prop]
+            }
+
 
             const applyTransform = <T extends keyof TransformOptionsAsArray>(prop: T): void => {
                 const val = getVal<T>(prop)
@@ -276,9 +282,6 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         if (!nextFrame) {
             this.time = 0
             this.frameIndex = 0
-            if (this.attachTo) {
-                this.attachTo.animationIsPlaying = false
-            }
             if (this.onFinish) this.onFinish()
             return
         }

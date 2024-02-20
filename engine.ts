@@ -47,7 +47,7 @@ const RMSpritesheet = (framesWidth: number, framesHeight: number, frameStand: nu
 
 const randomRange = (min, max) => Math.random() * (max - min) + min
 
-const sprites = signal(Array(100).fill(0).map((_, i) => {
+const sprites = signal(Array(2).fill(0).map((_, i) => {
     return { color: getRandomColor(), x: randomRange(0, 32 * 20), y: randomRange(0, 32 * 20) }
 }))
 
@@ -55,7 +55,6 @@ const bool = signal(true)
 const color = signal('#00ff00')
 const flexDirection = signal('row')
 const tick = signal(null)
-const x = signal(0)
 
 const useProps = (props): any => {
     const obj = {}
@@ -80,41 +79,41 @@ function Rectangle(props) {
     }, ...(props.children ?? []))
 }
 
-function MoveableSprite(props) {
-    const x = signal(0)
-    const y = signal(0)
+const x = signal(0)
+const y = signal(0)
 
-    const controls = signal({
-        'down': {
-            repeat: true,
-            bind: 'down',
-            trigger() {
-                y.update(y => y + 3)
-            }
-        },
-        'up': {
-            repeat: true,
-            bind: 'up',
-            trigger() {
-                y.update(y => y - 3)
-            }
-        },
-        'left': {
-            repeat: true,
-            bind: 'left',
-            trigger() {
-                x.update(x => x - 3)
-            }
-        },
-        'right': {
-            repeat: true,
-            bind: 'right',
-            trigger() {
-                x.update(x => x + 3)
-            }
+const controls = signal({
+    'down': {
+        repeat: true,
+        bind: 'down',
+        trigger() {
+            y.update(y => y + 3)
         }
-    })
+    },
+    'up': {
+        repeat: true,
+        bind: 'up',
+        trigger() {
+            y.update(y => y - 3)
+        }
+    },
+    'left': {
+        repeat: true,
+        bind: 'left',
+        trigger() {
+            x.update(x => x - 3)
+        }
+    },
+    'right': {
+        repeat: true,
+        bind: 'right',
+        trigger() {
+            x.update(x => x + 3)
+        }
+    }
+})
 
+function MoveableSprite(props) {
     return Sprite({ image: 'hero.png', y, x, zIndex: y, controls, viewportFollow: props.viewportFollow })
 }
 
@@ -144,7 +143,7 @@ const to = () => {
     return array
 }
 
-const spritesheet = signal({
+const spritesheet = {
     id: 'shield',
     image: './animation.png',
     framesWidth: 5,
@@ -158,7 +157,7 @@ const spritesheet = signal({
             animations: [to()]
         }
     }
-})
+}
 
 const config = {
     "lifetime": {
@@ -272,7 +271,7 @@ let player = false
 
 h(Canvas, {
     width: 800,
-    height: 600
+    height: 600,
 },
     /*h(Sprite, {
         sheet: {
@@ -299,29 +298,45 @@ h(Canvas, {
             objectLayer: (layer) => {
                 return h(Container, {
                     sortableChildren: true,
-                    viewportCull: true
+                    viewportCull: true,
+                    soundListenerPosition: {
+                        x,
+                        y
+                    }
                 }, loop(sprites, (obj) => {
                     if (!player) {
                         player = true
                         return h(MoveableSprite)
                     }
                     return h(Sprite, {
-                       /* sheet: {
-                            definition: {
-                                ...RMSpritesheet(3, 4, 1),
-                                image: './hero.png',
-                                width: 96,
-                                height: 128,
-                            },
-                            playing: 'stand',
+                        sheet: {
+                            /* definition: {
+                                 ...RMSpritesheet(3, 4, 1),
+                                 image: './hero.png',
+                                 width: 96,
+                                 height: 128,
+                             },
+                             playing: 'walk',*/
 
                         },
                         x: obj.x,
-                        y: obj.y*/
-                        image: './hero.png',
-                        x: obj.x,
                         y: obj.y,
-                        zIndex: obj.y
+                        zIndex: obj.y,
+                        image: './hero.png',
+                        rectangle: {
+                            width: 32,
+                            height: 32,
+                            x: 0,
+                            y: 0
+                        },
+                        sound: {
+                            src: './theme.ogg',
+                            spatial: {
+                                maxVolume: 1,
+                                maxDistance: 32 * 10
+                            },
+                            autoplay: true
+                        }
                     })
                 }))
             }

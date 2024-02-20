@@ -17,6 +17,7 @@
     "@react-spring/web": "^9.7.3",
     "@rpgjs/tiled": "^4.3.0",
     "d-path-parser": "^1.0.0",
+    "howler": "^2.2.4",
     "peggy": "^3.0.2",
     "pixi-cull": "^2.1.1",
     "pixi-viewport": "^5.0.2",
@@ -32,6 +33,7 @@
     "yoga-layout": "^2.0.1"
   },
   "devDependencies": {
+    "@types/howler": "^2.2.11",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@types/stats.js": "^0.17.3",

@@ -4,8 +4,8 @@ export const directives: { [key: string]: any } = {}
 
 export abstract class Directive {
     abstract onDestroy();
-    abstract onInit(element: Element);
-    abstract onMount(element);
+    abstract onInit(element:  Element<any>);
+    abstract onMount(element: Element<any>);
     abstract onUpdate(props: any);
 }
 

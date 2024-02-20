@@ -7,7 +7,7 @@ import { Container } from 'pixi.js';
 import { effect } from '../engine/signal';
 
 export class ViewportCull extends Directive {
-    private cull: any
+    private cull: Simple
 
     onInit(element) {
         this.cull = new Simple({
@@ -21,22 +21,9 @@ export class ViewportCull extends Directive {
         if (!viewport) {
             throw error('ViewportCull directive requires a Viewport component to be mounted in the same context')
         }
-        let init = true
+
         element.props.children[0].subscribe((val) => {
-            // val.fullElements.forEach((el: any) => {
-            //     el.componentInstance._boundsViewport = true
-            // })
-          //  this.cull.lists[0] = val.fullElements.map((el: any) => el.componentInstance)
-          
-            if (!init) {
-                init = false
-                return
-            }
-            this.cull.addList(val.fullElements.map((el: any) => el.componentInstance))
-            // for (let i = 0; i < val.fullElements.length; i++) {
-            //     this.cull.add(val.fullElements[i].componentInstance)
-            // }
-            
+            this.cull.lists[0] = val.fullElements.map((el: any) => el.componentInstance)
         })
 
         effect(() => {
