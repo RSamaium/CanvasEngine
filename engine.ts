@@ -79,8 +79,8 @@ function Rectangle(props) {
     }, ...(props.children ?? []))
 }
 
-const x = signal(0)
-const y = signal(0)
+const x = signal(100)
+const y = signal(100)
 
 const controls = signal({
     'down': {
@@ -114,7 +114,7 @@ const controls = signal({
 })
 
 function MoveableSprite(props) {
-    return Sprite({ image: 'hero.png', y, x, zIndex: y, controls, viewportFollow: props.viewportFollow })
+    return Sprite({ image: 'hero.png', y, x, alpha: 0.1, zIndex: y, controls, viewportFollow: props.viewportFollow })
 }
 
 function RectangeSprite(props) {
@@ -319,8 +319,8 @@ h(Canvas, {
                              playing: 'walk',*/
 
                         },
-                        x: obj.x,
-                        y: obj.y,
+                        x,
+                        y,
                         zIndex: obj.y,
                         image: './hero.png',
                         rectangle: {
@@ -329,14 +329,15 @@ h(Canvas, {
                             x: 0,
                             y: 0
                         },
-                        sound: {
-                            src: './theme.ogg',
-                            spatial: {
-                                maxVolume: 1,
-                                maxDistance: 32 * 10
-                            },
-                            autoplay: true
-                        }
+                        // sound: {
+                        //     src: './theme.ogg',
+                        //     spatial: {
+                        //         maxVolume: 1,
+                        //         maxDistance: 32 * 10
+                        //     },
+                        //     autoplay: true
+                        // }
+                        drag: true
                     })
                 }))
             }

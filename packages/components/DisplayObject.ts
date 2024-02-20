@@ -182,6 +182,7 @@ export function DisplayObject(extendClass) {
             if (props.zIndex !== undefined) {
                 this.zOrder = props.zIndex
             }
+            if (props.cursor) this.cursor = props.cursor
             if (props.visible !== undefined) this.visible = props.visible
             if (props.alpha !== undefined) this.alpha = props.alpha
             if (props.pivot) setObservablePoint(this.pivot, props.pivot)
