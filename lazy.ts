@@ -9,4 +9,4 @@ export function Component() {
             g.endFill()
         }
     })
-}
+} 

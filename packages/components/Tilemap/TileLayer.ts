@@ -140,6 +140,8 @@ export class CanvasTileLayer extends DisplayObject(CompositeTilemap) {
         if (props.tilewidth) this.layer.tilewidth = props.tilewidth
         if (props.width) this.layer.width = props.width
         if (props.height) this.layer.height = props.height
+        if (props.parallaxX) this.layer.parallaxX = props.parallaxx
+        if (props.parallaxY) this.layer.parallaxY = props.parallaxy
 
         this.removeChildren()
 

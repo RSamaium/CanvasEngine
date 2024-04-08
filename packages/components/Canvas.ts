@@ -5,13 +5,22 @@ import { loadYoga } from 'yoga-layout';
 import { Scheduler } from '../directives/Scheduler';
 import { effect, signal } from '../engine/signal';
 import { Layer, Stage } from '@pixi/layers';
+import { useProps } from '../hooks/useProps';
 
 registerComponent('Canvas', class Canvas extends DisplayObject(Stage) { })
 
 export async function Canvas(props: Props = {}) {
+    const { cursorStyles } = useProps(props)
     const Yoga = await loadYoga()
     const renderer = autoDetectRenderer(props)
-    document.body.appendChild(renderer.view)
+
+    if (props.canvasEl) {
+        props.canvasEl.appendChild(renderer.view)
+    }
+    else {
+        document.body.appendChild(renderer.view)
+    }
+    
     props.isRoot = true
     const options: any = {
         ...props,
@@ -35,4 +44,10 @@ export async function Canvas(props: Props = {}) {
         canvasElement.propObservables!.tick()
         renderer.render(canvasElement.componentInstance as any)
     })
+
+    if (cursorStyles) {
+        effect(() => {
+            renderer.events.cursorStyles = cursorStyles()
+        })
+    }
 }

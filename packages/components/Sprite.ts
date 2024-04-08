@@ -121,12 +121,13 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
             this.spritesheet = props.sheet.definition
             this.createAnimations()
         }
+        if (props.scaleMode) this.baseTexture.scaleMode = props.scaleMode
         else if (props.image) {
             if (props.rectangle === undefined) {
                 this.texture = Texture.from(props.image)
             }
             else {
-                const { x, y, width, height } = props.rectangle
+                const { x, y, width, height } = props.rectangle
                 this.texture = new Texture(Texture.from(props.image).baseTexture, new Rectangle(x, y, width, height))
             }
         }

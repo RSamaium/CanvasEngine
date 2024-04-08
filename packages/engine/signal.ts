@@ -42,7 +42,7 @@ export function signal<T extends any[]>(defaultValue: T): WritableArraySignal<T>
 export function signal<T>(defaultValue: T): WritableSignal<T>;
 export function signal<T = any>(
     defaultValue: T
-  ): T extends Array<any> ? WritableArraySignal<T> : WritableSignal<T> {
+): T extends Array<any> ? WritableArraySignal<T> : WritableSignal<T> {
     let subject
     if (Array.isArray(defaultValue)) {
         subject = new ArraySubject(defaultValue)
@@ -63,7 +63,7 @@ export function signal<T = any>(
     fn.set = (value) => {
         if (subject instanceof ArraySubject) {
             subject.items = value;
-            return 
+            return
         }
         subject.next(value);
     }
@@ -125,7 +125,7 @@ export function mount(fn: MountFunction) {
     mountTracker?.(fn);
 }
 
-export function h(componentFunction, props = {}, ...children): Element | Promise<Element> {
+export function h(componentFunction, props = {}, ...children): Element | Promise<Element> {
     const allSubscriptions = new Set<Subscription>();
     const allMounts = new Set<MountFunction>();
 

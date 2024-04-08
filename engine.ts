@@ -2,8 +2,6 @@ import Stats from 'stats.js'
 import { Canvas, Text, Container, cond, createComponent, isPrimitive, loop, h, computed, signal, effect, Graphics, mount, Scene, Sprite, ParticlesEmitter, Viewport, TiledMap } from './packages';
 import { animate } from "popmotion"
 
-
-
 function getRandomColor() {
     var letters = '0123456789ABCDEF';
     var color = '#';

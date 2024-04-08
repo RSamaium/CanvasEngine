@@ -179,15 +179,15 @@ export function DisplayObject(extendClass) {
             if (props.tint) this.tint = props.tint
             if (props.rotation) this.rotation = props.rotation
             if (props.angle) this.angle = props.angle
-            if (props.zIndex !== undefined) {
-                this.zOrder = props.zIndex
-            }
+            if (props.zIndex !== undefined) this.zOrder = props.zIndex
+            if (props.roundPixels !== undefined) this.roundPixels = props.roundPixels
             if (props.cursor) this.cursor = props.cursor
             if (props.visible !== undefined) this.visible = props.visible
             if (props.alpha !== undefined) this.alpha = props.alpha
             if (props.pivot) setObservablePoint(this.pivot, props.pivot)
             if (props.flexDirection) this.setFlexDirection(props.flexDirection)
             if (props.justifyContent) this.setJustifyContent(props.justifyContent)
+            if (props.filters) this.filters = props.filters
             this.flexRender(props)
         }
 
