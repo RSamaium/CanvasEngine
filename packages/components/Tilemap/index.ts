@@ -1,12 +1,11 @@
-import { Layer, TiledLayer, TiledLayerType, TiledMap, TiledParserFile, TiledTileset } from "@rpgjs/tiled"
-import { effect, h, mount, signal } from "../../engine/signal"
+import { TiledLayer, TiledLayerType, TiledMap, TiledParserFile, TiledTileset } from "@rpgjs/tiled"
+import { loop } from "../../engine/reactive"
+import { effect, h, signal } from "../../engine/signal"
 import { useProps } from "../../hooks/useProps"
 import { Container } from "../Container"
-import { TileSet } from "./TileSet"
-import { loop } from "../../engine/reactive"
-import { CompositeTileLayer } from "./TileLayer"
-import { Sprite } from "../Spritesheet"
 import { TilingSprite } from "../TilingSprite"
+import { CompositeTileLayer } from "./TileLayer"
+import { TileSet } from "./TileSet"
 
 
 export function TiledMap(props) {
@@ -17,6 +16,9 @@ export function TiledMap(props) {
     let mapData: TiledMap = {} as TiledMap
 
     const parseTmx = async (file: string, relativePath: string = '') => {
+        if (typeof file !== 'string') {
+            return file
+        }
         // @ts-ignore
         const parser = new TiledParserFile(
             file,
@@ -35,7 +37,9 @@ export function TiledMap(props) {
 
     effect(async () => {
         mapData = await parseTmx(map())
-        tilesets = mapData.tilesets.map((tileSet) => new TileSet(tileSet).load(tileSet.image.source))
+        for (let tileSet of mapData.tilesets) {
+            tilesets.push(await new TileSet(tileSet).load(tileSet.image.source))
+        }
         layers.set(mapData.layers)
     })
 

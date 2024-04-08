@@ -1,17 +1,16 @@
-import { CompositeTilemap, settings, POINT_STRUCT_SIZE, Tilemap } from '@pixi/tilemap'
+import { CompositeTilemap, POINT_STRUCT_SIZE, Tilemap, settings } from '@pixi/tilemap';
 import { Layer, Tile as TileClass } from '@rpgjs/tiled';
-import { Tile } from './Tile';
-import { TileSet } from './TileSet';
 import { createComponent, registerComponent } from '../../engine/reactive';
 import { DisplayObject } from '../DisplayObject';
-import { error } from '../../engine/utils';
+import { Tile } from './Tile';
+import { TileSet } from './TileSet';
 
 settings.use32bitIndex = true
 
 export class CanvasTileLayer extends DisplayObject(CompositeTilemap) {
     private _tiles: any = {}
     tiles: (TileClass | null)[]
-    layer: Layer
+    private _layer: Layer
 
     static findTileSet(gid: number, tileSets: TileSet[]) {
         let tileset: TileSet | undefined
@@ -27,13 +26,13 @@ export class CanvasTileLayer extends DisplayObject(CompositeTilemap) {
     /** @internal */
     createTile(x: number, y: number, options: any = {}): Tile | undefined {
         const { real, filter } = options
-        const { tilewidth, tileheight, width } = this.layer
+        const { tilewidth, tileheight, width } = this._layer
         if (real) {
             x = Math.floor(x / tilewidth)
             y = Math.floor(y / tileheight)
         }
         const i = x + y * width;
-        const tiledTile = this.layer.getTileByIndex(i)
+        const tiledTile = this._layer.getTileByIndex(i)
 
         if (!tiledTile || (tiledTile && tiledTile.gid == 0)) return
 
@@ -73,7 +72,7 @@ export class CanvasTileLayer extends DisplayObject(CompositeTilemap) {
 
     /** @internal */
     changeTile(x: number, y: number) {
-        const { tilewidth, tileheight } = this.layer
+        const { tilewidth, tileheight } = this._layer
         x = Math.floor(x / tilewidth)
         y = Math.floor(y / tileheight)
         const oldTile: Tile = this._tiles[x + ';' + y]
@@ -126,27 +125,26 @@ export class CanvasTileLayer extends DisplayObject(CompositeTilemap) {
     onMount(args) {
         const { props } = args
         this.tileSets = props.tilesets
-        this.layer = new Layer({
-            ...props,
-            tilesets: this.tileSets
-        })
+        this._layer = new Layer({
+            ...props
+        }, this.tileSets)
         super.onMount(args)
     }
 
     onUpdate(props) {
         super.onUpdate(props)
         if (!this.isMounted) return
-        if (props.tileheight) this.layer.tileheight = props.tileheight
-        if (props.tilewidth) this.layer.tilewidth = props.tilewidth
-        if (props.width) this.layer.width = props.width
-        if (props.height) this.layer.height = props.height
-        if (props.parallaxX) this.layer.parallaxX = props.parallaxx
-        if (props.parallaxY) this.layer.parallaxY = props.parallaxy
+        if (props.tileheight) this._layer.tileheight = props.tileheight
+        if (props.tilewidth) this._layer.tilewidth = props.tilewidth
+        if (props.width) this._layer.width = props.width
+        if (props.height) this._layer.height = props.height
+        if (props.parallaxX) this._layer.parallaxX = props.parallaxx
+        if (props.parallaxY) this._layer.parallaxY = props.parallaxy
 
         this.removeChildren()
 
-        for (let y = 0; y < this.layer.height; y++) {
-            for (let x = 0; x < this.layer.width; x++) {
+        for (let y = 0; y < this._layer.height; y++) {
+            for (let x = 0; x < this._layer.width; x++) {
                 const tile = this.createTile(x, y)
                 if (tile) {
                     this._addFrame(tile, x, y)

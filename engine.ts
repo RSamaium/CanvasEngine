@@ -1,6 +1,4 @@
-import Stats from 'stats.js'
-import { Canvas, Text, Container, cond, createComponent, isPrimitive, loop, h, computed, signal, effect, Graphics, mount, Scene, Sprite, ParticlesEmitter, Viewport, TiledMap } from './packages';
-import { animate } from "popmotion"
+import { Canvas, Container, Graphics, Sprite, h, isPrimitive, signal } from './packages';
 
 function getRandomColor() {
     var letters = '0123456789ABCDEF';
@@ -69,10 +67,7 @@ function Rectangle(props) {
     return h(Graphics, {
         ...props,
         draw: (g) => {
-            g.clear()
-            g.beginFill(color())
-            g.drawRect(0, 0, width?.() ?? 10, height?.() ?? 10)
-            g.endFill()
+            g.rect(0, 0, width?.() ?? 10, height?.() ?? 10).fill(color())
         }
     }, ...(props.children ?? []))
 }
@@ -282,74 +277,15 @@ h(Canvas, {
         x: 200,
         y: 200
     }),*/
-    h(Viewport, {
-        clamp: {
-            direction: 'all'
-        },
-        screenWidth: 800,
-        screenHeight: 600,
-        worldWidth: 40 * 32,
-        worlHeight: 40 * 32,
-    },
-        h(TiledMap, {
-            map: './maps/map.tmx',
-            objectLayer: (layer) => {
-                return h(Container, {
-                    sortableChildren: true,
-                    viewportCull: true,
-                    soundListenerPosition: {
-                        x,
-                        y
-                    }
-                }, loop(sprites, (obj) => {
-                    if (!player) {
-                        player = true
-                        return h(MoveableSprite)
-                    }
-                    return h(Sprite, {
-                        sheet: {
-                            /* definition: {
-                                 ...RMSpritesheet(3, 4, 1),
-                                 image: './hero.png',
-                                 width: 96,
-                                 height: 128,
-                             },
-                             playing: 'walk',*/
-
-                        },
-                        x,
-                        y,
-                        zIndex: obj.y,
-                        image: './hero.png',
-                        rectangle: {
-                            width: 32,
-                            height: 32,
-                            x: 0,
-                            y: 0
-                        },
-                        // sound: {
-                        //     src: './theme.ogg',
-                        //     spatial: {
-                        //         maxVolume: 1,
-                        //         maxDistance: 32 * 10
-                        //     },
-                        //     autoplay: true
-                        // }
-                        drag: true
-                    })
-                }))
-            }
-        }),
-    )
-
-    /*h(Rectangle, {
-        color, width: 100, height: 100, x: 100, y: 100, click: () => {
-            sprites().shift()
-            bool.update(bool => !bool)
-        }
-    }),
    
-    ,*/
+
+    // h(TiledMap, {
+    //     map: './maps/map.tmx'
+    // }),
+
+    h(Container, {})
+   
+    
     //cond(bool, () => lazy)
     /*h(Container, {}, loop(sprites, (sprite, index) =>
         h(Rectangle, {

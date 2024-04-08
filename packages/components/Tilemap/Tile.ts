@@ -1,7 +1,7 @@
-import { Texture, AnimatedSprite, groupD8 } from "pixi.js";
-import { TileSet } from "./TileSet";
-import { Tile as TiledTileClass } from '@rpgjs/tiled'
 import { CompositeTilemap } from "@pixi/tilemap";
+import { Tile as TiledTileClass } from '@rpgjs/tiled';
+import { AnimatedSprite, Texture, groupD8 } from "pixi.js";
+import { TileSet } from "./TileSet";
 
 export class Tile extends AnimatedSprite {
     static getTextures(tile: TiledTileClass, tileSet: TileSet) {
@@ -9,10 +9,10 @@ export class Tile extends AnimatedSprite {
 
         if (tile.animations && tile.animations.length) {
             tile.animations.forEach(frame => {
-                textures.push(tileSet.textures[frame.tileid].clone())
+                textures.push(tileSet.textures[frame.tileid])
             });
         } else {
-            textures.push(tileSet.textures[tile.gid - tileSet.firstgid].clone())
+            textures.push(tileSet.textures[tile.gid - tileSet.firstgid])
         }
 
         return textures;
@@ -74,6 +74,6 @@ export class Tile extends AnimatedSprite {
             }
         }
 
-        if (symmetry) this.texture.rotate = symmetry
+        //if (symmetry) this.texture.rotate = symmetry
     }
 }

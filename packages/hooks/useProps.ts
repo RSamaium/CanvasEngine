@@ -1,7 +1,10 @@
 import { isPrimitive } from "../engine/reactive"
-import { signal } from "../engine/signal"
+import { isSignal, signal } from "../engine/signal"
 
 export const useProps = (props): any => {
+    if (isSignal(props)) {
+        return props()
+    }
     const obj = {}
     for (let key in props) {
         const value = props[key]

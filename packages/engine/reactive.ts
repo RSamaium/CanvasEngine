@@ -1,9 +1,9 @@
-import { Observable, Subject, Subscription, combineLatest, defer, from, map, of, switchMap } from 'rxjs';
-import { Signal, WritableArraySignal, WritableSignal, isSignal, signal } from './signal';
+import { Observable, Subscription, defer, from, map, of, switchMap } from 'rxjs';
 import { ComponentInstance } from '../components/DisplayObject';
+import { type ArrayChange } from './ArraySubject';
 import { Directive, applyDirective } from './directive';
-import { type ArrayChange, ArraySubject } from './ArraySubject';
-import { get, isObject, isPromise, set } from './utils';
+import { Signal, WritableArraySignal, isSignal } from './signal';
+import { isObject, isPromise, set } from './utils';
 
 export interface Props {
     [key: string]: any;

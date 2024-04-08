@@ -1,8 +1,7 @@
 import { Node } from "yoga-layout";
-import type { AlignContent, EdgeSize, FlexDirection, Size } from "./types/DisplayObject";
 import { Element, Props } from "../engine/reactive";
 import { setObservablePoint } from "../engine/utils";
-import { Layer } from '@pixi/layers';
+import type { AlignContent, EdgeSize, FlexDirection } from "./types/DisplayObject";
 
 export interface ComponentInstance {
     onInit?(props: Props): void;
@@ -91,7 +90,7 @@ const EVENTS = [
 
 export function DisplayObject(extendClass) {
     return class DisplayObject extends extendClass {
-        private _context: {
+        private _canvasContext: {
             [key: string]: any
         } | null = null
         private isFlex: boolean = false;
@@ -101,11 +100,11 @@ export function DisplayObject(extendClass) {
         public node: Node;
 
         get yoga() {
-            return this._context?.Yoga
+            return this._canvasContext?.Yoga
         }
 
         get deltaRatio() {
-            return this._context?.scheduler?.tick.value.deltaRatio
+            return this._canvasContext?.scheduler?.tick.value.deltaRatio
         }
 
         onInit(props) {
@@ -118,7 +117,7 @@ export function DisplayObject(extendClass) {
         }
 
         onMount({ parent, props }: Element<DisplayObject>, index?: number) {
-            this._context = props.context
+            this._canvasContext = props.context
             this.node = this.yoga.Node.create();
             if (parent) {
                 const instance = parent.componentInstance as DisplayObject
@@ -168,7 +167,7 @@ export function DisplayObject(extendClass) {
         }
 
         onUpdate(props) {
-            if (!this._context || !this.parent) return;
+            if (!this._canvasContext || !this.parent) return;
             if (props.x) this.setX(props.x)
             if (props.y) this.setY(props.y)
             if (props.width) this.setWidth(props.width)
