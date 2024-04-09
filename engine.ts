@@ -266,7 +266,7 @@ h(Canvas, {
     width: 800,
     height: 600,
 },
-    /*h(Sprite, {
+    h(Sprite, {
         sheet: {
             definition: spritesheet,
             playing: 'default',
@@ -276,7 +276,7 @@ h(Canvas, {
         },
         x: 200,
         y: 200
-    }),*/
+    }),
    
 
     // h(TiledMap, {

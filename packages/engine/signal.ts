@@ -1,6 +1,7 @@
-import { BehaviorSubject, Observable, Subscription, combineLatest, finalize, map } from 'rxjs';
-import type { Element } from './reactive';
+import { animate as motion } from "popmotion";
+import { BehaviorSubject, Observable, Subscription, combineLatest, filter, finalize, map } from 'rxjs';
 import { ArrayChange, ArraySubject } from './ArraySubject';
+import type { Element } from './reactive';
 
 interface BaseWritableSignal<T = any> {
     (): T;
@@ -25,6 +26,7 @@ export interface ComputedSignal<T = any> {
 }
 
 export type Signal<T = any> = WritableSignal<T> | ComputedSignal<T>;
+export type Effect = ComputedSignal<void>;
 
 type MountFunction = (fn: (element: Element) => void | (() => void)) => void;
 
@@ -70,9 +72,20 @@ export function signal<T = any>(
     fn.mutate = (mutateFn) => {
         const value = getValue()
         mutateFn(value)
-        fn.set(value)
     }
-    fn.update = (updateFn) => fn.set(updateFn(subject.value));
+    fn.update = (updateFn) => fn.set(updateFn(subject instanceof ArraySubject ? subject.items : subject.value));
+    fn.animate = (value, options: any = {}) => {
+        const currentValue = getValue()
+        return motion({
+            ...options,
+            from: currentValue,
+            to: typeof value === 'function' ? value(currentValue) : value,
+            onUpdate: (v) => {
+                if (options.onUpdate) options.onUpdate(v)
+                fn.set(v)
+            }
+        })
+    }
     fn.observable = subject.asObservable();
     fn._subject = subject;
     return fn as any;
@@ -80,25 +93,26 @@ export function signal<T = any>(
 
 export function computed<T = any>(computeFunction: () => T, disposableFn?: () => void): ComputedSignal<T> {
     const dependencies: Set<WritableSignal<any>> = new Set();
+    let init = true
+    let lastComputedValue;
 
     currentDependencyTracker = (signal) => {
         dependencies.add(signal);
     };
 
-    const ret = computeFunction();
+    lastComputedValue = computeFunction();
     if (computeFunction['isEffect']) {
-        disposableFn = ret as any
+        disposableFn = lastComputedValue as any
     }
 
     currentDependencyTracker = null;
 
     const computedObservable = combineLatest([...dependencies].map(signal => signal.observable))
         .pipe(
+            filter(() => !init),
             map(() => computeFunction()),
             finalize(() => disposableFn?.())
         )
-
-    let lastComputedValue;
 
     const fn = function () {
         trackDependency(fn);
@@ -113,10 +127,12 @@ export function computed<T = any>(computeFunction: () => T, disposableFn?: () =>
 
     currentSubscriptionsTracker?.(fn.subscription);
 
+    init = false
+
     return fn
 }
 
-export function effect(fn: () => void) {
+export function effect(fn: () => void): Effect {
     fn['isEffect'] = true
     return computed(fn);
 }

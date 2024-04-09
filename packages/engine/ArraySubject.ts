@@ -27,33 +27,39 @@ export class ArraySubject<T> extends BehaviorSubject<ArrayChange<T>> {
           return (...args) => {
             let changeType: 'add' | 'remove' | 'update' = 'update';
             let index: number | undefined = undefined;
+            let isMutateFn = false;
 
             switch (prop) {
               case 'push':
                 index = target.length;
                 changeType = 'add';
+                isMutateFn = true
                 break;
               case 'pop':
                 index = target.length - 1;
                 changeType = 'remove';
+                isMutateFn = true
                 break;
               case 'unshift':
                 index = 0;
                 changeType = 'add';
+                isMutateFn = true
                 break;
               case 'shift':
                 index = 0;
                 changeType = 'remove';
+                isMutateFn = true
                 break;
               case 'splice':
                 index = args[0];
                 changeType = args.length > 2 ? 'add' : 'remove';
+                isMutateFn = true
                 break;
             }
 
             const result = origMethod.apply(target, args);
             // Notify subscribers after the method call
-            this.next({ type: changeType, index, items: args });
+            if (isMutateFn) this.next({ type: changeType, index, items: args });
 
             return result;
           };

@@ -9,13 +9,15 @@
     "build": "tsc",
     "watch": "tsc -w",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest"
   },
   "dependencies": {
     "@pixi/layers": "^2.1.0",
     "@pixi/particle-emitter": "^5.0.8",
     "@pixi/tilemap": "^5.0.0",
     "@rpgjs/tiled": "^4.3.0",
+    "animejs": "^3.2.2",
     "d-path-parser": "^1.0.0",
     "howler": "^2.2.4",
     "peggy": "^3.0.2",
@@ -32,17 +34,11 @@
   },
   "devDependencies": {
     "@types/howler": "^2.2.11",
-    "@types/react": "^18.2.43",
-    "@types/react-dom": "^18.2.17",
     "@types/stats.js": "^0.17.3",
-    "@typescript-eslint/eslint-plugin": "^6.14.0",
-    "@typescript-eslint/parser": "^6.14.0",
-    "@vitejs/plugin-react": "^4.2.1",
     "eslint": "^8.55.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.5",
     "rollup-plugin-node-polyfills": "^0.2.1",
     "typescript": "^5.2.2",
-    "vite": "^5.0.8"
+    "vite": "^5.0.8",
+    "vitest": "^1.4.0"
   }
 }
