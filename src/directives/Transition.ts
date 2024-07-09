@@ -1,8 +1,7 @@
+import { Container, DisplacementFilter, Sprite, Texture, WRAP_MODES } from 'pixi.js';
+import { animate } from 'popmotion';
 import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
-import { Container, DisplacementFilter, Sprite, Texture, WRAP_MODES } from 'pixi.js';
-import { isSignal } from '../engine/signal';
-import { animate } from 'popmotion';
 
 
 export class Transition extends Directive {

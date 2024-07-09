@@ -1,7 +1,7 @@
+import { isSignal } from '@signe/reactive';
+import { Container } from 'pixi.js';
 import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
-import { Container } from 'pixi.js';
-import { isSignal } from '../engine/signal';
 
 const EVENTS = ['']
 

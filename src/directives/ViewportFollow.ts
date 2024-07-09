@@ -1,6 +1,6 @@
+import { ComponentInstance } from '../components/DisplayObject';
 import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
-import { ComponentInstance } from '../components/DisplayObject';
 import { error } from '../engine/utils';
 
 export class ViewportFollow extends Directive {

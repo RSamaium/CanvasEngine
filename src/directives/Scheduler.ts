@@ -1,8 +1,8 @@
-import * as Utils from '../engine/utils'
-import Stats from 'stats.js'
+import { WritableSignal } from '@signe/reactive';
+import Stats from 'stats.js';
 import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
-import { WritableSignal, signal } from '../engine/signal';
+import * as Utils from '../engine/utils';
 
 export class Scheduler extends Directive {
     private maxFps?: number

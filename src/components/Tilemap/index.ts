@@ -1,6 +1,7 @@
 import { TiledLayer, TiledLayerType, TiledMap, TiledParserFile, TiledTileset } from "@rpgjs/tiled"
+import { effect, signal } from '@signe/reactive'
 import { loop } from "../../engine/reactive"
-import { effect, h, signal } from "../../engine/signal"
+import { h } from "../../engine/signal"
 import { useProps } from "../../hooks/useProps"
 import { Container } from "../Container"
 import { TilingSprite } from "../TilingSprite"

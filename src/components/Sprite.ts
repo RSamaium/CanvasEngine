@@ -1,3 +1,4 @@
+import { Signal } from "@signe/reactive";
 import {
   Assets,
   Container,
@@ -11,7 +12,6 @@ import {
   createComponent,
   registerComponent,
 } from "../engine/reactive";
-import { Signal } from "../engine/signal";
 import { arrayEquals, isFunction } from "../engine/utils";
 import { DisplayObject } from "./DisplayObject";
 import {
@@ -368,7 +368,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       return;
     }
 
-    this.time += deltaRatio;
+    this.time += deltaRatio ?? 1;
 
     if (this.time >= nextFrame.time) {
       this.frameIndex++;

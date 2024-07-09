@@ -1,8 +1,7 @@
-import { Viewport as PixiViewport } from 'pixi-viewport'
-import { DisplayObject } from './DisplayObject';
-import { createComponent, registerComponent } from '../engine/reactive';
-import { Signal } from '../engine/signal';
+import { Viewport as PixiViewport } from 'pixi-viewport';
 import { Subscription } from 'rxjs';
+import { createComponent, registerComponent } from '../engine/reactive';
+import { DisplayObject } from './DisplayObject';
 
 export class CanvasViewport extends DisplayObject(PixiViewport) {
     private tickSubscription: Subscription

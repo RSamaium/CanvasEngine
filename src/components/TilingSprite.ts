@@ -1,6 +1,6 @@
+import { TilingSprite as PixiTilingSprite, Texture } from 'pixi.js';
 import { createComponent, registerComponent } from '../engine/reactive';
 import { DisplayObject } from './DisplayObject';
-import { TilingSprite as PixiTilingSprite, Texture } from 'pixi.js';
 
 class CanvasTilingSprite extends DisplayObject(PixiTilingSprite) {
     onUpdate(props: any): void {

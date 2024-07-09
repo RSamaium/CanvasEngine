@@ -1,6 +1,6 @@
 import { Text as PixiText } from 'pixi.js';
-import { DisplayObject } from './DisplayObject';
 import { createComponent, registerComponent } from '../engine/reactive';
+import { DisplayObject } from './DisplayObject';
 
 class CanvasText extends DisplayObject(PixiText) {
     onUpdate(props) {

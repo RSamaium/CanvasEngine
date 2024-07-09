@@ -1,8 +1,6 @@
-import * as particles from '@pixi/particle-emitter'
-import { DisplayObject } from './DisplayObject';
-import { Element, createComponent, registerComponent } from '../engine/reactive';
+import * as particles from '@pixi/particle-emitter';
+import { createComponent, registerComponent } from '../engine/reactive';
 import { CanvasContainer } from './Container';
-import { Subscription } from 'rxjs';
 
 class CanvasParticlesEmitter extends CanvasContainer {
     private emitter: particles.Emitter | null

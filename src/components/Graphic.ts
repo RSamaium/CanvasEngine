@@ -1,6 +1,6 @@
+import { effect } from "@signe/reactive";
 import { Graphics as PixiGraphics } from "pixi.js";
 import { createComponent, registerComponent } from "../engine/reactive";
-import { effect } from "../engine/signal";
 import { DisplayObject } from "./DisplayObject";
 
 class CanvasGraphics extends DisplayObject(PixiGraphics) {

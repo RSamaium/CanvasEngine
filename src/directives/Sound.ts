@@ -1,10 +1,10 @@
+import { effect } from '@signe/reactive';
+import { Howl } from 'howler';
+import { Container } from 'pixi.js';
+import { Subscription } from 'rxjs';
 import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
-import { Container } from 'pixi.js';
-import { Howl } from 'howler'
-import { effect } from '../engine/signal';
-import { Subscription } from 'rxjs';
-import { calculateDistance, error, log } from '../engine/utils';
+import { calculateDistance, error } from '../engine/utils';
 
 const EVENTS = ['load', 'loaderror', 'playerror', 'play', 'end', 'pause', 'stop', 'mute', 'volume', 'rate', 'seek', 'fade', 'unlock']
 

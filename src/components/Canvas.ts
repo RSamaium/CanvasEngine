@@ -1,7 +1,7 @@
+import { effect, signal } from "@signe/reactive";
 import { Container, autoDetectRenderer } from "pixi.js";
 import { loadYoga } from "yoga-layout";
 import { Props, createComponent, registerComponent } from "../engine/reactive";
-import { effect, signal } from "../engine/signal";
 import { useProps } from "../hooks/useProps";
 import { DisplayObject } from "./DisplayObject";
 

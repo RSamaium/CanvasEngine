@@ -1,4 +1,4 @@
-import { Canvas, Container, Graphics, Sprite, h, isPrimitive, signal } from './packages';
+import { Canvas, Container, Graphics, Sprite, h, isPrimitive, signal } from './dist';
 
 function getRandomColor() {
     var letters = '0123456789ABCDEF';

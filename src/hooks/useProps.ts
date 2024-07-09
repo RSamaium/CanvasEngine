@@ -1,5 +1,5 @@
+import { isSignal, signal } from "@signe/reactive"
 import { isPrimitive } from "../engine/reactive"
-import { isSignal, signal } from "../engine/signal"
 
 export const useProps = (props): any => {
     if (isSignal(props)) {

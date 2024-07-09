@@ -1,21 +1,26 @@
+import { Signal, WritableArraySignal, isSignal } from "@signe/reactive";
 import {
-    Observable,
-    Subscription,
-    defer,
-    from,
-    map,
-    of,
-    switchMap,
+  Observable,
+  Subscription,
+  defer,
+  from,
+  map,
+  of,
+  switchMap,
 } from "rxjs";
 import { ComponentInstance } from "../components/DisplayObject";
-import { type ArrayChange } from "./ArraySubject";
 import { Directive, applyDirective } from "./directive";
-import { Signal, WritableArraySignal, isSignal } from "./signal";
 import { isObject, isPromise, set } from "./utils";
 
 export interface Props {
   [key: string]: any;
 }
+
+export type ArrayChange<T> = {
+  type: 'add' | 'remove' | 'update' | 'init' | 'reset';
+  index?: number;
+  items: T[];
+};
 
 type ElementObservable<T> = Observable<
   ArrayChange<T> & {

@@ -1,10 +1,9 @@
+import { effect } from '@signe/reactive';
+import { Simple } from "pixi-cull";
+import { Container } from 'pixi.js';
 import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
-import { Simple, SpatialHash } from "pixi-cull"
 import { error } from '../engine/utils';
-import { ComponentInstance } from '../components/DisplayObject';
-import { Container } from 'pixi.js';
-import { effect } from '../engine/signal';
 
 export class ViewportCull extends Directive {
     private cull: Simple
