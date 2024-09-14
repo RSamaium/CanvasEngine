@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsup src/index.ts",
+    "build": "tsup src/index.ts --watch",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest"
@@ -14,7 +14,7 @@
   "dependencies": {
     "@pixi/layers": "^2.1.0",
     "@pixi/particle-emitter": "^5.0.8",
-    "@pixi/tilemap": "^5.0.0",
+    "@pixi/tilemap": "^5.0.1",
     "@rpgjs/tiled": "^4.3.0",
     "@signe/reactive": "^0.0.2",
     "animejs": "^3.2.2",
@@ -22,24 +22,24 @@
     "howler": "^2.2.4",
     "peggy": "^3.0.2",
     "pixi-cull": "^2.1.1",
-    "pixi-viewport": "^5.1.0",
+    "pixi-viewport": "^5.0.3",
     "pixi-virtual-joystick": "^0.4.1",
-    "pixi.js": "^8.1.0",
+    "pixi.js": "^8.4.0",
     "popmotion": "^11.0.5",
     "rxjs": "^7.8.1",
     "stats.js": "^0.17.0",
     "svg-arc-to-cubic-bezier": "^3.2.0",
     "tinycolor2": "^1.6.0",
-    "tsup": "^8.1.0",
+    "tsup": "^8.2.4",
     "yoga-layout": "^2.0.1"
   },
   "devDependencies": {
     "@types/howler": "^2.2.11",
     "@types/stats.js": "^0.17.3",
-    "eslint": "^8.55.0",
+    "eslint": "^8.57.0",
     "rollup-plugin-node-polyfills": "^0.2.1",
-    "typescript": "^5.2.2",
-    "vite": "^5.0.8",
-    "vitest": "^1.4.0"
+    "typescript": "^5.6.2",
+    "vite": "^5.4.4",
+    "vitest": "^1.6.0"
   }
 }

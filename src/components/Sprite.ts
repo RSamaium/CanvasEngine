@@ -21,6 +21,8 @@ import {
   TextureOptions,
   TransformOptions,
 } from "./types/Spritesheet";
+import { ComponentFunction } from "../engine/signal";
+import { DisplayObjectProps } from "./types/DisplayObject";
 
 const log = console.log;
 
@@ -380,6 +382,49 @@ export interface CanvasSprite extends PixiSprite {}
 
 registerComponent("Sprite", CanvasSprite);
 
-export function Sprite(props) {
+// Define the props interface for Sprite
+export interface SpriteProps extends DisplayObjectProps {
+  sheet?: {
+    definition?: SpritesheetOptionsMerging;
+    playing?: string;
+    params?: any;
+    onFinish?: () => void;
+  };
+  scaleMode?: number;
+  image?: string;
+  rectangle?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  context?: {
+    tick: Signal;
+  };
+}
+
+export interface SpritePropsWithImage extends Omit<SpriteProps, 'sheet'> {
+  image: string;
+  rectangle?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+export interface SpritePropsWithSheet extends Omit<SpriteProps, 'image' | 'rectangle'> {
+  sheet: {
+    definition: SpritesheetOptionsMerging;
+    playing?: string;
+    params?: any;
+    onFinish?: () => void;
+  };
+}
+
+export type SpritePropTypes = SpritePropsWithImage | SpritePropsWithSheet;
+
+// Update the Sprite function to use the props interface
+export const Sprite: ComponentFunction<SpritePropTypes> = (props) => {
   return createComponent("Sprite", props);
 }

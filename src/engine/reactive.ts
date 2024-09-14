@@ -123,10 +123,10 @@ export function createComponent(tag: string, props?: Props): Element {
         set(element.props, path + "." + key, value);
       };
 
-      Object.entries(props).forEach(([key, value]: [string, Signal]) => {
+      Object.entries(props).forEach(([key, value]: [string, unknown]) => {
         if (isSignal(value)) {
           element.propSubscriptions.push(
-            value.observable.subscribe((value) => {
+            (value as Signal<any>).observable.subscribe((value) => {
               _set(path, key, value);
               if (element.directives[key]) {
                 element.directives[key].onUpdate?.(value);
@@ -244,7 +244,7 @@ export function loop<T = any>(
       return element;
     });
   };
-
+  
   return defer(() => {
     let initialItems = [...itemsSubject._subject.items];
     let init = true;
@@ -306,7 +306,7 @@ export function cond(
   createElementFn: () => Element | Promise<Element>
 ): FlowObservable {
   let element: Element | null = null;
-  return condition.observable.pipe(
+  return (condition.observable as Observable<boolean>).pipe(
     switchMap((bool) => {
       if (bool) {
         let _el = createElementFn();

@@ -13,7 +13,7 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
                 domElement: {
                     addEventListener: () => {}
                 }
-            }
+            },
         }
         // @ts-ignore
         super(defaultOptions) 
@@ -29,28 +29,31 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
         );
         this.options.events = renderer.events
             
-        this.tickSubscription = tick.observable.subscribe(({ deltaTime }) => {
-            this.update(deltaTime)
+        this.tickSubscription = tick.observable.subscribe(({ value }) => {
+            this.update(value.timestamp)
         })
 
         element.props.context.viewport = this
+        this.updateViewportSettings(element.props)
     }
 
     onUpdate(props) {
         super.onUpdate(props)
-        if (props.drag) {
-            this.drag()
-        }
-        if (props.screenWidth) {
+        this.updateViewportSettings(props)
+    }
+
+    private updateViewportSettings(props) {
+        console.log(props)
+        if (props.screenWidth !== undefined) {
             this.screenWidth = props.screenWidth
         }
-        if (props.screenHeight) {
+        if (props.screenHeight !== undefined) {
             this.screenHeight = props.screenHeight
         }
-        if (props.worldWidth) {
+        if (props.worldWidth !== undefined) {
             this.worldWidth = props.worldWidth
         }
-        if (props.worldHeight) {
+        if (props.worldHeight !== undefined) {
             this.worldHeight = props.worldHeight
         }
         if (props.clamp) {
@@ -68,6 +71,20 @@ export interface CanvasViewport extends PixiViewport { }
 
 registerComponent('Viewport', CanvasViewport)
 
-export function Viewport(props) {
-    return createComponent('Viewport', props)
+export interface ViewportProps {
+    screenWidth?: number;
+    screenHeight?: number;
+    worldWidth?: number;
+    worldHeight?: number;
+    clamp?: boolean | {
+        left?: number;
+        right?: number;
+        top?: number;
+        bottom?: number;
+    };
+    [key: string]: any;
+}
+
+export function Viewport(props: ViewportProps) {
+    return createComponent('Viewport', props);
 }

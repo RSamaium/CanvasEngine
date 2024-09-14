@@ -5,18 +5,21 @@ import type { Element } from "./reactive";
 
 type MountFunction = (fn: (element: Element) => void | (() => void)) => void;
 
-let currentSubscriptionsTracker: ((subscription) => void) | null = null;
-let mountTracker: MountFunction | null = null;
+// Define ComponentFunction type
+export type ComponentFunction<P = {}> = (props: P) => Element | Promise<Element>;
+
+export let currentSubscriptionsTracker: ((subscription: Subscription) => void) | null = null;
+export let mountTracker: MountFunction | null = null;
 
 export function mount(fn: MountFunction) {
   mountTracker?.(fn);
 }
 
-export function h(
-  componentFunction,
-  props = {},
-  ...children
-): Element | Promise<Element> {
+export function h<C extends ComponentFunction<any>>(
+  componentFunction: C,
+  props: Parameters<C>[0] = {} as Parameters<C>[0],
+  ...children: any[]
+): ReturnType<C> {
   const allSubscriptions = new Set<Subscription>();
   const allMounts = new Set<MountFunction>();
 

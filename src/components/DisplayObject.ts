@@ -17,7 +17,7 @@ type AABB = {
     height: number
 }
 
-const EVENTS = [
+export const EVENTS = [
     'added',
     'childAdded',
     'childRemoved',

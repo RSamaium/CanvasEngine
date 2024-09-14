@@ -9,6 +9,7 @@ function getRandomColor() {
     return color;
 }
 
+
 const RMSpritesheet = (framesWidth: number, framesHeight: number, frameStand: number = 1) => {
 
     if (framesWidth <= frameStand) {
@@ -136,21 +137,62 @@ const to = () => {
     return array
 }
 
+// const spritesheet = {
+//     id: 'shield',
+//     image: './animation.png',
+//     framesWidth: 5,
+//     framesHeight: 4,
+//     width: 960,
+//     height: 768,
+//     opacity: 1,
+//     anchor: [0.5],
+//     textures: {
+//         default: {
+//             animations: [to()]
+//         }
+//     }
+// }
+
+
 const spritesheet = {
     id: 'shield',
-    image: './animation.png',
-    framesWidth: 5,
-    framesHeight: 4,
-    width: 960,
+    image: './chara.png',
+    framesWidth: 4,
+    framesHeight: 1,
+    width: 1024,
     height: 768,
     opacity: 1,
-    anchor: [0.5],
+    //anchor: [0.5],
     textures: {
         default: {
-            animations: [to()]
+            animations: [
+                [
+                    {
+                        time: 0,
+                        frameX: 0,
+                        frameY: 0
+                    },
+                    {
+                        time: 5,
+                        frameX: 1,
+                        frameY: 0
+                    },
+                    {
+                        time: 15,
+                        frameX: 2,
+                        frameY: 0
+                    },
+                    {
+                        time: 20,
+                        frameX: 3,
+                        frameY: 0
+                    }
+                ]
+            ]
         }
     }
 }
+
 
 const config = {
     "lifetime": {
@@ -266,24 +308,20 @@ h(Canvas, {
     width: 800,
     height: 600,
 },
-    h(Sprite, {
-        sheet: {
-            definition: spritesheet,
-            playing: 'default',
-            onFinish: () => {
-                console.log('finish')
-            }
-        },
-        x: 200,
-        y: 200
-    }),
-   
-
+    
     // h(TiledMap, {
     //     map: './maps/map.tmx'
     // }),
 
-    h(Container, {})
+    h(Rectangle, {
+        color: 'red',
+        width: 100,
+        height: 100,
+        click: () => {
+            console.log('click')
+        }
+    }),
+
    
     
     //cond(bool, () => lazy)

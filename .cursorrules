@@ -1,0 +1,3 @@
+For unit tests, use vitest
+If you fix unit tests, maintain the operation of the other tests in the specifications
+Write comments in english
