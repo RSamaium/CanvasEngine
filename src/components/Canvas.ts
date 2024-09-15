@@ -6,13 +6,14 @@ import { useProps } from "../hooks/useProps";
 import { DisplayObject } from "./DisplayObject";
 import { ComponentFunction } from "../engine/signal";
 import { SignalOrPrimitive } from "./types";
+import { Size } from "./types/DisplayObject";
 
 registerComponent("Canvas", class Canvas extends DisplayObject(Container) {});
 
 export interface CanvasProps extends Props {
   cursorStyles?: () => any;
-  width?: SignalOrPrimitive<number>;
-  height?: SignalOrPrimitive<number>;
+  width?: SignalOrPrimitive<Size>;
+  height?: SignalOrPrimitive<Size>;
   canvasEl?: HTMLElement;
   selector?: string;
   isRoot?: boolean;
@@ -60,6 +61,7 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
   const canvasElement = createComponent("Canvas", options);
   (globalThis as any).__PIXI_STAGE__ = canvasElement.componentInstance;
   (globalThis as any).__PIXI_RENDERER__ = renderer;
+
   effect(() => {
     canvasElement.propObservables!.tick();
     renderer.render(canvasElement.componentInstance as any);
@@ -70,6 +72,25 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
       renderer.events.cursorStyles = cursorStyles();
     });
   }
+
+  const resizeCanvas = () => {
+    let w, h;
+    if (width?.() === '100%' && height?.() === '100%') {
+      const parent = canvasEl.parentElement;
+      w = parent ? parent.clientWidth : window.innerWidth;
+      h = parent ? parent.clientHeight : window.innerHeight;
+    } else {
+      w = width?.() ?? canvasEl.offsetWidth;
+      h = height?.() ?? canvasEl.offsetHeight;
+    }
+    renderer.resize(w, h);
+  };
+
+  // Initial resize
+  resizeCanvas();
+
+  // Listen for window resize events
+  window.addEventListener("resize", resizeCanvas);
 
   return canvasElement;
 };

@@ -43,7 +43,6 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
     }
 
     private updateViewportSettings(props) {
-        console.log(props)
         if (props.screenWidth !== undefined) {
             this.screenWidth = props.screenWidth
         }

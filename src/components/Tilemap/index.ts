@@ -8,7 +8,6 @@ import { TilingSprite } from "../TilingSprite"
 import { CompositeTileLayer } from "./TileLayer"
 import { TileSet } from "./TileSet"
 
-
 export function TiledMap(props) {
     const { map } = useProps(props)
     const layers = signal<TiledLayer[]>([])

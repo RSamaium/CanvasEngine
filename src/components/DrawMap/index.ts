@@ -9,43 +9,51 @@ interface TileData {
   id: number;
   rect: [number, number, number, number];
   drawIn: [number, number];
+  layerIndex: number;
 }
 
 export function ImageExtractor(props) {
   const { imageSource, tileData } = useProps(props);
+  const objectLayer = props.objectLayer;
   const tiles = signal<TileData[]>([]);
 
   effect(() => {
-    // Assuming tileData is a string path to a JSON file
     fetch(tileData())
       .then((response) => response.json())
       .then((data) => tiles.set(data));
   });
 
-  const createTiles = () => {
+  const createLayeredTiles = () => {
+    const layers = [
+      createTileLayer(0),
+      h(Container, {}, objectLayer?.()),
+      createTileLayer(1),
+      createTileLayer(2),
+    ];
+
+    return h(Container, {}, ...layers);
+  };
+
+  const createTileLayer = (layerIndex: number) => {
     return h(
       Container,
       {},
       loop(tiles, (tile) => {
+        tile.layerIndex ||= 0;
+        if (tile.layerIndex !== layerIndex) return null;
+
         const [x, y, width, height] = tile.rect;
         const [drawX, drawY] = tile.drawIn;
 
         return h(Sprite, {
-          sheet: {
-            image: imageSource(),
-            x: drawX,
-            y: drawY,
-            rectangle: {
-              x,
-              y,
-              width,
-              height,
-            },
-          },
+          image: imageSource(),
+          x: drawX,
+          y: drawY,
+          rectangle: { x, y, width, height },
         });
       })
     );
   };
 
-  return createTiles();
+  return createLayeredTiles();
 }

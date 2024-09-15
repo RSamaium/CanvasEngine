@@ -156,7 +156,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   onMount(params: Element<CanvasSprite>) {
     const { props, propObservables } = params;
     const tick: Signal = props.context.tick;
-    const sheet = props.sheet;
+    const sheet = props.sheet ?? {};
     if (sheet?.onFinish) {
       this.onFinish = sheet.onFinish;
     }
@@ -267,7 +267,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       //RpgSound.get(sound).play()
     }
 
-    //this.addChild(this.currentAnimation.container);
+    this.addChild(this.currentAnimation.container);
     // Updates immediately to avoid flickering
     this.update({
       deltaRatio: 1,

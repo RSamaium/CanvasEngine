@@ -188,15 +188,16 @@ export function createComponent(tag: string, props?: Props): Element {
               prev?: Element;
             }) => {
               // if prev, insert element after this
+              const components = comp.filter((c) => c !== null);
               if (prev) {
-                comp.forEach((c) => {
+                components.forEach((c) => {
                   const index = element.props.children.indexOf(prev.props.key);
                   onMount(element, c, index + 1);
                   propagateContext(c);
                 });
                 return;
               }
-              comp.forEach((c) => {
+              components.forEach((c) => {
                 onMount(element, c);
                 propagateContext(c);
               });
