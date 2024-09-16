@@ -22,13 +22,14 @@ enum Animation {
 const x = animatedSignal(800);
 const y = animatedSignal(600);
 const direction = signal(Direction.Down);
+const speed = 5
 
 const controls = signal({
   down: {
     repeat: true,
     bind: "down",
     trigger() {
-      y.update((y) => y + 3);
+      y.update((y) => y + speed);
       direction.set(Direction.Down);
     },
   },
@@ -36,7 +37,7 @@ const controls = signal({
     repeat: true,
     bind: "up",
     trigger() {
-      y.update((y) => y - 3);
+      y.update((y) => y - speed);
       direction.set(Direction.Up);
     },
   },
@@ -44,7 +45,7 @@ const controls = signal({
     repeat: true,
     bind: "left",
     trigger() {
-      x.update((x) => x - 3);
+      x.update((x) => x - speed);
       direction.set(Direction.Left);
     },
   },
@@ -52,7 +53,7 @@ const controls = signal({
     repeat: true,
     bind: "right",
     trigger() {
-      x.update((x) => x + 3);
+      x.update((x) => x + speed);
       direction.set(Direction.Right);
     },
   },
@@ -153,19 +154,22 @@ h(
     h(ImageExtractor, {
       imageSource: "tileset.png",
       tileData: "tilesetData.json",
-      objectLayer() {
-        return h(Sprite, {
-          sheet: {
-            definition: LPCSpritesheetPreset(),
-            params: {
-              direction,
+      objects() {
+        return [
+          h(Sprite, {
+            sheet: {
+              definition: LPCSpritesheetPreset(),
+              params: {
+                direction,
+              },
             },
-          },
-          x,
-          y,
-          controls,
-          viewportFollow: true,
-        });
+            x,
+            y,
+            controls,
+            viewportFollow: true,
+            zIndex: y
+          })
+        ]
       },
     })
   )

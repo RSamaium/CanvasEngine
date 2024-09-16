@@ -178,7 +178,7 @@ export function DisplayObject(extendClass) {
             if (props.tint) this.tint = props.tint
             if (props.rotation) this.rotation = props.rotation
             if (props.angle) this.angle = props.angle
-            if (props.zIndex !== undefined) this.zOrder = props.zIndex
+            if (props.zIndex !== undefined) this.zIndex = props.zIndex
             if (props.roundPixels !== undefined) this.roundPixels = props.roundPixels
             if (props.cursor) this.cursor = props.cursor
             if (props.visible !== undefined) this.visible = props.visible

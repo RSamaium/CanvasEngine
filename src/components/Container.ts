@@ -4,26 +4,23 @@ import { DisplayObject } from "./DisplayObject";
 import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
 
-export class CanvasContainer extends DisplayObject(PixiContainer) {
-  // layer = new Layer()
-  /*onMount(element: Element) {
-        super.onMount(element)
-        const { rootElement } = element.props.context
-        rootElement.componentInstance.addChild(this.layer)
-    }
+interface ContainerProps extends DisplayObjectProps {
+  sortableChildren?: boolean;
+}
 
-    onUpdate(props) {
-        super.onUpdate(props)
-        if (props.sortableChildren != undefined) {
-            //this.layer.group.enableSort = props.sortableChildren
-        }
-    }*/
+export class CanvasContainer extends DisplayObject(PixiContainer) {
+  onUpdate(props) {
+      super.onUpdate(props)
+      if (props.sortableChildren != undefined) {
+          this.sortableChildren = props.sortableChildren
+      }
+  }
 }
 
 export interface CanvasContainer extends DisplayObjectProps {}
 
 registerComponent("Container", CanvasContainer);
 
-export const Container: ComponentFunction<DisplayObjectProps> = (props) => {
+export const Container: ComponentFunction<ContainerProps> = (props) => {
   return createComponent("Container", props);
 };

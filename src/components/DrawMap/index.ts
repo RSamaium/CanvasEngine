@@ -14,41 +14,47 @@ interface TileData {
 
 export function ImageExtractor(props) {
   const { imageSource, tileData } = useProps(props);
-  const objectLayer = props.objectLayer;
   const tiles = signal<TileData[]>([]);
 
-  effect(() => {
-    fetch(tileData())
-      .then((response) => response.json())
-      .then((data) => tiles.set(data));
+  effect(async () => {
+    const data = await fetch(tileData()).then((response) => response.json());
+    const objects = data;
+    if (props.objects) {
+      objects.push(...props.objects(data));
+    }
+    tiles.set(objects);
   });
 
   const createLayeredTiles = () => {
-    const layers = [
-      createTileLayer(0),
-      ...[createTileLayer(1), objectLayer?.()],
-      createTileLayer(2),
-    ];
+    const layers = [createTileLayer(0), createTileLayer(1, true), createTileLayer(2)];
 
     return h(Container, {}, ...layers);
   };
 
-  const createTileLayer = (layerIndex: number) => {
+  const createTileLayer = (layerIndex: number, sortableChildren = false) => {
     return h(
       Container,
-      {},
-      loop(tiles, (tile) => {
-        tile.layerIndex ||= 0;
-        if (tile.layerIndex !== layerIndex) return null;
+      {
+        sortableChildren
+      },
+      loop(tiles, (object) => {
 
-        const [x, y, width, height] = tile.rect;
-        const [drawX, drawY] = tile.drawIn;
+        if (object.tag && layerIndex == 1) {
+            return object
+        }
+
+        object.layerIndex ||= 1;
+        if (object.layerIndex !== layerIndex) return null;
+
+        const [x, y, width, height] = object.rect;
+        const [drawX, drawY] = object.drawIn;
 
         return h(Sprite, {
           image: imageSource(),
           x: drawX,
           y: drawY,
           rectangle: { x, y, width, height },
+          zIndex: drawY + height - 70,
         });
       })
     );
