@@ -1,4 +1,4 @@
-import { Signal } from "@signe/reactive";
+import { computed, effect, Signal } from "@signe/reactive";
 import {
   Assets,
   Container,
@@ -23,6 +23,7 @@ import {
 } from "./types/Spritesheet";
 import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
+import { AnimatedState, isAnimatedSignal } from "../engine/animation";
 
 const log = console.log;
 
@@ -51,6 +52,11 @@ type AnimationDataFrames = {
   data: TextureOptionsMerging;
 };
 
+export enum StandardAnimation {
+  Stand = "stand",
+  Walk = "walk",
+}
+
 export class CanvasSprite extends DisplayObject(PixiSprite) {
   public hitbox: { w: number; h: number };
   public applyTransform: (
@@ -65,6 +71,11 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   private animations: Map<string, AnimationDataFrames> = new Map();
   private subscriptionTick: Subscription;
   private subscriptionSheet: Subscription[] = [];
+  private sheetParams: any = {};
+  private sheetCurrentAnimation: string = StandardAnimation.Stand;
+  private isMoving = false;
+  private newX = 0;
+  private newY = 0;
   onFinish: () => void;
 
   private async createTextures(
@@ -153,7 +164,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     }
   }
 
-  onMount(params: Element<CanvasSprite>) {
+  async onMount(params: Element<CanvasSprite>) {
     const { props, propObservables } = params;
     const tick: Signal = props.context.tick;
     const sheet = props.sheet ?? {};
@@ -163,30 +174,56 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     this.subscriptionTick = tick.observable.subscribe((value) => {
       this.update(value);
     });
+    if (props.sheet?.definition) {
+      this.spritesheet = props.sheet.definition;
+      await this.createAnimations();
+    }
     if (sheet.params) {
       for (let key in propObservables?.sheet["params"]) {
         const value = propObservables?.sheet["params"][key] as Signal;
         this.subscriptionSheet.push(
           value.observable.subscribe((value) => {
             if (this.animations.size == 0) return;
-            this.play(sheet.playing, [{ [key]: value }]);
+            this.play(this.sheetCurrentAnimation, [{ [key]: value }]);
           })
         );
       }
     }
+
+    const isMoving = computed(() => {
+      const isMovingX = isAnimatedSignal(propObservables?.x) && 
+        propObservables?.x.animatedState().current !== propObservables?.x.animatedState().end;
+      const isMovingY = isAnimatedSignal(propObservables?.y) && 
+        propObservables?.y.animatedState().current !== propObservables?.y.animatedState().end;
+      return isMovingX || isMovingY;
+    });
+
+    effect(() => {
+      const _isMoving = isMoving();
+
+      if (!this.isMounted) return;
+
+      if (_isMoving) {
+        this.sheetCurrentAnimation = StandardAnimation.Walk;
+      } else {
+        this.sheetCurrentAnimation = StandardAnimation.Stand;
+      }
+
+      this.play(this.sheetCurrentAnimation, [this.sheetParams]);
+    });
+
     super.onMount(params);
   }
 
   async onUpdate(props) {
     super.onUpdate(props);
     const sheet = props.sheet;
-    if (props.sheet?.definition) {
-      this.spritesheet = props.sheet.definition;
-      await this.createAnimations();
-    }
+    if (sheet?.params) this.sheetParams = sheet?.params;
+
     if (sheet?.playing) {
-      this.play(sheet.playing, [sheet.params]);
+      this.sheetCurrentAnimation = sheet?.playing;
     }
+
     if (props.scaleMode) this.baseTexture.scaleMode = props.scaleMode;
     else if (props.image) {
       if (props.rectangle === undefined) {
@@ -243,7 +280,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     this.removeChildren();
     animation.sprites = [];
     this.currentAnimation = animation;
-    this.currentAnimation.params = params;
+    this.currentAnimation.params = structuredClone(params);
     this.time = 0;
     this.frameIndex = 0;
     let animations: any = animation.animations;
@@ -403,7 +440,7 @@ export interface SpriteProps extends DisplayObjectProps {
   };
 }
 
-export interface SpritePropsWithImage extends Omit<SpriteProps, 'sheet'> {
+export interface SpritePropsWithImage extends Omit<SpriteProps, "sheet"> {
   image: string;
   rectangle?: {
     x: number;
@@ -413,7 +450,8 @@ export interface SpritePropsWithImage extends Omit<SpriteProps, 'sheet'> {
   };
 }
 
-export interface SpritePropsWithSheet extends Omit<SpriteProps, 'image' | 'rectangle'> {
+export interface SpritePropsWithSheet
+  extends Omit<SpriteProps, "image" | "rectangle"> {
   sheet: {
     definition: SpritesheetOptionsMerging;
     playing?: string;
@@ -427,4 +465,4 @@ export type SpritePropTypes = SpritePropsWithImage | SpritePropsWithSheet;
 // Update the Sprite function to use the props interface
 export const Sprite: ComponentFunction<SpritePropTypes> = (props) => {
   return createComponent("Sprite", props);
-}
+};

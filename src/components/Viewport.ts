@@ -2,6 +2,7 @@ import { Viewport as PixiViewport } from 'pixi-viewport';
 import { Subscription } from 'rxjs';
 import { createComponent, registerComponent } from '../engine/reactive';
 import { DisplayObject } from './DisplayObject';
+import { effect } from '@signe/reactive';
 
 export class CanvasViewport extends DisplayObject(PixiViewport) {
     private tickSubscription: Subscription
@@ -21,7 +22,12 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
 
     onMount(element) {
         super.onMount(element)
-        const { tick, renderer } = element.props.context
+        const { tick, renderer, canvasSize } = element.props.context
+        
+        effect(() => {
+            this.screenWidth = canvasSize().width
+            this.screenHeight = canvasSize().height
+        })
 
         renderer.events.domElement.addEventListener(
             'wheel',

@@ -26,8 +26,7 @@ export function ImageExtractor(props) {
   const createLayeredTiles = () => {
     const layers = [
       createTileLayer(0),
-      h(Container, {}, objectLayer?.()),
-      createTileLayer(1),
+      ...[createTileLayer(1), objectLayer?.()],
       createTileLayer(2),
     ];
 

@@ -1,4 +1,4 @@
-import { effect, Signal, signal } from "@signe/reactive";
+import { computed, effect, Signal, signal } from "@signe/reactive";
 import { Container, autoDetectRenderer } from "pixi.js";
 import { loadYoga } from "yoga-layout";
 import { Props, createComponent, registerComponent } from "../engine/reactive";
@@ -40,12 +40,18 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
     (props.canvasEl ?? document.body).appendChild(canvasEl);
   }
 
+  const canvasSize = signal({
+    width: renderer.width,
+    height: renderer.height,
+  });
+
   props.isRoot = true;
   const options: CanvasProps = {
     ...props,
     context: {
       Yoga,
       renderer,
+      canvasSize
     },
     width: width?.(),
     height: height?.(),
@@ -84,6 +90,7 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
       h = height?.() ?? canvasEl.offsetHeight;
     }
     renderer.resize(w, h);
+    canvasSize.set({ width: w, height: h });
   };
 
   // Initial resize

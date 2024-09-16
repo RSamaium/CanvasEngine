@@ -17,7 +17,45 @@ export function isPromise(value: any): boolean {
 }
 
 export function arrayEquals(a: any[], b: any[]): boolean {
-    return a.length === b.length && a.every((v, i) => v === b[i])
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        const v = a[i];
+        const bv = b[i];
+        if (typeof v === 'object' && v !== null) {
+            if (typeof bv !== 'object' || bv === null) return false;
+            if (Array.isArray(v)) {
+                if (!Array.isArray(bv) || !arrayEquals(v, bv)) return false;
+            } else if (!objectEquals(v, bv)) {
+                return false;
+            }
+        } else if (v !== bv) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function objectEquals(a: object, b: object): boolean {
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+    for (let key of keysA) {
+        if (!b.hasOwnProperty(key)) return false;
+        if (!deepEquals(a[key], b[key])) return false;
+    }
+    return true;
+}
+
+function deepEquals(a: any, b: any): boolean {
+    if (a === b) return true;
+    if (typeof a !== typeof b) return false;
+    if (typeof a === 'object' && a !== null) {
+        if (Array.isArray(a)) {
+            return Array.isArray(b) && arrayEquals(a, b);
+        }
+        return objectEquals(a, b);
+    }
+    return false;
 }
 
 export function isFunction(val: unknown): boolean {
