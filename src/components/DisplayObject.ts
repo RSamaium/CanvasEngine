@@ -110,6 +110,7 @@ export function DisplayObject(extendClass) {
         onInit(props) {
             for (let event of EVENTS) {
                 if (props[event]) {
+
                     this.eventMode = 'static';
                     this.on(event, props[event])
                 }

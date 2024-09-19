@@ -1,10 +1,10 @@
-import { ImageExtractor } from "./src/components/DrawMap";
+import { ImageMap } from "./src/components/DrawMap";
 import { Sprite, SpriteProps } from "./src/components/Sprite";
 import { h, Canvas, Container, signal, Viewport } from "./src";
 import "./src/directives";
 import { effect } from "@signe/reactive";
 import { animatedSignal } from "./src/engine/animation";
-
+import { bootstrapCanvas } from "./src/engine/bootstrap";
 enum Direction {
   Down = "down",
   Left = "left",
@@ -135,12 +135,13 @@ const LPCSpritesheetPreset = () => {
   };
 };
 
-h(
+const root = h(
   Canvas,
   {
     width: "100%",
     height: "100%",
     antialias: true,
+    class: "bg-red-500"
   },
   h(
     Viewport,
@@ -151,7 +152,7 @@ h(
         direction: "all",
       }
     },
-    h(ImageExtractor, {
+    h(ImageMap, {
       imageSource: "tileset.png",
       tileData: "tilesetData.json",
       objects() {
@@ -167,10 +168,15 @@ h(
             y,
             controls,
             viewportFollow: true,
-            zIndex: y
+            zIndex: y,
+            pointerdown() {
+              console.log("click")
+            }
           })
         ]
       },
     })
   )
 );
+
+bootstrapCanvas(document.getElementById("root"), root);

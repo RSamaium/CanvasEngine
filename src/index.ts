@@ -4,5 +4,7 @@ export { Howler } from 'howler'
 export * from './components'
 export * from './engine/reactive'
 export * from './engine/signal'
+export * from './engine/bootstrap'
+export * from './engine/animation'
 export { useProps } from './hooks/useProps'
 

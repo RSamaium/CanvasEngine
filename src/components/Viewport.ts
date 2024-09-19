@@ -1,4 +1,6 @@
 import { Viewport as PixiViewport } from 'pixi-viewport';
+import pkg from 'pixi-viewport';
+
 import { Subscription } from 'rxjs';
 import { createComponent, registerComponent } from '../engine/reactive';
 import { DisplayObject } from './DisplayObject';
@@ -34,7 +36,7 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
             this.input.wheelFunction
         );
         this.options.events = renderer.events
-            
+ 
         this.tickSubscription = tick.observable.subscribe(({ value }) => {
             this.update(value.timestamp)
         })

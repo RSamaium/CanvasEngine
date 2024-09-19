@@ -78,6 +78,8 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   private newY = 0;
   onFinish: () => void;
 
+  private currentAnimationContainer: Container | null = null;
+
   private async createTextures(
     options: Required<TextureOptionsMerging>
   ): Promise<Texture[][]> {
@@ -243,6 +245,9 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     super.onDestroy();
     this.subscriptionSheet.forEach((sub) => sub.unsubscribe());
     this.subscriptionTick.unsubscribe();
+    if (this.currentAnimationContainer && this.parent instanceof Container) {
+      this.parent.removeChild(this.currentAnimationContainer);
+    }
   }
 
   has(name: string): boolean {
@@ -288,14 +293,14 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       ? (animations as Function)(...params)
       : animations;
 
-    this.currentAnimation.container = new Container();
+    this.currentAnimationContainer = new Container();
 
     for (let container of animations as FrameOptionsMerging[][]) {
       const sprite = new PixiSprite();
       for (let frame of container) {
         this.currentAnimation.sprites.push(frame);
       }
-      this.currentAnimation.container.addChild(sprite);
+      this.currentAnimationContainer.addChild(sprite);
     }
 
     const sound = this.currentAnimation.data.sound;
@@ -304,7 +309,10 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       //RpgSound.get(sound).play()
     }
 
-    this.addChild(this.currentAnimation.container);
+    // Replace this.addChild with this.parent.addChild
+    if (this.parent instanceof Container) {
+      this.parent.addChild(this.currentAnimationContainer);
+    } 
     // Updates immediately to avoid flickering
     this.update({
       deltaRatio: 1,
@@ -312,13 +320,13 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   }
 
   update({ deltaRatio }) {
-    if (!this.isPlaying() || !this.currentAnimation) return;
+    if (!this.isPlaying() || !this.currentAnimation || !this.currentAnimationContainer) return;
 
-    const { frames, container, sprites, data } = this.currentAnimation;
+    const { frames, sprites, data } = this.currentAnimation;
     let frame = sprites[this.frameIndex];
     const nextFrame = sprites[this.frameIndex + 1];
 
-    for (let _sprite of container.children) {
+    for (let _sprite of this.currentAnimationContainer.children) {
       const sprite = _sprite as PixiSprite;
 
       if (!frame || frame.frameY == undefined || frame.frameX == undefined) {

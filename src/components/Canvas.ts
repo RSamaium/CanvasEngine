@@ -18,27 +18,17 @@ export interface CanvasProps extends Props {
   selector?: string;
   isRoot?: boolean;
   tick?: any;
+  class?: SignalOrPrimitive<string>;
 }
 
 export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
-  const { cursorStyles, width, height } = useProps(props);
+  const { cursorStyles, width, height, class: className } = useProps(props);
   const Yoga = await loadYoga();
   const renderer = await autoDetectRenderer({
     ...props,
     width: width?.() ?? 800,
     height: height?.() ?? 600,
   });
-  const canvasEl = renderer.view.canvas;
-
-  if (!props.canvasEl && props.selector) {
-    const selector =
-      document.body.querySelector(props.selector) || document.body;
-    selector.insertBefore(canvasEl, selector.firstChild);
-    const [canvas] = document.querySelector(props.selector)!.children;
-    (canvas as HTMLElement).style.position = "absolute";
-  } else {
-    (props.canvasEl ?? document.body).appendChild(canvasEl);
-  }
 
   const canvasSize = signal({
     width: renderer.width,
@@ -51,7 +41,7 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
     context: {
       Yoga,
       renderer,
-      canvasSize
+      canvasSize,
     },
     width: width?.(),
     height: height?.(),
@@ -65,39 +55,60 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
     });
   }
   const canvasElement = createComponent("Canvas", options);
-  (globalThis as any).__PIXI_STAGE__ = canvasElement.componentInstance;
-  (globalThis as any).__PIXI_RENDERER__ = renderer;
 
-  effect(() => {
-    canvasElement.propObservables!.tick();
-    renderer.render(canvasElement.componentInstance as any);
-  });
+  canvasElement.render = (rootElement: HTMLElement) => {
+    const canvasEl = renderer.view.canvas;
 
-  if (cursorStyles) {
+    (globalThis as any).__PIXI_STAGE__ = canvasElement.componentInstance;
+    (globalThis as any).__PIXI_RENDERER__ = renderer;
+
     effect(() => {
-      renderer.events.cursorStyles = cursorStyles();
+      canvasElement.propObservables!.tick();
+      renderer.render(canvasElement.componentInstance as any);
     });
-  }
 
-  const resizeCanvas = () => {
-    let w, h;
-    if (width?.() === '100%' && height?.() === '100%') {
-      const parent = canvasEl.parentElement;
-      w = parent ? parent.clientWidth : window.innerWidth;
-      h = parent ? parent.clientHeight : window.innerHeight;
-    } else {
-      w = width?.() ?? canvasEl.offsetWidth;
-      h = height?.() ?? canvasEl.offsetHeight;
+    if (cursorStyles) {
+      effect(() => {
+        renderer.events.cursorStyles = cursorStyles();
+      });
     }
-    renderer.resize(w, h);
-    canvasSize.set({ width: w, height: h });
+
+    if (className) {
+      effect(() => {
+        canvasEl.classList.add(className());
+      });
+    }
+
+    const resizeCanvas = () => {
+      let w, h;
+      if (width?.() === "100%" && height?.() === "100%") {
+        const parent = canvasEl.parentElement;
+        w = parent ? parent.clientWidth : window.innerWidth;
+        h = parent ? parent.clientHeight : window.innerHeight;
+      } else {
+        w = width?.() ?? canvasEl.offsetWidth;
+        h = height?.() ?? canvasEl.offsetHeight;
+      }
+      renderer.resize(w, h);
+      canvasSize.set({ width: w, height: h });
+    };
+
+    // Initial resize
+    resizeCanvas();
+
+    // Listen for window resize events
+    window.addEventListener("resize", resizeCanvas);
+
+    // Check if a canvas already exists in the rootElement
+    const existingCanvas = rootElement.querySelector('canvas');
+    if (existingCanvas) {
+      // If it exists, replace it with the new canvas
+      rootElement.replaceChild(canvasEl, existingCanvas);
+    } else {
+      // If it doesn't exist, append the new canvas
+      rootElement.appendChild(canvasEl);
+    }
   };
-
-  // Initial resize
-  resizeCanvas();
-
-  // Listen for window resize events
-  window.addEventListener("resize", resizeCanvas);
 
   return canvasElement;
 };

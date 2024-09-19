@@ -49,7 +49,6 @@ export class Scheduler extends Directive {
 
     private showPanel() {
         this.stats.showPanel(0)
-        document.body.appendChild( this.stats.dom );
     }
 
     /**

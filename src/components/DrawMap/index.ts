@@ -12,7 +12,7 @@ interface TileData {
   layerIndex: number;
 }
 
-export function ImageExtractor(props) {
+export function ImageMap(props) {
   const { imageSource, tileData } = useProps(props);
   const tiles = signal<TileData[]>([]);
 
