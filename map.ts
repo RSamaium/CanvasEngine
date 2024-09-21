@@ -25,6 +25,7 @@ import * as PIXI from "pixi.js";
 import * as filters from "pixi-filters";
 import { PointLight } from "@pixi/lights";
 import { Stage } from "@pixi/layers";
+import { Joystick } from "./src/composition/Joystick";
 
 enum Direction {
   Down = "down",
@@ -193,7 +194,7 @@ const filter = new filters.GodrayFilter({
 
 const updateFilter = () => {
   filter.time += Math.random() * 0.01;
-  filter.center = [0, 0]
+  filter.center = [0, 0];
   requestAnimationFrame(updateFilter);
 };
 
@@ -248,7 +249,7 @@ const darkness = h(
 
   h(Graphics, {
     id: "lightMask",
-    
+
     //  blendMode: 'add',
     alpha: 0.5,
     draw(g) {
@@ -278,14 +279,24 @@ const root = h(
     height: "100%",
     antialias: true,
     class: "bg-red-500",
+    background: "red",
   },
-  h(Viewport, {
-    worldHeight: 2000,
-    worldWidth: 2000,
-    clamp: {
-      direction: "all",
-    }
-  }, map)
+  // h(Viewport, {
+  //   worldHeight: 2000,
+  //   worldWidth: 2000,
+  //   clamp: {
+  //     direction: "all",
+  //   }
+  // }, map),
+  h(Joystick, {
+    // outer: "joystick.png",
+    // inner: "joystick-handle.png",
+    x: 350,
+    y: 350,
+    onChange(settings) {
+      console.log(settings);
+    },
+  })
 );
 
 bootstrapCanvas(document.getElementById("root"), root);

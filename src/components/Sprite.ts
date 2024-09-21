@@ -193,10 +193,12 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     }
 
     const isMoving = computed(() => {
-      const isMovingX = isAnimatedSignal(propObservables?.x) && 
-        propObservables?.x.animatedState().current !== propObservables?.x.animatedState().end;
-      const isMovingY = isAnimatedSignal(propObservables?.y) && 
-        propObservables?.y.animatedState().current !== propObservables?.y.animatedState().end;
+      const { x, y } = propObservables ?? {};
+      if (!x || !y) return false;
+      const isMovingX = isAnimatedSignal(x) && 
+        x.animatedState().current !== x.animatedState().end;
+      const isMovingY = isAnimatedSignal(y) && 
+        y.animatedState().current !== y.animatedState().end;
       return isMovingX || isMovingY;
     });
 

@@ -4,6 +4,8 @@ import { setObservablePoint } from "../engine/utils";
 import type { AlignContent, EdgeSize, FlexDirection } from "./types/DisplayObject";
 
 export interface ComponentInstance {
+    id?: string;
+    children?: ComponentInstance[];
     onInit?(props: Props): void;
     onUpdate?(props: Props): void;
     onDestroy?(parent: Element): void;
@@ -133,7 +135,7 @@ export function DisplayObject(extendClass) {
                 if (instance.layer) this.parentLayer = instance.layer;
                 this.isMounted = true;
                 this.onUpdate(props)
-                this.parent.node.insertChild(this.node, this.parent.node.getChildCount());
+              //  this.parent.node.insertChild(this.node, this.parent.node.getChildCount());
                 if (parent.props.flexDirection) {
                     this.parent.node.calculateLayout()
                     for (let child of this.parent.children) {
@@ -171,16 +173,16 @@ export function DisplayObject(extendClass) {
 
         onUpdate(props) {
             if (!this._canvasContext || !this.parent) return;
-            if (props.x) this.setX(props.x)
-            if (props.y) this.setY(props.y)
-            if (props.width) this.setWidth(props.width)
-            if (props.height) this.setHeight(props.height)
-            if (props.scale) setObservablePoint(this.scale, props.scale)
-            if (props.anchor) setObservablePoint(this.anchor, props.anchor)
-            if (props.skew) setObservablePoint(this.skew, props.skew)
+            if (props.x !== undefined) this.setX(props.x)
+            if (props.y !== undefined) this.setY(props.y)
+            if (props.width !== undefined) this.setWidth(props.width)
+            if (props.height !== undefined) this.setHeight(props.height)
+            if (props.scale !== undefined) setObservablePoint(this.scale, props.scale)
+            if (props.anchor !== undefined) setObservablePoint(this.anchor, props.anchor)
+            if (props.skew !== undefined) setObservablePoint(this.skew, props.skew)
             if (props.tint) this.tint = props.tint
-            if (props.rotation) this.rotation = props.rotation
-            if (props.angle) this.angle = props.angle
+            if (props.rotation !== undefined) this.rotation = props.rotation
+            if (props.angle !== undefined) this.angle = props.angle
             if (props.zIndex !== undefined) this.zIndex = props.zIndex
             if (props.roundPixels !== undefined) this.roundPixels = props.roundPixels
             if (props.cursor) this.cursor = props.cursor
