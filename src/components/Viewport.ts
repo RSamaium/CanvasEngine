@@ -1,6 +1,4 @@
 import { Viewport as PixiViewport } from 'pixi-viewport';
-import pkg from 'pixi-viewport';
-
 import { Subscription } from 'rxjs';
 import { createComponent, registerComponent } from '../engine/reactive';
 import { DisplayObject } from './DisplayObject';

@@ -28,14 +28,14 @@ export function ImageMap(props) {
   const createLayeredTiles = () => {
     const layers = [createTileLayer(0), createTileLayer(1, true), createTileLayer(2)];
 
-    return h(Container, {}, ...layers);
+    return h(Container, props, ...layers);
   };
 
   const createTileLayer = (layerIndex: number, sortableChildren = false) => {
     return h(
       Container,
       {
-        sortableChildren
+        sortableChildren,
       },
       loop(tiles, (object) => {
 

@@ -57,6 +57,10 @@ type FlowObservable = Observable<{
 
 const components: { [key: string]: any } = {};
 
+export const isElement = (value: any): value is Element => {
+  return value && typeof value === 'object' && 'tag' in value && 'props' in value && 'componentInstance' in value;
+};
+
 export const isPrimitive = (value) => {
   return (
     typeof value === "string" ||
@@ -141,7 +145,7 @@ export function createComponent(tag: string, props?: Props): Element {
             })
           );
         } else {
-          if (isObject(value) && key != "context") {
+          if (isObject(value) && key != "context" && !isElement(value)) {
             recursiveProps(value, (path ? path + "." : "") + key);
           } else {
             _set(path, key, value);

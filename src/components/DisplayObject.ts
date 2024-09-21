@@ -1,5 +1,5 @@
 import { Node } from "yoga-layout";
-import { Element, Props } from "../engine/reactive";
+import { Element, isElement, Props } from "../engine/reactive";
 import { setObservablePoint } from "../engine/utils";
 import type { AlignContent, EdgeSize, FlexDirection } from "./types/DisplayObject";
 
@@ -96,6 +96,7 @@ export function DisplayObject(extendClass) {
         private isFlex: boolean = false;
         protected isMounted: boolean = false;
         private AABB: AABB = { x: 0, y: 0, width: 0, height: 0 }
+        private _id?: string
 
         public node: Node;
 
@@ -108,6 +109,7 @@ export function DisplayObject(extendClass) {
         }
 
         onInit(props) {
+            this._id = props.id
             for (let event of EVENTS) {
                 if (props[event]) {
 
@@ -188,6 +190,13 @@ export function DisplayObject(extendClass) {
             if (props.flexDirection) this.setFlexDirection(props.flexDirection)
             if (props.justifyContent) this.setJustifyContent(props.justifyContent)
             if (props.filters) this.filters = props.filters
+            if (props.maskOf) {
+                if (isElement(props.maskOf)) {
+                    props.maskOf.componentInstance.mask = this
+                }
+            }
+            if (props.blendMode) this.blendMode = props.blendMode
+            if (props.filterArea) this.filterArea = props.filterArea
             this.flexRender(props)
         }
 

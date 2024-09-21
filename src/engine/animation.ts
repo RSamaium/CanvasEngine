@@ -13,10 +13,11 @@ export interface AnimatedState<T> {
   end: T;
 }
 
-export interface AnimatedSignal<T> extends Omit<WritableSignal<AnimatedState<T>>, 'set'> {
+export interface AnimatedSignal<T> extends Omit<WritableSignal<T>, 'set'> {
+  (): T;
   set: (newValue: T) => void;
   animatedState: WritableSignal<AnimatedState<T>>;
-  update: (updater: (value: AnimatedState<T>) => AnimatedState<T>) => void;
+  update: (updater: (value: T) => T) => void;
 }
 
 export function isAnimatedSignal(signal: WritableSignal<any>): boolean {
@@ -92,14 +93,21 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
     });
   }
 
-  return {
-    ...publicSignal,
-    animatedState: privateSignal,
-    update(updater: (value: T) => any) {
-        animatedSignal(updater(privateSignal().current));
-    },
-    set(newValue: T) {
-        animatedSignal(newValue);
-    }
-  } as any
+  const fn = function() {
+    return privateSignal().current
+  }
+
+  for (const key in publicSignal) {
+    fn[key] = publicSignal[key]
+  }
+
+  fn.animatedState = privateSignal
+  fn.update = (updater: (value: T) => any) => {
+    animatedSignal(updater(privateSignal().current));
+  }
+  fn.set = (newValue: T) => {
+    animatedSignal(newValue);
+  }
+
+  return fn as any
 }

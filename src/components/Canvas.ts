@@ -7,6 +7,7 @@ import { DisplayObject } from "./DisplayObject";
 import { ComponentFunction } from "../engine/signal";
 import { SignalOrPrimitive } from "./types";
 import { Size } from "./types/DisplayObject";
+import { Stage } from "@pixi/layers";
 
 registerComponent("Canvas", class Canvas extends DisplayObject(Container) {});
 

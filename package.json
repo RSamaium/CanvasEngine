@@ -12,8 +12,9 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@barvynkoa/particle-emitter": "^0.0.1",
     "@pixi/layers": "^2.1.0",
-    "@pixi/particle-emitter": "^5.0.8",
+    "@pixi/lights": "^4.1.0",
     "@pixi/tilemap": "^5.0.1",
     "@rpgjs/tiled": "^4.3.0",
     "@signe/reactive": "^0.0.2",
@@ -21,7 +22,7 @@
     "d-path-parser": "^1.0.0",
     "howler": "^2.2.4",
     "peggy": "^3.0.2",
-    "pixi-cull": "^2.1.1",
+    "pixi-filters": "^6.0.5",
     "pixi-viewport": "^5.0.3",
     "pixi-virtual-joystick": "^0.4.1",
     "pixi.js": "^8.4.0",

@@ -34,6 +34,7 @@ export interface DisplayObjectProps extends PIXI.IDisplayObjectOptions {
     visible?: boolean;
     pivot?: { x: number, y: number };
     filters?: any[];
+    blendMode?: PIXI.BLEND_MODES;
 
     click?: PIXI.FederatedEventHandler;
     mousedown?: PIXI.FederatedEventHandler;

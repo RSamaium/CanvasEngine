@@ -15,6 +15,16 @@ export class CanvasContainer extends DisplayObject(PixiContainer) {
           this.sortableChildren = props.sortableChildren
       }
   }
+  onMount(args) {
+    super.onMount(args)
+    const { componentInstance, props } = args
+    const { pixiChildren } = props
+    if (pixiChildren) {
+      pixiChildren.forEach(child => {
+        componentInstance.addChild(child)
+      })
+    }
+  }
 }
 
 export interface CanvasContainer extends DisplayObjectProps {}
