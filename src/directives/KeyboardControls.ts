@@ -350,6 +350,17 @@ export class KeyboardControls extends Directive {
     private lastKeyPressed: number | null = null
     private _controlsOptions: Controls = {}
     private interval: any
+    private directionState: {
+        up: boolean,
+        down: boolean,
+        left: boolean,
+        right: boolean
+    } = {
+        up: false,
+        down: false,
+        left: false,
+        right: false
+    };
 
     onInit(element: Element) {
         this.setupListeners();
@@ -374,29 +385,43 @@ export class KeyboardControls extends Directive {
 
     /** @internal */
     preStep() {
-        //this.directionToAngle()
-        if (this.stop) return
-        const boundKeys = Object.keys(this.boundKeys)
-        const applyInput = (keyName: string) => {
-            const keyState = this.keyState[keyName]
-            if (!keyState) return
-            const { isDown, count } = keyState
-            if (isDown) {
-                const { repeat, trigger } = this.boundKeys[keyName].options
-                if ((repeat || count == 0)) {
-                    let parameters = this.boundKeys[keyName].parameters
-                    if (typeof parameters === "function") {
-                        parameters = parameters();
-                    }
-                    if (trigger) {
-                        trigger(this.boundKeys[keyName])
-                    }
-                    this.keyState[keyName]!.count++
+        if (this.stop) return;
+
+        const direction = this.getDirection();
+        if (direction !== 'none') {
+            // Trigger only the composite direction
+            const directionControl = this.boundKeys[direction];
+            if (directionControl) {
+                const { trigger } = directionControl.options;
+                if (trigger) {
+                    trigger(directionControl);
                 }
             }
+        } else {
+            // Process other controls as before
+            const boundKeys = Object.keys(this.boundKeys);
+            for (let keyName of boundKeys) {
+                this.applyInput(keyName);
+            }
         }
-        for (let keyName of boundKeys) {
-            applyInput(keyName)
+    }
+
+    private applyInput(keyName: string) {
+        const keyState = this.keyState[keyName];
+        if (!keyState) return;
+        const { isDown, count } = keyState;
+        if (isDown) {
+            const { repeat, trigger } = this.boundKeys[keyName].options;
+            if ((repeat || count == 0)) {
+                let parameters = this.boundKeys[keyName].parameters;
+                if (typeof parameters === "function") {
+                    parameters = parameters();
+                }
+                if (trigger) {
+                    trigger(this.boundKeys[keyName]);
+                }
+                this.keyState[keyName]!.count++;
+            }
         }
     }
 
@@ -462,7 +487,41 @@ export class KeyboardControls extends Directive {
             this.lastKeyPressed = isDown ? e.keyCode : null;
         }
 
-        //if (isDown) this.clientEngine.keyChange.next(keyName)
+        if (keyName) {
+            this.updateDirectionState(keyName, isDown);
+        }
+    }
+
+    private updateDirectionState(keyName: string, isDown: boolean) {
+        switch (keyName) {
+            case 'up':
+                this.directionState.up = isDown;
+                break;
+            case 'down':
+                this.directionState.down = isDown;
+                break;
+            case 'left':
+                this.directionState.left = isDown;
+                break;
+            case 'right':
+                this.directionState.right = isDown;
+                break;
+        }
+    }
+
+    private getDirection(): string {
+        const { up, down, left, right } = this.directionState;
+
+        if (up && left) return 'top_left';
+        if (up && right) return 'top_right';
+        if (down && left) return 'bottom_left';
+        if (down && right) return 'bottom_right';
+        if (up) return 'up';
+        if (down) return 'down';
+        if (left) return 'left';
+        if (right) return 'right';
+
+        return 'none';
     }
 
     /**

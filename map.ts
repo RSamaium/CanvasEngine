@@ -49,7 +49,7 @@ const speed = 5;
 const controls = signal({
   down: {
     repeat: true,
-    bind: "down",
+    bind: ["down", 'bottom_right', 'bottom_left'],
     trigger() {
       y.update((y) => y + speed);
       direction.set(Direction.Down);
@@ -57,7 +57,7 @@ const controls = signal({
   },
   up: {
     repeat: true,
-    bind: "up",
+    bind: ['up', 'top_left', 'top_right'],
     trigger() {
       y.update((y) => y - speed);
       direction.set(Direction.Up);
@@ -281,13 +281,13 @@ const root = h(
     class: "bg-red-500",
     background: "red",
   },
-  // h(Viewport, {
-  //   worldHeight: 2000,
-  //   worldWidth: 2000,
-  //   clamp: {
-  //     direction: "all",
-  //   }
-  // }, map),
+  h(Viewport, {
+    worldHeight: 2000,
+    worldWidth: 2000,
+    clamp: {
+      direction: "all",
+    }
+  }, map),
   h(Joystick, {
     // outer: "joystick.png",
     // inner: "joystick-handle.png",

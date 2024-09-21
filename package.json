@@ -24,7 +24,6 @@
     "peggy": "^3.0.2",
     "pixi-filters": "^6.0.5",
     "pixi-viewport": "^5.0.3",
-    "pixi-virtual-joystick": "^0.4.1",
     "pixi.js": "^8.4.0",
     "popmotion": "^11.0.5",
     "rxjs": "^7.8.1",
