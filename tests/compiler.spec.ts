@@ -23,6 +23,18 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas, { width: computed(() => x) })`);
   });
 
+  test("should compile component with object attribute", () => {
+    const input = `<Canvas width={ {x: 10, y: 20} } />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: computed(() => ({x: 10, y: 20})) })`);
+  });
+
+  test("should compile component with array attribute", () => {
+    const input = `<Canvas width={ [10, 20] } />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: computed(() => [10, 20]) })`);
+  });
+
   test("should compile component with standalone dynamic attribute", () => {
     const input = `<Canvas width />`;
     const output = parser.parse(input);
@@ -89,28 +101,28 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Sprite, { click })`);
   });
 
-  // test('should compile component with inline event handler', () => {
-  //     const input = `<Sprite (click)="() => console.log('click')" />`;
-  //     const output = parser.parse(input);
-  //     expect(output).toBe(`h('Sprite', { click: () => console.log('click') })`);
-  // });
+  test('should compile component with inline event handler', () => {
+      const input = `<Sprite @click={() => console.log('click')} />`;
+      const output = parser.parse(input);
+      expect(output).toBe(`h(Sprite, { click: () => console.log('click') })`);
+  });
 
-  // test('should compile interpolation', () => {
-  //     const input = `{{ val }}`;
-  //     const output = parser.parse(input);
-  //     expect(output).toBe(`h('Text', { text: val })`);
+  // test("should compile component with component attribute", () => {
+  //   const input = `<Canvas child={<Sprite />} />`;
+  //   const output = parser.parse(input);
+  //   expect(output).toBe(`h(Canvas, { child: h(Sprite) })`);
   // });
 });
 
 describe("Loop", () => {
   test("loop in canvas", () => {
     const input = `
-                <Canvas>
-                    @for (sprite of sprites) {
-                        <Sprite />
-                    }
-                </Canvas>
-            `;
+        <Canvas>
+            @for (sprite of sprites) {
+                <Sprite />
+            }
+        </Canvas>
+    `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
       `h(Canvas,null,loop(sprites,(sprite)=>h(Sprite)))`.replace(/\s+/g, "")

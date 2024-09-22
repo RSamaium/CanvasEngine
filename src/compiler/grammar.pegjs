@@ -62,7 +62,7 @@ attribute
   / eventHandler
 
 eventHandler
-  = "@" eventName:identifier _ "=" _ "{" handlerName:identifier "}" {
+  = "@" eventName:identifier _ "=" _ "{" _ handlerName:attributeValue _ "}" {
       return `${eventName}: ${handlerName}`;
     }
      / "@" eventName:attributeName _ {
@@ -70,12 +70,21 @@ eventHandler
     }
 
 dynamicAttribute
-  = attributeName:attributeName _ "=" _ "{" attributeValue:expression "}" {
+  = attributeName:attributeName _ "=" _ "{" _ attributeValue:attributeValue _ "}" {
       return `${attributeName}: computed(() => ${attributeValue})`;
     }
   / attributeName:attributeName _ {
       return attributeName;
     }
+
+attributeValue
+  = $([^{}]* ("{" [^{}]* "}" [^{}]*)*) {
+    const t = text().trim()
+    if (t.startsWith("{") && t.endsWith("}")) {
+      return `(${t})`;
+    }
+    return t
+  }
 
 staticAttribute
   = attributeName:attributeName _ "=" _ "\"" attributeValue:staticValue "\"" {
@@ -86,9 +95,6 @@ eventAttribute
   = "(" _ eventName:eventName _ ")" _ "=" _ "\"" eventAction:eventAction "\"" {
       return `${eventName}: () => { ${eventAction} }`;
     }
-
-expression
-  = [^}]+ { return text(); }
 
 staticValue
   = [^"]+ {

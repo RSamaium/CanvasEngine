@@ -3,6 +3,7 @@ import { parse } from "acorn";
 import dd from "dedent";
 import fs from "fs";
 import pkg from "peggy";
+import * as ts from "typescript"; // Import TypeScript package
 
 const { generate } = pkg;
 
@@ -11,6 +12,7 @@ export default function vitePluginCe() {
   const grammar = fs.readFileSync("src/compiler/grammar.pegjs", "utf8");
   const parser = generate(grammar);
   const isDev = process.env.NODE_ENV === "development";
+  const FLAG_COMMENT = "/*--[TPL]--*/";
 
   const PRIMITIVE_COMPONENTS = [
     "Canvas",
@@ -20,6 +22,7 @@ export default function vitePluginCe() {
     "Viewport",
     "Graphics",
     "Container",
+    "ImageMap",
   ];
 
   return {
@@ -29,12 +32,28 @@ export default function vitePluginCe() {
 
       // Extract the script content
       const scriptMatch = code.match(/<script>([\s\S]*?)<\/script>/);
-      const scriptContent = scriptMatch ? scriptMatch[1].trim() : "";
+      let scriptContent = scriptMatch ? scriptMatch[1].trim() : "";
+      
       const template = code.replace(/<script>[\s\S]*?<\/script>/, "").trim();
       const parsedTemplate = parser.parse(template);
 
+      // trick to avoid typescript remove imports in scriptContent
+      scriptContent += FLAG_COMMENT + parsedTemplate
+
+      let transpiledCode = ts.transpileModule(scriptContent, {
+        compilerOptions: {
+          module: ts.ModuleKind.Preserve,
+        },
+      }).outputText;
+
+      // remove code after /*---*/
+      transpiledCode = transpiledCode.split(FLAG_COMMENT)[0]
+
       // Use Acorn to parse the script content
-      const parsed = parse(scriptContent, { sourceType: "module" });
+      const parsed = parse(transpiledCode, {
+        sourceType: "module",
+        ecmaVersion: 2020,
+      });
 
       // Extract imports
       const imports = parsed.body.filter(
@@ -44,12 +63,12 @@ export default function vitePluginCe() {
       // Extract non-import statements from scriptContent
       const nonImportCode = parsed.body
         .filter((node) => node.type !== "ImportDeclaration")
-        .map((node) => scriptContent.slice(node.start, node.end))
+        .map((node) => transpiledCode.slice(node.start, node.end))
         .join("\n");
 
       let importsCode = imports
         .map((imp) => {
-          let importCode = scriptContent.slice(imp.start, imp.end);
+          let importCode = transpiledCode.slice(imp.start, imp.end);
           if (isDev && importCode.includes("from 'canvasengine'")) {
             importCode = importCode.replace(
               "from 'canvasengine'",

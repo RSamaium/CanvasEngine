@@ -1,22 +1,16 @@
 <script>
 import { signal } from 'canvasengine'
-
-import Other from './other.ce'
-
-const bool = signal(true)
-
-
-function draw(g) {
-    g.rect(0, 0, 100, 100)
-    g.fill('red')
-}
-
-function click() {
-    bool.update(v => !v)
-}
-
+import Character from './character.ce'
 </script>
 
 <Canvas width="100%" height="100%">
-   <Other value={10+1} />
+   <Viewport worldWidth="2000" worldHeight="2000" clamp={ {direction: 'all'} }>
+        <ImageMap 
+            imageSource="tileset.png" 
+            tileData="tilesetData.json" 
+            @objects={ () => [
+                Character()   
+            ] }
+        />
+   </Viewport>
 </Canvas>
