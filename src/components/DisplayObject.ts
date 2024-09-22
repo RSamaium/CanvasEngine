@@ -139,7 +139,7 @@ export function DisplayObject(extendClass) {
                 if (parent.props.flexDirection) {
                     this.parent.node.calculateLayout()
                     for (let child of this.parent.children) {
-                        const { left, top } = child.node.getComputedLayout()
+                        const { left, top } = child.getComputedLayout()
                         child.x = left
                         child.y = top
                     }
@@ -153,22 +153,13 @@ export function DisplayObject(extendClass) {
             // flex has changed, compute new layout
             if (props.flexDirection || props.justifyContent) {
                 this.isFlex = true
-                this.node.calculateLayout()
+                this.calculateLayout()
                 for (let child of this.children) {
                     const { left, top } = child.node.getComputedLayout()
                     child.x = left
                     child.y = top
                 }
             }
-
-            /* if () {
-                 this.parent.node.calculateLayout()
-                 for (let child of this.parent.children) {
-                     const { left, top } = child.node.getComputedLayout()
-                     child.x = left
-                     child.y = top
-                 }
-             }*/
         }
 
         onUpdate(props) {
@@ -190,7 +181,16 @@ export function DisplayObject(extendClass) {
             if (props.alpha !== undefined) this.alpha = props.alpha
             if (props.pivot) setObservablePoint(this.pivot, props.pivot)
             if (props.flexDirection) this.setFlexDirection(props.flexDirection)
+            if (props.flexWrap) this.setFlexWrap(props.flexWrap)
             if (props.justifyContent) this.setJustifyContent(props.justifyContent)
+            if (props.alignItems) this.setAlignItems(props.alignItems)
+            if (props.alignContent) this.setAlignContent(props.alignContent)
+            if (props.alignSelf) this.setAlignSelf(props.alignSelf)
+            if (props.margin) this.setMargin(props.margin)
+            if (props.padding) this.setPadding(props.padding)
+            if (props.gap) this.setGap(props.gap)
+            if (props.border) this.setBorder(props.border)
+            if (props.positionType) this.setPositionType(props.positionType)
             if (props.filters) this.filters = props.filters
             if (props.maskOf) {
                 if (isElement(props.maskOf)) {
@@ -199,6 +199,9 @@ export function DisplayObject(extendClass) {
             }
             if (props.blendMode) this.blendMode = props.blendMode
             if (props.filterArea) this.filterArea = props.filterArea
+
+            this.setWidth(this.width)
+            this.setHeight(this.height)
             this.flexRender(props)
         }
 
@@ -263,7 +266,7 @@ export function DisplayObject(extendClass) {
             this.setAlign("setAlignSelf", align);
         }
 
-        setAlinItems(align: AlignContent) {
+        setAlignItems(align: AlignContent) {
             this.setAlign("setAlignItems", align);
         }
 
@@ -322,6 +325,10 @@ export function DisplayObject(extendClass) {
             this.setEdgeSize("setMargin", margin);
         }
 
+        setGap(gap: EdgeSize) {
+            this.node.setGap(this.yoga.GAP_ALL, +gap);
+        }
+
         setBorder(border: EdgeSize) {
             this.setEdgeSize("setBorder", border);
         }
@@ -345,38 +352,36 @@ export function DisplayObject(extendClass) {
         }
 
         setWidth(width: number) {
-            this.node.setWidth(width);
-            //   this.width = width;
+            this.node?.setWidth(width);
         }
 
         setHeight(height: number) {
-            this.node.setHeight(height);
-            //  this.height = height;
+            this.node?.setHeight(height);
         }
 
         getWidth() {
             return this.node.getWidth();
         }
 
-      /*  updateAABB() {
-            const box = this.getLocalBounds()
-            this.AABB.x = this.x + (box.x - this.pivot.x) * Math.abs(this.scale.x)
-            this.AABB.y = this.y + (box.y - this.pivot.y) * Math.abs(this.scale.y)
-            this.AABB.width = box.width * Math.abs(this.scale.x)
-            this.AABB.height = box.height * Math.abs(this.scale.y)
-        }
+    //    updateAABB() {
+    //         const box = this.getLocalBounds()
+    //         this.AABB.x = this.x + (box.x - this.pivot.x) * Math.abs(this.scale.x)
+    //         this.AABB.y = this.y + (box.y - this.pivot.y) * Math.abs(this.scale.y)
+    //         this.AABB.width = box.width * Math.abs(this.scale.x)
+    //         this.AABB.height = box.height * Math.abs(this.scale.y)
+    //     }
 
-        render(args) {
-            super.render(args);
-            this.updateAABB()
-            if (this._boundsViewport) {
-                const bounds = this._context.viewport.getVisibleBounds()
-                const box = this.AABB
-                this.visible =
-                    box.x + box.width > bounds.x && box.x < bounds.x + bounds.width &&
-                    box.y + box.height > bounds.y && box.y < bounds.y + bounds.height
-            }
+    //     render(args) {
+    //         super.render(args);
+    //         this.updateAABB()
+    //         if (this._boundsViewport) {
+    //             const bounds = this._context.viewport.getVisibleBounds()
+    //             const box = this.AABB
+    //             this.visible =
+    //                 box.x + box.width > bounds.x && box.x < bounds.x + bounds.width &&
+    //                 box.y + box.height > bounds.y && box.y < bounds.y + bounds.height
+    //         }
             
-        }*/
+    //     }
     }
 } 

@@ -79,6 +79,9 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
     }
 
     animation = animatePopmotion({
+       // TODO
+       duration: 20,
+      ...options,
       from: prevState.current,
       to: newValue,
       onUpdate: (value) => {
@@ -87,9 +90,6 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
           options.onUpdate(value as T);
         }
       },
-      ...options,
-      // TODO
-      duration: 20,
     });
   }
 

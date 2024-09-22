@@ -1,5 +1,5 @@
 <script>
-  import { signal, animatedSignal, effect } from 'canvasengine'
+  import { signal, animatedSignal, effect, computed } from 'canvasengine'
   import { Bar } from '../src/presets/Bar'
 
   enum Direction {
@@ -139,11 +139,59 @@
         },
     }
 
-    const health = signal(100);
+    const health =  animatedSignal(100, {
+      duration: 300,
+    });
+
     const healthMax = signal(100);
+    
+    const textHealth = computed(() => Math.round(health()) + "%");
+
+    const mapColor = {
+        20: "#fb6f92",   // Color for 0% or less
+        40: "#ffb3c6",  // Color for 25% or less
+        70: "#588157",  // Color for 50% or less
+        90: "#344e41"   // Color for 75% or more
+    };
+    
+    const getForegroundColor = (value, max, colorMap = mapColor, defaultColor = "#FFFFFF") => {
+        const percentage = (value / max) * 100;
+        const thresholds = Object.keys(colorMap).map(Number).sort((a, b) => a - b);
+        
+        for (const threshold of thresholds) {
+            if (percentage <= threshold) {
+                return colorMap[threshold];
+            }
+        }
+        
+        return colorMap[thresholds[thresholds.length - 1]] || defaultColor;
+    };
+
+    const foregroundColor = signal("#344e41");
+
+    health.observable.subscribe((value) => {
+        foregroundColor.set(getForegroundColor(value, healthMax()));
+    });
+
 </script>
 
-<Container x y controls zIndex={y} @viewportFollow={true}>
-  <Bar width="100" height="10" value={health} maxValue={healthMax} />
+<Container x y controls 
+  zIndex={y} 
+  viewportFollow="true"
+  flexDirection="column" 
+  alignItems="center"
+>
+  <Text text={textHealth} style={{ fontSize: 20, align: 'center' }} />
+  <Bar 
+    width="100" 
+    height="12" 
+    value={health} 
+    maxValue={healthMax} 
+    backgroundColor="#000000"
+    foregroundColor={foregroundColor}
+    margin={ [10, 0, 0, 0] }
+    borderRadius="5"
+    innerMargin="2"
+  /> 
   <Sprite sheet @click={() => health.update((health) => health - 10)} />
 </Container>

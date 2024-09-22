@@ -11,6 +11,40 @@ beforeAll(() => {
 });
 
 describe("Compiler", () => {
+  test("should compile comment", () => {
+    const input = `
+      <Canvas>
+        <!-- Comment -->
+      </Canvas>
+    `;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas)`);
+  });
+
+  test("should compile multiple comment", () => {
+    const input = `
+      <Canvas>
+        <!-- Comment -->
+        <!-- Comment -->
+      </Canvas>
+    `;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas)`);
+  });
+
+  test("should compile multiple line comment", () => {
+    const input = `
+      <Canvas>
+        <!--
+          Comment
+          Comment
+        -->
+      </Canvas>
+    `;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas)`);
+  });
+
   test("should compile simple component", () => {
     const input = `<Canvas />`;
     const output = parser.parse(input);

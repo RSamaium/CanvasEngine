@@ -17,7 +17,7 @@ export interface Props {
 }
 
 export type ArrayChange<T> = {
-  type: 'add' | 'remove' | 'update' | 'init' | 'reset';
+  type: "add" | "remove" | "update" | "init" | "reset";
   index?: number;
   items: T[];
 };
@@ -58,7 +58,13 @@ type FlowObservable = Observable<{
 const components: { [key: string]: any } = {};
 
 export const isElement = (value: any): value is Element => {
-  return value && typeof value === 'object' && 'tag' in value && 'props' in value && 'componentInstance' in value;
+  return (
+    value &&
+    typeof value === "object" &&
+    "tag" in value &&
+    "props" in value &&
+    "componentInstance" in value
+  );
 };
 
 export const isPrimitive = (value) => {
@@ -133,8 +139,13 @@ export function createComponent(tag: string, props?: Props): Element {
 
       Object.entries(props).forEach(([key, value]: [string, unknown]) => {
         if (isSignal(value)) {
+          const _value = value as Signal<any>;
+          if ("dependencies" in _value && _value.dependencies.size == 0) {
+            _set(path, key, _value());
+            return;
+          }
           element.propSubscriptions.push(
-            (value as Signal<any>).observable.subscribe((value) => {
+            _value.observable.subscribe((value) => {
               _set(path, key, value);
               if (element.directives[key]) {
                 element.directives[key].onUpdate?.(value);
@@ -207,7 +218,7 @@ export function createComponent(tag: string, props?: Props): Element {
               }
               components.forEach((component) => {
                 if (!Array.isArray(component)) {
-                  component = [component]
+                  component = [component];
                 }
                 component.forEach((comp) => {
                   onMount(element, comp);
@@ -258,7 +269,7 @@ export function loop<T = any>(
       return element;
     });
   };
-  
+
   return defer(() => {
     let initialItems = [...itemsSubject._subject.items];
     let init = true;

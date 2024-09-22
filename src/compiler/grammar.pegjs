@@ -20,6 +20,7 @@ element
   / ifCondition
   / selfClosingElement
   / openCloseElement
+  / comment 
 
 selfClosingElement
   = _ "<" _ tagName:tagName _ attributes:attributes _ "/>" _ {
@@ -162,3 +163,13 @@ _ 'whitespace'
 
 identifier
   = [a-zA-Z_][a-zA-Z0-9_]* { return text(); }
+
+comment
+  = singleComment+ {
+    return null
+  }
+
+singleComment
+  = "<!--" _ content:((!("-->") .)* "-->") _ {
+      return null;
+    }

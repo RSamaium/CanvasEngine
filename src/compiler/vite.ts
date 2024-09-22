@@ -119,15 +119,15 @@ export default function vitePluginCe() {
 
       // Generate the output
       const output = dd`
-            ${importsCode}
-            import { useProps } from '../src'
+      ${importsCode}
+      import { useProps } from '../src'
 
-            export default function component($$props) {
-                const $props = useProps($$props)
-                ${nonImportCode}
-                return ${parsedTemplate}
-            }
-        `;
+      export default function component($$props) {
+          const $props = useProps($$props)
+          ${nonImportCode}
+          return ${parsedTemplate}
+      }
+  `;
 
       return {
         code: output,

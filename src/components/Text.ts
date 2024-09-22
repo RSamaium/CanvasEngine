@@ -15,9 +15,8 @@ class CanvasText extends DisplayObject(PixiText) {
             this.text = props.text
         }
         if (props.style) {
-            this.style = {
-                ...this.style,
-                ...props.style
+            for (const key in props.style) {
+                this.style[key] = props.style[key]
             }
         }
     }
