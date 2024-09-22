@@ -20,7 +20,7 @@ describe("Compiler", () => {
   test("should compile component with dynamic attribute", () => {
     const input = `<Canvas width={x} />`;
     const output = parser.parse(input);
-    expect(output).toBe(`h(Canvas, { width: computed(() => x) })`);
+    expect(output).toBe(`h(Canvas, { width: x })`);
   });
 
   test("should compile component with object attribute", () => {
@@ -29,10 +29,22 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas, { width: computed(() => ({x: 10, y: 20})) })`);
   });
 
+  test("should compile component with dynamic object attribute", () => {
+    const input = `<Canvas width={ {x: x, y: 20} } />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: computed(() => ({x: x(), y: 20})) })`);
+  });
+
   test("should compile component with array attribute", () => {
     const input = `<Canvas width={ [10, 20] } />`;
     const output = parser.parse(input);
     expect(output).toBe(`h(Canvas, { width: computed(() => [10, 20]) })`);
+  });
+
+  test("should compile component with dynamic array attribute", () => {
+    const input = `<Canvas width={ [x, 20] } />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: computed(() => [x(), 20]) })`);
   });
 
   test("should compile component with standalone dynamic attribute", () => {
@@ -44,13 +56,13 @@ describe("Compiler", () => {
   test("should compile component with computed dynamic attribute", () => {
     const input = `<Canvas width={x * 2} />`;
     const output = parser.parse(input);
-    expect(output).toBe(`h(Canvas, { width: computed(() => x * 2) })`);
+    expect(output).toBe(`h(Canvas, { width: computed(() => x() * 2) })`);
   });
 
   test("should compile component with multiple computed dynamic attributes", () => {
     const input = `<Canvas width={x * 2 * y} />`;
     const output = parser.parse(input);
-    expect(output).toBe(`h(Canvas, { width: computed(() => x * 2 * y) })`);
+    expect(output).toBe(`h(Canvas, { width: computed(() => x() * 2 * y()) })`);
   });
 
   test("should compile component with static numeric attribute", () => {

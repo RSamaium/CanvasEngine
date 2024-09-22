@@ -1,9 +1,8 @@
 <script>
-import { signal } from 'canvasengine'
 import Character from './character.ce'
 </script>
 
-<Canvas width="100%" height="100%">
+<Canvas width="100%" height="100%" backgroundColor="red">
    <Viewport worldWidth="2000" worldHeight="2000" clamp={ {direction: 'all'} }>
         <ImageMap 
             imageSource="tileset.png" 

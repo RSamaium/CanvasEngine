@@ -71,7 +71,11 @@ eventHandler
 
 dynamicAttribute
   = attributeName:attributeName _ "=" _ "{" _ attributeValue:attributeValue _ "}" {
-      return `${attributeName}: computed(() => ${attributeValue})`;
+      if (attributeValue.trim().match(/^[a-zA-Z_]\w*$/)) {
+        return `${attributeName}: ${attributeValue}`;
+      } else {
+        return `${attributeName}: computed(() => ${attributeValue.replace(/\b([a-zA-Z_]\w*)\b(?![\(\:])/g, '$1()')})`;
+      }
     }
   / attributeName:attributeName _ {
       return attributeName;

@@ -1,5 +1,6 @@
 <script>
-  import { signal, animatedSignal } from 'canvasengine'
+  import { signal, animatedSignal, effect } from 'canvasengine'
+  import { Bar } from '../src/presets/Bar'
 
   enum Direction {
     Down = "down",
@@ -15,8 +16,8 @@
     Skill = "skill",
   }
 
-  const x = animatedSignal(800);
-  const y = animatedSignal(600);
+  const x = animatedSignal(700);
+  const y = animatedSignal(400);
   const direction = signal(Direction.Down);
   const speed = 5;
 
@@ -137,6 +138,12 @@
             direction,
         },
     }
+
+    const health = signal(100);
+    const healthMax = signal(100);
 </script>
 
-<Sprite sheet x y controls zIndex={y} @viewportFollow={true} />
+<Container x y controls zIndex={y} @viewportFollow={true}>
+  <Bar width="100" height="10" value={health} maxValue={healthMax} />
+  <Sprite sheet @click={() => health.update((health) => health - 10)} />
+</Container>
