@@ -9,20 +9,22 @@
 
 start
   = _ elements:(element)* _ {
-      return elements.join('');
+    if (elements.length === 1) {
+      return elements[0];
     }
+    return `[${elements.join(',')}]`;
+  }
 
 element
   = forLoop
   / ifCondition
   / selfClosingElement
   / openCloseElement
-  
 
 selfClosingElement
-  = "<" _ tagName:tagName _ attributes:attributes _ "/>" {
+  = _ "<" _ tagName:tagName _ attributes:attributes _ "/>" _ {
       const attrs = attributes.length > 0 ? `{ ${attributes.join(', ')} }` : null;
-      return attrs ? `h('${tagName}', ${attrs})` : `h('${tagName}')`;
+      return attrs ? `h(${tagName}, ${attrs})` : `h(${tagName})`;
     }
 
 openCloseElement
@@ -33,13 +35,13 @@ openCloseElement
       const attrs = attributes.length > 0 ? `{ ${attributes.join(', ')} }` : null;
       const children = content ? content : null;
       if (attrs && children) {
-        return `h('${tagName}', ${attrs}, ${children})`;
+        return `h(${tagName}, ${attrs}, ${children})`;
       } else if (attrs) {
-        return `h('${tagName}', ${attrs})`;
+        return `h(${tagName}, ${attrs})`;
       } else if (children) {
-        return `h('${tagName}', null, ${children})`;
+        return `h(${tagName}, null, ${children})`;
       } else {
-        return `h('${tagName}')`;
+        return `h(${tagName})`;
       }
     }
 
@@ -55,13 +57,24 @@ attributes
     }
 
 attribute
-  = dynamicAttribute
-  / staticAttribute
-  / eventAttribute
+  = staticAttribute
+  / dynamicAttribute
+  / eventHandler
+
+eventHandler
+  = "@" eventName:identifier _ "=" _ "{" handlerName:identifier "}" {
+      return `${eventName}: ${handlerName}`;
+    }
+     / "@" eventName:attributeName _ {
+      return eventName;
+    }
 
 dynamicAttribute
-  = "[" _ attributeName:attributeName _ "]" _ "=" _ "\"" attributeValue:expression "\"" {
+  = attributeName:attributeName _ "=" _ "{" attributeValue:expression "}" {
       return `${attributeName}: computed(() => ${attributeValue})`;
+    }
+  / attributeName:attributeName _ {
+      return attributeName;
     }
 
 staticAttribute
@@ -75,7 +88,7 @@ eventAttribute
     }
 
 expression
-  = [^"]+ { return text(); }
+  = [^}]+ { return text(); }
 
 staticValue
   = [^"]+ {
@@ -84,7 +97,7 @@ staticValue
     }
 
 content
-  = elements:(element / textNode)* {
+  = elements:(element)* {
       const filteredElements = elements.filter(el => el !== null);
       if (filteredElements.length === 0) return null;
       if (filteredElements.length === 1) return filteredElements[0];
@@ -97,9 +110,6 @@ textNode
       return trimmed ? `'${trimmed}'` : null;
     }
 
-contentItem
-  = _ (forLoop / ifCondition / element / textElement) _ { return text(); }
-
 textElement
   = text:[^<>]+ {
       const trimmed = text.join('').trim();
@@ -107,12 +117,12 @@ textElement
     }
 
 forLoop
-  = "@for" _ "(" _ variableName:identifier _ "of" _ iterable:identifier _ ")" _ "{" _ content:content _ "}" {
+  = _ "@for" _ "(" _ variableName:identifier _ "of" _ iterable:identifier _ ")" _ "{" _ content:content _ "}" _ {
       return `loop(${iterable}, (${variableName}) => ${content})`;
     }
 
 ifCondition
-  = "@if" _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" _ {
+  = _ "@if" _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" _ {
       return `cond(${condition}, () => ${content})`;
     }
 

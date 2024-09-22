@@ -350,6 +350,8 @@ export class KeyboardControls extends Directive {
     private lastKeyPressed: number | null = null
     private _controlsOptions: Controls = {}
     private interval: any
+    // TODO: This should be dynamic
+    private serverFps: number = 60
     private directionState: {
         up: boolean,
         down: boolean,
@@ -512,10 +514,10 @@ export class KeyboardControls extends Directive {
     private getDirection(): string {
         const { up, down, left, right } = this.directionState;
 
-        if (up && left) return 'top_left';
-        if (up && right) return 'top_right';
-        if (down && left) return 'bottom_left';
-        if (down && right) return 'bottom_right';
+        if (up && left) return 'up_left';
+        if (up && right) return 'up_right';
+        if (down && left) return 'down_left';
+        if (down && right) return 'down_right';
         if (up) return 'up';
         if (down) return 'down';
         if (left) return 'left';
@@ -895,10 +897,7 @@ export class KeyboardControls extends Directive {
         let inputsTransformed: any = {}
         for (let control in inputs) {
             const option = inputs[control]
-            const { method, bind } = option
-            if (method) {
-                option.method = method
-            }
+            const { bind } = option
             let inputsKey: any = bind
             if (!Array.isArray(inputsKey)) {
                 inputsKey = [bind]

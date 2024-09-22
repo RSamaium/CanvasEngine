@@ -75,7 +75,11 @@ export function registerComponent(name, component) {
   components[name] = component;
 }
 
-function destroyElement(element: Element) {
+function destroyElement(element: Element | Element[]) {
+  if (Array.isArray(element)) {
+    element.forEach((e) => destroyElement(e));
+    return;
+  }
   if (!element) {
     return;
   }
@@ -201,9 +205,14 @@ export function createComponent(tag: string, props?: Props): Element {
                 });
                 return;
               }
-              components.forEach((c) => {
-                onMount(element, c);
-                propagateContext(c);
+              components.forEach((component) => {
+                if (!Array.isArray(component)) {
+                  component = [component]
+                }
+                component.forEach((comp) => {
+                  onMount(element, comp);
+                  propagateContext(comp);
+                });
               });
             }
           );

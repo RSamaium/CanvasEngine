@@ -31,6 +31,10 @@ export function h<C extends ComponentFunction<any>>(
     allMounts.add(fn);
   };
 
+  if (children[0] instanceof Array) {
+    children = children[0]
+  }
+
   let component = componentFunction({ ...props, children });
   if (!component) {
     component = {};

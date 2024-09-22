@@ -27,6 +27,8 @@ import { PointLight } from "@pixi/lights";
 import { Stage } from "@pixi/layers";
 import { Joystick } from "./src/composition/Joystick";
 
+import Test from './sample/test.ce'
+
 enum Direction {
   Down = "down",
   Left = "left",
@@ -253,7 +255,7 @@ const darkness = h(
     //  blendMode: 'add',
     alpha: 0.5,
     draw(g) {
-      // Fonction pour créer un trou de lumière
+      
       const createLightHole = (x, y, radius) => {
         g.circle(x, y, radius).fill("white");
       };
@@ -278,8 +280,7 @@ const root = h(
     width: "100%",
     height: "100%",
     antialias: true,
-    class: "bg-red-500",
-    background: "red",
+    class: "bg-red-500"
   },
   h(Viewport, {
     worldHeight: 2000,
@@ -299,4 +300,4 @@ const root = h(
   })
 );
 
-bootstrapCanvas(document.getElementById("root"), root);
+bootstrapCanvas(document.getElementById("root"), Test());

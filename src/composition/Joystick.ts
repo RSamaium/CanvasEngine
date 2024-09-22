@@ -50,7 +50,7 @@ export function Joystick(opts: JoystickSettings = {}) {
   const innerAlphaStandby = 0.5;
 
   let dragging = false;
-  let startPosition: PIXI.Point | null = null;
+  let startPosition: PIXI.PointData | null = null;
   let power = 0;
 
   const innerPositionX = signal(0);

@@ -135,7 +135,7 @@ export function DisplayObject(extendClass) {
                 if (instance.layer) this.parentLayer = instance.layer;
                 this.isMounted = true;
                 this.onUpdate(props)
-              //  this.parent.node.insertChild(this.node, this.parent.node.getChildCount());
+                this.parent.node.insertChild(this.node, this.parent.node.getChildCount());
                 if (parent.props.flexDirection) {
                     this.parent.node.calculateLayout()
                     for (let child of this.parent.children) {

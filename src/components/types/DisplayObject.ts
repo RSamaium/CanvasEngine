@@ -7,9 +7,10 @@ export type FlexDirection = 'row' | 'column' | 'row-reverse' | 'column-reverse';
 export type JustifyContent = 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around';
 export type AlignContent = 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around';
 export type Size = number | `${number}%`
-export type EdgeSize = Size | [Size, Size] | [Size, Size, Size, Size]
+export type EdgeSize = SignalOrPrimitive<Size | [Size, Size] | [Size, Size, Size, Size]>
 
 export interface DisplayObjectProps extends PIXI.IDisplayObjectOptions {
+    ref?: string;
     x?: SignalOrPrimitive<number>;
     y?: SignalOrPrimitive<number>;
     width?: SignalOrPrimitive<Size>;
@@ -17,24 +18,24 @@ export interface DisplayObjectProps extends PIXI.IDisplayObjectOptions {
     children?: React.ReactNode;
     flexDirection?: FlexDirection;
     justifyContent?: JustifyContent;
-    alpha?: number;
+    alpha?: SignalOrPrimitive<number>;
     margin?: EdgeSize;
     padding?: EdgeSize;
     border?: EdgeSize;
-    absolute?: boolean;
-    scale?: { x: number, y: number } | number;
-    anchor?: { x: number, y: number };
-    skew?: { x: number, y: number };
-    tint?: number;
-    rotation?: number;
-    angle?: number;
-    zIndex?: number;
-    roundPixels?: boolean;
-    cursor?: string;
-    visible?: boolean;
-    pivot?: { x: number, y: number };
+    absolute?: SignalOrPrimitive<boolean>;
+    scale?: SignalOrPrimitive<{ x: number, y: number } | number>;
+    anchor?: SignalOrPrimitive<{ x: number, y: number }>;
+    skew?: SignalOrPrimitive<{ x: number, y: number }>;
+    tint?: SignalOrPrimitive<number>;
+    rotation?: SignalOrPrimitive<number>;
+    angle?: SignalOrPrimitive<number>;
+    zIndex?: SignalOrPrimitive<number>;
+    roundPixels?: SignalOrPrimitive<boolean>;
+    cursor?: SignalOrPrimitive<string>;
+    visible?: SignalOrPrimitive<boolean>;
+    pivot?: SignalOrPrimitive<{ x: number, y: number }>;
     filters?: any[];
-    blendMode?: PIXI.BLEND_MODES;
+    blendMode?: SignalOrPrimitive<PIXI.BLEND_MODES>;
 
     click?: PIXI.FederatedEventHandler;
     mousedown?: PIXI.FederatedEventHandler;

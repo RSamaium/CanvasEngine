@@ -1,0 +1,22 @@
+<script>
+import { signal } from 'canvasengine'
+
+import Other from './other.ce'
+
+const bool = signal(true)
+
+
+function draw(g) {
+    g.rect(0, 0, 100, 100)
+    g.fill('red')
+}
+
+function click() {
+    bool.update(v => !v)
+}
+
+</script>
+
+<Canvas width="100%" height="100%">
+   <Other value={10+1} />
+</Canvas>

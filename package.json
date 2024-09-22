@@ -36,6 +36,8 @@
   "devDependencies": {
     "@types/howler": "^2.2.11",
     "@types/stats.js": "^0.17.3",
+    "acorn": "^8.12.1",
+    "dedent": "^1.5.3",
     "eslint": "^8.57.0",
     "rollup-plugin-node-polyfills": "^0.2.1",
     "typescript": "^5.6.2",
