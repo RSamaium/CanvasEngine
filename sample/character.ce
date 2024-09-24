@@ -181,6 +181,11 @@
   flexDirection="column" 
   alignItems="center"
 >
+  <NineSliceSprite
+    image="https://s3-us-west-2.amazonaws.com/s.cdpn.io/693612/speech_bubble.png"
+    width="400"
+    height="300"
+  />
   <Text text={textHealth} style={{ fontSize: 20, align: 'center' }} />
   <Bar 
     width="100" 
