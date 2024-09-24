@@ -121,21 +121,27 @@
           },
           framesWidth: 6,
           framesHeight: 4,
-          animations: (direction: Direction) => [anim(direction, 6, 3)],
+          animations: ({ direction }) => [anim(direction, 6, 3)],
         },
         [Animation.Skill]: {
           framesWidth: 7,
           framesHeight: 4,
-          animations: (direction: Direction) => [anim(direction, 7, 3)],
+          animations: ({ direction }) => [anim(direction, 7, 3)],
         },
       },
     };
   };
 
-  const sheet = {
-    definition: LPCSpritesheetPreset(),
+    const playing = signal(Animation.Stand)
+
+    const sheet = {
+        definition: LPCSpritesheetPreset(),
+        playing,
+        onFinish: () => {
+          playing.set(Animation.Stand)
+        },
         params: {
-            direction,
+           direction,
         },
     }
 
@@ -181,11 +187,6 @@
   flexDirection="column" 
   alignItems="center"
 >
-  <NineSliceSprite
-    image="https://s3-us-west-2.amazonaws.com/s.cdpn.io/693612/speech_bubble.png"
-    width="400"
-    height="300"
-  />
   <Text text={textHealth} style={{ fontSize: 20, align: 'center' }} />
   <Bar 
     width="100" 
@@ -198,5 +199,5 @@
     borderRadius="5"
     innerMargin="2"
   /> 
-  <Sprite sheet @click={() => health.update((health) => health - 10)} />
+  <Sprite sheet @click={() => playing.set(Animation.Attack)} />
 </Container>

@@ -1,0 +1,19 @@
+
+<!-- 
+ <script>
+import Character from './character.ce'
+</script>
+
+<Canvas width="100%" height="100%" backgroundColor="red" antialias="true">
+   <Viewport worldWidth="2000" worldHeight="2000" clamp={ {direction: 'all'} }>
+       <ImageMap 
+            imageSource="tileset.png" 
+            tileData="tilesetData.json" 
+            @objects={ () => [
+                Character()   
+            ] }
+        /> 
+        <Character />
+   </Viewport>
+</Canvas> 
+-->

@@ -166,8 +166,6 @@ export function DisplayObject(extendClass) {
             if (!this._canvasContext || !this.parent) return;
             if (props.x !== undefined) this.setX(props.x)
             if (props.y !== undefined) this.setY(props.y)
-            if (props.width !== undefined) this.setWidth(props.width)
-            if (props.height !== undefined) this.setHeight(props.height)
             if (props.scale !== undefined) setObservablePoint(this.scale, props.scale)
             if (props.anchor !== undefined) setObservablePoint(this.anchor, props.anchor)
             if (props.skew !== undefined) setObservablePoint(this.skew, props.skew)
@@ -199,9 +197,7 @@ export function DisplayObject(extendClass) {
             }
             if (props.blendMode) this.blendMode = props.blendMode
             if (props.filterArea) this.filterArea = props.filterArea
-
-            this.setWidth(this.width)
-            this.setHeight(this.height)
+            
             this.flexRender(props)
         }
 

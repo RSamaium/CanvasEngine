@@ -150,6 +150,9 @@ export function createComponent(tag: string, props?: Props): Element {
               if (element.directives[key]) {
                 element.directives[key].onUpdate?.(value);
               }
+              if (key == "tick") {
+                return
+              }
               instance.onUpdate?.(
                 path == ""
                   ? {

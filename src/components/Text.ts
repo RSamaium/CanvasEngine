@@ -19,6 +19,8 @@ class CanvasText extends DisplayObject(PixiText) {
                 this.style[key] = props.style[key]
             }
         }
+        this.setWidth(this.width)
+        this.setHeight(this.height)
     }
 }
 

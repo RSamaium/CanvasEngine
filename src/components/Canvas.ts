@@ -92,6 +92,9 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
       }
       renderer.resize(w, h);
       canvasSize.set({ width: w, height: h });
+      canvasElement.componentInstance.setWidth(w)
+      canvasElement.componentInstance.setHeight(h)
+      canvasElement.componentInstance.flexRender(options)
     };
 
     // Initial resize

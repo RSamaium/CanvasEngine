@@ -221,11 +221,13 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
   async onUpdate(props) {
     super.onUpdate(props);
+
     const sheet = props.sheet;
     if (sheet?.params) this.sheetParams = sheet?.params;
 
-    if (sheet?.playing) {
+    if (sheet?.playing && this.isMounted) {
       this.sheetCurrentAnimation = sheet?.playing;
+      this.play(this.sheetCurrentAnimation, [this.sheetParams]);
     }
 
     if (props.scaleMode) this.baseTexture.scaleMode = props.scaleMode;
@@ -284,15 +286,17 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       );
     }
 
+    const cloneParams = structuredClone(params);
+
     this.removeChildren();
     animation.sprites = [];
     this.currentAnimation = animation;
-    this.currentAnimation.params = structuredClone(params);
+    this.currentAnimation.params = cloneParams;
     this.time = 0;
     this.frameIndex = 0;
     let animations: any = animation.animations;
     animations = isFunction(animations)
-      ? (animations as Function)(...params)
+      ? (animations as Function)(...cloneParams)
       : animations;
 
     this.currentAnimationContainer = new Container();
@@ -311,10 +315,6 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       //RpgSound.get(sound).play()
     }
 
-    // Replace this.addChild with this.parent.addChild
-    if (this.parent instanceof Container) {
-      this.parent.addChild(this.currentAnimationContainer);
-    } 
     // Updates immediately to avoid flickering
     this.update({
       deltaRatio: 1,
@@ -327,6 +327,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     const { frames, sprites, data } = this.currentAnimation;
     let frame = sprites[this.frameIndex];
     const nextFrame = sprites[this.frameIndex + 1];
+    
 
     for (let _sprite of this.currentAnimationContainer.children) {
       const sprite = _sprite as PixiSprite;
@@ -413,7 +414,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     if (!nextFrame) {
       this.time = 0;
       this.frameIndex = 0;
-      if (this.onFinish) this.onFinish();
+      if (this.onFinish && sprites.length > 1) this.onFinish();
       return;
     }
 

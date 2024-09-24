@@ -4,6 +4,31 @@ import { createComponent, registerComponent } from '../engine/reactive';
 import { DisplayObject } from './DisplayObject';
 import { effect } from '@signe/reactive';
 
+const EVENTS = [
+    'bounce-x-end',
+    'bounce-x-start',
+    'bounce-y-end',
+    'bounce-y-start',
+    'clicked',
+    'drag-end',
+    'drag-start',
+    'frame-end',
+    'mouse-edge-end',
+    'mouse-edge-start',
+    'moved',
+    'moved-end',
+    'pinch-end',
+    'pinch-start',
+    'snap-end',
+    'snap-start',
+    'snap-zoom-end',
+    'snap-zoom-start',
+    'wheel',
+    'wheel-scroll',
+    'zoomed',
+    'zoomed-end'
+]
+
 export class CanvasViewport extends DisplayObject(PixiViewport) {
     private tickSubscription: Subscription
 
@@ -18,6 +43,15 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
         }
         // @ts-ignore
         super(defaultOptions) 
+    }
+
+    onInit(props) {
+        super.onInit(props)
+        for (let event of EVENTS) {
+            if (props[event]) {
+                this.on(event, props[event])
+            }
+        }
     }
 
     onMount(element) {

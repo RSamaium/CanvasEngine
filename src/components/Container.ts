@@ -10,19 +10,21 @@ interface ContainerProps extends DisplayObjectProps {
 
 export class CanvasContainer extends DisplayObject(PixiContainer) {
   onUpdate(props) {
-      super.onUpdate(props)
-      if (props.sortableChildren != undefined) {
-          this.sortableChildren = props.sortableChildren
-      }
+    super.onUpdate(props);
+    if (props.sortableChildren != undefined) {
+      this.sortableChildren = props.sortableChildren;
+    }
+    if (props.width != undefined) this.setWidth(props.width)
+    if (props.height != undefined) this.setHeight(props.height)
   }
   onMount(args) {
-    super.onMount(args)
-    const { componentInstance, props } = args
-    const { pixiChildren } = props
+    super.onMount(args);
+    const { componentInstance, props } = args;
+    const { pixiChildren } = props;
     if (pixiChildren) {
-      pixiChildren.forEach(child => {
-        componentInstance.addChild(child)
-      })
+      pixiChildren.forEach((child) => {
+        componentInstance.addChild(child);
+      });
     }
   }
 }
