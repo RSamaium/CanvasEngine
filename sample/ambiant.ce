@@ -1,0 +1,12 @@
+<script>
+import { signal, computed } from 'canvasengine'
+import { NightAmbiant, LightSpot } from '../src/presets/NightAmbiant';
+
+const x = signal(20)
+const y = signal(20)
+
+</script>
+
+<NightAmbiant>
+    <LightSpot x="430" y="250" radius="200" />
+</NightAmbiant>

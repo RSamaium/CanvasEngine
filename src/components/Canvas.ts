@@ -1,5 +1,5 @@
 import { computed, effect, Signal, signal } from "@signe/reactive";
-import { Container, autoDetectRenderer } from "pixi.js";
+import { Assets, Container, autoDetectRenderer, Sprite } from "pixi.js";
 import { loadYoga } from "yoga-layout";
 import { Props, createComponent, registerComponent } from "../engine/reactive";
 import { useProps } from "../hooks/useProps";
@@ -80,7 +80,7 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
       });
     }
 
-    const resizeCanvas = () => {
+    const resizeCanvas = async () => {
       let w, h;
       if (width?.() === "100%" && height?.() === "100%") {
         const parent = canvasEl.parentElement;
@@ -94,11 +94,7 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
       canvasSize.set({ width: w, height: h });
       canvasElement.componentInstance.setWidth(w)
       canvasElement.componentInstance.setHeight(h)
-      canvasElement.componentInstance.flexRender(options)
     };
-
-    // Initial resize
-    resizeCanvas();
 
     // Listen for window resize events
     window.addEventListener("resize", resizeCanvas);
@@ -112,6 +108,9 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
       // If it doesn't exist, append the new canvas
       rootElement.appendChild(canvasEl);
     }
+
+     // Initial resize
+     resizeCanvas();
   };
 
   return canvasElement;

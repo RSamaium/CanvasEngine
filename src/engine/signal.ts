@@ -36,11 +36,16 @@ export function h<C extends ComponentFunction<any>>(
   }
 
   let component = componentFunction({ ...props, children });
+
   if (!component) {
     component = {};
   }
+
   component.effectSubscriptions = Array.from(allSubscriptions);
-  component.effectMounts = Array.from(allMounts);
+  component.effectMounts = [
+    ...Array.from(allMounts),
+    ...((component as any).effectMounts ?? [])
+  ];
 
   currentSubscriptionsTracker = null;
   mountTracker = null;

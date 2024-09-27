@@ -183,7 +183,6 @@
 
 <Container x y controls 
   zIndex={y} 
-  viewportFollow="true"
   flexDirection="column" 
   alignItems="center"
 >

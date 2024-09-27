@@ -166,6 +166,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     }
   }
 
+
   async onMount(params: Element<CanvasSprite>) {
     const { props, propObservables } = params;
     const tick: Signal = props.context.tick;
@@ -242,6 +243,9 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
           frame: new Rectangle(x, y, width, height),
         });
       }
+    }
+    else if (props.texture) {
+      this.texture = props.texture
     }
   }
 
