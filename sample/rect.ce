@@ -1,7 +1,10 @@
 <script>
-import { signal, computed } from 'canvasengine'
+import { signal, computed, effect } from 'canvasengine'
+import { distance } from "popmotion"
 const x = signal(0)
 const y = signal(0)
+const x2 = signal(500)
+const y2 = signal(500)
 const text = computed(() => `x: ${x()} y: ${y()}`)
 
 const draw = (g) => {
@@ -17,8 +20,12 @@ const draw2 = (g) => {
 const drop = (event) => {
     console.log('drop', event)
 }
+
+
+const _distance = computed(() => distance({ x: x(), y: y() }, { x: x2(), y: y2() }))
+
 </script>
 
-<Text text />
-<Graphics @draw={draw2} x="500" y="500" drop />
-<Graphics @draw drag="true" x y />
+<Text text={_distance} />
+<Graphics @draw={draw2} x={x} y={y2} />
+<Graphics @draw drag="true" x={x} y={y} />

@@ -47,6 +47,15 @@ export function h<C extends ComponentFunction<any>>(
     ...((component as any).effectMounts ?? [])
   ];
 
+  // call mount hook for root component
+  if (component instanceof Promise) {
+    component.then((component) => {
+      if (component.props.isRoot) {
+        allMounts.forEach((fn) => fn(component));
+      }
+    })
+  }
+
   currentSubscriptionsTracker = null;
   mountTracker = null;
 

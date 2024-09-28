@@ -56,6 +56,7 @@ export class Drag extends Directive {
         const onDragEnd = () => {
             drag.end?.()
             stage.off('pointermove', onDragMove)
+            console.log(rootElement.allElements)
         }   
 
         instance.on('pointerdown', () => {

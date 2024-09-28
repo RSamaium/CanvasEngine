@@ -1,0 +1,91 @@
+<script>
+  import { signal, effect, mount } from 'canvasengine';
+  const width = signal(800);
+  const height = signal(600);
+  const score1 = signal(0);
+  const score2 = signal(0);
+
+  const y = signal(0);
+  const speed = 5;
+
+  const controls = signal({
+    down: {
+      repeat: true,
+      bind: ["down"],
+      trigger() {
+        y.update((y) => Math.min(y + speed, height() - 100));
+      },
+    },
+    up: {
+      repeat: true,
+      bind: ["up"],
+      trigger() {
+        y.update((y) => Math.max(y - speed, 0));
+      },
+    },
+  });
+
+  const aiY = signal(height() / 2 - 50);
+  const ballX = signal(width() / 2);
+  const ballY = signal(height() / 2);
+  const ballSpeedX = signal(5);
+  const ballSpeedY = signal(3);
+
+  mount((el) => {
+   const { tick } = el.props.context
+   tick.observable.subscribe((tick) => {
+    ballX.update(x => x + ballSpeedX());
+      ballY.update(y => y + ballSpeedY());
+
+      // Bounce off top and bottom walls
+      if (ballY() <= 0 || ballY() >= height() - 10) {
+        ballSpeedY.update(speed => -speed);
+      }
+
+      // Bounce off paddles
+      if (
+        (ballX() <= 60 && ballY() > y() && ballY() < y() + 100) ||
+        (ballX() >= width() - 90 && ballY() > aiY() && ballY() < aiY() + 100)
+      ) {
+        ballSpeedX.update(speed => -speed);
+      }
+
+      // Reset ball if it goes out of bounds and update scores
+      if (ballX() < 0) {
+        score2.update(s => s + 1);
+        resetBall();
+      } else if (ballX() > width()) {
+        score1.update(s => s + 1);
+        resetBall();
+      }
+
+      // AI movement
+      const aiTarget = ballY() - 50;
+      aiY.update(y => {
+        if (y < aiTarget) {
+          return Math.min(y + 3, height() - 100);
+        } else if (y > aiTarget) {
+          return Math.max(y - 3, 0);
+        }
+        return y;
+      });
+   })
+  })
+
+  // Function to reset the ball position
+  function resetBall() {
+    ballX.set(width() / 2);
+    ballY.set(height() / 2);
+    // Randomize ball direction
+    ballSpeedX.set(Math.random() < 0.5 ? 5 : -5);
+    ballSpeedY.set(Math.random() < 0.5 ? 3 : -3);
+  }
+</script>
+
+<Canvas width={width} height={height}>
+    <Rect x="50" y width="10" height="100" color="white" controls />
+    <Rect x={width - 80} y={aiY} width="10" height="100" color="white" />
+    <Circle x={ballX} y={ballY} radius="10" color="white" />
+    <Text x="80" y="10" text={score1} color="white" size="40" />
+    <Text x={width - 80} y="10" text={score2} color="white" size="40" />
+</Canvas>

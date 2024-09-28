@@ -1,6 +1,8 @@
 import { Signal, WritableArraySignal, isSignal } from "@signe/reactive";
 import {
+  BehaviorSubject,
   Observable,
+  Subject,
   Subscription,
   defer,
   from,
@@ -192,6 +194,8 @@ export function createComponent(tag: string, props?: Props): Element {
     });
   };
 
+  const elementsListen = new Subject()
+
   if (props?.isRoot) {
     // propagate recrusively context in all children
     const propagateContext = async (element) => {
@@ -231,6 +235,7 @@ export function createComponent(tag: string, props?: Props): Element {
                   propagateContext(comp);
                 });
               });
+              elementsListen.next()
             }
           );
         } else {
@@ -239,6 +244,7 @@ export function createComponent(tag: string, props?: Props): Element {
         }
       }
     };
+    element.allElements = elementsListen
     element.props.context.rootElement = element;
     element.componentInstance.onMount?.(element);
     propagateContext(element);

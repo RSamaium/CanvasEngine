@@ -1,7 +1,7 @@
 <script>
     import Ambiant from "./ambiant.ce";
     import Flash from "./flash.ce";
-    import Rect from "./rect.ce";
+    import Recta from "./rect.ce";
     import { trigger } from 'canvasengine';
 
     const flash = trigger()
@@ -17,5 +17,5 @@
     height="100%"
     antialias="true"
 >
-    <Rect  />
+    <Recta  />
 </Canvas>

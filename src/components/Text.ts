@@ -6,18 +6,26 @@ import { DisplayObjectProps } from './types/DisplayObject';
 interface TextProps extends DisplayObjectProps {
   text?: string;
   style?: Partial<TextStyle>;
+  color?: string;
+  size?: string;
 }
 
 class CanvasText extends DisplayObject(PixiText) {
     onUpdate(props: TextProps) {
         super.onUpdate(props)
-        if (props.text) {
+        if (props.text != undefined) {
             this.text = props.text
         }
         if (props.style) {
             for (const key in props.style) {
                 this.style[key] = props.style[key]
             }
+        }
+        if (props.color) {
+            this.style.fill = props.color
+        }
+        if (props.size) {
+            this.style.fontSize = props.size
         }
         this.setWidth(this.width)
         this.setHeight(this.height)

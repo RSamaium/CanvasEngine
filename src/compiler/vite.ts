@@ -23,7 +23,9 @@ export default function vitePluginCe() {
     "Graphics",
     "Container",
     "ImageMap",
-    "NineSliceSprite"
+    "NineSliceSprite",
+    "Rect",
+    "Circle"
   ];
 
   return {

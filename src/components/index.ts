@@ -1,6 +1,6 @@
 export { Canvas } from './Canvas'
 export { Container } from './Container'
-export { Graphics } from './Graphic'
+export { Graphics, Rect, Circle } from './Graphic'
 export { Scene } from './Scene'
 export { ParticlesEmitter } from './ParticleEmitter'
 export { Sprite } from './Sprite'
