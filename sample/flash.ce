@@ -1,0 +1,24 @@
+<script>
+import { on, animatedSignal } from 'canvasengine'
+
+const flash = $props.flash
+
+const alpha = animatedSignal(0, {
+    duration: 200,
+    onComplete: () => {
+        $this.destroy()
+    }
+})
+
+on(flash, () => {
+    console.log('flash')
+    alpha.set(1)
+})
+
+const draw = (g) => {
+    g.rect(0, 0, 1000, 1000)
+    g.fill('red')
+}
+</script>
+
+<Graphics @draw alpha />

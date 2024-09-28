@@ -4,6 +4,7 @@ import { animatedSignal } from "../engine/animation";
 import { RadialGradient } from "../utils/RadialGradient";
 import { effect, isSignal, signal } from "@signe/reactive";
 import { useProps } from "../hooks/useProps";
+import { isObservable } from "rxjs";
 
 export function LightSpot(opts) {
   const { radius } = useProps(opts);
@@ -58,11 +59,12 @@ export function NightAmbiant(props) {
   let el
   const width = signal(0);
   const height = signal(0);
+  let subscription
   const draw = (rectAndHole) => {
     const margin = 80
     rectAndHole.rect(-margin, -margin, width() + margin*2, height() + margin*2);
     rectAndHole.fill(0x000000);
-    for (let child of children) {
+    const applyChildren = (child) => {
       const x = isSignal(child.propObservables.x)
         ? child.propObservables.x()
         : child.props.x;
@@ -74,6 +76,20 @@ export function NightAmbiant(props) {
         : child.props.radius;
       rectAndHole.circle(x, y, radius);
       rectAndHole.cut();
+    }
+    for (let child of children) {
+      if (isObservable(child)) {
+        if (subscription) {
+          subscription.unsubscribe()
+        }
+        subscription = child.subscribe((event) => {
+           for (let child of event.fullElements) {
+            applyChildren(child)
+           }
+        })
+        return
+      }
+      applyChildren(child)
     }
   };
 

@@ -126,7 +126,8 @@ export default function vitePluginCe() {
       export default function component($$props) {
           const $props = useProps($$props)
           ${nonImportCode}
-          return ${parsedTemplate}
+          let $this = ${parsedTemplate}
+          return $this
       }
   `;
 

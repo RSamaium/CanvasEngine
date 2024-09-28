@@ -1,12 +1,27 @@
 <script>
-import { signal, computed } from 'canvasengine'
+import { signal, computed, useRef } from 'canvasengine'
 import { NightAmbiant, LightSpot } from '../src/presets/NightAmbiant';
 
 const x = signal(20)
 const y = signal(20)
+const spot = signal([])
+const shake = trigger()
+
+const click = (ev) => {
+    spot.mutate((items) => {
+        items.push(signal({
+            x: signal(ev.x),
+            y: signal(ev.y),
+            radius: signal(100)
+        }))
+    })
+}
 
 </script>
 
-<NightAmbiant>
-    <LightSpot x="430" y="250" radius="200" />
+<NightAmbiant @click ref="ambiant">
+    <LightSpot x="200" y="200" radius="100" />
+    @for (item of spot) {
+        <LightSpot x={item.x} y={item.y} radius={item.radius} />
+    }
 </NightAmbiant>

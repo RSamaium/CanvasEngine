@@ -1,5 +1,14 @@
 <script>
     import Ambiant from "./ambiant.ce";
+    import Flash from "./flash.ce";
+    import Rect from "./rect.ce";
+    import { trigger } from 'canvasengine';
+
+    const flash = trigger()
+
+    const click = () => {
+        flash.start()
+    }
 </script>
 
 <Canvas 
@@ -8,13 +17,5 @@
     height="100%"
     antialias="true"
 >
-    <Sprite image="test.jpg" />
-    <Ambiant />
-    <!-- <Container  
-        
-        width="100%" 
-        height="100%"
-    >
-        <Button text="Hello World" />
-    </Container> -->
+    <Rect  />
 </Canvas>

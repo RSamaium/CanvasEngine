@@ -1,18 +1,22 @@
-import { isSignal } from '@signe/reactive';
-import { Container } from 'pixi.js';
+import { effect, isSignal } from '@signe/reactive';
+import { Container, Rectangle } from 'pixi.js';
 import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
+import { snap } from 'popmotion';
+import { addContext } from '../hooks/addContext';
 
-const EVENTS = ['']
+export class Drop extends Directive {
+    onMount(element: Element<Container>) {
+        addContext(element, 'drop', element)
+    }
+}
 
 export class Drag extends Directive {
 
-    onInit(element: Element<Container>) {
-
-    }
+    onInit(element: Element<Container>) {}
 
     onMount(element: Element<Container>) {
-        const { rootElement } = element.props.context
+        const { rootElement, canvasSize } = element.props.context
         const { propObservables } = element
         const { drag } = element.props
         const instance = element.componentInstance
@@ -20,15 +24,32 @@ export class Drag extends Directive {
         instance.eventMode = 'static'
         stage.eventMode = 'static'
 
+        const snapTo = snap(drag?.snap ?? 0);
+
+        effect(() => {
+            stage.hitArea = new Rectangle(0, 0, canvasSize().width, canvasSize().height)
+        })
+
+        let x = 0
+        let y = 0
+
         const onDragMove = (event) => {
             drag.move?.(event)
-            const value = instance.parent.toLocal(event.global, null, instance.position)
-            const { x, y } = propObservables as any
-            if (x !== undefined && isSignal(x)) {
-                x.set(value.x)
+            x += event.movementX
+            y += event.movementY
+            if (drag?.snap) {
+                instance.position.x = snapTo(x)
+                instance.position.y = snapTo(y)
+            } else {
+                instance.position.x = x
+                instance.position.y = y
             }
-            if (y !== undefined && isSignal(y)) {
-                y.set(value.y)
+            const { x: xProp, y: yProp } = propObservables as any
+            if (xProp !== undefined && isSignal(xProp)) {
+                xProp.set(instance.position.x)
+            }
+            if (yProp !== undefined && isSignal(yProp)) {
+                yProp.set(instance.position.y)
             }
         }
 
@@ -46,9 +67,6 @@ export class Drag extends Directive {
         stage.on('pointerupoutside', onDragEnd)
     }
 
-    onUpdate(props: any) {
-
-    }
 
     onDestroy() {
 
@@ -56,3 +74,4 @@ export class Drag extends Directive {
 }
 
 registerDirective('drag', Drag)
+registerDirective('drop', Drop)

@@ -1,0 +1,24 @@
+<script>
+import { signal, computed } from 'canvasengine'
+const x = signal(0)
+const y = signal(0)
+const text = computed(() => `x: ${x()} y: ${y()}`)
+
+const draw = (g) => {
+    g.rect(0, 0, 100, 100)
+    g.fill('red')
+}
+
+const draw2 = (g) => {
+    g.rect(0, 0, 100, 100)
+    g.fill('green')
+}
+
+const drop = (event) => {
+    console.log('drop', event)
+}
+</script>
+
+<Text text />
+<Graphics @draw={draw2} x="500" y="500" drop />
+<Graphics @draw drag="true" x y />

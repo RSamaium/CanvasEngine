@@ -124,6 +124,9 @@ export function createComponent(tag: string, props?: Props): Element {
     effectUnmounts: [],
     effectSubscriptions: [],
     effectMounts: [],
+    destroy() {
+      destroyElement(this);
+    },
   };
 
   // Iterate over each property in the props object
@@ -311,6 +314,7 @@ export function loop<T = any>(
           return {
             prev: lastElement,
             elements: newElements,
+            fullElements: elements,
           };
         } else if (index != undefined && type == "remove") {
           const currentElement = elements[index];
