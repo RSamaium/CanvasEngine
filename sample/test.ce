@@ -9,6 +9,10 @@
     const click = () => {
         flash.start()
     }
+
+    const dragStart = () => {
+        console.log('dragStart')
+    }
 </script>
 
 <Canvas 
@@ -17,5 +21,17 @@
     height="100%"
     antialias="true"
 >
-    <Recta  />
+    <Viewport  
+        worldHeight="1000" 
+        worldWidth="1000" 
+        clamp="all" 
+        dragg={true} 
+        wheel={{}} 
+        decelerate={{}} 
+        pinch={{}} 
+        snap={{}}
+        @dragStart={dragStart}
+    >
+        <Recta  />
+    </Viewport>
 </Canvas>

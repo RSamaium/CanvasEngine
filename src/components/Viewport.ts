@@ -23,7 +23,6 @@ const EVENTS = [
     'snap-start',
     'snap-zoom-end',
     'snap-zoom-start',
-    'wheel',
     'wheel-scroll',
     'zoomed',
     'zoomed-end'
@@ -31,6 +30,7 @@ const EVENTS = [
 
 export class CanvasViewport extends DisplayObject(PixiViewport) {
     private tickSubscription: Subscription
+    overrideProps = ['wheel']
 
     constructor() {
         const defaultOptions = {
@@ -48,8 +48,9 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
     onInit(props) {
         super.onInit(props)
         for (let event of EVENTS) {
-            if (props[event]) {
-                this.on(event, props[event])
+            const camelCaseEvent = event.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+            if (props[camelCaseEvent]) {
+                this.on(event, props[camelCaseEvent])
             }
         }
     }
@@ -57,6 +58,7 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
     onMount(element) {
         super.onMount(element)
         const { tick, renderer, canvasSize } = element.props.context
+        let isDragging = false
         
         effect(() => {
             this.screenWidth = canvasSize().width
@@ -95,8 +97,36 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
         if (props.worldHeight !== undefined) {
             this.worldHeight = props.worldHeight
         }
+        // if (props.drag) {
+        //     if (props.drag === true) {
+                
+        //     } else {
+        //         this.drag(props.drag)
+        //     }
+        // }
         if (props.clamp) {
             this.clamp(props.clamp)
+        }
+        if (props.wheel) {
+            if (props.wheel === true) {
+                this.wheel()
+            } else {
+                this.wheel(props.wheel)
+            }
+        }
+        if (props.decelerate) {
+            if (props.decelerate === true) {
+                this.decelerate()
+            } else {
+                this.decelerate(props.decelerate)
+            }
+        }
+        if (props.pinch) {
+            if (props.pinch === true) {
+                this.pinch()
+            } else {
+                this.pinch(props.pinch)
+            }
         }
     }
 

@@ -108,6 +108,7 @@ export function DisplayObject(extendClass) {
     private AABB: AABB = { x: 0, y: 0, width: 0, height: 0 };
     displayWidth = signal(0);
     displayHeight = signal(0);
+    overrideProps: string[] = []
 
     public node: Node;
 
@@ -122,7 +123,7 @@ export function DisplayObject(extendClass) {
     onInit(props) {
       this._id = props.id;
       for (let event of EVENTS) {
-        if (props[event]) {
+        if (props[event] && !this.overrideProps.includes(event)) {
           this.eventMode = "static";
           this.on(event, props[event]);
         }

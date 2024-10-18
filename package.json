@@ -19,7 +19,7 @@
     "@pixi/lights": "^4.1.0",
     "@pixi/tilemap": "^5.0.1",
     "@rpgjs/tiled": "^4.3.0",
-    "@signe/reactive": "^1.0.0",
+    "@signe/reactive": "^1.0.1",
     "animejs": "^3.2.2",
     "d-path-parser": "^1.0.0",
     "howler": "^2.2.4",

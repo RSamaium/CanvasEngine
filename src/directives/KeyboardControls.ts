@@ -147,7 +147,8 @@ export enum Input {
 export interface ControlOptions {
     repeat?: boolean;
     bind: string | string[];
-    trigger?: Function;
+    keyUp?: Function;
+    keyDown?: Function;
     delay?: number | {
         duration: number;
         otherControls?: (string)[];
@@ -394,9 +395,9 @@ export class KeyboardControls extends Directive {
             // Trigger only the composite direction
             const directionControl = this.boundKeys[direction];
             if (directionControl) {
-                const { trigger } = directionControl.options;
-                if (trigger) {
-                    trigger(directionControl);
+                const { keyDown } = directionControl.options;
+                if (keyDown) {
+                    keyDown(directionControl);
                 }
             }
         } else {
@@ -413,14 +414,14 @@ export class KeyboardControls extends Directive {
         if (!keyState) return;
         const { isDown, count } = keyState;
         if (isDown) {
-            const { repeat, trigger } = this.boundKeys[keyName].options;
+            const { repeat, keyDown } = this.boundKeys[keyName].options;
             if ((repeat || count == 0)) {
                 let parameters = this.boundKeys[keyName].parameters;
                 if (typeof parameters === "function") {
                     parameters = parameters();
                 }
-                if (trigger) {
-                    trigger(this.boundKeys[keyName]);
+                if (keyDown) {
+                    keyDown(this.boundKeys[keyName]);
                 }
                 this.keyState[keyName]!.count++;
             }
@@ -483,6 +484,10 @@ export class KeyboardControls extends Directive {
             // key up, reset press count
             if (!isDown) {
                 this.keyState[keyName]!.count = 0
+                const { keyUp } = this.boundKeys[keyName].options
+                if (keyUp) {
+                    keyUp(this.boundKeys[keyName]);
+                }
             }
 
             // keep reference to the last key pressed to avoid duplicates

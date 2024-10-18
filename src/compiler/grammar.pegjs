@@ -141,10 +141,10 @@ tagName
   = [a-zA-Z][a-zA-Z0-9]* { return text(); }
 
 attributeName
-  = [a-zA-Z][a-zA-Z0-9]* { return text(); }
+  = [a-zA-Z][a-zA-Z0-9-]* { return text(); }
 
 eventName
-  = [a-zA-Z][a-zA-Z0-9]* { return text(); }
+  = [a-zA-Z][a-zA-Z0-9-]* { return text(); }
 
 variableName
   = [a-zA-Z_][a-zA-Z0-9_]* { return text(); }

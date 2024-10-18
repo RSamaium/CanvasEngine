@@ -97,7 +97,7 @@ function destroyElement(element: Element | Element[]) {
     element.directives[name].onDestroy?.();
   }
   element.componentInstance.onDestroy?.(element.parent as any);
-  element.effectUnmounts.forEach((fn) => fn());
+  element.effectUnmounts.forEach((fn) => fn?.());
 }
 
 /**

@@ -20,6 +20,12 @@ interface CircleProps extends DisplayObjectProps {
   color: string;
 }
 
+interface EllipseProps extends DisplayObjectProps {
+  width: number;
+  height: number;
+  color: string;
+}
+
 class CanvasGraphics extends DisplayObject(PixiGraphics) {
   onInit(props: GraphicsProps) {
     super.onInit(props);
@@ -61,18 +67,35 @@ export function Rect(props: RectProps) {
   })
 }
 
+function drawShape(g: PixiGraphics, shape: 'circle' | 'ellipse', props: CircleProps | EllipseProps) {
+  const { color, border } = props;
+  if ('radius' in props) {
+    g.circle(0, 0, props.radius());
+  } else {
+    g.ellipse(0, 0, props.width() / 2, props.height() / 2);
+  }
+  if (border()) {
+    g.stroke(border());
+  }
+  g.fill(color());
+}
+
 export function Circle(props: CircleProps) {  
   const { radius, color, border } = useProps(props, {
     border: null
   })
   return Graphics({
-    draw: (g) => {
-      g.circle(0, 0, radius())
-      if (border()) {
-        g.stroke(border());
-      }
-      g.fill(color());
-    },
+    draw: (g) => drawShape(g, 'circle', { radius, color, border }),
+    ...props
+  })
+}
+
+export function Ellipse(props: EllipseProps) {
+  const { width, height, color, border } = useProps(props, {
+    border: null
+  })
+  return Graphics({
+    draw: (g) => drawShape(g, 'ellipse', { width, height, color, border }),
     ...props
   })
 }
