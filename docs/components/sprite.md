@@ -1,5 +1,16 @@
 # Use Sprite component
 
+## Simple Image:
+
+```html
+<Sprite 
+    image="path/to/image.png" 
+    rectangle={{ x: 0, y: 0, width: 100, height: 100 }}
+/>
+```
+
+## Sprite Sheet:
+
 Common example:
 
 ```html

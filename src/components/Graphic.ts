@@ -26,6 +26,12 @@ interface EllipseProps extends DisplayObjectProps {
   color: string;
 }
 
+interface TriangleProps extends DisplayObjectProps {
+  base: number;
+  height: number;
+  color: string;
+}
+
 class CanvasGraphics extends DisplayObject(PixiGraphics) {
   onInit(props: GraphicsProps) {
     super.onInit(props);
@@ -58,8 +64,8 @@ export function Rect(props: RectProps) {
       } else {
         g.rect(0, 0, width(), height());
       }
-      if (border()) {
-        g.stroke(border());
+      if (border) {
+        g.stroke(border);
       }
       g.fill(color());
     },
@@ -96,6 +102,26 @@ export function Ellipse(props: EllipseProps) {
   })
   return Graphics({
     draw: (g) => drawShape(g, 'ellipse', { width, height, color, border }),
+    ...props
+  })
+}
+
+export function Triangle(props: TriangleProps) {
+  const { width, height, color, border } = useProps(props, {
+    border: null,
+    color: '#000'
+  })
+  return Graphics({
+    draw: (g) => {
+      g.moveTo(0, height());
+      g.lineTo(width() / 2, 0);
+      g.lineTo(width(), height());
+      g.lineTo(0, height());
+      g.fill(color());
+      if (border) {
+        g.stroke(border);
+      }
+    },
     ...props
   })
 }

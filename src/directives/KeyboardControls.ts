@@ -396,8 +396,8 @@ export class KeyboardControls extends Directive {
             const directionControl = this.boundKeys[direction];
             if (directionControl) {
                 const { keyDown } = directionControl.options;
-                if (keyDown) {
-                    keyDown(directionControl);
+                if (keyDown ) {
+                    this.applyInput(direction);
                 }
             }
         } else {
@@ -416,7 +416,7 @@ export class KeyboardControls extends Directive {
         if (isDown) {
             const { repeat, keyDown } = this.boundKeys[keyName].options;
             if ((repeat || count == 0)) {
-                let parameters = this.boundKeys[keyName].parameters;
+                   let parameters = this.boundKeys[keyName].parameters;
                 if (typeof parameters === "function") {
                     parameters = parameters();
                 }

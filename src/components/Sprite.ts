@@ -73,9 +73,6 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   private subscriptionSheet: Subscription[] = [];
   private sheetParams: any = {};
   private sheetCurrentAnimation: string = StandardAnimation.Stand;
-  private isMoving = false;
-  private newX = 0;
-  private newY = 0;
   onFinish: () => void;
 
   private currentAnimationContainer: Container | null = null;
@@ -190,8 +187,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
               this.play(this.sheetCurrentAnimation, [{ [key]: value }]);
             })
           );
-        }
-        else {
+        } else {
           this.play(this.sheetCurrentAnimation, [{ [key]: value }]);
         }
       }
@@ -236,6 +232,8 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       this.sheetCurrentAnimation = sheet?.playing;
       this.play(this.sheetCurrentAnimation, [this.sheetParams]);
     }
+
+    if (props.hitbox) this.hitbox = props.hitbox;
 
     if (props.scaleMode) this.baseTexture.scaleMode = props.scaleMode;
     else if (props.image) {
@@ -338,6 +336,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     )
       return;
 
+    const self = this;
     const { frames, sprites, data } = this.currentAnimation;
     let frame = sprites[this.frameIndex];
     const nextFrame = sprites[this.frameIndex + 1];
@@ -362,7 +361,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       ): void => {
         const val = getVal<T>(prop);
         if (val) {
-          sprite[prop as string].set(...val!);
+          this[prop as string].set(...val!);
         }
       };
 
@@ -378,7 +377,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         const optionProp = alias || prop;
         const val = getVal<T>(optionProp);
         if (val !== undefined) {
-          sprite[prop as string] = val;
+          self[prop as string] = val;
         }
       }
 
@@ -401,7 +400,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
           const w = (spriteWidth - this.hitbox.w) / 2 / spriteWidth;
           const gap = (spriteHeight - heightOfSprite) / 2;
           const h = (spriteHeight - this.hitbox.h - gap) / spriteHeight;
-          sprite.anchor.set(w, h);
+          this.anchor.set(w, h);
         }
       };
 

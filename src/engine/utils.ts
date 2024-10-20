@@ -116,12 +116,15 @@ export function error(text) {
     console.error(text)
 }
 
-export function setObservablePoint(observablePoint: ObservablePoint, point: { x: number, y: number } |  number): void {
+export function setObservablePoint(observablePoint: ObservablePoint, point: { x: number, y: number } | number | [number, number]): void {
     if (typeof point === 'number') {
-        observablePoint.set(point)
+        observablePoint.set(point);
+    }
+    else if (Array.isArray(point)) {
+        observablePoint.set(point[0], point[1]);
     }
     else {
-        observablePoint.set(point.x, point.y)
+        observablePoint.set(point.x, point.y);
     }
 }
 
