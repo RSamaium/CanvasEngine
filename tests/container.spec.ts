@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Canvas } from '../src/components/Canvas';
 import { ComponentInstance } from '../src/components/DisplayObject';
 import { bootstrapCanvas, Container, Element, h } from '../src';
-import { signal } from '@signe/reactive/src/signal.js';
+import { signal } from '@signe/reactive';
 
 describe('Container', () => {
     let rootElement: HTMLElement;

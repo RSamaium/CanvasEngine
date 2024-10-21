@@ -21,7 +21,6 @@ describe('Flex Positioning', () => {
         const parent = canvas.componentInstance.children[0] as Element<ComponentInstance>
         const child1 = parent.children[0] as Element<ComponentInstance>
         const child2 = parent.children[1] as Element<ComponentInstance>
-Z
         expect(child1.x).toBe(0)
         expect(child1.y).toBe(0)
         expect(child2.x).toBe(50)
