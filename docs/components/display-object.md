@@ -44,3 +44,11 @@ All common display objects are components:
 | blendMode      | string              | Blend mode for rendering.                                                   |
 | filterArea     | object              | Filter area for rendering.                                                  |
 
+
+# shadow
+
+| Property       | Type                | Description                                                                 |  
+| blur           | number              | Blur strength.                                                                 |
+| color          | number              | Color of the shadow.                                                            |
+| offset         | object              | Offset of the shadow.                                                           |
+| quality        | number              | Quality of the shadow.                                                           |

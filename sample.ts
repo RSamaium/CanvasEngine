@@ -1,4 +1,4 @@
-import Test from './sample/pong.ce'
+import Test from './sample/test.ce'
 import { bootstrapCanvas } from './src';
 
 bootstrapCanvas(document.getElementById("root"), Test);

@@ -4,6 +4,13 @@ import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
 import * as Utils from '../engine/utils';
 
+export interface Tick {
+    timestamp: number
+    deltaTime: number
+    frame: number
+    deltaRatio: number
+}
+
 export class Scheduler extends Directive {
     private maxFps?: number
     private fps: number = 60
@@ -13,12 +20,7 @@ export class Scheduler extends Directive {
     private requestedDelay: number = 0
     private lastTimestamp: number = 0
     private _stop: boolean = false
-    private tick: WritableSignal<{
-        timestamp: number
-        deltaTime: number
-        frame: number
-        deltaRatio: number
-    } | null>
+    private tick: WritableSignal<Tick | null>
     
     private stats = new Stats()
 

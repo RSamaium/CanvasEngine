@@ -54,7 +54,8 @@ export function ImageMap(props) {
           x: drawX,
           y: drawY,
           rectangle: { x, y, width, height },
-          zIndex: drawY + height - 70,
+         // zIndex: drawY + height - 70,
+         zIndex: 0
         });
       })
     );

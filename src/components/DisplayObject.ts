@@ -9,7 +9,7 @@ import type {
 } from "./types/DisplayObject";
 import { effect, Signal, signal } from "@signe/reactive";
 import { DropShadowFilter } from "pixi-filters";
-import { BlurFilter } from "pixi.js";
+import { BlurFilter, ObservablePoint } from "pixi.js";
 
 export interface ComponentInstance {
   id?: string;
@@ -105,9 +105,16 @@ export function DisplayObject(extendClass) {
     } | null = null;
     private isFlex: boolean = false;
     protected isMounted: boolean = false;
+    protected _anchorPoints = new ObservablePoint(
+      { _onUpdate: () => {} },
+      0,
+      0
+    );
+    protected isCustomAnchor: boolean = false;
     private AABB: AABB = { x: 0, y: 0, width: 0, height: 0 };
     displayWidth = signal(0);
     displayHeight = signal(0);
+    overrideProps: string[] = [];
 
     public node: Node;
 
@@ -122,7 +129,7 @@ export function DisplayObject(extendClass) {
     onInit(props) {
       this._id = props.id;
       for (let event of EVENTS) {
-        if (props[event]) {
+        if (props[event] && !this.overrideProps.includes(event)) {
           this.eventMode = "static";
           this.on(event, props[event]);
         }
@@ -141,6 +148,7 @@ export function DisplayObject(extendClass) {
         }
         if (instance.layer) this.parentLayer = instance.layer;
         this.isMounted = true;
+        this.effectSize(props.width, props.height);
         this.onUpdate(props);
         this.parent.node.insertChild(
           this.node,
@@ -154,12 +162,16 @@ export function DisplayObject(extendClass) {
             child.y = top;
           }
         }
-        this.effectSize(props.width, props.height)
+      
       }
     }
 
     effectSize(width: Size, height: Size) {
-      const handleSize = (size: Size, setter: (value: number) => void, parentSize: Signal<number>) => {
+      const handleSize = (
+        size: Size,
+        setter: (value: number) => void,
+        parentSize: Signal<number>
+      ) => {
         if (typeof size === "string" && size.endsWith("%")) {
           effect(() => {
             setter(parentSize() * (parseInt(size) / 100));
@@ -172,24 +184,30 @@ export function DisplayObject(extendClass) {
         }
       };
 
-      if (width != undefined) handleSize(width, this.setWidth.bind(this), this.parent.displayWidth);
-      if (height != undefined) handleSize(height, this.setHeight.bind(this), this.parent.displayHeight);
+      if (width != undefined)
+        handleSize(width, this.setWidth.bind(this), this.parent.displayWidth);
+      if (height != undefined)
+        handleSize(
+          height,
+          this.setHeight.bind(this),
+          this.parent.displayHeight
+        );
     }
 
     private applyFlexLayout() {
-        this.calculateLayout();
-        for (let child of this.children) {
-          const { left, top } = child.node.getComputedLayout();
-          child.x = left;
-          child.y = top;
-        }
+      this.calculateLayout();
+      for (let child of this.children) {
+        const { left, top } = child.node.getComputedLayout();
+        child.x = left;
+        child.y = top;
+      }
     }
 
     private flexRender(props) {
       if (!this.parent) return;
       if (props.flexDirection || props.justifyContent) {
         this.isFlex = true;
-        this.applyFlexLayout()
+        this.applyFlexLayout();
       }
     }
 
@@ -199,8 +217,9 @@ export function DisplayObject(extendClass) {
       if (props.y !== undefined) this.setY(props.y);
       if (props.scale !== undefined)
         setObservablePoint(this.scale, props.scale);
-      if (props.anchor !== undefined)
+      if (props.anchor !== undefined && !this.isCustomAnchor) {
         setObservablePoint(this.anchor, props.anchor);
+      }
       if (props.skew !== undefined) setObservablePoint(this.skew, props.skew);
       if (props.tint) this.tint = props.tint;
       if (props.rotation !== undefined) this.rotation = props.rotation;
@@ -231,9 +250,11 @@ export function DisplayObject(extendClass) {
       if (props.blendMode) this.blendMode = props.blendMode;
       if (props.filterArea) this.filterArea = props.filterArea;
       const currentFilters = this.filters || [];
-      
+
       if (props.shadow) {
-        let dropShadowFilter = currentFilters.find(filter => filter instanceof DropShadowFilter);
+        let dropShadowFilter = currentFilters.find(
+          (filter) => filter instanceof DropShadowFilter
+        );
         if (!dropShadowFilter) {
           dropShadowFilter = new DropShadowFilter();
           currentFilters.push(dropShadowFilter);
@@ -242,11 +263,16 @@ export function DisplayObject(extendClass) {
       }
 
       if (props.blur) {
-        let blurFilter = currentFilters.find(filter => filter instanceof BlurFilter);
+        let blurFilter = currentFilters.find(
+          (filter) => filter instanceof BlurFilter
+        );
         if (!blurFilter) {
-          const options = typeof props.blur === 'number' ? { 
-            strength: props.blur,
-          } : props.blur;
+          const options =
+            typeof props.blur === "number"
+              ? {
+                  strength: props.blur,
+                }
+              : props.blur;
           blurFilter = new BlurFilter(options);
           currentFilters.push(blurFilter);
         }
@@ -363,6 +389,7 @@ export function DisplayObject(extendClass) {
     }
 
     setX(x: number) {
+      x = x + this.getWidth() * this._anchorPoints.x;
       if (!this.parent.isFlex) {
         this.x = x;
       }
@@ -370,6 +397,7 @@ export function DisplayObject(extendClass) {
     }
 
     setY(y: number) {
+      y = y + this.getHeight() * this._anchorPoints.y;
       if (!this.parent.isFlex) {
         this.y = y;
       }
@@ -421,7 +449,11 @@ export function DisplayObject(extendClass) {
     }
 
     getWidth() {
-      return this.node.getWidth();
+      return this.displayWidth();
+    }
+
+    getHeight() {
+      return this.displayHeight();
     }
 
     //    updateAABB() {

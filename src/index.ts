@@ -9,3 +9,5 @@ export * from './engine/bootstrap'
 export * from './engine/animation'
 export { useProps } from './hooks/useProps'
 
+export * from './presets/Bar'
+export * from './presets/Particle'

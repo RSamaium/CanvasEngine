@@ -1,4 +1,4 @@
-import { computed, effect, Signal } from "@signe/reactive";
+import { computed, effect, isSignal, Signal } from "@signe/reactive";
 import {
   Assets,
   Container,
@@ -23,7 +23,7 @@ import {
 } from "./types/Spritesheet";
 import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
-import { AnimatedState, isAnimatedSignal } from "../engine/animation";
+import { isAnimatedSignal } from "../engine/animation";
 
 const log = console.log;
 
@@ -73,9 +73,6 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   private subscriptionSheet: Subscription[] = [];
   private sheetParams: any = {};
   private sheetCurrentAnimation: string = StandardAnimation.Stand;
-  private isMoving = false;
-  private newX = 0;
-  private newY = 0;
   onFinish: () => void;
 
   private currentAnimationContainer: Container | null = null;
@@ -166,7 +163,6 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     }
   }
 
-
   async onMount(params: Element<CanvasSprite>) {
     const { props, propObservables } = params;
     const tick: Signal = props.context.tick;
@@ -184,21 +180,27 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     if (sheet.params) {
       for (let key in propObservables?.sheet["params"]) {
         const value = propObservables?.sheet["params"][key] as Signal;
-        this.subscriptionSheet.push(
-          value.observable.subscribe((value) => {
-            if (this.animations.size == 0) return;
-            this.play(this.sheetCurrentAnimation, [{ [key]: value }]);
-          })
-        );
+        if (isSignal(value)) {
+          this.subscriptionSheet.push(
+            value.observable.subscribe((value) => {
+              if (this.animations.size == 0) return;
+              this.play(this.sheetCurrentAnimation, [{ [key]: value }]);
+            })
+          );
+        } else {
+          this.play(this.sheetCurrentAnimation, [{ [key]: value }]);
+        }
       }
     }
 
     const isMoving = computed(() => {
       const { x, y } = propObservables ?? {};
       if (!x || !y) return false;
-      const isMovingX = isAnimatedSignal(x) && 
+      const isMovingX =
+        isAnimatedSignal(x) &&
         x.animatedState().current !== x.animatedState().end;
-      const isMovingY = isAnimatedSignal(y) && 
+      const isMovingY =
+        isAnimatedSignal(y) &&
         y.animatedState().current !== y.animatedState().end;
       return isMovingX || isMovingY;
     });
@@ -231,6 +233,8 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       this.play(this.sheetCurrentAnimation, [this.sheetParams]);
     }
 
+    if (props.hitbox) this.hitbox = props.hitbox;
+
     if (props.scaleMode) this.baseTexture.scaleMode = props.scaleMode;
     else if (props.image) {
       if (props.rectangle === undefined) {
@@ -243,9 +247,8 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
           frame: new Rectangle(x, y, width, height),
         });
       }
-    }
-    else if (props.texture) {
-      this.texture = props.texture
+    } else if (props.texture) {
+      this.texture = props.texture;
     }
   }
 
@@ -326,12 +329,17 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   }
 
   update({ deltaRatio }) {
-    if (!this.isPlaying() || !this.currentAnimation || !this.currentAnimationContainer) return;
+    if (
+      !this.isPlaying() ||
+      !this.currentAnimation ||
+      !this.currentAnimationContainer
+    )
+      return;
 
+    const self = this;
     const { frames, sprites, data } = this.currentAnimation;
     let frame = sprites[this.frameIndex];
     const nextFrame = sprites[this.frameIndex + 1];
-    
 
     for (let _sprite of this.currentAnimationContainer.children) {
       const sprite = _sprite as PixiSprite;
@@ -353,7 +361,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       ): void => {
         const val = getVal<T>(prop);
         if (val) {
-          sprite[prop as string].set(...val!);
+          this[prop as string].set(...val!);
         }
       };
 
@@ -369,7 +377,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         const optionProp = alias || prop;
         const val = getVal<T>(optionProp);
         if (val !== undefined) {
-          sprite[prop as string] = val;
+          self[prop as string] = val;
         }
       }
 
@@ -392,7 +400,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
           const w = (spriteWidth - this.hitbox.w) / 2 / spriteWidth;
           const gap = (spriteHeight - heightOfSprite) / 2;
           const h = (spriteHeight - this.hitbox.h - gap) / spriteHeight;
-          sprite.anchor.set(w, h);
+          this.anchor.set(w, h);
         }
       };
 

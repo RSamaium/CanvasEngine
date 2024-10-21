@@ -74,5 +74,5 @@ export class Drag extends Directive {
     }
 }
 
-registerDirective('drag', Drag)
-registerDirective('drop', Drop)
+// registerDirective('drag', Drag)
+// registerDirective('drop', Drop)

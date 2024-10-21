@@ -2,8 +2,9 @@ import {
     Subscription
 } from "rxjs";
 import type { Element } from "./reactive";
+import { Tick } from "../directives/Scheduler";
 
-type MountFunction = (fn: (element: Element) => void | (() => void)) => void;
+type MountFunction = (fn: (element: Element) => void) => void;
 
 // Define ComponentFunction type
 export type ComponentFunction<P = {}> = (props: P) => Element | Promise<Element>;
@@ -11,8 +12,23 @@ export type ComponentFunction<P = {}> = (props: P) => Element | Promise<Element>
 export let currentSubscriptionsTracker: ((subscription: Subscription) => void) | null = null;
 export let mountTracker: MountFunction | null = null;
 
-export function mount(fn: MountFunction) {
+export function mount(fn: (element: Element) => void) {
   mountTracker?.(fn);
+}
+
+export function tick(fn: (tickValue: Tick, element: Element) => void) {
+  mount((el: Element) => {
+    const { context } = el.props
+    let subscription: Subscription | undefined
+    if (context.tick) {
+      subscription = context.tick.observable.subscribe(({ value }) => {
+          fn(value, el)
+      })
+    }
+    return () => {
+      subscription?.unsubscribe()
+    }
+  })
 }
 
 export function h<C extends ComponentFunction<any>>(
