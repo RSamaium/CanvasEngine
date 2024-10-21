@@ -8,4 +8,6 @@ export const bootstrapCanvas = async (rootElement: HTMLElement | null, canvas: P
     throw new Error('Canvas is required');
   }
   canvasElement.render(rootElement);
+
+  return canvasElement;
 };

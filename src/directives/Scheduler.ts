@@ -24,7 +24,6 @@ export class Scheduler extends Directive {
 
     onInit(element: Element) { 
         this.tick = element.propObservables?.tick as any
-        this.start()
     }
 
     onDestroy() { }

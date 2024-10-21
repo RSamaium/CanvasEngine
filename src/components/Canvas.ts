@@ -1,5 +1,5 @@
-import { computed, effect, Signal, signal } from "@signe/reactive";
-import { Assets, Container, autoDetectRenderer, Sprite } from "pixi.js";
+import { effect, signal } from "@signe/reactive";
+import { Container, autoDetectRenderer } from "pixi.js";
 import { loadYoga } from "yoga-layout";
 import { Props, createComponent, registerComponent } from "../engine/reactive";
 import { useProps } from "../hooks/useProps";
@@ -7,7 +7,6 @@ import { DisplayObject } from "./DisplayObject";
 import { ComponentFunction } from "../engine/signal";
 import { SignalOrPrimitive } from "./types";
 import { Size } from "./types/DisplayObject";
-import { Stage } from "@pixi/layers";
 
 registerComponent("Canvas", class Canvas extends DisplayObject(Container) {});
 
@@ -23,12 +22,16 @@ export interface CanvasProps extends Props {
 }
 
 export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
-  const { cursorStyles, width, height, class: className } = useProps(props);
+  let { cursorStyles, width, height, class: className } = useProps(props);
   const Yoga = await loadYoga();
+
+  if (!props.width) width = signal<Size>(800)
+  if (!props.height) height = signal<Size>(600)
+
   const renderer = await autoDetectRenderer({
     ...props,
-    width: width?.() ?? 800,
-    height: height?.() ?? 600,
+    width: width?.(),
+    height: height?.(),
   });
 
   const canvasSize = signal({
@@ -47,6 +50,7 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
     width: width?.(),
     height: height?.(),
   };
+
   if (!props.tick) {
     options.context!.tick = options.tick = signal({
       timestamp: 0,
@@ -62,6 +66,8 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
 
     (globalThis as any).__PIXI_STAGE__ = canvasElement.componentInstance;
     (globalThis as any).__PIXI_RENDERER__ = renderer;
+
+    if (props.tickStart !== false) canvasElement.directives.tick.start()
 
     effect(() => {
       canvasElement.propObservables!.tick();

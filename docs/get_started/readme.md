@@ -29,7 +29,7 @@ npm install canvasengine
 
 ```typescript
 import { bootstrapCanvas } from "canvasengine";
-import { Main } from "./main.ce";
+import Main from "./main.ce";
 
-bootstrapCanvas(document.getElementById("root"), Main());
+bootstrapCanvas(document.getElementById("root"), Main);
 ```

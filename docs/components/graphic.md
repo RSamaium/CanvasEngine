@@ -34,6 +34,18 @@ const click = () => {
 <Graphics @draw @click />
 ```
 
+## Rect
+
+```html
+<Rect x="0" y="0" width="100" height="100" color="red" />
+```
+
+## Circle
+
+```html
+<Circle x="0" y="0" radius="50" color="red" />
+```
+
 ## Properties
 
 You can use all properties from Display Object
