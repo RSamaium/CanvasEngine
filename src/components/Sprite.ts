@@ -1,4 +1,4 @@
-import { computed, effect, isSignal, Signal } from "@signe/reactive";
+import { computed, effect, isSignal, Signal, WritableSignal } from "@signe/reactive";
 import {
   Assets,
   Container,
@@ -23,7 +23,7 @@ import {
 } from "./types/Spritesheet";
 import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
-import { isAnimatedSignal } from "../engine/animation";
+import { AnimatedSignal, isAnimatedSignal } from "../engine/animation";
 
 const log = console.log;
 
@@ -196,12 +196,14 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     const isMoving = computed(() => {
       const { x, y } = propObservables ?? {};
       if (!x || !y) return false;
+      const xSignal = x as AnimatedSignal<any>;
+      const ySignal = y as AnimatedSignal<any>;
       const isMovingX =
-        isAnimatedSignal(x) &&
-        x.animatedState().current !== x.animatedState().end;
+        isAnimatedSignal(xSignal) &&
+        xSignal.animatedState().current !== xSignal.animatedState().end;
       const isMovingY =
-        isAnimatedSignal(y) &&
-        y.animatedState().current !== y.animatedState().end;
+        isAnimatedSignal(ySignal) &&
+        ySignal.animatedState().current !== ySignal.animatedState().end;
       return isMovingX || isMovingY;
     });
 
@@ -236,19 +238,19 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     if (props.hitbox) this.hitbox = props.hitbox;
 
     if (props.scaleMode) this.baseTexture.scaleMode = props.scaleMode;
-    else if (props.image) {
-      if (props.rectangle === undefined) {
-        this.texture = await Assets.load(props.image);
-      } else {
-        const { x, y, width, height } = props.rectangle;
-        const texture = await Assets.load(props.image);
-        this.texture = new Texture({
-          source: texture.source,
-          frame: new Rectangle(x, y, width, height),
-        });
-      }
+    else if (props.image && this.fullProps.rectangle === undefined) {
+      this.texture = await Assets.load(this.fullProps.image);
     } else if (props.texture) {
       this.texture = props.texture;
+    }
+
+    if (props.rectangle !== undefined) {
+      const { x, y, width, height } = props.rectangle?.value ?? props.rectangle;
+      const texture = await Assets.load(this.fullProps.image);
+      this.texture = new Texture({
+        source: texture.source,
+        frame: new Rectangle(x, y, width, height),
+      });
     }
   }
 
@@ -289,7 +291,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
     if (!animation) {
       throw new Error(
-        `Impossible to play the ${name} animation because it doesn't exist on the "${this.spritesheet?.id}" spritesheet`
+        `Impossible to play the ${name} animation because it doesn't exist on the "${this.id}" spritesheet`
       );
     }
 

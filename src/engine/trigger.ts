@@ -29,12 +29,12 @@ export function trigger<T = any>(config?: T): Trigger<T> {
   };
 }
 
-export function on(triggerSignal: any, callback: () => void) {
+export function on(triggerSignal: any, callback: (config: any) => void) {
   if (!isTrigger(triggerSignal)) {
     throw new Error("In 'on(arg)' must have a trigger signal type");
   }
   effect(() => {
-    const { config, seed } = triggerSignal.listen();
-    if (seed) callback(config);
+    const result = triggerSignal.listen();
+    if (result?.seed) callback(result.config);
   });
 }

@@ -46,6 +46,12 @@ const click = () => {
 <Circle x="0" y="0" radius="50" color="red" />
 ```
 
+## Triangle
+
+```html
+<Triangle x="0" y="0" width="100" height="100" color="red" />
+```
+
 ## Properties
 
 You can use all properties from Display Object

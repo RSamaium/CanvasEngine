@@ -24,7 +24,7 @@ const controls = signal({
     down: {
       repeat: true,
       bind: ["down", 'bottom_right', 'bottom_left'],
-      trigger() {
+      keyDown() {
         y.update((y) => y + speed);
         direction.set(Direction.Down);
       },
@@ -32,7 +32,7 @@ const controls = signal({
     up: {
       repeat: true,
       bind: ['up', 'top_left', 'top_right'],
-      trigger() {
+      keyDown() {
         y.update((y) => y - speed);
         direction.set(Direction.Up);
       },
@@ -40,7 +40,7 @@ const controls = signal({
     left: {
       repeat: true,
       bind: "left",
-      trigger() {
+      keyDown() {
         x.update((x) => x - speed);
         direction.set(Direction.Left);
       },
@@ -48,7 +48,7 @@ const controls = signal({
     right: {
       repeat: true,
       bind: "right",
-      trigger() {
+      keyDown() {
         x.update((x) => x + speed);
         direction.set(Direction.Right);
       },

@@ -63,10 +63,11 @@ class CanvasText extends DisplayObject(PixiText) {
       if (props.typewriter) {
         this.typewriterOptions = props.typewriter;
       }
-    } else {
-      this.text = this.fullText;
     }
-    if (props.text !== undefined && props.text !== this.fullText) {
+    if (props.text) {
+      this.text = props.text;
+    }
+    if (props.text !== undefined && props.text !== this.fullText && this.fullProps.typewriter) {
       this.text = "";
       this.currentIndex = 0;
       this.fullText = props.text;
@@ -100,7 +101,7 @@ class CanvasText extends DisplayObject(PixiText) {
   private typewriterEffect() {
     if (this.currentIndex < this.fullText.length) {
       const nextIndex = Math.min(
-        this.currentIndex + this.typewriterOptions.speed ?? 1,
+        this.currentIndex + (this.typewriterOptions.speed ?? 1),
         this.fullText.length
       );
       this.text = this.fullText.slice(0, nextIndex);
@@ -117,7 +118,7 @@ class CanvasText extends DisplayObject(PixiText) {
   }
 
   // Add a method to skip the typewriter effect
-  public skipTypewriter() {
+  private skipTypewriter() {
     if (this.skipSignal) {
       this.skipSignal();
     }

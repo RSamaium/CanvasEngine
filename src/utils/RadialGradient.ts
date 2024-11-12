@@ -1,4 +1,4 @@
-import { Sprite, Texture, ImageSource, DOMAdapter, Matrix } from "pixi.js";
+import { Texture, ImageSource, DOMAdapter, Matrix } from "pixi.js";
 
 export class RadialGradient {
   private canvas: HTMLCanvasElement;

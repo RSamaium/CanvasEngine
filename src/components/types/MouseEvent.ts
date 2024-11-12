@@ -1,3 +1,3 @@
 export interface MouseEvent {
-    click?: (e: React.MouseEvent) => void
+    click?: (e: any) => void
 }

@@ -1,4 +1,4 @@
-import { effect } from "@signe/reactive";
+import { effect, Signal } from "@signe/reactive";
 import { Graphics as PixiGraphics } from "pixi.js";
 import { createComponent, registerComponent } from "../engine/reactive";
 import { DisplayObject } from "./DisplayObject";
@@ -73,7 +73,16 @@ export function Rect(props: RectProps) {
   })
 }
 
-function drawShape(g: PixiGraphics, shape: 'circle' | 'ellipse', props: CircleProps | EllipseProps) {
+function drawShape(g: PixiGraphics, shape: 'circle' | 'ellipse', props: {
+  radius: Signal<number>;
+  color: Signal<string>;
+  border: Signal<number>;
+} | {
+  width: Signal<number>;
+  height: Signal<number>;
+  color: Signal<string>;
+  border: Signal<number>;
+}) {
   const { color, border } = props;
   if ('radius' in props) {
     g.circle(0, 0, props.radius());

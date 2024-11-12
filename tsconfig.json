@@ -9,7 +9,7 @@
     "sourceMap": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": false,
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "esModuleInterop": true,
     "removeComments": false,
     "noUnusedParameters": false,

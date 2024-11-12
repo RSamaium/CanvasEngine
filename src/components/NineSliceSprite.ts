@@ -1,4 +1,3 @@
-import { effect } from "@signe/reactive";
 import { Assets, NineSliceSprite as PixiNineSliceSprite, Texture } from "pixi.js";
 import { createComponent, registerComponent } from "../engine/reactive";
 import { DisplayObject } from "./DisplayObject";

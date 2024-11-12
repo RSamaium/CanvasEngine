@@ -1,6 +1,4 @@
-import React from "react";
 import * as PIXI from "pixi.js";
-import { EVENTS } from "../DisplayObject";
 import { SignalOrPrimitive } from ".";
 
 export type FlexDirection = 'row' | 'column' | 'row-reverse' | 'column-reverse';
@@ -9,13 +7,13 @@ export type AlignContent = 'flex-start' | 'flex-end' | 'center' | 'space-between
 export type Size = number | `${number}%`
 export type EdgeSize = SignalOrPrimitive<Size | [Size, Size] | [Size, Size, Size, Size]>
 
-export interface DisplayObjectProps extends PIXI.IDisplayObjectOptions {
+export interface DisplayObjectProps {
     ref?: string;
     x?: SignalOrPrimitive<number>;
     y?: SignalOrPrimitive<number>;
     width?: SignalOrPrimitive<Size>;
     height?: SignalOrPrimitive<Size>;
-    children?: React.ReactNode;
+    children?: any[];
     flexDirection?: FlexDirection;
     justifyContent?: JustifyContent;
     alpha?: SignalOrPrimitive<number>;

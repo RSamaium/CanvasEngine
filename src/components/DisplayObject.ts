@@ -11,21 +11,16 @@ import { effect, Signal, signal } from "@signe/reactive";
 import { DropShadowFilter } from "pixi-filters";
 import { BlurFilter, ObservablePoint } from "pixi.js";
 
-export interface ComponentInstance {
+export interface ComponentInstance extends PixiMixins.ContainerOptions {
   id?: string;
   children?: ComponentInstance[];
   onInit?(props: Props): void;
   onUpdate?(props: Props): void;
   onDestroy?(parent: Element): void;
   onMount?(context: Element, index?: number): void;
+  setWidth(width: number): void;
+  setHeight(height: number): void;
 }
-
-type AABB = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
 
 export const EVENTS = [
   "added",
@@ -100,30 +95,29 @@ export const EVENTS = [
 
 export function DisplayObject(extendClass) {
   return class DisplayObject extends extendClass {
-    private _canvasContext: {
+    #canvasContext: {
       [key: string]: any;
     } | null = null;
-    private isFlex: boolean = false;
-    protected isMounted: boolean = false;
-    protected _anchorPoints = new ObservablePoint(
+    isFlex: boolean = false;
+    fullProps: Props = {};
+    isMounted: boolean = false;
+    _anchorPoints = new ObservablePoint(
       { _onUpdate: () => {} },
       0,
       0
     );
-    protected isCustomAnchor: boolean = false;
-    private AABB: AABB = { x: 0, y: 0, width: 0, height: 0 };
+    isCustomAnchor: boolean = false;
     displayWidth = signal(0);
     displayHeight = signal(0);
     overrideProps: string[] = [];
-
-    public node: Node;
+    node: Node;
 
     get yoga() {
-      return this._canvasContext?.Yoga;
+      return this.#canvasContext?.Yoga;
     }
 
     get deltaRatio() {
-      return this._canvasContext?.scheduler?.tick.value.deltaRatio;
+      return this.#canvasContext?.scheduler?.tick.value.deltaRatio;
     }
 
     onInit(props) {
@@ -137,7 +131,7 @@ export function DisplayObject(extendClass) {
     }
 
     onMount({ parent, props }: Element<DisplayObject>, index?: number) {
-      this._canvasContext = props.context;
+      this.#canvasContext = props.context;
       this.node = this.yoga.Node.create();
       if (parent) {
         const instance = parent.componentInstance as DisplayObject;
@@ -176,7 +170,7 @@ export function DisplayObject(extendClass) {
           effect(() => {
             setter(parentSize() * (parseInt(size) / 100));
             if (this.isFlex) {
-              this.applyFlexLayout();
+              this.#applyFlexLayout();
             }
           });
         } else {
@@ -194,7 +188,7 @@ export function DisplayObject(extendClass) {
         );
     }
 
-    private applyFlexLayout() {
+    #applyFlexLayout() {
       this.calculateLayout();
       for (let child of this.children) {
         const { left, top } = child.node.getComputedLayout();
@@ -203,16 +197,21 @@ export function DisplayObject(extendClass) {
       }
     }
 
-    private flexRender(props) {
+    #flexRender(props) {
       if (!this.parent) return;
       if (props.flexDirection || props.justifyContent) {
         this.isFlex = true;
-        this.applyFlexLayout();
+        this.#applyFlexLayout();
       }
     }
 
     onUpdate(props) {
-      if (!this._canvasContext || !this.parent) return;
+      this.fullProps = {
+        ...this.fullProps,
+        ...props,
+      };
+
+      if (!this.#canvasContext || !this.parent) return;
       if (props.x !== undefined) this.setX(props.x);
       if (props.y !== undefined) this.setY(props.y);
       if (props.scale !== undefined)
@@ -281,7 +280,7 @@ export function DisplayObject(extendClass) {
 
       this.filters = currentFilters;
 
-      this.flexRender(props);
+      this.#flexRender(props);
     }
 
     onDestroy() {
@@ -322,7 +321,7 @@ export function DisplayObject(extendClass) {
       this.node.setFlexWrap(mapping[wrap]);
     }
 
-    private setAlign(methodName: string, align: AlignContent) {
+    #setAlign(methodName: string, align: AlignContent) {
       const mapping = {
         auto: this.yoga.ALIGN_AUTO,
         "flex-start": this.yoga.ALIGN_FLEX_START,
@@ -338,15 +337,15 @@ export function DisplayObject(extendClass) {
     }
 
     setAlignContent(align: AlignContent) {
-      this.setAlign("setAlignContent", align);
+      this.#setAlign("setAlignContent", align);
     }
 
     setAlignSelf(align: AlignContent) {
-      this.setAlign("setAlignSelf", align);
+      this.#setAlign("setAlignSelf", align);
     }
 
     setAlignItems(align: AlignContent) {
-      this.setAlign("setAlignItems", align);
+      this.#setAlign("setAlignItems", align);
     }
 
     setJustifyContent(
@@ -367,7 +366,7 @@ export function DisplayObject(extendClass) {
       this.node.setJustifyContent(mapping[justifyContent]);
     }
 
-    private setEdgeSize(methodName: string, size: EdgeSize) {
+    #setEdgeSize(methodName: string, size: EdgeSize) {
       const method = (this.node as any)[methodName].bind(this.node);
       if (size instanceof Array) {
         if (size.length === 2) {
@@ -385,7 +384,7 @@ export function DisplayObject(extendClass) {
     }
 
     setPosition(position: EdgeSize) {
-      this.setEdgeSize("setPosition", position);
+      this.#setEdgeSize("setPosition", position);
     }
 
     setX(x: number) {
@@ -405,11 +404,11 @@ export function DisplayObject(extendClass) {
     }
 
     setPadding(padding: EdgeSize) {
-      this.setEdgeSize("setPadding", padding);
+      this.#setEdgeSize("setPadding", padding);
     }
 
     setMargin(margin: EdgeSize) {
-      this.setEdgeSize("setMargin", margin);
+      this.#setEdgeSize("setMargin", margin);
     }
 
     setGap(gap: EdgeSize) {
@@ -417,7 +416,7 @@ export function DisplayObject(extendClass) {
     }
 
     setBorder(border: EdgeSize) {
-      this.setEdgeSize("setBorder", border);
+      this.#setEdgeSize("setBorder", border);
     }
 
     setPositionType(positionType: "relative" | "absolute") {
@@ -455,26 +454,5 @@ export function DisplayObject(extendClass) {
     getHeight() {
       return this.displayHeight();
     }
-
-    //    updateAABB() {
-    //         const box = this.getLocalBounds()
-    //         this.AABB.x = this.x + (box.x - this.pivot.x) * Math.abs(this.scale.x)
-    //         this.AABB.y = this.y + (box.y - this.pivot.y) * Math.abs(this.scale.y)
-    //         this.AABB.width = box.width * Math.abs(this.scale.x)
-    //         this.AABB.height = box.height * Math.abs(this.scale.y)
-    //     }
-
-    //     render(args) {
-    //         super.render(args);
-    //         this.updateAABB()
-    //         if (this._boundsViewport) {
-    //             const bounds = this._context.viewport.getVisibleBounds()
-    //             const box = this.AABB
-    //             this.visible =
-    //                 box.x + box.width > bounds.x && box.x < bounds.x + bounds.width &&
-    //                 box.y + box.height > bounds.y && box.y < bounds.y + bounds.height
-    //         }
-
-    //     }
   };
 }

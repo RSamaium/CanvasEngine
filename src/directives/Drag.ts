@@ -6,13 +6,18 @@ import { snap } from 'popmotion';
 import { addContext } from '../hooks/addContext';
 
 export class Drop extends Directive {
+    onInit(element: Element<Container>) {}
+
     onMount(element: Element<Container>) {
         addContext(element, 'drop', element)
     }
+
+    onUpdate() {}
+
+    onDestroy() {}
 }
 
 export class Drag extends Directive {
-
     onInit(element: Element<Container>) {}
 
     onMount(element: Element<Container>) {
@@ -68,6 +73,7 @@ export class Drag extends Directive {
         stage.on('pointerupoutside', onDragEnd)
     }
 
+    onUpdate() {}
 
     onDestroy() {
 

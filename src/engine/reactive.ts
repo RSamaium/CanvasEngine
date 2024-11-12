@@ -1,6 +1,5 @@
 import { Signal, WritableArraySignal, isSignal } from "@signe/reactive";
 import {
-  BehaviorSubject,
   Observable,
   Subject,
   Subscription,
@@ -50,6 +49,8 @@ export interface Element<T = ComponentInstance> {
   directives: {
     [key: string]: Directive;
   };
+  destroy: () => void;
+  allElements: Subject<void>;
 }
 
 type FlowObservable = Observable<{
@@ -129,6 +130,7 @@ export function createComponent(tag: string, props?: Props): Element {
     destroy() {
       destroyElement(this);
     },
+    allElements: new Subject(),
   };
 
   // Iterate over each property in the props object
@@ -194,7 +196,7 @@ export function createComponent(tag: string, props?: Props): Element {
     });
   };
 
-  const elementsListen = new Subject()
+  const elementsListen = new Subject<any>()
 
   if (props?.isRoot) {
     // propagate recrusively context in all children
@@ -228,14 +230,16 @@ export function createComponent(tag: string, props?: Props): Element {
               }
               components.forEach((component) => {
                 if (!Array.isArray(component)) {
-                  component = [component];
+                  onMount(element, component);
+                  propagateContext(component);
+                } else {
+                  component.forEach((comp) => {
+                    onMount(element, comp);
+                    propagateContext(comp);
+                  });
                 }
-                component.forEach((comp) => {
-                  onMount(element, comp);
-                  propagateContext(comp);
-                });
               });
-              elementsListen.next()
+              elementsListen.next(undefined)
             }
           );
         } else {

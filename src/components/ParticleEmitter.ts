@@ -11,7 +11,7 @@ class CanvasParticlesEmitter extends CanvasContainer {
     super.onMount(params);
     const { props } = params;
     const tick: Signal = props.context.tick;
-    this.emitter = new particles.Emitter(this, props.config);
+    this.emitter = new particles.Emitter(this as any, props.config);
     //this.emitter.emit = true
 
     this.subscriptionTick = tick.observable.subscribe((value) => {

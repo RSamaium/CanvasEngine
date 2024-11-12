@@ -1,12 +1,23 @@
-import { effect, signal } from "@signe/reactive";
+import { effect, Signal, signal } from "@signe/reactive";
 import { Container, autoDetectRenderer } from "pixi.js";
 import { loadYoga } from "yoga-layout";
-import { Props, createComponent, registerComponent } from "../engine/reactive";
+import { Props, createComponent, registerComponent, Element } from "../engine/reactive";
 import { useProps } from "../hooks/useProps";
-import { DisplayObject } from "./DisplayObject";
+import { ComponentInstance, DisplayObject } from "./DisplayObject";
 import { ComponentFunction } from "../engine/signal";
 import { SignalOrPrimitive } from "./types";
 import { Size } from "./types/DisplayObject";
+import { Scheduler, Tick } from "../directives/Scheduler";
+
+interface CanvasElement extends Element<ComponentInstance> {
+  render: (rootElement: HTMLElement) => void;
+  directives: {
+    tick: Scheduler
+  };
+  propObservables: {
+    tick: Signal<Tick>
+  };
+}
 
 registerComponent("Canvas", class Canvas extends DisplayObject(Container) {});
 
@@ -59,10 +70,10 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
       deltaRatio: 1,
     });
   }
-  const canvasElement = createComponent("Canvas", options);
+  const canvasElement = createComponent("Canvas", options) as CanvasElement;
 
   canvasElement.render = (rootElement: HTMLElement) => {
-    const canvasEl = renderer.view.canvas;
+    const canvasEl = renderer.view.canvas as HTMLCanvasElement;
 
     (globalThis as any).__PIXI_STAGE__ = canvasElement.componentInstance;
     (globalThis as any).__PIXI_RENDERER__ = renderer;

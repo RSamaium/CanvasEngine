@@ -6,6 +6,12 @@ Common example:
 <Text text="Hello World" style={ { fontSize: 20 } } />
 ```
 
+## Typewriter
+
+```html
+<Text text="Hello World" typewriter="{}" />
+```
+
 ## Properties
 
 You can use all properties from Display Object

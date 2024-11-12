@@ -10,7 +10,7 @@ interface ContainerProps extends DisplayObjectProps {
 }
 
 export class CanvasContainer extends DisplayObject(PixiContainer) {
-  protected isCustomAnchor = true;
+  isCustomAnchor = true;
   
   onUpdate(props) {
     if (props.anchor) {
