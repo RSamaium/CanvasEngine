@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "dev": "vite",
     "build": "tsup src/index.ts --watch",
