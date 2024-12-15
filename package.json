@@ -1,6 +1,6 @@
 {
   "name": "canvasengine",
-  "private": true,
+  "description": "A reactive HTML5 Canvas management library built on top of PixiJS",
   "version": "2.0.0-beta.1",
   "type": "module",
   "main": "dist/index.js",
@@ -18,11 +18,13 @@
   "scripts": {
     "dev": "cd sample && vite",
     "build": "tsup",
+    "watch": "tsup --watch",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest",
     "docs": "vitepress dev docs",
-    "docs:build": "vitepress build docs"
+    "docs:build": "vitepress build docs",
+    "prepublish": "npm run build"
   },
   "dependencies": {
     "@barvynkoa/particle-emitter": "^0.0.1",
@@ -64,5 +66,24 @@
     "vitepress": "^1.3.4",
     "vitest": "^1.6.0",
     "vitest-webgl-canvas-mock": "^1.1.0"
+  },
+  "author": "Samuel Ronce",
+  "license": "MIT",
+  "homepage": "https://canvasengine.net",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RSamaium/CanvasEngine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RSamaium/CanvasEngine/issues"
+  },
+  "keywords": [
+    "canvas",
+    "pixijs",
+    "reactive",
+    "html5"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }

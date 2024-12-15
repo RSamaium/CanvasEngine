@@ -1,15 +1,19 @@
 {
-  "name": "template",
+  "name": "canvasengine-starter",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "vite"
+    "dev": "vite",
+    "build": "vite build"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
+  "dependencies": {
+    "canvasengine": "2.0.0-beta.1"
+  },
   "devDependencies": {
     "vite": "^6.0.3"
   }

@@ -1,15 +1,13 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "lib": ["dom", "esnext"],
-    "module": "ES2020",
-    "outDir": "./lib",
-    "rootDir": "src",
+    "target": "es2020",
+    "module": "esnext",
+    "outDir": "dist",
     "strict": true,
     "sourceMap": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": false,
-    "moduleResolution": "Bundler",
+    "moduleResolution": "node",
     "esModuleInterop": true,
     "removeComments": false,
     "noUnusedParameters": false,
@@ -17,16 +15,18 @@
     "noImplicitThis": false,
     "noImplicitAny": false,
     "noImplicitReturns": false,
-    "declaration": true,
-    "experimentalDecorators": true, 
+    "declaration": false,
+    "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "stripInternal": true,
-    "skipLibCheck": true,
-    "types": ["node"]
+    "types": [
+      "node",
+      "vite/client"
+    ],
+    "resolveJsonModule": true
   },
   "include": [
-      "src",
-      "sample"
-  ],
-  
+    ".",
+    "index.d.ts",
+    "node_modules/canvasengine/index.d.ts"
+  ]
 }

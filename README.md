@@ -20,7 +20,7 @@ CanvasEngine offers significant performance advantages over Pixi React. While Pi
 ## Installation
 
 ```bash
-npx degit RSamaium/CanvasEngine/starter#v2 my-project
+npx degit RSamaium/CanvasEngine/starter my-project
 cd my-project
 npm install
 npm run dev # and go to localhost:5173

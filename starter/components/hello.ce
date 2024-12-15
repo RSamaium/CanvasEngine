@@ -1,6 +1,6 @@
 <Container flexDirection="column" width="500px">
     <Sprite 
-        image="/assets/logo.png" 
+        image={imgUrl} 
         anchor="0.5" 
         rotation
         scale
@@ -11,6 +11,7 @@
 </Container>
 
 <script>
+import imgUrl from '../assets/logo.png'
 import { signal, tick, animatedSignal, Easing } from "canvasengine";
 
 const { text } = defineProps();

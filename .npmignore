@@ -4,3 +4,4 @@ sample
 public
 docs
 .vitepress
+node_modules
