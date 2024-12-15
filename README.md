@@ -69,3 +69,11 @@ const onLeave = () => {
 </script>
 ```
 
+## Contributing
+
+```bash
+git clone https://github.com/RSamaium/CanvasEngine.git
+cd CanvasEngine
+npm install
+npm run dev
+```
