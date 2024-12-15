@@ -19,9 +19,10 @@
     "noImplicitReturns": false,
     "declaration": true,
     "experimentalDecorators": true, 
-    "emitDecoratorMetadata": true,
+    "emitDecoratorMetadata": false,
     "stripInternal": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]
   },
   "include": [
       "src",

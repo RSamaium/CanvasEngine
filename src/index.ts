@@ -11,3 +11,4 @@ export { useProps, useDefineProps } from './hooks/useProps'
 
 export * from './presets/Bar'
 export * from './presets/Particle'
+export * from './utils/Ease'

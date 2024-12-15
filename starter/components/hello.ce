@@ -1,0 +1,34 @@
+<Container flexDirection="column" width="500px">
+    <Sprite 
+        image="/assets/logo.png" 
+        anchor="0.5" 
+        rotation
+        scale
+        @pointerenter={onEnter} 
+        @pointerleave={onLeave}
+    />
+    <Text text size="70" fontFamily="Helvetica" x="90" y="-30" />
+</Container>
+
+<script>
+import { signal, tick, animatedSignal, Easing } from "canvasengine";
+
+const { text } = defineProps();
+const rotation = signal(0);
+const scale = animatedSignal(1, {
+    duration: 300,
+    ease: Easing.easeInOut,
+});
+
+tick(() => {
+    rotation.update(rotation => rotation + 0.01);
+});
+
+const onEnter = () => {
+    scale.set(1.5);
+};
+
+const onLeave = () => {
+    scale.set(1);
+};
+</script>

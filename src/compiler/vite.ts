@@ -1,9 +1,10 @@
 import { createFilter } from "vite";
 import { parse } from "acorn";
-import dd from "dedent";
 import fs from "fs";
 import pkg from "peggy";
+import path from "path";
 import * as ts from "typescript"; // Import TypeScript package
+import { fileURLToPath } from 'url';
 
 const { generate } = pkg;
 
@@ -11,7 +12,14 @@ const DEV_SRC = "../../src"
 
 export default function canvasengine() {
   const filter = createFilter("**/*.ce");
-  const grammar = fs.readFileSync("src/compiler/grammar.pegjs", "utf8");
+
+  // Convert import.meta.url to a file path
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+
+  const grammar = fs.readFileSync(
+    path.join(__dirname, "grammar.pegjs").replace("dist/compiler/grammar.pegjs", "src/compiler/grammar.pegjs"), 
+  "utf8");
   const parser = generate(grammar);
   const isDev = process.env.NODE_ENV === "development";
   const FLAG_COMMENT = "/*--[TPL]--*/";
@@ -103,7 +111,11 @@ export default function canvasengine() {
             (imp) =>
               imp.specifiers &&
               imp.specifiers.some(
-                (spec) => spec.imported && spec.imported.name === importName
+                (spec) =>
+                  spec.type === "ImportSpecifier" &&
+                  spec.imported && 
+                  'name' in spec.imported &&
+                  spec.imported.name === importName
               )
           )
       );

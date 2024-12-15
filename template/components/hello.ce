@@ -1,7 +1,0 @@
-<Canvas backgroundColor="#1e1e1e" width="1920" height="1080" antialias="true">
-    <Text x="5" y="5" text="Hello" />
-</Canvas>
-  
-<script>
-
-</script>
