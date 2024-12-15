@@ -4,7 +4,11 @@ Input props are
 
 ```html
 <script>
-  const { title } = $props
+  const { title } = defineProps({
+    title: 'Hello World'
+  })
+
+  console.log(title())
 </script>
 
 <Text text={title} />

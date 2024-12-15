@@ -2,7 +2,12 @@ const guideMenu = [
   {
     text: "Quick Start",
     collapsed: false,
-    items: [],
+    items: [
+      {
+        text: "Installation",
+        link: "/get_started/installation",
+      },
+    ],
   },
   {
     text: "Components",
@@ -66,6 +71,7 @@ export default {
       },
     ],
     sidebar: {
+      "/": guideMenu,
       "/guide/": guideMenu,
       "/components/": guideMenu,
       "/directives/": guideMenu,

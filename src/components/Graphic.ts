@@ -32,6 +32,10 @@ interface TriangleProps extends DisplayObjectProps {
   color: string;
 }
 
+interface SvgProps extends DisplayObjectProps {
+  svg: string;
+}
+
 class CanvasGraphics extends DisplayObject(PixiGraphics) {
   onInit(props: GraphicsProps) {
     super.onInit(props);
@@ -131,6 +135,13 @@ export function Triangle(props: TriangleProps) {
         g.stroke(border);
       }
     },
+    ...props
+  })
+}
+
+export function Svg(props: SvgProps) {
+  return Graphics({
+    draw: (g) => g.svg(props.svg),
     ...props
   })
 }

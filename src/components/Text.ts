@@ -14,6 +14,7 @@ interface TextProps extends DisplayObjectProps {
   style?: Partial<TextStyle>;
   color?: string;
   size?: string;
+  fontFamily?: string;
   typewriter?: {
     speed?: number;
     start?: () => void;
@@ -85,6 +86,9 @@ class CanvasText extends DisplayObject(PixiText) {
     }
     if (props.size) {
       this.style.fontSize = props.size;
+    }
+    if (props.fontFamily) {
+      this.style.fontFamily = props.fontFamily;
     }
     if (this._wordWrapWidth) {
       this.setWidth(this._wordWrapWidth);

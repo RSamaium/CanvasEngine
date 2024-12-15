@@ -63,6 +63,24 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas, { width: computed(() => ({x: 10, y: 20})) })`);
   });
 
+  test("should compile component with deep object attribute", () => {
+    const input = `<Canvas width={deep.value} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: computed(() => deep().value()) })`);
+  });
+
+  test("should compile component with deep object attribute but not transform to signal", () => {
+    const input = `<Canvas width={@deep.value} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: computed(() => deep.value()) })`);
+  });
+
+  test("should compile component with deep object attribute but not all transform to signal", () => {
+    const input = `<Canvas width={@deep.@value} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: computed(() => deep.value) })`);
+  });
+
   test("should compile component with dynamic object attribute", () => {
     const input = `<Canvas width={ {x: x, y: 20} } />`;
     const output = parser.parse(input);
@@ -324,4 +342,5 @@ describe("Condition in Loops", () => {
       `h(Canvas,null,[loop(sprites,(sprite)=>h(Sprite)),loop(others,(other)=>h(Sprite))])`.replace(/\s+/g, "")
     );
   });
+
 });

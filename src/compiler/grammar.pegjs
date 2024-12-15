@@ -75,7 +75,12 @@ dynamicAttribute
       if (attributeValue.trim().match(/^[a-zA-Z_]\w*$/)) {
         return `${attributeName}: ${attributeValue}`;
       } else {
-        return `${attributeName}: computed(() => ${attributeValue.replace(/\b([a-zA-Z_]\w*)\b(?![\(\:])/g, '$1()')})`;
+        return `${attributeName}: computed(() => ${attributeValue.replace(/@?[a-zA-Z_][a-zA-Z0-9_]*(?!:)/g, (match) => {
+          if (match.startsWith('@')) {
+            return match.substring(1);
+          }
+          return `${match}()`;
+        })})`;
       }
     }
   / attributeName:attributeName _ {

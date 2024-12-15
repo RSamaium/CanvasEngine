@@ -13,5 +13,5 @@ Lifecycle is a core concept in Canvas Engine. It is used to manage the lifecycle
   });
 </script>
 
- <Rect x y width="10" height="10" color="red" />
+ <Rect x="5" y="5" width="10" height="10" color="red" />
 ```

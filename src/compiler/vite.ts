@@ -7,7 +7,9 @@ import * as ts from "typescript"; // Import TypeScript package
 
 const { generate } = pkg;
 
-export default function vitePluginCe() {
+const DEV_SRC = "../../src"
+
+export default function canvasengine() {
   const filter = createFilter("**/*.ce");
   const grammar = fs.readFileSync("src/compiler/grammar.pegjs", "utf8");
   const parser = generate(grammar);
@@ -25,7 +27,8 @@ export default function vitePluginCe() {
     "ImageMap",
     "NineSliceSprite",
     "Rect",
-    "Circle"
+    "Circle",
+    "svg"
   ];
 
   return {
@@ -37,7 +40,15 @@ export default function vitePluginCe() {
       const scriptMatch = code.match(/<script>([\s\S]*?)<\/script>/);
       let scriptContent = scriptMatch ? scriptMatch[1].trim() : "";
       
-      const template = code.replace(/<script>[\s\S]*?<\/script>/, "").trim();
+      // Transform SVG tags to Svg components
+      let template = code.replace(/<script>[\s\S]*?<\/script>/, "")
+        .replace(/^\s+|\s+$/g, '');
+      
+      // Add SVG transformation
+      template = template.replace(/<svg>([\s\S]*?)<\/svg>/g, (match, content) => {
+        return `<Svg content="${content.trim()}" />`;
+      });
+      
       const parsedTemplate = parser.parse(template);
 
       // trick to avoid typescript remove imports in scriptContent
@@ -75,7 +86,7 @@ export default function vitePluginCe() {
           if (isDev && importCode.includes("from 'canvasengine'")) {
             importCode = importCode.replace(
               "from 'canvasengine'",
-              "from '../src'"
+              `from '${DEV_SRC}'`
             );
           }
           return importCode;
@@ -101,7 +112,7 @@ export default function vitePluginCe() {
       if (missingImports.length > 0) {
         const additionalImportCode = `import { ${missingImports.join(
           ", "
-        )} } from ${isDev ? "'../src'" : "'canvasengine'"};`;
+        )} } from ${isDev ? `'${DEV_SRC}'` : "'canvasengine'"};`;
         importsCode = `${additionalImportCode}\n${importsCode}`;
       }
 
@@ -113,7 +124,7 @@ export default function vitePluginCe() {
       // Add missing imports for primitive components
       primitiveImports.forEach((component) => {
         const importStatement = `import { ${component} } from ${
-          isDev ? "'../src'" : "'canvasengine'"
+          isDev ? `'${DEV_SRC}'` : "'canvasengine'"
         };`;
         if (!importsCode.includes(importStatement)) {
           importsCode = `${importStatement}\n${importsCode}`;
@@ -121,21 +132,22 @@ export default function vitePluginCe() {
       });
 
       // Generate the output
-      const output = dd`
+      const output = String.raw`
       ${importsCode}
-      import { useProps } from '../src'
+      import { useProps, useDefineProps } from ${isDev ? `'${DEV_SRC}'` : "'canvasengine'"}
 
       export default function component($$props) {
-          const $props = useProps($$props)
-          ${nonImportCode}
-          let $this = ${parsedTemplate}
-          return $this
+        const $props = useProps($$props)
+        const defineProps = useDefineProps($$props)
+        ${nonImportCode}
+        let $this = ${parsedTemplate}
+        return $this
       }
-  `;
+      `;
 
       return {
         code: output,
-        map: null, // Provide source map if needed
+        map: null,
       };
     },
   };

@@ -3,7 +3,7 @@
 Events are a type of signal that can be used to pass data to a component. They are created using the `events` function. For example:
 
 ```html
-<Rect x y width="10" height="10" color="red" @click={() => console.log('Clicked')} />
+<Rect x="5" y="5" width="10" height="10" color="red" @click={() => console.log('Clicked')} />
 ```
 
 ## Use callback function
@@ -17,7 +17,7 @@ Events are a type of signal that can be used to pass data to a component. They a
   }
 </script>
 
-<Rect x y width="10" height="10" color="red" @click />
+<Rect x="5" y="5" width="10" height="10" color="red" @click />
 ```
 
 > `@click` is a shorthand for `@click={click}`.
