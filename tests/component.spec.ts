@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { bootstrapCanvas, Canvas, createComponent, h, registerComponent } from '../packages/core/src/index'
-import { signal } from '@signe/reactive'
+import { bootstrapCanvas, Canvas, createComponent, h, registerComponent, signal } from '../packages/core/src/index'
 
 describe('Component', () => {
     test('bootstrap application', async () => {
