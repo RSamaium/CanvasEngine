@@ -1,10 +1,4 @@
-import { Container, Graphics } from "../components";
-import { h, mount } from "../engine/signal";
-import { animatedSignal } from "../engine/animation";
-import { RadialGradient } from "../utils/RadialGradient";
-import { effect, isSignal, signal } from "@signe/reactive";
-import { useProps } from "../hooks/useProps";
-import { isObservable } from "rxjs";
+import { Container, Graphics, h, mount, useProps, animatedSignal, RadialGradient, effect, isSignal, signal, isObservable } from "canvasengine";
 
 export function LightSpot(opts) {
   const { radius } = useProps(opts);
@@ -82,7 +76,7 @@ export function NightAmbiant(props) {
         if (subscription) {
           subscription.unsubscribe()
         }
-        subscription = child.subscribe((event) => {
+        subscription = child.subscribe((event: any) => {
            for (let child of event.fullElements) {
             applyChildren(child)
            }
@@ -95,7 +89,7 @@ export function NightAmbiant(props) {
 
   mount((el) => {
     effect(() => {
-      const { displayWidth, displayHeight } = el.componentInstance
+      const { displayWidth, displayHeight } = el.componentInstance as any
       const w = +displayWidth()
       const h = +displayHeight()
       setTimeout(() => {

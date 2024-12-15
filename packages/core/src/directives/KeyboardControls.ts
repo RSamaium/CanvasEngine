@@ -468,7 +468,7 @@ export class KeyboardControls extends Directive {
     }
 
     private onKeyChange(e: KeyboardEvent, isDown: boolean) {
-        e = e || window.event;
+        e = (e || window.event) as KeyboardEvent;
 
         const keyName: string = keyCodeTable[e.keyCode];
 

@@ -1,0 +1,52 @@
+{
+  "name": "canvasengine",
+  "version": "2.0.1-beta.3",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "@barvynkoa/particle-emitter": "^0.0.1",
+    "@pixi/tilemap": "^5.0.1",
+    "@rpgjs/tiled": "^4.3.0",
+    "@signe/reactive": "^1.0.1",
+    "howler": "^2.2.4",
+    "package.json": "^2.0.1",
+    "pixi-filters": "^6.0.5",
+    "pixi-viewport": "^6.0.3",
+    "pixi.js": "^8.6.4",
+    "popmotion": "^11.0.5",
+    "rxjs": "^7.8.1",
+    "yoga-layout": "^2.0.1"
+  },
+  "devDependencies": {
+    "@types/howler": "^2.2.11"
+  },
+  "author": "Samuel Ronce",
+  "license": "MIT",
+  "homepage": "https://canvasengine.net",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RSamaium/CanvasEngine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RSamaium/CanvasEngine/issues"
+  },
+  "keywords": [
+    "canvas",
+    "pixijs",
+    "reactive",
+    "html5"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "overrides": {
+    "revolt-fx": {
+      "pixi.js": "^8.6.4"
+    }
+  }
+}

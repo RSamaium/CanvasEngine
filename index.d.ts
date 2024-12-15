@@ -1,4 +1,4 @@
-import { ComponentFunction } from "./src/engine/signal";
+import { ComponentFunction } from "./packages/core/src/engine/signal";
 
 declare module '*.ce' {
     const content: any;

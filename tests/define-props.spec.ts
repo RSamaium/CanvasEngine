@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { useDefineProps } from '../src/hooks/useProps'
+import { useDefineProps } from '../packages/core/src/hooks/useProps'
 import { signal, isSignal } from '@signe/reactive'
 
 describe('useDefineProps', () => {

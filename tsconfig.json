@@ -1,27 +1,17 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "lib": ["dom", "esnext"],
-    "module": "ES2020",
-    "outDir": "./lib",
-    "rootDir": "src",
-    "strict": true,
-    "sourceMap": true,
-    "strictNullChecks": true,
-    "strictPropertyInitialization": false,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": false,
+    "lib": ["ES2020", "DOM"],
     "moduleResolution": "Bundler",
-    "esModuleInterop": true,
-    "removeComments": false,
-    "noUnusedParameters": false,
-    "noUnusedLocals": false,
-    "noImplicitThis": false,
-    "noImplicitAny": false,
-    "noImplicitReturns": false,
+    "paths": {
+      "canvasengine": ["./packages/core/src/index.ts"],
+      "@canvasengine/presets": ["./packages/presets/src/index.ts"]
+    },
     "declaration": true,
-    "experimentalDecorators": true, 
-    "emitDecoratorMetadata": true,
-    "stripInternal": true,
     "skipLibCheck": true,
-    "types": ["node"]
-  }
+    "esModuleInterop": true
+  },
+  "exclude": ["**/dist/**", "node_modules"]
 }

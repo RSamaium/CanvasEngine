@@ -34,6 +34,7 @@ export interface DisplayObjectProps {
     pivot?: SignalOrPrimitive<{ x: number, y: number }>;
     filters?: any[];
     blendMode?: SignalOrPrimitive<PIXI.BLEND_MODES>;
+    blur?: SignalOrPrimitive<number>;
 
     click?: PIXI.FederatedEventHandler;
     mousedown?: PIXI.FederatedEventHandler;

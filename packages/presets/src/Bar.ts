@@ -1,7 +1,5 @@
-import { Graphics } from "../components";
-import { h } from "../engine/signal";
+import { Graphics, h, useProps } from "canvasengine";
 import * as PIXI from "pixi.js";
-import { useProps } from "../hooks/useProps";
 
 interface BarProps {
   backgroundColor?: string;

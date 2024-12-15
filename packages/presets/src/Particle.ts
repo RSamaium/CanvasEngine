@@ -1,9 +1,6 @@
 import * as PIXI from "pixi.js";
 import { FX } from "revolt-fx";
-import { h, mount, tick } from "../engine/signal";
-import { Container } from "../components";
-import { on } from "../engine/trigger";
-import { useProps } from "../hooks/useProps";
+import { h, mount, tick, Container, on, useProps } from "canvasengine";
 
 export function Particle(options) {
   const { emit, settings = {} } = options;
