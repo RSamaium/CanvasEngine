@@ -3,7 +3,7 @@ import { parse } from "acorn";
 import fs from "fs";
 import pkg from "peggy";
 import path from "path";
-import * as ts from "typescript"; // Import TypeScript package
+import * as ts from "typescript";
 import { fileURLToPath } from 'url';
 
 const { generate } = pkg;
@@ -18,10 +18,10 @@ export default function canvasengine() {
   const __dirname = path.dirname(__filename);
 
   const grammar = fs.readFileSync(
-    path.join(__dirname, "grammar.pegjs").replace("dist/compiler/grammar.pegjs", "src/compiler/grammar.pegjs"), 
+    path.join(__dirname, "grammar.pegjs").replace("dist/grammar.pegjs", "grammar.pegjs"), 
   "utf8");
   const parser = generate(grammar);
-  const isDev = process.env.NODE_ENV === "development";
+  const isDev = process.env.NODE_ENV === "dev";
   const FLAG_COMMENT = "/*--[TPL]--*/";
 
   const PRIMITIVE_COMPONENTS = [

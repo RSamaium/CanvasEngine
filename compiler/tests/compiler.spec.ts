@@ -6,7 +6,7 @@ const { generate } = pkg;
 let parser: any;
 
 beforeAll(() => {
-  const grammar = fs.readFileSync("src/compiler/grammar.pegjs", "utf8");
+  const grammar = fs.readFileSync("compiler/grammar.pegjs", "utf8");
   parser = generate(grammar);
 });
 

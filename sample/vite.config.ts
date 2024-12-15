@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite'
-import canvasengine from '../src/compiler/vite'
+import canvasengine from '../compiler'
 
 // https://vitejs.dev/config/
 export default defineConfig({

@@ -1,5 +1,4 @@
 import { WritableSignal } from '@signe/reactive';
-import Stats from 'stats.js';
 import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
 import * as Utils from '../engine/utils';
@@ -22,8 +21,6 @@ export class Scheduler extends Directive {
     private _stop: boolean = false
     private tick: WritableSignal<Tick | null>
     
-    private stats = new Stats()
-
     onInit(element: Element) { 
         this.tick = element.propObservables?.tick as any
     }
@@ -36,22 +33,15 @@ export class Scheduler extends Directive {
         this.lastTimestamp = this.lastTimestamp || this.timestamp // first
         this.deltaTime = Utils.preciseNow() - this.timestamp
         this.timestamp = timestamp
-        this.stats.begin()
         this.tick.set({
             timestamp: this.timestamp,
             deltaTime: this.deltaTime,
             frame: this.frame,
             deltaRatio: ~~this.deltaTime / ~~Utils.fps2ms(this.fps)
         })
-        this.stats.end()
         this.lastTimestamp = this.timestamp
         this.frame++
     }
-
-    private showPanel() {
-        this.stats.showPanel(0)
-    }
-
     /**
      * start the schedule
      * @return {Scheduler} returns this scheduler instance
@@ -64,7 +54,6 @@ export class Scheduler extends Directive {
         if (options.maxFps) this.maxFps = options.maxFps
         if (options.fps) this.fps = options.fps
         if (options.delay) this.requestedDelay = options.delay
-        this.showPanel()
         const requestAnimationFrame = (fn: (timestamp: number) => void) => {
             if (Utils.isBrowser()) {
                 window.requestAnimationFrame(fn.bind(this))

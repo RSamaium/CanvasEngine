@@ -5,3 +5,8 @@ public
 docs
 .vitepress
 node_modules
+starter
+.github
+.cursorrules
+logo.png
+compiler

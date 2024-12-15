@@ -18,10 +18,6 @@
     "declaration": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "types": [
-      "node",
-      "vite/client"
-    ],
     "resolveJsonModule": true
   },
   "include": [

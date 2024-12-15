@@ -23,10 +23,5 @@
     "stripInternal": true,
     "skipLibCheck": true,
     "types": ["node"]
-  },
-  "include": [
-      "src",
-      "sample"
-  ],
-  
+  }
 }
