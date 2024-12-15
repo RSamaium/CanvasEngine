@@ -26,3 +26,4 @@ dist-ssr
 lib
 public
 cache
+.vitepress

@@ -3,7 +3,7 @@
 All common display objects are components:
 
 - [Graphics](./graphic.md)
-- [Image](./image.md)
+- [Sprite](./sprite.md)
 - [Text](./text.md)
 - [Sprite](./sprite.md)
 - [Container](./container.md)
