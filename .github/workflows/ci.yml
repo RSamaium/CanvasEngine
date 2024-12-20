@@ -36,52 +36,31 @@ jobs:
       - name: Run Tests
         run: pnpm test
 
-  build_and_publish:
-      needs: tests
-      if: github.ref == 'refs/heads/v2'
-      strategy:
-        matrix:
-          os: [ubuntu-latest]
-          node-version: [lts/*]
-          pnpm-version: [latest]
-      runs-on: ${{ matrix.os }}
-      steps:
-        - name: ⬇️ Checkout
-          id: checkout
-          uses: actions/checkout@v4
-          with:
-            fetch-depth: 0
-  
-        - name: 🟢 Setup node
-          id: setup-node
-          uses: actions/setup-node@v4
-          with:
-            node-version: ${{ matrix.node-version }}
-  
-        - name: 🥡 Setup pnpm
-          id: setup-pnpm
-          uses: pnpm/action-setup@v4
-          with:
-            version: ${{ matrix.pnpm-version }}
-            run_install: false
-  
-        - name: 🧩 Install Dependencies
-          id: install-dependencies
-          run: pnpm install --no-frozen-lockfile
-  
-        - name: 🏗️ Build
-          id: build-the-mono-repo
-          run: |
-            pnpm build
-  
-        - name: 📣 Create Release Pull Request or Publish to npm
-          id: changesets
-          uses: changesets/action@v1
-          with:
-            title: "chore(release): version packages 🦋"
-            publish: pnpm publish:packages
-            version: pnpm version:packages
-            commit: "chore(release): version packages 🦋 [skip ci]"
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+  deploy:
+    needs: tests
+    runs-on: ubuntu-22.04
+    if: github.ref == 'refs/heads/v2'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: 📣 Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          title: "chore(release): version packages 🦋"
+          publish: pnpm publish:packages
+          version: pnpm version:packages
+          commit: "chore(release): version packages 🦋 [skip ci]"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
