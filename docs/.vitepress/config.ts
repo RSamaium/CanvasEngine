@@ -1,3 +1,5 @@
+import { defineConfig } from 'vitepress';
+
 const guideMenu = [
   {
     text: "Quick Start",
@@ -51,7 +53,7 @@ const guideMenu = [
   },
 ];
 
-export default {
+export default defineConfig({
   title: "Canvas Engine Documentation",
   description: "Reactive Canvas Framework",
   ignoreDeadLinks: true,
@@ -76,5 +78,5 @@ export default {
       "/components/": guideMenu,
       "/directives/": guideMenu,
     },
-  },
-};
+  }
+})

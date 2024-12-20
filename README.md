@@ -71,9 +71,19 @@ const onLeave = () => {
 
 ## Contributing
 
+Before, install pnpm and run the following command:
+
 ```bash
 git clone https://github.com/RSamaium/CanvasEngine.git
 cd CanvasEngine
-npm install
-npm run dev
+pnpm install
+pnpm run dev
+```
+
+Documentation
+
+```
+cd docs
+pnpm install
+pnpm run dev
 ```
