@@ -30,7 +30,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: "pnpm"
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
       - name: Build
         run: pnpm build
       - name: Run Tests
@@ -81,7 +81,7 @@ jobs:
   
         - name: 🧩 Install Dependencies
           id: install-dependencies
-          run: pnpm install --prod
+          run: pnpm install --no-frozen-lockfile --prod
   
         - name: 🏗️ Build
           id: build-the-mono-repo
