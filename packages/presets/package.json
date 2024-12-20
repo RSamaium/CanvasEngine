@@ -15,5 +15,8 @@
     "canvasengine": "workspace:*",
     "pixi.js": "^8.6.4",
     "revolt-fx": "^1.3.5"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
