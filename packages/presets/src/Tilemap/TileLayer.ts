@@ -9,7 +9,7 @@ settings.use32bitIndex = true
 export class CanvasTileLayer extends DisplayObject(CompositeTilemap) {
     private _tiles: any = {}
     tiles: (TileClass | null)[]
-    private _layer: Layer
+    private _layer: any // TODO: fix this, remove any. replace with Layer
 
     static findTileSet(gid: number, tileSets: TileSet[]) {
         let tileset: TileSet | undefined
