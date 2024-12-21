@@ -16,6 +16,10 @@ Lifecycle is a core concept in Canvas Engine. It is used to manage the lifecycle
  <Rect x="5" y="5" width="10" height="10" color="red" />
 ```
 
+Element is the root element of the component. Here, it is the `Graphics` element (`Rect` is a `Graphics` element).
+
+> View the [Element Object](/api/element) for more information.
+
 ## Unmount
 
 To unmount a component, you can return a function from the mount function.

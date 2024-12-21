@@ -24,6 +24,4 @@ const click = () => {
 <Container x y @click />
 ```
 
-## Properties
-
-You can use all properties from Display Object
+<!-- @include: ./_display-object.md -->

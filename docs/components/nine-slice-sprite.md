@@ -28,3 +28,5 @@ You can use all properties from Display Object plus the following:
 | `topHeight` | number | Height of the top edge that should not be scaled |
 | `bottomHeight` | number | Height of the bottom edge that should not be scaled |
 | `roundPixels` | boolean | If true, the sprite's position will be rounded to integers |
+
+<!-- @include: ./_display-object.md -->

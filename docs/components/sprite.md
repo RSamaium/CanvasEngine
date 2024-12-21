@@ -51,3 +51,5 @@ const definition = {
     }
 />
 ```
+
+<!-- @include: ./_display-object.md -->

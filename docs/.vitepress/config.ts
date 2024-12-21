@@ -46,10 +46,6 @@ const guideMenu = [
     collapsed: false,
     items: [
       {
-        text: "Common properties",
-        link: "/components/display-object",
-      },
-      {
         text: "Canvas",
         link: "/components/canvas",
       },
@@ -90,6 +86,30 @@ const guideMenu = [
       {
         text: "Controls",
         link: "/directives/controls",
+      },
+    ],
+  },
+  {
+    text: "Presets Components",
+    collapsed: false,
+    items: [
+      {
+        text: "Joystick",
+        link: "/presets/joystick",
+      },
+      {
+        text: "Bar",
+        link: "/presets/bar",
+      }
+    ],
+  },
+  {
+    text: "API",
+    collapsed: false,
+    items: [
+      {
+        text: "Element Object",
+        link: "/api/element",
       },
     ],
   },

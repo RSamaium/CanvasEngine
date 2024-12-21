@@ -38,3 +38,5 @@ With scale and position:
   height={600}
 />
 ```
+
+<!-- @include: ./_display-object.md -->

@@ -1,14 +1,4 @@
-# Common Display Object
-
-All common display objects are components:
-
-- [Graphics](./graphic.md)
-- [Sprite](./sprite.md)
-- [Text](./text.md)
-- [Sprite](./sprite.md)
-- [Container](./container.md)
-
-## Properties
+## Common Properties
 
 | Property       | Type                | Description                                                                 |
 |----------------|---------------------|-----------------------------------------------------------------------------|

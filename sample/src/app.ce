@@ -4,5 +4,8 @@
     height="100%" 
     antialias="true"
     >
-    <Text text="CanvasEngine" />
+   <Child />
 </Canvas>
+<script>
+    import Child from './child.ce'
+</script>

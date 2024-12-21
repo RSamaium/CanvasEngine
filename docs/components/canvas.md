@@ -10,10 +10,6 @@ Common example:
 </Canvas>
 ```
 
-## Properties
-
-You can use all properties from Display Object
-
 ### options
 
 You can use all properties from [PixiJS Canvas Renderer](https://pixijs.download/release/docs/rendering.html#autoDetectRenderer)

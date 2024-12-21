@@ -60,10 +60,9 @@ the drawing is redrawn if width and height change
 <Ellipse x="0" y="0" width="100" height="100" color="red" />
 ```
 
-## Properties
-
-You can use all properties from Display Object
-
 ### draw
 
 Function that draws on the canvas. It receives the `Graphics` object as argument. It uses [PixiJS Graphics](https://pixijs.download/release/docs/scene.Graphics.html) to draw.
+
+<!-- @include: ./_display-object.md -->
+

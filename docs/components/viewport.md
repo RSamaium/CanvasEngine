@@ -30,3 +30,5 @@ In this example, the red rectangle will be followed by the viewport, keeping it 
 
 - Must be used on an element that is a child of a `Viewport` component
 - The parent `Viewport` component must have defined dimensions (`worldWidth` and `worldHeight`)
+
+<!-- @include: ./_display-object.md -->

@@ -1,0 +1,13 @@
+<Container x y ref="container" />
+
+<script>
+    import { mount, signal, useRef } from 'canvasengine'
+
+    const x = signal(5)
+    const y = signal(5)
+
+    mount((element) => {
+       const container = useRef(element, 'container')
+       console.log(container)
+    })
+</script>

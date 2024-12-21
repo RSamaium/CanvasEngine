@@ -69,3 +69,5 @@ const skip = trigger()
 skip.start()
 </script>
 ```
+
+<!-- @include: ./_display-object.md -->
