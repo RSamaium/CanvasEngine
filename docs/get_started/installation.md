@@ -1,5 +1,7 @@
 # Installation
 
+## From template
+
 ```bash
 npx degit RSamaium/CanvasEngine/starter my-project
 cd my-project
@@ -7,41 +9,21 @@ npm install
 npm run dev # and go to localhost:5173
 ```
 
-Try CanvasEngine
+## In existing project
 
+> Your project must already be under Vite.
 
-::: sandbox {deps="vue3-toastify: latest"}
-
-```vue App.vue
-<template>
-  <div>
-    <button @click="notify">Notify !</button>
-  </div>
-</template>
-
-<script setup>
-import { toast } from 'vue3-toastify';
-
-const notify = () => {
-  toast("Wow so easy !", {
-    autoClose: 1000,
-  }); // ToastOptions
-}
-</script>
+```bash
+npm i canvasengine @canvasengine/compiler
 ```
 
-```js /src/main.js [active] [readOnly]
-import App from './App.vue';
-import { createApp } from 'vue';
-import Vue3Toasity from 'vue3-toastify';
-import 'vue3-toastify/dist/index.css';
+Add in `vite.config.ts`
 
-createApp(App).use(
-  Vue3Toasity,
-  {
-    autoClose: 3000,
-  },
-).mount('#app');
+```ts
+import { defineConfig } from 'vite';
+import canvasengine from '@canvasengine/compiler';
+
+export default defineConfig({
+  plugins: [canvasengine()],
+});
 ```
-
-:::

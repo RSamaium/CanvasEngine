@@ -1,9 +1,4 @@
-import { effect, signal } from "@signe/reactive";
-import { loop } from "../../engine/reactive";
-import { h } from "../../engine/signal";
-import { useProps } from "../../hooks/useProps";
-import { Container } from "../Container";
-import { Sprite } from "../Sprite";
+import { effect, signal, loop, h, Container, Sprite, useProps } from "canvasengine";
 
 interface TileData {
   id: number;

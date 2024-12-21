@@ -28,7 +28,6 @@ export default function canvasengine() {
     "Canvas",
     "Sprite",
     "Text",
-    "Joystick",
     "Viewport",
     "Graphics",
     "Container",
@@ -36,6 +35,7 @@ export default function canvasengine() {
     "NineSliceSprite",
     "Rect",
     "Circle",
+    "TilingSprite",
     "svg"
   ];
 

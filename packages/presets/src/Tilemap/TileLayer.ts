@@ -1,7 +1,6 @@
 import { CompositeTilemap, POINT_STRUCT_SIZE, Tilemap, settings } from '@pixi/tilemap';
 import { Layer, Tile as TileClass } from '@rpgjs/tiled';
-import { createComponent, registerComponent } from '../../engine/reactive';
-import { DisplayObject } from '../DisplayObject';
+import { createComponent, registerComponent, DisplayObject } from 'canvasengine';
 import { Tile } from './Tile';
 import { TileSet } from './TileSet';
 

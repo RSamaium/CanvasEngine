@@ -9,6 +9,36 @@ const guideMenu = [
         text: "Installation",
         link: "/get_started/installation",
       },
+      {
+        text: "Start",
+        link: "/get_started/start",
+      }
+    ],
+  },
+  {
+    text: "Concepts",
+    collapsed: false,
+    items: [
+      {
+        text: "Template Syntax",
+        link: "/concepts/template-syntax",
+      },
+      {
+        text: "Reactivity",
+        link: "/concepts/reactive",
+      },
+      {
+        text: "Child Component",
+        link: "/concepts/child-component",
+      },
+      {
+        text: "Trigger",
+        link: "/concepts/trigger",
+      },
+      {
+        text: "Lifecycle",
+        link: "/concepts/lifecycle",
+      }
     ],
   },
   {
@@ -16,8 +46,12 @@ const guideMenu = [
     collapsed: false,
     items: [
       {
-        text: "Common Components",
+        text: "Common properties",
         link: "/components/display-object",
+      },
+      {
+        text: "Canvas",
+        link: "/components/canvas",
       },
       {
         text: "Container",
@@ -36,8 +70,16 @@ const guideMenu = [
         link: "/components/sprite",
       },
       {
+        text: "NineSliceSprite",
+        link: "/components/nine-slice-sprite",
+      },
+      {
         text: "Viewport",
         link: "/components/viewport",
+      },
+      {
+        text: "TilingSprite",
+        link: "/components/tilling-sprite",
       },
     ],
   },

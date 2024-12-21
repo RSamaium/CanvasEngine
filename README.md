@@ -1,8 +1,8 @@
-# CanvasEngine - A reactive HTML5 Canvas management library built on top of PixiJS
+# CanvasEngine - A reactive HTML5 Canvas management library built on top of PixiJS and Vite
 
 ![CanvasEngine](logo.png)
 
-CanvasEngine is a reactive HTML5 Canvas management library built on top of PixiJS. It provides a component-oriented approach to canvas rendering, similar to modern frontend frameworks.
+CanvasEngine is a reactive HTML5 Canvas management library built on top of PixiJS and Vite. It provides a component-oriented approach to canvas rendering, similar to modern frontend frameworks.
 
 Features:
 - Reactive components
@@ -71,13 +71,19 @@ const onLeave = () => {
 
 ## Contributing
 
-Before, install pnpm and run the following command:
+Before, install `pnpm` and run the following command:
 
 ```bash
 git clone https://github.com/RSamaium/CanvasEngine.git
 cd CanvasEngine
 pnpm install
-pnpm run dev
+pnpm run dev # to build the libraries
+```
+
+To run the sample project:
+
+```bash
+pnpm run dev:sample
 ```
 
 Documentation
@@ -87,3 +93,18 @@ cd docs
 pnpm install
 pnpm run dev
 ```
+
+## Release
+
+```bash
+pnpm run release
+```
+
+> Choose the version you want to release
+
+Push the release branch to the remote repository
+
+```bash
+git push origin v2
+```
+

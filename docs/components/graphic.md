@@ -34,7 +34,9 @@ const click = () => {
 <Graphics @draw @click />
 ```
 
-## Rect
+the drawing is redrawn if width and height change
+
+## Rectangle
 
 ```html
 <Rect x="0" y="0" width="100" height="100" color="red" />
@@ -50,6 +52,12 @@ const click = () => {
 
 ```html
 <Triangle x="0" y="0" width="100" height="100" color="red" />
+```
+
+## Ellipse
+
+```html
+<Ellipse x="0" y="0" width="100" height="100" color="red" />
 ```
 
 ## Properties

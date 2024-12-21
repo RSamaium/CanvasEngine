@@ -42,11 +42,13 @@ All common display objects are components:
 | filters        | array               | Filters applied to the display object.                                      |
 | maskOf         | Element             | Element that this display object masks.                                     |
 | blendMode      | string              | Blend mode for rendering.                                                   |
-| filterArea     | object              | Filter area for rendering.                                                  |
+| filterArea     | object              | Filter area for rendering.                                               
+
+## shadow 
 
 
-# shadow
-
+| Property       | Type                | Description                                                                 |
+|----------------|---------------------|-----------------------------------------------------------------------------|
 | Property       | Type                | Description                                                                 |  
 | blur           | number              | Blur strength.                                                                 |
 | color          | number              | Color of the shadow.                                                            |
