@@ -10,7 +10,8 @@
     "release": "bumpp package.json packages/*/package.json --all",
     "changeset": "changeset",
     "publish:packages": "changeset publish",
-    "version:packages": "changeset version"
+    "version:packages": "changeset version",
+    "preinstall": "cd docs && npm install"
   },
   "dependencies": {
     "@changesets/cli": "^2.27.10",
