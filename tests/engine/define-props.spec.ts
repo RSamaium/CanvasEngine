@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { useDefineProps, signal, isSignal } from '../packages/core/src'
+import { useDefineProps, signal, isSignal } from 'canvasengine'
 
 describe('useDefineProps', () => {
 

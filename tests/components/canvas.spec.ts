@@ -1,7 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Canvas } from '../packages/core/src/components/Canvas';
-import { ComponentInstance } from '../packages/core/src/components/DisplayObject';
-import { Element } from '../packages/core/src';
+import { Canvas, ComponentInstance, Element } from 'canvasengine';
 
 describe('Canvas', () => {
   let rootElement: HTMLElement;

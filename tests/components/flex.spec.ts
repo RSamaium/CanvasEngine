@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Canvas } from '../packages/core/src/components/Canvas';
-import { ComponentInstance } from '../packages/core/src/components/DisplayObject';
-import { bootstrapCanvas, Container, Element, h } from '../packages/core/src';
+import { Canvas, ComponentInstance, Element, bootstrapCanvas, Container, h  } from 'canvasengine';
 
 describe('Flex Positioning', () => {
 

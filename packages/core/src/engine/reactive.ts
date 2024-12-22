@@ -224,7 +224,7 @@ export function createComponent(tag: string, props?: Props): Element {
                 components.forEach((c) => {
                   const index = element.props.children.indexOf(prev.props.key);
                   onMount(element, c, index + 1);
-                  propagateContext(c);
+                 propagateContext(c);
                 });
                 return;
               }
