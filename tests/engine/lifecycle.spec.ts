@@ -9,7 +9,6 @@ describe('Lifecycle', () => {
         function MyComponent() { 
             mount((element) => {
                 mockMount(element)
-                console.log('a')
             })
             
             return h(Canvas, {
@@ -19,8 +18,6 @@ describe('Lifecycle', () => {
 
         await bootstrapCanvas(document.getElementById('root'), MyComponent)
 
-        console.log('b')
-        
         expect(mockMount).toHaveBeenCalledTimes(1)
         expect(mockMount).toHaveBeenCalledWith(expect.objectContaining({
             props: expect.objectContaining({ isRoot: true })

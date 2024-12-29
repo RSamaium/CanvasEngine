@@ -201,6 +201,23 @@ export function createComponent(tag: string, props?: Props): Element {
   if (props?.isRoot) {
     // propagate recrusively context in all children
     const propagateContext = async (element) => {
+      if (element.props.attach) {
+        const isReactiveAttach = isSignal(element.propObservables?.attach)
+        if (!isReactiveAttach) {
+          element.props.children.push(element.props.attach)
+        }
+        else {
+          let lastElement = null
+          element.propObservables.attach.observable.subscribe(({ value, type }) => {
+            if (type != "init") {
+              destroyElement(lastElement)
+            }
+            lastElement = value
+            onMount(element, value);
+            propagateContext(value);
+          })
+        }
+      }
       if (!element.props.children) {
         return;
       }
@@ -224,7 +241,7 @@ export function createComponent(tag: string, props?: Props): Element {
                 components.forEach((c) => {
                   const index = element.props.children.indexOf(prev.props.key);
                   onMount(element, c, index + 1);
-                 propagateContext(c);
+                  propagateContext(c);
                 });
                 return;
               }

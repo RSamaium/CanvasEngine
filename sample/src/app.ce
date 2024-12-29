@@ -1,39 +1,15 @@
 <Canvas width="800" height="600" backgroundColor="0x1099bb">
-    @for (sprite of sprites) {
-        <Sprite image={bunnyUrl} x={@sprite.x} y={@sprite.y} rotation={@sprite.rotation} rotationSpeed={@sprite.rotationSpeed} scale={@sprite.scale} />
-    }
+    
 </Canvas>
 
 <script>
-    import { tick, signal } from "canvasengine";
+    import { trigger, on } from 'canvasengine'
 
-    const sprites = signal([])
+   const myTrigger = trigger({
+    'jj': 'jj'
+   })
 
-    const bunnyUrl = 'https://pixijs.io/pixi-react/img/bunny.png';
-
-    const createSprite = (id) => ({
-        id,
-        x: signal(Math.random() * 800),
-        y: signal(Math.random() * 600),
-        rotation: signal(0),
-        rotationSpeed: signal((Math.random() - 0.5) * 0.1),
-        scale: signal(1 + Math.random() * 1)
-    });
-
-    const addSprites = () => {
-        const newSprites = Array.from({ length: 5000 }, (_, i) => 
-            createSprite(sprites.length + i)
-        );
-        sprites.update(prev => [...prev, ...newSprites]);
-    };
-    
-    addSprites()
-
-    tick(({ deltaRatio }) => {
-        //console.time('tick')
-        for (const sprite of sprites()) {
-            sprite.rotation.set(sprite.rotation() + sprite.rotationSpeed() * deltaRatio)
-        }
-        //console.timeEnd('tick')
-    });
+   on(myTrigger, async (data) => {
+       console.log('Triggered with data:', data)
+   })
 </script>

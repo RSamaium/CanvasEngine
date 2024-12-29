@@ -38,6 +38,10 @@ const guideMenu = [
       {
         text: "Lifecycle",
         link: "/concepts/lifecycle",
+      },
+      {
+        text: "Slot",
+        link: "/concepts/slot",
       }
     ],
   },
