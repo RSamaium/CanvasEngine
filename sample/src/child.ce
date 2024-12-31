@@ -1,15 +1,16 @@
 <Container x y ref="container" attach={child1} />
 
 <script>
-    import { mount, signal } from 'canvasengine'
+    import { mount, signal, computed } from 'canvasengine'
 
     const x = signal(5)
     const y = signal(5)
     const { children } = defineProps()
+    const index = signal(0)
 
-    const child1 = signal(children[0])
+    const child1 = computed(() => children[index()])
 
     setTimeout(() => {
-        child1.set(children[1])
+        index.set(1)
     }, 1000)
 </script>

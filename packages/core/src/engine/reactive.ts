@@ -209,8 +209,12 @@ export function createComponent(tag: string, props?: Props): Element {
         else {
           let lastElement = null
           // TODO: fix computed attach
-          element.propObservables.attach.observable.subscribe(({ value, type }) => {
-            if (type != "init") {
+          element.propObservables.attach.observable.subscribe((args) => {
+            const value = args?.value ?? args
+            if (!value) {
+              throw new Error(`attach in ${element.tag} is undefined or null, add a component`)
+            }
+            if (lastElement) {
               destroyElement(lastElement)
             }
             lastElement = value

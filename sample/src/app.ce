@@ -1,25 +1,12 @@
 <script>
     import { signal, animatedSignal, mount, effect } from 'canvasengine'
-    import { Bar } from 'canvasengine/components'
-    
-    const { title } = defineProps()
-    
-    const width = animatedSignal(10, {
-        duration: 1000,
-    })
-    
-
-    mount(() => {
-       setTimeout(() => {
-        width.set(400)
-       }, 1000)
-    })
+    import Child from './child.ce'
     </script>
     
   <Canvas>
-    <Container>
-        <Rect width height={25} color="#fff"/>
-        <Text text="mmaaa" size={96} fontFamily="Lato" color="#fff" />
-    </Container>
+    <Child>
+      <Text text="a" size={96} fontFamily="Lato" color="#fff" />
+      <Text text="b" size={96} fontFamily="Lato" color="#fff" />
+    </Child>
     
   </Canvas>
