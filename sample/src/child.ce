@@ -1,4 +1,4 @@
-<Container x y ref="container" attach={child1} />
+<Container x y attach={child1} />
 
 <script>
     import { mount, signal, computed } from 'canvasengine'
@@ -7,6 +7,10 @@
     const y = signal(5)
     const { children } = defineProps()
     const index = signal(0)
+
+    children[0].subscribe((val) => {
+        console.log(val.elements)
+    })
 
     const child1 = computed(() => children[index()])
 

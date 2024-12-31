@@ -1,12 +1,19 @@
 <script>
     import { signal, animatedSignal, mount, effect } from 'canvasengine'
     import Child from './child.ce'
+
+    const bool = signal(true)
+
+    
     </script>
     
   <Canvas>
-    <Child>
-      <Text text="a" size={96} fontFamily="Lato" color="#fff" />
-      <Text text="b" size={96} fontFamily="Lato" color="#fff" />
-    </Child>
-    
+     
+        <Child>
+          @if (bool) {
+            <Text text="a" size={96} fontFamily="Lato" color="#fff" />
+            <Text text="b" size={96} fontFamily="Lato" color="#fff" />
+          }
+        </Child>
+     
   </Canvas>

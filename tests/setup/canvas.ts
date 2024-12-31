@@ -30,3 +30,5 @@ Object.defineProperty(global.window.HTMLMediaElement.prototype, 'load', {
 })
 
 window.document.body.innerHTML = `<div id="root"></div>`
+
+console.error = () => {}

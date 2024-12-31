@@ -184,7 +184,23 @@ export function createComponent(tag: string, props?: Props): Element {
   instance.onInit?.(element.props);
   instance.onUpdate?.(element.props);
 
-  const onMount = (parent: Element, element: Element, index?: number) => {
+  const elementsListen = new Subject<any>()
+
+  if (props?.isRoot) {
+    element.allElements = elementsListen
+    element.props.context.rootElement = element;
+    element.componentInstance.onMount?.(element);
+    propagateContext(element);
+  }
+
+  if (props) {
+    for (let key in props) {
+      const directive = applyDirective(element, key);
+      if (directive) element.directives[key] = directive;
+    }
+  }
+
+  function onMount(parent: Element, element: Element, index?: number) {
     element.props.context = parent.props.context;
     element.parent = parent;
     element.componentInstance.onMount?.(element, index);
@@ -196,90 +212,79 @@ export function createComponent(tag: string, props?: Props): Element {
     });
   };
 
-  const elementsListen = new Subject<any>()
-
-  if (props?.isRoot) {
-    // propagate recrusively context in all children
-    const propagateContext = async (element) => {
-      if (element.props.attach) {
-        const isReactiveAttach = isSignal(element.propObservables?.attach)
-        if (!isReactiveAttach) {
-          element.props.children.push(element.props.attach)
-        }
-        else {
-          let lastElement = null
-          // TODO: fix computed attach
-          element.propObservables.attach.observable.subscribe((args) => {
-            const value = args?.value ?? args
-            if (!value) {
-              throw new Error(`attach in ${element.tag} is undefined or null, add a component`)
-            }
-            if (lastElement) {
-              destroyElement(lastElement)
-            }
-            lastElement = value
-            onMount(element, value);
-            propagateContext(value);
-          })
-        }
+  async function propagateContext(element) {
+    if (element.props.attach) {
+      const isReactiveAttach = isSignal(element.propObservables?.attach)
+      if (!isReactiveAttach) {
+        element.props.children.push(element.props.attach)
       }
-      if (!element.props.children) {
-        return;
-      }
-      for (let child of element.props.children) {
-        if (!child) continue;
-        if (isPromise(child)) {
-          child = await child;
-        }
-        if (child instanceof Observable) {
-          child.subscribe(
-            ({
-              elements: comp,
-              prev,
-            }: {
-              elements: Element[];
-              prev?: Element;
-            }) => {
-              // if prev, insert element after this
-              const components = comp.filter((c) => c !== null);
-              if (prev) {
-                components.forEach((c) => {
-                  const index = element.props.children.indexOf(prev.props.key);
-                  onMount(element, c, index + 1);
-                  propagateContext(c);
-                });
-                return;
-              }
-              components.forEach((component) => {
-                if (!Array.isArray(component)) {
-                  onMount(element, component);
-                  propagateContext(component);
-                } else {
-                  component.forEach((comp) => {
-                    onMount(element, comp);
-                    propagateContext(comp);
-                  });
+      else {
+        await new Promise((resolve) => {
+            let lastElement = null
+            element.propSubscriptions.push(element.propObservables.attach.observable.subscribe(async (args) => {
+                const value = args?.value ?? args
+                if (!value) {
+                  throw new Error(`attach in ${element.tag} is undefined or null, add a component`)
                 }
-              });
-              elementsListen.next(undefined)
-            }
-          );
-        } else {
-          onMount(element, child);
-          await propagateContext(child);
-        }
+                if (lastElement) {
+                  destroyElement(lastElement)
+                }
+                lastElement = value
+                await createElement(element, value)
+                resolve(undefined)
+            }))
+        })
       }
-    };
-    element.allElements = elementsListen
-    element.props.context.rootElement = element;
-    element.componentInstance.onMount?.(element);
-    propagateContext(element);
-  }
+    }
+    if (!element.props.children) {
+      return;
+    }
+    for (let child of element.props.children) {
+      if (!child) continue;
+      await createElement(element, child)
+    }
+  };
 
-  if (props) {
-    for (let key in props) {
-      const directive = applyDirective(element, key);
-      if (directive) element.directives[key] = directive;
+  async function createElement(parent: Element, child: Element) {
+    if (isPromise(child)) {
+      child = await child;
+    }
+    if (child instanceof Observable) {
+      child.subscribe(
+        ({
+          elements: comp,
+          prev,
+        }: {
+          elements: Element[];
+          prev?: Element;
+        }) => {
+          // if prev, insert element after this
+          const components = comp.filter((c) => c !== null);
+          if (prev) {
+            components.forEach((c) => {
+              const index = parent.props.children.indexOf(prev.props.key);
+              onMount(parent, c, index + 1);
+              propagateContext(c);
+            });
+            return;
+          }
+          components.forEach((component) => {
+            if (!Array.isArray(component)) {
+              onMount(parent, component);
+              propagateContext(component);
+            } else {
+              component.forEach((comp) => {
+                onMount(parent, comp);
+                propagateContext(comp);
+              });
+            }
+          });
+          elementsListen.next(undefined)
+        }
+      );
+    } else {
+      onMount(parent, child);
+      await propagateContext(child);
     }
   }
 
