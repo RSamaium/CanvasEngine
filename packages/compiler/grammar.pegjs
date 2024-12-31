@@ -75,12 +75,18 @@ dynamicAttribute
       if (attributeValue.trim().match(/^[a-zA-Z_]\w*$/)) {
         return `${attributeName}: ${attributeValue}`;
       } else {
-        return `${attributeName}: computed(() => ${attributeValue.replace(/@?[a-zA-Z_][a-zA-Z0-9_]*(?!:)/g, (match) => {
+        let foundSignal = false
+        const computedValue = attributeValue.replace(/@?[a-zA-Z_][a-zA-Z0-9_]*(?!:)/g, (match) => {
           if (match.startsWith('@')) {
             return match.substring(1);
           }
+          foundSignal = true
           return `${match}()`;
-        })})`;
+        });
+        if (foundSignal) {
+          return `${attributeName}: computed(() => ${computedValue})`;
+        }
+        return `${attributeName}: ${computedValue}`;
       }
     }
   / attributeName:attributeName _ {

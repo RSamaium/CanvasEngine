@@ -1,15 +1,25 @@
-<Canvas width="800" height="600" backgroundColor="0x1099bb">
-    
-</Canvas>
-
 <script>
-    import { trigger, on } from 'canvasengine'
+    import { signal, animatedSignal, mount, effect } from 'canvasengine'
+    import { Bar } from 'canvasengine/components'
+    
+    const { title } = defineProps()
+    
+    const width = animatedSignal(10, {
+        duration: 1000,
+    })
+    
 
-   const myTrigger = trigger({
-    'jj': 'jj'
-   })
-
-   on(myTrigger, async (data) => {
-       console.log('Triggered with data:', data)
-   })
-</script>
+    mount(() => {
+       setTimeout(() => {
+        width.set(400)
+       }, 1000)
+    })
+    </script>
+    
+  <Canvas>
+    <Container>
+        <Rect width height={25} color="#fff"/>
+        <Text text="mmaaa" size={96} fontFamily="Lato" color="#fff" />
+    </Container>
+    
+  </Canvas>

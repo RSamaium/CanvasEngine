@@ -37,7 +37,7 @@ interface SvgProps extends DisplayObjectProps {
 }
 
 class CanvasGraphics extends DisplayObject(PixiGraphics) {
-  onInit(props: GraphicsProps) {
+  onInit(props) {
     super.onInit(props);
     if (props.draw) {
       effect(() => {

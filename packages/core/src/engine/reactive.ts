@@ -208,6 +208,7 @@ export function createComponent(tag: string, props?: Props): Element {
         }
         else {
           let lastElement = null
+          // TODO: fix computed attach
           element.propObservables.attach.observable.subscribe(({ value, type }) => {
             if (type != "init") {
               destroyElement(lastElement)

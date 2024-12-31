@@ -57,10 +57,16 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas, { width: x })`);
   });
 
+  test("should compile component with dynamic attribute but is not a signal", () => {
+    const input = `<Canvas width={20} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: 20 })`);
+  });
+
   test("should compile component with object attribute", () => {
     const input = `<Canvas width={ {x: 10, y: 20} } />`;
     const output = parser.parse(input);
-    expect(output).toBe(`h(Canvas, { width: computed(() => ({x: 10, y: 20})) })`);
+    expect(output).toBe(`h(Canvas, { width: ({x: 10, y: 20}) })`);
   });
 
   test("should compile component with deep object attribute", () => {
@@ -78,7 +84,7 @@ describe("Compiler", () => {
   test("should compile component with deep object attribute but not all transform to signal", () => {
     const input = `<Canvas width={@deep.@value} />`;
     const output = parser.parse(input);
-    expect(output).toBe(`h(Canvas, { width: computed(() => deep.value) })`);
+    expect(output).toBe(`h(Canvas, { width: deep.value })`);
   });
 
   test("should compile component with dynamic object attribute", () => {
@@ -90,7 +96,7 @@ describe("Compiler", () => {
   test("should compile component with array attribute", () => {
     const input = `<Canvas width={ [10, 20] } />`;
     const output = parser.parse(input);
-    expect(output).toBe(`h(Canvas, { width: computed(() => [10, 20]) })`);
+    expect(output).toBe(`h(Canvas, { width: [10, 20] })`);
   });
 
   test("should compile component with dynamic array attribute", () => {

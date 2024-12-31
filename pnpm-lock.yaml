@@ -14,6 +14,9 @@ importers:
       bumpp:
         specifier: ^9.9.1
         version: 9.9.1(magicast@0.3.5)
+      pixi.js:
+        specifier: ^8.6.6
+        version: 8.6.6
       rollup-plugin-node-polyfills:
         specifier: ^0.2.1
         version: 0.2.1

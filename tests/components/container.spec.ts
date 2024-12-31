@@ -1,13 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { Canvas, ComponentInstance,  bootstrapCanvas, Container, Element, h, signal } from 'canvasengine';
+import { Container, signal } from 'canvasengine';
+import { TestBed } from '../../packages/core/testing';
 
 
 describe('Container', () => {
-    let rootElement: HTMLElement;
-    let canvas: Element<ComponentInstance>
-    let container: Element<ComponentInstance>
-    let tick: any
-
     const props = {
         x: 10,
         y: 15,
@@ -23,26 +19,13 @@ describe('Container', () => {
         describe(`${prop} property`, () => {
             it(`should set ${prop} property`, async () => {
                 const value = signal(testValue)
-
-                function MyComponent() {
-                    return h(Canvas, {}, h(Container, { [prop]: value }))
-                }
-                canvas = await bootstrapCanvas(document.getElementById('root'), MyComponent)
-                container = canvas.componentInstance.children?.[0] as Element<ComponentInstance>
-                tick = canvas.directives.tick
-
-                expect(container[prop]).toBe(value())
+                const container = await TestBed.createComponent(Container, { [prop]: value })
+                expect(container.componentInstance[prop]).toBe(value())
             });
 
             it(`${prop} property updated`, async () => {
                 const value = signal(testValue)
-
-                function MyComponent() {
-                    return h(Canvas, {}, h(Container, { [prop]: value }))
-                }
-                canvas = await bootstrapCanvas(document.getElementById('root'), MyComponent)
-                container = canvas.componentInstance.children?.[0] as Element<ComponentInstance>
-                tick = canvas.directives.tick
+                const container = await TestBed.createComponent(Container, { [prop]: value })
 
                 if (typeof testValue === 'number') {
                     value.set(testValue + 1)
@@ -50,10 +33,8 @@ describe('Container', () => {
                     value.set(!testValue)
                 }
 
-                expect(container[prop]).toBe(value())
+                expect(container.componentInstance[prop]).toBe(value())
             });
         });
     }
-
- 
 })
