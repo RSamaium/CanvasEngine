@@ -4,6 +4,7 @@ export { Graphics, Rect, Circle, Ellipse, Triangle, Svg as svg } from './Graphic
 export { Scene } from './Scene'
 export { ParticlesEmitter } from './ParticleEmitter'
 export { Sprite } from './Sprite'
+export { Video } from './Video'
 export { Text } from './Text'
 export { TilingSprite } from './TilingSprite'
 export { Viewport } from './Viewport'

@@ -227,6 +227,24 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   async onUpdate(props) {
     super.onUpdate(props);
 
+    const setTexture = async (image: string) => {
+      const onProgress = this.fullProps.loader?.onProgress;
+      const texture = await Assets.load(image, (progress) => {
+        if (onProgress) onProgress(progress);
+        if (progress == 1) {
+          const onComplete = this.fullProps.loader?.onComplete;
+          if (onComplete) {
+            // hack to memoize the texture
+            setTimeout(() => {
+              onComplete(texture);
+            });
+          }
+        }
+      });
+
+      return texture
+    }
+
     const sheet = props.sheet;
     if (sheet?.params) this.sheetParams = sheet?.params;
 
@@ -239,14 +257,13 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
     if (props.scaleMode) this.baseTexture.scaleMode = props.scaleMode;
     else if (props.image && this.fullProps.rectangle === undefined) {
-      this.texture = await Assets.load(this.fullProps.image);
+      this.texture = await setTexture(this.fullProps.image);
     } else if (props.texture) {
       this.texture = props.texture;
     }
-
     if (props.rectangle !== undefined) {
       const { x, y, width, height } = props.rectangle?.value ?? props.rectangle;
-      const texture = await Assets.load(this.fullProps.image);
+      const texture = await setTexture(this.fullProps.image);
       this.texture = new Texture({
         source: texture.source,
         frame: new Rectangle(x, y, width, height),
@@ -482,6 +499,10 @@ export interface SpritePropsWithSheet
     playing?: string;
     params?: any;
     onFinish?: () => void;
+  };
+  loader?: {
+    onProgress?: (progress: number) => void;
+    onComplete?: (texture: Texture) => void;
   };
 }
 

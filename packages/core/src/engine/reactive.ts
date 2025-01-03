@@ -182,7 +182,6 @@ export function createComponent(tag: string, props?: Props): Element {
   }
 
   instance.onInit?.(element.props);
-  instance.onUpdate?.(element.props);
 
   const elementsListen = new Subject<any>()
 

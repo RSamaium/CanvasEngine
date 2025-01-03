@@ -36,7 +36,8 @@ export default function canvasengine() {
     "Rect",
     "Circle",
     "TilingSprite",
-    "svg"
+    "svg",
+    "Video"
   ];
 
   return {

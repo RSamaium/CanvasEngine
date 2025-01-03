@@ -4,16 +4,18 @@
 
     const bool = signal(true)
 
+    setTimeout(() => {
+        bool.set(false)
+    }, 1000)
     
     </script>
     
   <Canvas>
      
-        <Child>
-          @if (bool) {
-            <Text text="a" size={96} fontFamily="Lato" color="#fff" />
-            <Text text="b" size={96} fontFamily="Lato" color="#fff" />
-          }
-        </Child>
+    <Video 
+      source="https://pixijs.com/assets/video.mp4" 
+      play={bool} 
+      @pause={() => console.log('pause')}
+    />
      
   </Canvas>

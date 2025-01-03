@@ -72,13 +72,6 @@ describe('createComponent', () => {
         })
     })
 
-    test('calls onUpdate with correct props', () => {
-        expect(TestComponent.prototype.onUpdate).toHaveBeenCalledWith({
-            staticProp: 'static value',
-            dynamicProp: 'initial value'
-        })
-    })
-
     test('calls onUpdate when dynamic prop changes', () => {
         dynamicProp.set('new value')
         expect(TestComponent.prototype.onUpdate).toHaveBeenCalledWith({
@@ -91,5 +84,6 @@ describe('createComponent', () => {
         element.parent = parentElement
         element.componentInstance.onMount(element, 0)
         expect(TestComponent.prototype.onMount).toHaveBeenCalledWith(element, 0)
+        expect(TestComponent.prototype.onUpdate).toHaveBeenCalled()
     })
 })
