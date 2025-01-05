@@ -8,6 +8,7 @@ export type Size = number | `${number}%`
 export type EdgeSize = SignalOrPrimitive<Size | [Size, Size] | [Size, Size, Size, Size]>
 
 export interface DisplayObjectProps {
+    attach?: any;
     ref?: string;
     x?: SignalOrPrimitive<number>;
     y?: SignalOrPrimitive<number>;

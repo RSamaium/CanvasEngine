@@ -4,9 +4,10 @@ import { CompositeTileLayer } from "./TileLayer"
 import { TileSet } from "./TileSet"
 
 export function TiledMap(props) {
-    const { map } = useProps(props)
+    const { map, basePath } = useProps(props)
     const layers = signal<TiledLayer[]>([])
     const objectLayer = props.objectLayer
+    const child = props.children[0]
     let tilesets: TiledTileset[] = []
     let mapData: TiledMap = {} as TiledMap
 
@@ -31,11 +32,14 @@ export function TiledMap(props) {
     }
 
     effect(async () => {
-        mapData = await parseTmx(map())
-        for (let tileSet of mapData.tilesets) {
-            tilesets.push(await new TileSet(tileSet).load(tileSet.image.source))
+        const _map = map()
+        if (_map) {
+            mapData = await parseTmx(_map, basePath())
+            for (let tileSet of mapData.tilesets) {
+                tilesets.push(await new TileSet(tileSet).load(tileSet.image.source))
+            }
+            layers.set(mapData.layers)
         }
-        layers.set(mapData.layers)
     })
 
     const createLayer = (layers, props = {}) => {
@@ -71,5 +75,5 @@ export function TiledMap(props) {
         }))
     }
 
-    return createLayer(layers)
+    return h(Container, props, createLayer(layers))
 }

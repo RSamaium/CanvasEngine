@@ -1,4 +1,4 @@
-import { Signal, WritableArraySignal, isSignal } from "@signe/reactive";
+import { Signal, WritableArraySignal, WritableObjectSignal, isSignal } from "@signe/reactive";
 import {
   Observable,
   Subject,
@@ -369,37 +369,71 @@ export function loop<T = any>(
   });
 }
 
+/**
+ * Conditionally creates and destroys elements based on a condition signal.
+ *
+ * @param {Signal<boolean> | boolean} condition - A signal or boolean that determines whether to create an element.
+ * @param {Function} createElementFn - A function that returns an element or a promise that resolves to an element.
+ * @returns {Observable} An observable that emits the created or destroyed element.
+ */
 export function cond(
-  condition: Signal,
+  condition: Signal<boolean> | boolean,
   createElementFn: () => Element | Promise<Element>
 ): FlowObservable {
   let element: Element | null = null;
-  return (condition.observable as Observable<boolean>).pipe(
-    switchMap((bool) => {
-      if (bool) {
-        let _el = createElementFn();
-        if (isPromise(_el)) {
-          return from(_el as Promise<Element>).pipe(
-            map((el) => {
-              element = _el as Element;
-              return {
+  
+  if (isSignal(condition)) {
+    const signalCondition = condition as WritableObjectSignal<boolean>;
+    return new Observable<{elements: Element[], type?: "init" | "remove"}>(subscriber => {
+      return signalCondition.observable.subscribe(bool => {
+        if (bool) {
+          let _el = createElementFn();
+          if (isPromise(_el)) {
+            from(_el as Promise<Element>).subscribe(el => {
+              element = el;
+              subscriber.next({
                 type: "init",
                 elements: [el],
-              };
-            })
-          );
+              });
+            });
+          } else {
+            element = _el as Element;
+            subscriber.next({
+              type: "init",
+              elements: [element],
+            });
+          }
+        } else if (element) {
+          destroyElement(element);
+          subscriber.next({
+            elements: [],
+          });
+        } else {
+          subscriber.next({
+            elements: [],
+          });
         }
-        element = _el as Element;
-        return of({
-          type: "init",
-          elements: [element],
-        });
-      } else if (element) {
-        destroyElement(element);
+      });
+    });
+  } else {
+    // Handle boolean case
+    if (condition) {
+      let _el = createElementFn();
+      if (isPromise(_el)) {
+        return from(_el as Promise<Element>).pipe(
+          map((el) => ({
+            type: "init",
+            elements: [el],
+          }))
+        );
       }
       return of({
-        elements: [],
+        type: "init",
+        elements: [_el as Element],
       });
-    })
-  );
+    }
+    return of({
+      elements: [],
+    });
+  }
 }

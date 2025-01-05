@@ -19,3 +19,12 @@ test(`Test cond == false`, async () => {
     const container = await TestBed.createComponent(Container, {}, value)
     expect(container.componentInstance.children.length).toBe(0)
 });
+
+test(`Use not signal`, async () => {
+    const value = cond(
+        true,
+        () => h(Container)
+    )
+    const container = await TestBed.createComponent(Container, {}, value)
+    expect(container.componentInstance.children.length).toBe(1)
+});

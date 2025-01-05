@@ -1,21 +1,20 @@
 <script>
-    import { signal, animatedSignal, mount, effect } from 'canvasengine'
-    import Child from './child.ce'
+  import { signal, animatedSignal, mount, effect } from "canvasengine";
+  import { TiledMap } from "@canvasengine/presets";
 
-    const bool = signal(true)
+  const map = signal('');
+  const basePath = 'https://raw.githubusercontent.com/RSamaium/RPG-JS/refs/heads/v4/packages/sample2/main/worlds/maps/'
+  
+  fetch(basePath + 'map.tmx').then(res => res.text()).then(text => map.set(text));
+</script>
 
-    setTimeout(() => {
-        bool.set(false)
-    }, 1000)
-    
-    </script>
-    
-  <Canvas>
-     
-    <Video 
-      source="https://pixijs.com/assets/video.mp4" 
-      play={bool} 
-      @pause={() => console.log('pause')}
-    />
-     
-  </Canvas>
+<Canvas>
+  <TiledMap map={map} basePath objectLayer={({name}) => 
+    <Container>
+      @if (val()) {
+        <Text text={name} />
+      }
+    </Container>
+  }>
+  </TiledMap>
+</Canvas>

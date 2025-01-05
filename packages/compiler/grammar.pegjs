@@ -72,15 +72,17 @@ eventHandler
 
 dynamicAttribute
   = attributeName:attributeName _ "=" _ "{" _ attributeValue:attributeValue _ "}" {
-      if (attributeValue.trim().match(/^[a-zA-Z_]\w*$/)) {
+      if (attributeValue.startsWith('h(') || attributeValue.includes('=>')) {
+        return `${attributeName}: ${attributeValue}`;
+      } else if (attributeValue.trim().match(/^[a-zA-Z_]\w*$/)) {
         return `${attributeName}: ${attributeValue}`;
       } else {
-        let foundSignal = false
+        let foundSignal = false;
         const computedValue = attributeValue.replace(/@?[a-zA-Z_][a-zA-Z0-9_]*(?!:)/g, (match) => {
           if (match.startsWith('@')) {
             return match.substring(1);
           }
-          foundSignal = true
+          foundSignal = true;
           return `${match}()`;
         });
         if (foundSignal) {
@@ -94,13 +96,34 @@ dynamicAttribute
     }
 
 attributeValue
-  = $([^{}]* ("{" [^{}]* "}" [^{}]*)*) {
+  = element
+  / functionWithElement
+  / $([^{}]* ("{" [^{}]* "}" [^{}]*)*) {
     const t = text().trim()
     if (t.startsWith("{") && t.endsWith("}")) {
       return `(${t})`;
     }
     return t
   }
+
+functionWithElement
+  = "(" _ params:functionParams? _ ")" _ "=>" _ elem:element {
+      return `${params ? `(${params}) =>` : '() =>'} ${elem}`;
+    }
+
+functionParams
+  = destructuredParams
+  / simpleParams
+
+destructuredParams
+  = "{" _ param:identifier rest:(_ "," _ identifier)* _ "}" {
+      return `{${[param].concat(rest.map(r => r[3])).join(', ')}}`;
+    }
+
+simpleParams
+  = param:identifier rest:(_ "," _ identifier)* {
+      return [param].concat(rest.map(r => r[3])).join(', ');
+    }
 
 staticAttribute
   = attributeName:attributeName _ "=" _ "\"" attributeValue:staticValue "\"" {

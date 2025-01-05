@@ -177,11 +177,52 @@ describe("Compiler", () => {
       expect(output).toBe(`h(Sprite, { click: () => console.log('click') })`);
   });
 
-  // test("should compile component with component attribute", () => {
-  //   const input = `<Canvas child={<Sprite />} />`;
-  //   const output = parser.parse(input);
-  //   expect(output).toBe(`h(Canvas, { child: h(Sprite) })`);
-  // });
+  test("should compile component with component attribute", () => {
+    const input = `<Canvas child={<Sprite />} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { child: h(Sprite) })`);
+  });
+
+  test("should compile component with function returns component attribute", () => {
+    const input = `<Canvas child={() => <Sprite />} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { child: () => h(Sprite) })`);
+  });
+
+  test("should compile component with function (with params) returns component attribute", () => {
+    const input = `<Canvas child={(x, y) => <Sprite />} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { child: (x, y) => h(Sprite) })`);
+  });
+
+  test("should compile component with destructuring function (with params)", () => {
+    const input = `<Canvas child={({ x, y }) => <Sprite />} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { child: ({x, y}) => h(Sprite) })`);
+  });
+
+  test("should compile component with function returns component attribute and data", () => {
+    const input = `<Canvas child={() => <Text text="Hello" />} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { child: () => h(Text, { text: 'Hello' }) })`);
+  });
+
+  test("should compile component with function returns component attribute and child", () => {
+    const input = `<Canvas child={() => <Container>
+        <Text text="Hello" />
+    </Container>} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { child: () => h(Container, null, h(Text, { text: 'Hello' })) })`);
+  });
+
+  test("should compile component with function returns component attribute and children", () => {
+    const input = `<Canvas child={() => <Container>
+        <Text text="Hello 1" />
+        <Text text="Hello 2" />
+    </Container>} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { child: () => h(Container, null, [h(Text, { text: 'Hello 1' }), h(Text, { text: 'Hello 2' })]) })`);
+  });
 });
 
 describe("Loop", () => {
