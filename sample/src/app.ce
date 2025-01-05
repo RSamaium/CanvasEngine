@@ -6,12 +6,14 @@
   const basePath = 'https://raw.githubusercontent.com/RSamaium/RPG-JS/refs/heads/v4/packages/sample2/main/worlds/maps/'
   
   fetch(basePath + 'map.tmx').then(res => res.text()).then(text => map.set(text));
+
+  const bool= signal(true)
 </script>
 
 <Canvas>
   <TiledMap map={map} basePath objectLayer={({name}) => 
     <Container>
-      @if (val()) {
+      @if (bool) {
         <Text text={name} />
       }
     </Container>

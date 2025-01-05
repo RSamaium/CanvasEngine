@@ -187,7 +187,30 @@ iterable
   = [a-zA-Z_][a-zA-Z0-9_]* { return text(); }
 
 condition
-  = $([^)]*) { return text().trim(); }
+  = functionCall
+  / $([^)]*) { return text().trim(); }
+
+functionCall
+  = name:identifier "(" args:functionArgs? ")" {
+    return `${name}(${args || ''})`;
+  }
+
+functionArgs
+  = arg:functionArg rest:("," _ functionArg)* {
+    return [arg].concat(rest.map(r => r[2])).join(', ');
+  }
+
+functionArg
+  = _ value:(identifier / number / string) _ {
+    return value;
+  }
+
+number
+  = [0-9]+ ("." [0-9]+)? { return text(); }
+
+string
+  = '"' chars:[^"]* '"' { return text(); }
+  / "'" chars:[^']* "'" { return text(); }
 
 eventAction
   = [^"]* { return text(); }

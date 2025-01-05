@@ -281,6 +281,16 @@ describe("Condition", () => {
     expect(output).toBe(`cond(sprite.visible, () => h(Sprite))`);
   });
 
+  test("should compile condition when function value", () => {
+    const input = `
+            @if (val()) {
+                <Sprite />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(val(), () => h(Sprite))`);
+  });
+
   test("should compile condition for multiple sprites", () => {
     const input = `
             @if (sprite) {
