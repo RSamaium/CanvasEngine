@@ -162,8 +162,13 @@ textElement
     }
 
 forLoop
-  = _ "@for" _ "(" _ variableName:identifier _ "of" _ iterable:identifier _ ")" _ "{" _ content:content _ "}" _ {
-      return `loop(${iterable}, (${variableName}) => ${content})`;
+  = _ "@for" _ "(" _ variableName:(tupleDestructuring / identifier) _ "of" _ iterable:identifier _ ")" _ "{" _ content:content _ "}" _ {
+      return `loop(${iterable}, ${variableName} => ${content})`;
+    }
+
+tupleDestructuring
+  = "(" _ first:identifier _ "," _ second:identifier _ ")" {
+      return `(${first}, ${second})`;
     }
 
 ifCondition

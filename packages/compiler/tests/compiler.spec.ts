@@ -236,7 +236,7 @@ describe("Loop", () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `h(Canvas,null,loop(sprites,(sprite)=>h(Sprite)))`.replace(/\s+/g, "")
+      `h(Canvas,null,loop(sprites,sprite=>h(Sprite)))`.replace(/\s+/g, "")
     );
   });
 
@@ -248,7 +248,19 @@ describe("Loop", () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `loop(sprites,(sprite)=>h(Sprite))`.replace(/\s+/g, "")
+      `loop(sprites,sprite=>h(Sprite))`.replace(/\s+/g, "")
+    );
+  });
+
+  test("should compile loop with destructuring", () => {
+    const input = `
+        @for ((sprite, index) of sprites) {
+            <Sprite key={index} />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(sprites,(sprite,index)=>h(Sprite, { key: index }))`.replace(/\s+/g, "")
     );
   });
 
@@ -262,7 +274,7 @@ describe("Loop", () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `loop(sprites,(sprite)=>loop(others,(other)=>h(Sprite)))`.replace(
+      `loop(sprites,sprite=>loop(others,other=>h(Sprite)))`.replace(
         /\s+/g,
         ""
       )
@@ -365,7 +377,7 @@ describe("Condition in Loops", () => {
         `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `h(Canvas,null,loop(sprites,(sprite)=>cond(sprite.visible,()=>h(Sprite))))`.replace(/\s+/g, "")
+      `h(Canvas,null,loop(sprites,sprite=>cond(sprite.visible,()=>h(Sprite))))`.replace(/\s+/g, "")
     );
   });
 
@@ -379,7 +391,7 @@ describe("Condition in Loops", () => {
         `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `h(Canvas,null,loop(sprites,(sprite)=>h(Sprite)))`.replace(/\s+/g, "")
+      `h(Canvas,null,loop(sprites,sprite=>h(Sprite)))`.replace(/\s+/g, "")
     );
   });
 
@@ -396,7 +408,7 @@ describe("Condition in Loops", () => {
         `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `h(Canvas,null,[loop(sprites,(sprite)=>h(Sprite)),loop(others,(other)=>h(Sprite))])`.replace(/\s+/g, "")
+      `h(Canvas,null,[loop(sprites,sprite=>h(Sprite)),loop(others,other=>h(Sprite))])`.replace(/\s+/g, "")
     );
   });
 
