@@ -43,7 +43,7 @@ export function TiledMap(props) {
     })
 
     const createLayer = (layers, props = {}) => {
-        return h(Container, props, loop(layers, (layer) => {
+        return h(Container, props, loop<any>(layers, (layer) => {
             switch (layer.type) {
                 case TiledLayerType.Tile:
                     return h(CompositeTileLayer, {

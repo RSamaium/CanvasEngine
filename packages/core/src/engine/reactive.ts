@@ -308,9 +308,9 @@ export function createComponent(tag: string, props?: Props): Element {
  * @param {Function} createElementFn - A function that takes an item and returns an element representation.
  * @returns {Observable} An observable that emits the list of created child elements.
  */
-export function loop<T = any>(
-  itemsSubject: WritableArraySignal<T> | WritableObjectSignal<T>,
-  createElementFn: (item: T, index: number | string) => Element
+export function loop<T>(
+  itemsSubject: WritableArraySignal<T[]> | WritableObjectSignal<T>,
+  createElementFn: (item: T, index: number | string) => Element | null
 ): FlowObservable {
   let elements: Element[] = [];
 

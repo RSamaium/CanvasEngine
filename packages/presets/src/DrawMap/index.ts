@@ -32,8 +32,8 @@ export function ImageMap(props) {
       {
         sortableChildren,
       },
-      loop(tiles, (object) => {
-
+      // TODO: fix this (remove any)
+      loop(tiles, (object: any) => {
         if (object.tag && layerIndex == 1) {
             return object
         }
