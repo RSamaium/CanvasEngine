@@ -89,7 +89,7 @@ You can use the `@if` directive to conditionally render a component.
 
 ## Loops
 
-You can use the `@for` directive to loop over an array.
+You can use the `@for` directive to loop over an array or an object.
 
 ```angular-html
 <Container>
@@ -105,7 +105,7 @@ You can use the `@for` directive to loop over an array.
 
 > `@for` cannot be used in the root, so we put it in `Container`
 
-::: warning With objects
+::: warning With objects array
 
 `item` is transformed into a signal (see chapter on reactivity).
 
@@ -138,3 +138,19 @@ To fix it, you can “undo” the transformation by signaling on the property.
 
 Use `@` to “undo” the transformation.
 :::
+
+### With objects
+
+You can use the `@for` directive to loop over an object.
+
+```angular-html
+<Container>
+  @for ((item, key) of items) {
+    <Text text={item} /> - <Text text={key} />
+  }
+</Container>
+
+<script>
+  const items = { 'Hello': 'World', 'Foo': 'Bar' }
+</script>
+```
