@@ -23,8 +23,15 @@ export type ArrayChange<T> = {
   items: T[];
 };
 
+export type ObjectChange<T> = {
+  type: "add" | "remove" | "update" | "init" | "reset";
+  key?: string;
+  value?: T;
+  items: T[];
+};
+
 type ElementObservable<T> = Observable<
-  ArrayChange<T> & {
+  (ArrayChange<T> | ObjectChange<T>) & {
     value: Element | Element[];
   }
 >;
@@ -53,10 +60,13 @@ export interface Element<T = ComponentInstance> {
   allElements: Subject<void>;
 }
 
-type FlowObservable = Observable<{
+type FlowResult = {
   elements: Element[];
   prev?: Element;
-}>;
+  fullElements?: Element[];
+};
+
+type FlowObservable = Observable<FlowResult>;
 
 const components: { [key: string]: any } = {};
 
@@ -292,32 +302,59 @@ export function createComponent(tag: string, props?: Props): Element {
 }
 
 /**
- * Observes a BehaviorSubject containing an array of items and dynamically creates child elements for each item.
+ * Observes a BehaviorSubject containing an array or object of items and dynamically creates child elements for each item.
  *
- * @param {BehaviorSubject<Array>} itemsSubject - A BehaviorSubject that emits an array of items.
+ * @param {WritableArraySignal<T> | WritableObjectSignal<T>} itemsSubject - A signal that emits an array or object of items.
  * @param {Function} createElementFn - A function that takes an item and returns an element representation.
  * @returns {Observable} An observable that emits the list of created child elements.
  */
 export function loop<T = any>(
-  itemsSubject: WritableArraySignal<T>,
-  createElementFn: (item: any, index: number) => Element | Promise<Element>
+  itemsSubject: WritableArraySignal<T> | WritableObjectSignal<T>,
+  createElementFn: (item: T, index: number | string) => Element
 ): FlowObservable {
   let elements: Element[] = [];
 
-  const addAt = (items, insertIndex: number) => {
+  const isArraySignal = '_subject' in itemsSubject && 'items' in (itemsSubject as any)._subject;
+
+  const addAt = (items: T[], insertIndex: number | string, keys?: string[]): Element[] => {
     return items.map((item, index) => {
-      const element = createElementFn(item, insertIndex + index);
-      elements.splice(insertIndex + index, 0, element as Element);
+      const key = keys ? keys[index] : (typeof insertIndex === 'number' ? insertIndex + index : insertIndex);
+      const element = createElementFn(item, key);
+      if (typeof insertIndex === 'number') {
+        elements.splice(insertIndex + index, 0, element);
+      } else {
+        elements.push(element);
+      }
       return element;
     });
   };
 
+  const getInitialItems = () => {
+    if (isArraySignal) {
+      return {
+        items: (itemsSubject as any)._subject.items as T[],
+        keys: undefined as string[] | undefined
+      };
+    } else {
+      const entries = Object.entries((itemsSubject as any)._subject.value.value) as [string, T][];
+      return {
+        items: entries.map(([_, value]) => value),
+        keys: entries.map(([key]) => key)
+      };
+    }
+  };
+
+  const { items, keys } = getInitialItems();
+
   return defer(() => {
-    let initialItems = [...itemsSubject._subject.items];
+    let initialItems = [...items];
+    let initialKeys = keys ? [...keys] : undefined;
     let init = true;
-    return itemsSubject.observable.pipe(
-      map((event: ArrayChange<T>) => {
-        const { type, items, index } = event;
+    return (itemsSubject.observable as Observable<ArrayChange<T> | ObjectChange<T>>).pipe(
+      map((event: ArrayChange<T> | ObjectChange<T>): FlowResult => {
+        const { type, items } = event;
+        const index = 'index' in event ? event.index : (event as ObjectChange<T>).key;
+
         if (init) {
           if (elements.length > 0) {
             return {
@@ -325,8 +362,9 @@ export function loop<T = any>(
               fullElements: elements,
             };
           }
-          const newElements = addAt(initialItems, 0);
+          const newElements = addAt(initialItems, 0, initialKeys);
           initialItems = [];
+          initialKeys = undefined;
           init = false;
           return {
             elements: newElements,
@@ -339,25 +377,64 @@ export function loop<T = any>(
             });
             elements = [];
           }
-          const newElements = addAt(items, 0);
+          if (!isArraySignal) {
+            const entries = Object.entries((itemsSubject as any)._subject.value.value) as [string, T][];
+            const newElements = addAt(
+              entries.map(([_, value]) => value),
+              0,
+              entries.map(([key]) => key)
+            );
+            return {
+              elements: newElements,
+              fullElements: elements,
+            };
+          }
+          const newElements = addAt(items as T[], 0);
           return {
             elements: newElements,
             fullElements: elements,
           };
         } else if (type == "add" && index != undefined) {
-          const lastElement = elements[index - 1];
-          const newElements = addAt(items, index);
+          const lastElement = typeof index === 'number' ? elements[index - 1] : elements[elements.length - 1];
+          let newElements: Element[];
+          if (!isArraySignal && typeof index === 'string') {
+            // For object updates, create a single element with the new value
+            const value = (event as ObjectChange<T>).value;
+            if (value !== undefined) {
+              newElements = [createElementFn(value, index)];
+              elements.push(newElements[0]);
+            } else {
+              newElements = [];
+            }
+          } else {
+            // For array updates, use addAt with the items array
+            newElements = addAt(items as T[], index);
+          }
           return {
             prev: lastElement,
             elements: newElements,
             fullElements: elements,
           };
-        } else if (index != undefined && type == "remove") {
-          const currentElement = elements[index];
-          destroyElement(currentElement);
-          elements.splice(index, 1);
+        } else if (type == "remove") {
+          if (!isArraySignal && typeof index === 'string') {
+            // For object property deletion
+            const elementIndex = elements.findIndex(el => {
+              return el.props.text === index || el.props.key === index;
+            });
+            if (elementIndex !== -1) {
+              const currentElement = elements[elementIndex];
+              destroyElement(currentElement);
+              elements.splice(elementIndex, 1);
+            }
+          } else if (typeof index === 'number') {
+            // For array element deletion
+            const currentElement = elements[index];
+            destroyElement(currentElement);
+            elements.splice(index, 1);
+          }
           return {
             elements: [],
+            fullElements: elements,
           };
         }
         return {
