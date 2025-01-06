@@ -5,7 +5,7 @@ import { Sprite } from "./Sprite";
 import { effect, Signal, signal } from "@signe/reactive";
 
 interface VideoProps {
-    source: string;
+    src: string;
     paused?: boolean;
     loop?: boolean;
     muted?: boolean;
@@ -87,7 +87,7 @@ export function Video(props: VideoProps) {
 
     return h(Sprite, {
         ...props,
-        image: props.source,
+        image: props.src,
         loader: {
             onComplete: (texture) => {
                 const source = texture.source.resource

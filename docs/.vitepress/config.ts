@@ -81,6 +81,10 @@ const guideMenu = [
         text: "TilingSprite",
         link: "/components/tilling-sprite",
       },
+      {
+        text: "Video",
+        link: "/components/video",
+      },
     ],
   },
   {

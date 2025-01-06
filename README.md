@@ -13,10 +13,6 @@ Features:
 - Particle Emitter
 - Audio System
 
-## Note: Performance Comparison with Pixi React
-
-CanvasEngine offers significant performance advantages over Pixi React. While Pixi React relies on React's detection cycles in addition to Pixi's traversal, which can be resource-intensive, CanvasEngine takes a more granular approach. It only updates the specific elements that have changed, resulting in more efficient rendering and better overall performance.
-
 ## Installation
 
 ```bash
