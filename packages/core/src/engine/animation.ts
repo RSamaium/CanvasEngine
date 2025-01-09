@@ -1,10 +1,11 @@
 import { effect, signal, type WritableSignal } from "@signe/reactive";
 import { animate as animatePopmotion } from "popmotion";
 
-interface AnimateOptions<T> {
+export interface AnimateOptions<T> {
   duration?: number;
   ease?: (t: number) => number;
   onUpdate?: (value: T) => void;
+  onComplete?: () => void;
 }
 
 export interface AnimatedState<T> {
@@ -15,7 +16,7 @@ export interface AnimatedState<T> {
 
 export interface AnimatedSignal<T> extends Omit<WritableSignal<T>, 'set'> {
   (): T;
-  set: (newValue: T) => void;
+  set: (newValue: T, options?: AnimateOptions<T>) => Promise<void>;
   animatedState: WritableSignal<AnimatedState<T>>;
   update: (updater: (value: T) => T) => void;
 }
@@ -60,7 +61,8 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
 
   function animatedSignal(): AnimatedState<T>;
   function animatedSignal(newValue: T): void;
-  function animatedSignal(newValue?: T): AnimatedState<T> | void {
+  function animatedSignal(newValue: T, animationConfig: AnimateOptions<T>): void;
+  function animatedSignal(newValue?: T, animationConfig: AnimateOptions<T> = {}): AnimatedState<T> | void {
     if (newValue === undefined) {
       return privateSignal();
     }
@@ -82,6 +84,7 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
        // TODO
        duration: 20,
       ...options,
+      ...animationConfig,
       from: prevState.current,
       to: newValue,
       onUpdate: (value) => {
@@ -105,9 +108,42 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
   fn.update = (updater: (value: T) => any) => {
     animatedSignal(updater(privateSignal().current));
   }
-  fn.set = (newValue: T) => {
-    animatedSignal(newValue);
+  fn.set = async (newValue: T, animationConfig: AnimateOptions<T> = {}) => {
+    return new Promise<void>((resolve) => {
+      animatedSignal(newValue, {
+        ...animationConfig,
+        onComplete: resolve
+      });
+    })
   }
 
   return fn as any
+}
+
+/**
+ * Executes a sequence of animations. If an array is provided as an element in the sequence,
+ * those animations will be executed in parallel.
+ * 
+ * @param sequence Array of animation functions or arrays of animation functions for parallel execution
+ * @returns Promise that resolves when all animations are complete
+ * @example
+ * ```ts
+ * await animatedSequence([
+ *   () => value1.set(10),
+ *   [
+ *     () => value2.set(20),
+ *     () => value3.set(30)
+ *   ],
+ *   () => value1.set(0)
+ * ])
+ * ```
+ */
+export async function animatedSequence(sequence: ((() => Promise<void>) | (() => Promise<void>)[])[]) {
+  for (const item of sequence) {
+    if (Array.isArray(item)) {
+      await Promise.all(item.map(fn => fn()));
+    } else {
+      await item();
+    }
+  }
 }

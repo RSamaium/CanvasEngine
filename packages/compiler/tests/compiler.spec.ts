@@ -123,16 +123,16 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas, { width: computed(() => x() * 2 * y()) })`);
   });
 
-  test("should compile component with static numeric attribute", () => {
-    const input = `<Canvas width="10" />`;
-    const output = parser.parse(input);
-    expect(output).toBe(`h(Canvas, { width: 10 })`);
-  });
-
   test("should compile component with static string attribute", () => {
     const input = `<Canvas width="val" />`;
     const output = parser.parse(input);
     expect(output).toBe(`h(Canvas, { width: 'val' })`);
+  });
+
+  test("should compile component with static attribute (with number)", () => {
+    const input = `<Canvas width="10" />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: '10' })`);
   });
 
   test("should compile component with children", () => {

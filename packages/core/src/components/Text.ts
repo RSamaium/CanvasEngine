@@ -65,8 +65,8 @@ class CanvasText extends DisplayObject(PixiText) {
         this.typewriterOptions = props.typewriter;
       }
     }
-    if (props.text) {
-      this.text = props.text;
+    if (props.text !== undefined) {
+      this.text = ''+props.text;
     }
     if (props.text !== undefined && props.text !== this.fullText && this.fullProps.typewriter) {
       this.text = "";

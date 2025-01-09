@@ -1,22 +1,22 @@
 <script>
-  import { signal, animatedSignal, mount, effect } from "canvasengine";
-  import { TiledMap } from "@canvasengine/presets";
+  import { signal, animatedSignal, mount, effect, animatedSequence } from "canvasengine";
 
-  const map = signal('');
-  const basePath = 'https://raw.githubusercontent.com/RSamaium/RPG-JS/refs/heads/v4/packages/sample2/main/worlds/maps/'
-  
-  fetch(basePath + 'map.tmx').then(res => res.text()).then(text => map.set(text));
+  const val1 = animatedSignal(0, { duration: 1000 });
+  const val2 = animatedSignal(0, { duration: 1000 });
 
-  const bool= signal(true)
+  animatedSequence([
+    () => val1.set(10),
+    () => val2.set(10),
+    [
+      () => val1.set(0),
+      () => val2.set(0)
+    ]
+  ])
 </script>
 
-<Canvas>
-  <TiledMap map={map} basePath objectLayer={({name}) => 
-    <Container>
-      @if (bool) {
-        <Text text={name} />
-      }
-    </Container>
-  }>
-  </TiledMap>
+<Canvas width="100%" height="100%" >
+  <Container width="100%" height="100%" justifyContent="center" alignItems="center" flexDirection="column">
+    <Text text={val1} color="red" />
+    <Text text={val2} color="blue" />
+  </Container>
 </Canvas>

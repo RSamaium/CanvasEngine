@@ -76,6 +76,20 @@ describe("loop with object", () => {
     expect(container.componentInstance.children.length).toBe(3);
 
     delete items().b;
+
+    expect(container.componentInstance.children.length).toBe(2);
+    expect(container.componentInstance.children[0].text).toBe("a");
+    expect(container.componentInstance.children[1].text).toBe("c");
+  });
+
+  test(`Test loop with removing object properties and add`, async () => {
+    const items = signal({ a: 1, b: 2, c: 3 });
+    const value = loop(items, (item, key) => h(Text, { text: key, x: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    expect(container.componentInstance.children.length).toBe(3);
+
+    delete items().b;
+
     expect(container.componentInstance.children.length).toBe(2);
     expect(container.componentInstance.children[0].text).toBe("a");
     expect(container.componentInstance.children[1].text).toBe("c");
@@ -93,5 +107,18 @@ describe("loop with object", () => {
     expect(container.componentInstance.children[0].x).toBe(4);
     expect(container.componentInstance.children[1].text).toBe("e");
     expect(container.componentInstance.children[1].x).toBe(5);
+  });
+
+  test(`Test loop with class`, async () => {
+
+    class Obj {
+      a = 1;
+    }
+
+    const items = signal({ a: new Obj() });
+    const value = loop(items, (item, key) => h(Text, { text: key, x: item.a }));
+    const container = await TestBed.createComponent(Container, {}, value);
+
+    expect(container.componentInstance.children.length).toBe(1);
   });
 });

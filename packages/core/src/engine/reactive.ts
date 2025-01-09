@@ -344,9 +344,8 @@ export function loop<T>(
     }
   };
 
-  const { items, keys } = getInitialItems();
-
   return defer(() => {
+    const { items, keys } = getInitialItems();
     let initialItems = [...items];
     let initialKeys = keys ? [...keys] : undefined;
     let init = true;

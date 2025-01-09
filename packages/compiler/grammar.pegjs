@@ -138,7 +138,7 @@ eventAttribute
 staticValue
   = [^"]+ {
       var val = text();
-      return isNaN(val) ? `'${val}'` : val;
+      return `'${val}'`
     }
 
 content

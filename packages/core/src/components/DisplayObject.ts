@@ -170,7 +170,7 @@ export function DisplayObject(extendClass) {
           effect(() => {
             setter(parentSize() * (parseInt(size) / 100));
             if (this.isFlex) {
-              this.#applyFlexLayout();
+              this.applyFlexLayout();
             }
           });
         } else {
@@ -188,7 +188,7 @@ export function DisplayObject(extendClass) {
         );
     }
 
-    #applyFlexLayout() {
+    protected applyFlexLayout() {
       this.calculateLayout();
       for (let child of this.children) {
         const { left, top } = child.node.getComputedLayout();
@@ -201,7 +201,7 @@ export function DisplayObject(extendClass) {
       if (!this.parent) return;
       if (props.flexDirection || props.justifyContent) {
         this.isFlex = true;
-        this.#applyFlexLayout();
+        this.applyFlexLayout();
       }
     }
 
