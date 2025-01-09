@@ -188,7 +188,7 @@ export function DisplayObject(extendClass) {
         );
     }
 
-    protected applyFlexLayout() {
+    applyFlexLayout() {
       this.calculateLayout();
       for (let child of this.children) {
         const { left, top } = child.node.getComputedLayout();
