@@ -1,5 +1,5 @@
-import { loop, Container, h, signal, Text } from "canvasengine";
-import { describe, expect, test } from "vitest";
+import { loop, Container, h, signal, Text, computed } from "canvasengine";
+import { describe, expect, test, vi } from "vitest";
 import { TestBed } from "../../packages/core/testing";
 
 describe("loop with array", () => {
@@ -56,6 +56,7 @@ describe("loop with object", () => {
     expect(container.componentInstance.children[0].text).toBe("a");
   });
 
+  
   test(`Test loop with adding object properties`, async () => {
     const items = signal({ a: 1, b: 2 });
     const value = loop(items, (item, key) => h(Text, { text: key, x: item }));
@@ -109,16 +110,42 @@ describe("loop with object", () => {
     expect(container.componentInstance.children[1].x).toBe(5);
   });
 
-  test(`Test loop with class`, async () => {
+  test('Test loop with object with nested object', async () => {
+    const obj = signal({
+      '7dzfez': {
+        position: {
+          x: signal(100),
+          y: signal(100)
+        },
+        direction: signal('down'),
+        graphics: signal('male')
+      }
+    })
+    const value = loop(obj, (item, key) => {
+      return h(Text, { text: computed(() => item.position.x()) })
+    });
+    const container = await TestBed.createComponent(Container, {}, value);
+    expect(container.componentInstance.children.length).toBe(1);
+    expect(container.componentInstance.children[0].text).toBe('100');
+  });
 
-    class Obj {
-      a = 1;
+  
+  test('Test loop with object with added nested object', async () => {
+    const obj = signal({})
+
+    obj()['7dzfez'] = {
+      position: {
+        x: signal(100),
+        y: signal(100)
+      },
     }
 
-    const items = signal({ a: new Obj() });
-    const value = loop(items, (item, key) => h(Text, { text: key, x: item.a }));
-    const container = await TestBed.createComponent(Container, {}, value);
+    const value = loop(obj, (item, key) => {
+      return h(Text, { text: item.position.x })
+    });
 
+    const container = await TestBed.createComponent(Container, {}, value);
     expect(container.componentInstance.children.length).toBe(1);
+    expect(container.componentInstance.children[0].text).toBe('100');
   });
 });

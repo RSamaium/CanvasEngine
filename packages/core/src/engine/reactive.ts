@@ -353,8 +353,7 @@ export function loop<T>(
       map((event: ArrayChange<T> | ObjectChange<T>): FlowResult => {
         const { type, items } = event;
         const index = 'index' in event ? event.index : (event as ObjectChange<T>).key;
-
-        if (init) {
+        if (init && type != "add") {
           if (elements.length > 0) {
             return {
               elements: elements,
@@ -409,6 +408,7 @@ export function loop<T>(
             // For array updates, use addAt with the items array
             newElements = addAt(items as T[], index);
           }
+          init = false;
           return {
             prev: lastElement,
             elements: newElements,
