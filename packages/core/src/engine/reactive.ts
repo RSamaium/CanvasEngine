@@ -338,7 +338,7 @@ export function loop<T>(
             }
           } else if (change.type === 'add' && change.index !== undefined) {
             const newElements = change.items.map((item, i) => {
-              const element = createElementFn(item, change.index! + i);
+              const element = createElementFn(item as T, change.index! + i);
               if (element) {
                 elementMap.set(change.index! + i, element);
               }
@@ -359,6 +359,7 @@ export function loop<T>(
           });
         })
       : (itemsSubject as WritableObjectSignal<T>).observable.subscribe(change => {
+          const key = change.key as string | number
           if (change.type === 'init' || change.type === 'reset') {
             elements.forEach(el => el.destroy());
             elements = [];
@@ -375,27 +376,27 @@ export function loop<T>(
               });
             }
           } else if (change.type === 'add' && change.key && change.value !== undefined) {
-            const element = createElementFn(change.value as T, change.key);
+            const element = createElementFn(change.value as T, key);
             if (element) {
               elements.push(element);
-              elementMap.set(change.key, element);
+              elementMap.set(key, element);
             }
           } else if (change.type === 'remove' && change.key) {
-            const index = elements.findIndex(el => elementMap.get(change.key!) === el);
+            const index = elements.findIndex(el => elementMap.get(key) === el);
             if (index !== -1) {
               const [removed] = elements.splice(index, 1);
               removed.destroy();
-              elementMap.delete(change.key);
+              elementMap.delete(key);
             }
           } else if (change.type === 'update' && change.key && change.value !== undefined) {
-            const index = elements.findIndex(el => elementMap.get(change.key!) === el);
+            const index = elements.findIndex(el => elementMap.get(key) === el);
             if (index !== -1) {
               const oldElement = elements[index];
               oldElement.destroy();
-              const newElement = createElementFn(change.value as T, change.key);
+              const newElement = createElementFn(change.value as T, key);
               if (newElement) {
                 elements[index] = newElement;
-                elementMap.set(change.key, newElement);
+                elementMap.set(key, newElement);
               }
             }
           }
