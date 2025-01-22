@@ -1,22 +1,30 @@
 <script>
   import { signal, animatedSignal, mount, effect, animatedSequence } from "canvasengine";
 
-  const val1 = animatedSignal(0, { duration: 1000 });
-  const val2 = animatedSignal(0, { duration: 1000 });
+  const items = signal({
+    a: 100,
+    b: 200,
+    c: 300
+  });
 
-  animatedSequence([
-    () => val1.set(10),
-    () => val2.set(10),
-    [
-      () => val1.set(0),
-      () => val2.set(0)
-    ]
-  ])
+  items.set({
+    a: 100,
+    b: 200,
+    c: 300,
+    d: 400
+  });
+
+  items.observable.subscribe(change => {
+    console.log(change);
+  });
+
+  setTimeout(() => {
+    items().d = 800;
+  }, 1000);
 </script>
 
 <Canvas width="100%" height="100%" >
-  <Container width="100%" height="100%" justifyContent="center" alignItems="center" flexDirection="column">
-    <Text text={val1} color="red" />
-    <Text text={val2} color="blue" />
-  </Container>
+  @for ((item, key) of items) {
+    <Text text={item} color="red" x={item} />
+  }
 </Canvas>

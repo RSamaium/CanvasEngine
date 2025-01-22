@@ -313,135 +313,99 @@ export function loop<T>(
   createElementFn: (item: T, index: number | string) => Element | null
 ): FlowObservable {
   let elements: Element[] = [];
+  let elementMap = new Map<string | number, Element>();
 
-  const isArraySignal = '_subject' in itemsSubject && 'items' in (itemsSubject as any)._subject;
+  return new Observable<FlowResult>(subscriber => {
+    const isArraySignal = (signal: any): signal is WritableArraySignal<T[]> => 
+      Array.isArray(signal());
 
-  const addAt = (items: T[], insertIndex: number | string, keys?: string[]): Element[] => {
-    return items.map((item, index) => {
-      const key = keys ? keys[index] : (typeof insertIndex === 'number' ? insertIndex + index : insertIndex);
-      const element = createElementFn(item, key);
-      if (typeof insertIndex === 'number') {
-        elements.splice(insertIndex + index, 0, element);
-      } else {
-        elements.push(element);
-      }
-      return element;
-    });
-  };
-
-  const getInitialItems = () => {
-    if (isArraySignal) {
-      return {
-        items: (itemsSubject as any)._subject.items as T[],
-        keys: undefined as string[] | undefined
-      };
-    } else {
-      const entries = Object.entries((itemsSubject as any)._subject.value.value) as [string, T][];
-      return {
-        items: entries.map(([_, value]) => value),
-        keys: entries.map(([key]) => key)
-      };
-    }
-  };
-
-  return defer(() => {
-    const { items, keys } = getInitialItems();
-    let initialItems = [...items];
-    let initialKeys = keys ? [...keys] : undefined;
-    let init = true;
-    return (itemsSubject.observable as Observable<ArrayChange<T> | ObjectChange<T>>).pipe(
-      map((event: ArrayChange<T> | ObjectChange<T>): FlowResult => {
-        const { type, items } = event;
-        const index = 'index' in event ? event.index : (event as ObjectChange<T>).key;
-        if (init && type != "add") {
-          if (elements.length > 0) {
-            return {
-              elements: elements,
-              fullElements: elements,
-            };
-          }
-          const newElements = addAt(initialItems, 0, initialKeys);
-          initialItems = [];
-          initialKeys = undefined;
-          init = false;
-          return {
-            elements: newElements,
-            fullElements: elements,
-          };
-        } else if (type == "reset") {
-          if (elements.length != 0) {
-            elements.forEach((element) => {
-              destroyElement(element);
-            });
+    const subscription = isArraySignal(itemsSubject)
+      ? itemsSubject.observable.subscribe(change => {
+          if (change.type === 'init' || change.type === 'reset') {
+            elements.forEach(el => el.destroy());
             elements = [];
-          }
-          if (!isArraySignal) {
-            const entries = Object.entries((itemsSubject as any)._subject.value.value) as [string, T][];
-            const newElements = addAt(
-              entries.map(([_, value]) => value),
-              0,
-              entries.map(([key]) => key)
-            );
-            return {
-              elements: newElements,
-              fullElements: elements,
-            };
-          }
-          const newElements = addAt(items as T[], 0);
-          return {
-            elements: newElements,
-            fullElements: elements,
-          };
-        } else if (type == "add" && index != undefined) {
-          const lastElement = typeof index === 'number' ? elements[index - 1] : elements[elements.length - 1];
-          let newElements: Element[];
-          if (!isArraySignal && typeof index === 'string') {
-            // For object updates, create a single element with the new value
-            const value = (event as ObjectChange<T>).value;
-            if (value !== undefined) {
-              newElements = [createElementFn(value, index)];
-              elements.push(newElements[0]);
-            } else {
-              newElements = [];
+            elementMap.clear();
+
+            const items = itemsSubject();
+            if (items) {
+              items.forEach((item, index) => {
+                const element = createElementFn(item, index);
+                if (element) {
+                  elements.push(element);
+                  elementMap.set(index, element);
+                }
+              });
             }
-          } else {
-            // For array updates, use addAt with the items array
-            newElements = addAt(items as T[], index);
-          }
-          init = false;
-          return {
-            prev: lastElement,
-            elements: newElements,
-            fullElements: elements,
-          };
-        } else if (type == "remove") {
-          if (!isArraySignal && typeof index === 'string') {
-            // For object property deletion
-            const elementIndex = elements.findIndex(el => {
-              return el.props.text === index || el.props.key === index;
+          } else if (change.type === 'add' && change.index !== undefined) {
+            const newElements = change.items.map((item, i) => {
+              const element = createElementFn(item, change.index! + i);
+              if (element) {
+                elementMap.set(change.index! + i, element);
+              }
+              return element;
+            }).filter((el): el is Element => el !== null);
+            
+            elements.splice(change.index, 0, ...newElements);
+          } else if (change.type === 'remove' && change.index !== undefined) {
+            const removed = elements.splice(change.index, 1);
+            removed.forEach(el => {
+              el.destroy();
+              elementMap.delete(change.index!);
             });
-            if (elementIndex !== -1) {
-              const currentElement = elements[elementIndex];
-              destroyElement(currentElement);
-              elements.splice(elementIndex, 1);
-            }
-          } else if (typeof index === 'number') {
-            // For array element deletion
-            const currentElement = elements[index];
-            destroyElement(currentElement);
-            elements.splice(index, 1);
           }
-          return {
-            elements: [],
-            fullElements: elements,
-          };
-        }
-        return {
-          elements: [],
-          fullElements: elements,
-        };
-      })
-    );
+
+          subscriber.next({
+            elements: elements
+          });
+        })
+      : (itemsSubject as WritableObjectSignal<T>).observable.subscribe(change => {
+          if (change.type === 'init' || change.type === 'reset') {
+            elements.forEach(el => el.destroy());
+            elements = [];
+            elementMap.clear();
+
+            const items = (itemsSubject as WritableObjectSignal<T>)();
+            if (items) {
+              Object.entries(items).forEach(([key, value]) => {
+                const element = createElementFn(value, key);
+                if (element) {
+                  elements.push(element);
+                  elementMap.set(key, element);
+                }
+              });
+            }
+          } else if (change.type === 'add' && change.key && change.value !== undefined) {
+            const element = createElementFn(change.value as T, change.key);
+            if (element) {
+              elements.push(element);
+              elementMap.set(change.key, element);
+            }
+          } else if (change.type === 'remove' && change.key) {
+            const index = elements.findIndex(el => elementMap.get(change.key!) === el);
+            if (index !== -1) {
+              const [removed] = elements.splice(index, 1);
+              removed.destroy();
+              elementMap.delete(change.key);
+            }
+          } else if (change.type === 'update' && change.key && change.value !== undefined) {
+            const index = elements.findIndex(el => elementMap.get(change.key!) === el);
+            if (index !== -1) {
+              const oldElement = elements[index];
+              oldElement.destroy();
+              const newElement = createElementFn(change.value as T, change.key);
+              if (newElement) {
+                elements[index] = newElement;
+                elementMap.set(change.key, newElement);
+              }
+            }
+          }
+
+          subscriber.next({
+            elements: elements
+          });
+        });
+
+    return subscription;
   });
 }
 

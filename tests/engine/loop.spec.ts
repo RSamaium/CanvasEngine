@@ -33,6 +33,19 @@ describe("loop with array", () => {
     expect(container.componentInstance.children[1].x).toBe(3);
   });
 
+  /* TODO
+  test(`Test loop with multiple removing items`, async () => {
+    const items = signal([1, 2, 3]);
+    const value = loop(items, (item) => h(Container, { x: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    expect(container.componentInstance.children.length).toBe(3);
+
+    items().splice(1, 2);
+    expect(container.componentInstance.children.length).toBe(1);
+    expect(container.componentInstance.children[0].x).toBe(1);
+  });
+  */
+
   test(`Test loop with reset items`, async () => {
     const items = signal([1, 2, 3]);
     const value = loop(items, (item) => h(Container, { x: item }));
@@ -56,7 +69,7 @@ describe("loop with object", () => {
     expect(container.componentInstance.children[0].text).toBe("a");
   });
 
-  
+
   test(`Test loop with adding object properties`, async () => {
     const items = signal({ a: 1, b: 2 });
     const value = loop(items, (item, key) => h(Text, { text: key, x: item }));
@@ -129,7 +142,7 @@ describe("loop with object", () => {
     expect(container.componentInstance.children[0].text).toBe('100');
   });
 
-  
+
   test('Test loop with object with added nested object', async () => {
     const obj = signal({})
 
@@ -147,5 +160,26 @@ describe("loop with object", () => {
     const container = await TestBed.createComponent(Container, {}, value);
     expect(container.componentInstance.children.length).toBe(1);
     expect(container.componentInstance.children[0].text).toBe('100');
+  });
+
+  test('Test loop with object with added nested object', async () => {
+    const obj = signal({})
+
+    obj()['7dzfez'] = {
+      array: signal([{ id: 1 }])
+    }
+
+    const value = loop(obj, (item, key) => {
+      return h(Text, { text: item.array()[0].id })
+    });
+    const container = await TestBed.createComponent(Container, {}, value);
+
+    obj()['eee'] = {
+      array: signal([{ id: 2 }])
+    }
+
+    expect(container.componentInstance.children.length).toBe(2);
+    expect(container.componentInstance.children[0].text).toBe('1');
+    expect(container.componentInstance.children[1].text).toBe('2');
   });
 });
