@@ -182,4 +182,44 @@ describe("loop with object", () => {
     expect(container.componentInstance.children[0].text).toBe('1');
     expect(container.componentInstance.children[1].text).toBe('2');
   });
+
+  test('Test loop with object with multiple items', async () => {
+    const obj = signal({})
+
+    obj()['7dzfez'] = {
+      name: 'aaa'
+    }
+
+
+    obj()['eee'] = {
+     name: 'bbb'
+    }
+
+    const value = loop(obj, (item, key) => {
+      return h(Text, { text: item.name })
+    });
+    const container = await TestBed.createComponent(Container, {}, value);
+
+    expect(container.componentInstance.children.length).toBe(2);
+    expect(container.componentInstance.children[0].text).toBe('aaa');
+    expect(container.componentInstance.children[1].text).toBe('bbb');
+  });
+
+  test('Test loop with object with multiple items', async () => {
+    const obj = signal([])
+
+    obj().push('aaa')
+
+
+    obj().push('bbb')
+
+    const value = loop(obj, (name) => {
+      return h(Text, { text: name })
+    });
+    const container = await TestBed.createComponent(Container, {}, value);
+
+    expect(container.componentInstance.children.length).toBe(2);
+    expect(container.componentInstance.children[0].text).toBe('aaa');
+    expect(container.componentInstance.children[1].text).toBe('bbb');
+  });
 });

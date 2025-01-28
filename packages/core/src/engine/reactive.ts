@@ -312,101 +312,148 @@ export function loop<T>(
   itemsSubject: WritableArraySignal<T[]> | WritableObjectSignal<T>,
   createElementFn: (item: T, index: number | string) => Element | null
 ): FlowObservable {
-  let elements: Element[] = [];
-  let elementMap = new Map<string | number, Element>();
+  return defer(() => {
+    let elements: Element[] = [];
+    let elementMap = new Map<string | number, Element>();
+    let isFirstSubscription = true;
 
-  return new Observable<FlowResult>(subscriber => {
     const isArraySignal = (signal: any): signal is WritableArraySignal<T[]> => 
       Array.isArray(signal());
 
-    const subscription = isArraySignal(itemsSubject)
-      ? itemsSubject.observable.subscribe(change => {
-          if (change.type === 'init' || change.type === 'reset') {
-            elements.forEach(el => el.destroy());
-            elements = [];
-            elementMap.clear();
+    return new Observable<FlowResult>(subscriber => {
+      const subscription = isArraySignal(itemsSubject)
+        ? itemsSubject.observable.subscribe(change => {
+            if (isFirstSubscription) {
+              isFirstSubscription = false;
+              elements.forEach(el => el.destroy());
+              elements = [];
+              elementMap.clear();
 
-            const items = itemsSubject();
-            if (items) {
-              items.forEach((item, index) => {
-                const element = createElementFn(item, index);
+              const items = itemsSubject();
+              if (items) {
+                items.forEach((item, index) => {
+                  const element = createElementFn(item, index);
+                  if (element) {
+                    elements.push(element);
+                    elementMap.set(index, element);
+                  }
+                });
+              }
+              subscriber.next({
+                elements: [...elements]
+              });
+              return;
+            }
+
+            if (change.type === 'init' || change.type === 'reset') {
+              elements.forEach(el => el.destroy());
+              elements = [];
+              elementMap.clear();
+
+              const items = itemsSubject();
+              if (items) {
+                items.forEach((item, index) => {
+                  const element = createElementFn(item, index);
+                  if (element) {
+                    elements.push(element);
+                    elementMap.set(index, element);
+                  }
+                });
+              }
+            } else if (change.type === 'add' && change.index !== undefined) {
+              const newElements = change.items.map((item, i) => {
+                const element = createElementFn(item as T, change.index! + i);
                 if (element) {
-                  elements.push(element);
-                  elementMap.set(index, element);
+                  elementMap.set(change.index! + i, element);
                 }
+                return element;
+              }).filter((el): el is Element => el !== null);
+              
+              elements.splice(change.index, 0, ...newElements);
+            } else if (change.type === 'remove' && change.index !== undefined) {
+              const removed = elements.splice(change.index, 1);
+              removed.forEach(el => {
+                el.destroy();
+                elementMap.delete(change.index!);
               });
             }
-          } else if (change.type === 'add' && change.index !== undefined) {
-            const newElements = change.items.map((item, i) => {
-              const element = createElementFn(item as T, change.index! + i);
-              if (element) {
-                elementMap.set(change.index! + i, element);
-              }
-              return element;
-            }).filter((el): el is Element => el !== null);
-            
-            elements.splice(change.index, 0, ...newElements);
-          } else if (change.type === 'remove' && change.index !== undefined) {
-            const removed = elements.splice(change.index, 1);
-            removed.forEach(el => {
-              el.destroy();
-              elementMap.delete(change.index!);
+
+            subscriber.next({
+              elements: [...elements] // Create a new array to ensure change detection
             });
-          }
+          })
+        : (itemsSubject as WritableObjectSignal<T>).observable.subscribe(change => {
+            const key = change.key as string | number
+            if (isFirstSubscription) {
+              isFirstSubscription = false;
+              elements.forEach(el => el.destroy());
+              elements = [];
+              elementMap.clear();
 
-          subscriber.next({
-            elements: elements
-          });
-        })
-      : (itemsSubject as WritableObjectSignal<T>).observable.subscribe(change => {
-          const key = change.key as string | number
-          if (change.type === 'init' || change.type === 'reset') {
-            elements.forEach(el => el.destroy());
-            elements = [];
-            elementMap.clear();
-
-            const items = (itemsSubject as WritableObjectSignal<T>)();
-            if (items) {
-              Object.entries(items).forEach(([key, value]) => {
-                const element = createElementFn(value, key);
-                if (element) {
-                  elements.push(element);
-                  elementMap.set(key, element);
-                }
+              const items = (itemsSubject as WritableObjectSignal<T>)();
+              if (items) {
+                Object.entries(items).forEach(([key, value]) => {
+                  const element = createElementFn(value, key);
+                  if (element) {
+                    elements.push(element);
+                    elementMap.set(key, element);
+                  }
+                });
+              }
+              subscriber.next({
+                elements: [...elements]
               });
+              return;
             }
-          } else if (change.type === 'add' && change.key && change.value !== undefined) {
-            const element = createElementFn(change.value as T, key);
-            if (element) {
-              elements.push(element);
-              elementMap.set(key, element);
-            }
-          } else if (change.type === 'remove' && change.key) {
-            const index = elements.findIndex(el => elementMap.get(key) === el);
-            if (index !== -1) {
-              const [removed] = elements.splice(index, 1);
-              removed.destroy();
-              elementMap.delete(key);
-            }
-          } else if (change.type === 'update' && change.key && change.value !== undefined) {
-            const index = elements.findIndex(el => elementMap.get(key) === el);
-            if (index !== -1) {
-              const oldElement = elements[index];
-              oldElement.destroy();
-              const newElement = createElementFn(change.value as T, key);
-              if (newElement) {
-                elements[index] = newElement;
-                elementMap.set(key, newElement);
+
+            if (change.type === 'init' || change.type === 'reset') {
+              elements.forEach(el => el.destroy());
+              elements = [];
+              elementMap.clear();
+
+              const items = (itemsSubject as WritableObjectSignal<T>)();
+              if (items) {
+                Object.entries(items).forEach(([key, value]) => {
+                  const element = createElementFn(value, key);
+                  if (element) {
+                    elements.push(element);
+                    elementMap.set(key, element);
+                  }
+                });
+              }
+            } else if (change.type === 'add' && change.key && change.value !== undefined) {
+              const element = createElementFn(change.value as T, key);
+              if (element) {
+                elements.push(element);
+                elementMap.set(key, element);
+              }
+            } else if (change.type === 'remove' && change.key) {
+              const index = elements.findIndex(el => elementMap.get(key) === el);
+              if (index !== -1) {
+                const [removed] = elements.splice(index, 1);
+                removed.destroy();
+                elementMap.delete(key);
+              }
+            } else if (change.type === 'update' && change.key && change.value !== undefined) {
+              const index = elements.findIndex(el => elementMap.get(key) === el);
+              if (index !== -1) {
+                const oldElement = elements[index];
+                oldElement.destroy();
+                const newElement = createElementFn(change.value as T, key);
+                if (newElement) {
+                  elements[index] = newElement;
+                  elementMap.set(key, newElement);
+                }
               }
             }
-          }
 
-          subscriber.next({
-            elements: elements
+            subscriber.next({
+              elements: [...elements] // Create a new array to ensure change detection
+            });
           });
-        });
 
-    return subscription;
+      return subscription;
+    });
   });
 }
 

@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@barvynkoa/particle-emitter": "^0.0.1",
-    "@signe/reactive": "^1.0.1",
+    "@signe/reactive": "^1.1.0",
     "howler": "^2.2.4",
     "pixi-filters": "^6.0.5",
     "pixi-viewport": "^6.0.3",
