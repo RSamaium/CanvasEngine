@@ -12,10 +12,10 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "canvasengine": "2.0.0-beta.9"
+    "canvasengine": "2.0.0-beta.10"
   },
   "devDependencies": {
     "vite": "^6.0.3",
-    "@canvasengine/compiler": "2.0.0-beta.9"
+    "@canvasengine/compiler": "2.0.0-beta.10"
   }
 }
