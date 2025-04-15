@@ -1,0 +1,21 @@
+<Viewport worldWidth={2000} worldHeight={2000} clamp={clamp}>
+    <Sprite image="http://localhost:5173/api/uploads/map-upscale.png" />
+    <Sprite image="https://pixijs.com/assets/flowerTop.png" x={x} y={500} controls viewportFollow={true} />
+  </Viewport>
+
+  <script>
+    import { signal, animatedSignal, mount, effect, animatedSequence } from "canvasengine";
+   
+   const viewportFollow = signal(true);
+   const clamp = {direction: 'all'};
+   const x = signal(0);
+   const controls = signal({
+      right: {
+        repeat: true,
+        bind: "right",
+        keyDown() {
+          x.update(x => x + 4)
+        },
+      },
+    });
+  </script>

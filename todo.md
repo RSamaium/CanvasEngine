@@ -1,5 +1,8 @@
+[] If Viewport is loaded async (in a condition and changes to true after a while), the tracked element flashes during movement.
+
+```html
 <script>
-  import { signal, animatedSignal, mount, effect, animatedSequence } from "canvasengine";
+  import { signal } from "canvasengine";
   import MyViewport from "./viewport.ce";
   const display = signal(false);
 
@@ -13,3 +16,4 @@
      <MyViewport />
   }
 </Canvas>
+```

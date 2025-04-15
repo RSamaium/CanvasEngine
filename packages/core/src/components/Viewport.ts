@@ -105,7 +105,7 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
         //     }
         // }
         if (props.clamp) {
-            this.clamp(props.clamp)
+            this.clamp(props.clamp.value ?? props.clamp)
         }
         if (props.wheel) {
             if (props.wheel === true) {
