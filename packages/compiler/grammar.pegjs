@@ -177,7 +177,9 @@ ifCondition
     }
 
 tagName
-  = [a-zA-Z][a-zA-Z0-9]* { return text(); }
+  = segments:([a-zA-Z][a-zA-Z0-9]* ("." [a-zA-Z][a-zA-Z0-9]*)*) { 
+    return text();
+  }
 
 attributeName
   = [a-zA-Z][a-zA-Z0-9-]* { return text(); }

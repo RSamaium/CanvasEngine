@@ -51,6 +51,12 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas)`);
   });
 
+  test("should compile component with dot notation", () => {
+    const input = `<MyComp.test />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(MyComp.test)`);
+  });
+
   test("should compile component with dynamic attribute", () => {
     const input = `<Canvas width={x} />`;
     const output = parser.parse(input);
