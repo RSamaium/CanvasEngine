@@ -42,6 +42,10 @@ const guideMenu = [
       {
         text: "Slot",
         link: "/concepts/slot",
+      },
+      {
+        text: "Dynamic Components",
+        link: "/concepts/dynamic-components",
       }
     ],
   },

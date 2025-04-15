@@ -5,6 +5,34 @@
       `at line ${start.line}, column ${start.column} to line ${end.line}, column ${end.column}`;
     throw new Error(errorMessage);
   }
+
+  function formatAttributes(attributes) {
+    if (attributes.length === 0) {
+      return null;
+    }
+  
+    // Check if there's exactly one attribute and it's a spread attribute
+    if (attributes.length === 1 && attributes[0].startsWith('...')) {
+      // Return the identifier directly, removing the '...'
+      return attributes[0].substring(3);
+    }
+  
+    // Otherwise, format as an object literal
+    const formattedAttrs = attributes.map(attr => {
+      // If it's a spread attribute, keep it as is
+      if (attr.startsWith('...')) {
+        return attr;
+      }
+      // If it's a standalone attribute (doesn't contain ':'), format as shorthand property 'name'
+      if (!attr.includes(':')) {
+        return attr; // JS object literal shorthand
+      }
+      // Otherwise (key: value), keep it as is
+      return attr;
+    });
+  
+    return `{ ${formattedAttrs.join(', ')} }`;
+  }
 }
 
 start
@@ -24,8 +52,8 @@ element
 
 selfClosingElement
   = _ "<" _ tagName:tagName _ attributes:attributes _ "/>" _ {
-      const attrs = attributes.length > 0 ? `{ ${attributes.join(', ')} }` : null;
-      return attrs ? `h(${tagName}, ${attrs})` : `h(${tagName})`;
+      const attrsString = formatAttributes(attributes);
+      return attrsString ? `h(${tagName}, ${attrsString})` : `h(${tagName})`;
     }
 
 openCloseElement
@@ -33,12 +61,12 @@ openCloseElement
       if (tagName !== closingTagName) {
         error("Mismatched opening and closing tags");
       }
-      const attrs = attributes.length > 0 ? `{ ${attributes.join(', ')} }` : null;
+      const attrsString = formatAttributes(attributes);
       const children = content ? content : null;
-      if (attrs && children) {
-        return `h(${tagName}, ${attrs}, ${children})`;
-      } else if (attrs) {
-        return `h(${tagName}, ${attrs})`;
+      if (attrsString && children) {
+        return `h(${tagName}, ${attrsString}, ${children})`;
+      } else if (attrsString) {
+        return `h(${tagName}, ${attrsString})`;
       } else if (children) {
         return `h(${tagName}, null, ${children})`;
       } else {
@@ -61,6 +89,12 @@ attribute
   = staticAttribute
   / dynamicAttribute
   / eventHandler
+  / spreadAttribute
+
+spreadAttribute
+  = "..." objectName:identifier {
+      return "..." + objectName;
+    }
 
 eventHandler
   = "@" eventName:identifier _ "=" _ "{" _ handlerName:attributeValue _ "}" {
