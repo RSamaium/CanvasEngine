@@ -3,7 +3,6 @@ import { cond, Container, h, signal } from 'canvasengine';
 import { TestBed } from '../../packages/core/testing';
 import { CanvasContainer } from '../../packages/core/src/components/Container';
 
-
 describe('Container', () => {
     const props = {
         x: 10,
