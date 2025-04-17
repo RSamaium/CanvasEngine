@@ -366,8 +366,10 @@ export class KeyboardControls extends Directive {
     };
 
     onInit(element: Element) {
+        const value = element.props.controls.value ?? element.props.controls
+        if (!value) return
         this.setupListeners();
-        this.setInputs(element.props.controls.value)
+        this.setInputs(value)
         // The processing is outside the rendering loop because if the FPS are lower (or higher) then the sending to the server would be slower or faster. Here it is constant
         this.interval = setInterval(() => {
             this.preStep()

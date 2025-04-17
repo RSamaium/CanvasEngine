@@ -1,7 +1,9 @@
 <Viewport worldWidth={2000} worldHeight={2000} clamp={clamp}>
     <Sprite image="http://localhost:5173/api/uploads/map-upscale.png" />
-    <Sprite image="https://pixijs.com/assets/flowerTop.png" x={x} y={500} controls viewportFollow={true} />
-  </Viewport>
+    @for (sprite of sprites) {
+      <Sprite image={@sprite.@image} x={@sprite.x} y={@sprite.@y} controls={@sprite.controls} viewportFollow={@sprite.@viewportFollow} />
+    }
+</Viewport>
 
   <script>
     import { signal, animatedSignal, mount, effect, animatedSequence } from "canvasengine";
@@ -18,4 +20,28 @@
         },
       },
     });
+
+    const sprites = signal([
+      {
+        image: "https://pixijs.com/assets/flowerTop.png",
+        x: signal(0),
+        y: 400,
+        controls: signal(false),
+        viewportFollow: false,  
+      },
+      {
+        image: "https://pixijs.com/assets/flowerTop.png",
+        x: signal(0),
+        y: 500,
+        controls: signal(false),
+        viewportFollow: false,  
+      },
+      {
+        image: "https://pixijs.com/assets/flowerTop.png",
+        x,
+        y: 600,
+        controls,
+        viewportFollow: true,  
+      },
+    ]);
   </script>
