@@ -1,7 +1,7 @@
 <Viewport worldWidth={2048} worldHeight={1536} clamp={clamp}  drag-start={dragStart}>
     <Sprite image="http://localhost:5173/api/uploads/map-upscale.png" />
     @for (sprite of sprites) {
-      <Sprite image={@sprite.@image} x={@sprite.x} y={@sprite.@y} controls={@sprite.controls}  drag={@sprite.@drag} />
+      <Sprite image={@sprite.@image} x={@sprite.x} y={@sprite.@y} controls={@sprite.controls} viewportFollow={@sprite.viewportFollow} click  />
     }
 </Viewport>
 
@@ -16,7 +16,7 @@
         repeat: true,
         bind: "right",
         keyDown() {
-          x.update(x => x + 4)
+          x.update(x => x + 20)
         },
       },
     });
@@ -28,7 +28,10 @@
       }
     })
 
-
+    const click = () => {
+      viewportFollow.set(false)
+      console.log('viewport follow', viewportFollow())
+    }
   
 
     const dragStart = () => {
@@ -55,7 +58,7 @@
         x,
         y: 600,
         controls,
-        viewportFollow: true,  
+        viewportFollow,  
         drag,
       },
     ]);

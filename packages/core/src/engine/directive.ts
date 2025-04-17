@@ -3,10 +3,10 @@ import { Element } from "./reactive"
 export const directives: { [key: string]: any } = {}
 
 export abstract class Directive {
-    abstract onDestroy();
+    abstract onDestroy(element: Element<any>);
     abstract onInit(element:  Element<any>);
     abstract onMount(element: Element<any>);
-    abstract onUpdate(props: any);
+    abstract onUpdate(props: any, element: Element<any>);
 }
 
 export function registerDirective(name: string, directive: any) {

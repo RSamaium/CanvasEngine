@@ -105,7 +105,7 @@ function destroyElement(element: Element | Element[]) {
   element.propSubscriptions.forEach((sub) => sub.unsubscribe());
   element.effectSubscriptions.forEach((sub) => sub.unsubscribe());
   for (let name in element.directives) {
-    element.directives[name].onDestroy?.();
+    element.directives[name].onDestroy?.(element);
   }
   element.componentInstance.onDestroy?.(element.parent as any);
   element.effectUnmounts.forEach((fn) => fn?.());
@@ -165,7 +165,7 @@ export function createComponent(tag: string, props?: Props): Element {
             _value.observable.subscribe((value) => {
               _set(path, key, value);
               if (element.directives[key]) {
-                element.directives[key].onUpdate?.(value);
+                element.directives[key].onUpdate?.(value, element);
               }
               if (key == "tick") {
                 return
