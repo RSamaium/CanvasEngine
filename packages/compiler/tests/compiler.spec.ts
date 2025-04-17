@@ -69,6 +69,24 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas, obj)`);
   });
 
+  test("should compile component with spread operator object", () => {
+    const input = `<Canvas ...obj.prop />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, obj.prop)`);
+  });
+
+  test("should compile component with spread operator function", () => {
+    const input = `<Canvas ...fn() />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, fn())`);
+  });
+
+  test("should compile component with spread operator function and params", () => {
+    const input = `<Canvas ...fn(x, y) />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, fn(x, y))`);
+  });
+
   test("should compile component with dynamic attribute but is not a signal", () => {
     const input = `<Canvas width={20} />`;
     const output = parser.parse(input);

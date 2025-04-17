@@ -92,8 +92,18 @@ attribute
   / spreadAttribute
 
 spreadAttribute
-  = "..." objectName:identifier {
-      return "..." + objectName;
+  = "..." expr:(functionCallExpr / dotNotation) {
+      return "..." + expr;
+    }
+
+functionCallExpr
+  = name:dotNotation "(" args:functionArgs? ")" {
+      return `${name}(${args || ''})`;
+    }
+
+dotNotation
+  = first:identifier rest:("." identifier)* {
+      return text();
     }
 
 eventHandler
