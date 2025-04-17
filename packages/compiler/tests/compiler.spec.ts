@@ -141,6 +141,12 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas, { width: 'val' })`);
   });
 
+  test("should compile component with static string attribute with dash", () => {
+    const input = `<Canvas max-width="val" />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { 'max-width': 'val' })`);
+  });
+
   test("should compile component with static attribute (with number)", () => {
     const input = `<Canvas width="10" />`;
     const output = parser.parse(input);

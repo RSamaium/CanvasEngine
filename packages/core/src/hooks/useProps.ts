@@ -25,7 +25,7 @@ export const useProps = (props, defaults = {}): any => {
     }
     for (let key in defaults) {
         if (!(key in obj)) {
-            obj[key] = signal(defaults[key])
+            obj[key] = isPrimitive(defaults[key]) ? signal(defaults[key]) : defaults[key]
         }
     }
     return obj

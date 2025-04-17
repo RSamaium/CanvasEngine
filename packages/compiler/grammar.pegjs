@@ -98,18 +98,25 @@ spreadAttribute
 
 eventHandler
   = "@" eventName:identifier _ "=" _ "{" _ handlerName:attributeValue _ "}" {
-      return `${eventName}: ${handlerName}`;
+      const needsQuotes = /[^a-zA-Z0-9_$]/.test(eventName);
+      const formattedName = needsQuotes ? `'${eventName}'` : eventName;
+      return `${formattedName}: ${handlerName}`;
     }
      / "@" eventName:attributeName _ {
-      return eventName;
+      const needsQuotes = /[^a-zA-Z0-9_$]/.test(eventName);
+      return needsQuotes ? `'${eventName}'` : eventName;
     }
 
 dynamicAttribute
   = attributeName:attributeName _ "=" _ "{" _ attributeValue:attributeValue _ "}" {
+      // Check if attributeName needs to be quoted (contains dash or other invalid JS identifier chars)
+      const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
+      const formattedName = needsQuotes ? `'${attributeName}'` : attributeName;
+      
       if (attributeValue.startsWith('h(') || attributeValue.includes('=>')) {
-        return `${attributeName}: ${attributeValue}`;
+        return `${formattedName}: ${attributeValue}`;
       } else if (attributeValue.trim().match(/^[a-zA-Z_]\w*$/)) {
-        return `${attributeName}: ${attributeValue}`;
+        return `${formattedName}: ${attributeValue}`;
       } else {
         let foundSignal = false;
         const computedValue = attributeValue.replace(/@?[a-zA-Z_][a-zA-Z0-9_]*(?!:)/g, (match) => {
@@ -120,13 +127,14 @@ dynamicAttribute
           return `${match}()`;
         });
         if (foundSignal) {
-          return `${attributeName}: computed(() => ${computedValue})`;
+          return `${formattedName}: computed(() => ${computedValue})`;
         }
-        return `${attributeName}: ${computedValue}`;
+        return `${formattedName}: ${computedValue}`;
       }
     }
   / attributeName:attributeName _ {
-      return attributeName;
+      const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
+      return needsQuotes ? `'${attributeName}'` : attributeName;
     }
 
 attributeValue
@@ -161,7 +169,9 @@ simpleParams
 
 staticAttribute
   = attributeName:attributeName _ "=" _ "\"" attributeValue:staticValue "\"" {
-      return `${attributeName}: ${attributeValue}`;
+      const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
+      const formattedName = needsQuotes ? `'${attributeName}'` : attributeName;
+      return `${formattedName}: ${attributeValue}`;
     }
 
 eventAttribute

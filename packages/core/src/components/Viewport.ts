@@ -48,10 +48,7 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
     onInit(props) {
         super.onInit(props)
         for (let event of EVENTS) {
-            const camelCaseEvent = event.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-            if (props[camelCaseEvent]) {
-                this.on(event, props[camelCaseEvent])
-            }
+            if (props[event]) this.on(event, props[event])
         }
     }
 
@@ -69,6 +66,7 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
             'wheel',
             this.input.wheelFunction
         );
+
         this.options.events = renderer.events
  
         this.tickSubscription = tick.observable.subscribe(({ value }) => {
@@ -97,13 +95,9 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
         if (props.worldHeight !== undefined) {
             this.worldHeight = props.worldHeight
         }
-        // if (props.drag) {
-        //     if (props.drag === true) {
-                
-        //     } else {
-        //         this.drag(props.drag)
-        //     }
-        // }
+        if (props.drag) {
+            this.drag(props.drag)
+        }
         if (props.clamp) {
             this.clamp(props.clamp.value ?? props.clamp)
         }

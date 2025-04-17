@@ -1,7 +1,7 @@
-<Viewport worldWidth={2000} worldHeight={2000} clamp={clamp}>
+<Viewport worldWidth={2048} worldHeight={1536} clamp={clamp}  drag-start={dragStart}>
     <Sprite image="http://localhost:5173/api/uploads/map-upscale.png" />
     @for (sprite of sprites) {
-      <Sprite image={@sprite.@image} x={@sprite.x} y={@sprite.@y} controls={@sprite.controls} viewportFollow={@sprite.@viewportFollow} />
+      <Sprite image={@sprite.@image} x={@sprite.x} y={@sprite.@y} controls={@sprite.controls}  drag={@sprite.@drag} />
     }
 </Viewport>
 
@@ -21,27 +21,42 @@
       },
     });
 
+    const snap = signal(50);
+    const drag = signal({
+      move(event) {
+        
+      }
+    })
+
+
+  
+
+    const dragStart = () => {
+      console.log("drag start")
+    }
+
     const sprites = signal([
-      {
-        image: "https://pixijs.com/assets/flowerTop.png",
-        x: signal(0),
-        y: 400,
-        controls: signal(false),
-        viewportFollow: false,  
-      },
-      {
-        image: "https://pixijs.com/assets/flowerTop.png",
-        x: signal(0),
-        y: 500,
-        controls: signal(false),
-        viewportFollow: false,  
-      },
+      // {
+      //   image: "https://pixijs.com/assets/flowerTop.png",
+      //   x: signal(0),
+      //   y: 400,
+      //   controls: signal(false),
+      //   viewportFollow: false,  
+      // },
+      // {
+      //   image: "https://pixijs.com/assets/flowerTop.png",
+      //   x: signal(0),
+      //   y: 500,
+      //   controls: signal(false),
+      //   viewportFollow: false,  
+      // },
       {
         image: "https://pixijs.com/assets/flowerTop.png",
         x,
         y: 600,
         controls,
         viewportFollow: true,  
+        drag,
       },
     ]);
   </script>
