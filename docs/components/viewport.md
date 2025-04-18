@@ -94,6 +94,26 @@ This directive must be used within a `Viewport` component context.
 
 In this example, the red rectangle will be followed by the viewport, keeping it centered in the view as it moves around within the 2000x2000 world space.
 
+### Usage with options
+
+```html
+<Viewport worldWidth="2000" worldHeight="2000" clamp={ {direction: 'all'} }>
+    <Rect viewportFollow x="0" y="0" width="100" height="100" color="red" />
+</Viewport>
+
+<script>
+    const viewportFollow = {
+        speed: 0.1,
+        acceleration: 0.1,
+        radius: 100
+    }
+</script>
+```
+
+- `speed` number 0 optional to follow in pixels/frame (0=teleport to location)
+- `acceleration` number optional set acceleration to accelerate and decelerate at this rate; speed cannot be 0 to use acceleration
+- `radius` number optional radius (in world coordinates) of center circle where movement is allowed without moving the viewport * @returns {Viewport} this
+
 ### Requirements
 
 - Must be used on an element that is a child of a `Viewport` component

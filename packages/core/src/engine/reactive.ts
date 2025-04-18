@@ -104,11 +104,11 @@ function destroyElement(element: Element | Element[]) {
   }
   element.propSubscriptions.forEach((sub) => sub.unsubscribe());
   element.effectSubscriptions.forEach((sub) => sub.unsubscribe());
+  element.effectUnmounts.forEach((fn) => fn?.());
   for (let name in element.directives) {
     element.directives[name].onDestroy?.(element);
   }
   element.componentInstance.onDestroy?.(element.parent as any);
-  element.effectUnmounts.forEach((fn) => fn?.());
 }
 
 /**

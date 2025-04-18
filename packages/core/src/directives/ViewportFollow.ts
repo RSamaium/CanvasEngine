@@ -1,23 +1,45 @@
 import { ComponentInstance } from '../components/DisplayObject';
+import { SignalOrPrimitive } from '../components/types';
 import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
 import { error } from '../engine/utils';
+import { useProps } from '../hooks/useProps';
+
+export type ViewportFollowProps = {
+    viewportFollow?: boolean | {
+        speed?: SignalOrPrimitive<number>;
+        acceleration?: SignalOrPrimitive<number>;
+        radius?: SignalOrPrimitive<number>;
+    };
+}
 
 export class ViewportFollow extends Directive {
     onInit(element: Element<ComponentInstance>) {
 
     }
     onMount(element: Element) {
-       this.onUpdate(element.props, element)
+       this.onUpdate(element.props.viewportFollow, element)
     }
-    onUpdate(props: any, element: Element) {
-        const { viewportFollow } = element.props
+    onUpdate(viewportFollow: any, element: Element) {
         const { viewport } = element.props.context
         if (!viewport) {
             throw error('ViewportFollow directive requires a Viewport component to be mounted in the same context')
         }
         if (viewportFollow) {
-            viewport.follow(element.componentInstance)
+            if (viewportFollow === true) {
+                viewport.follow(element.componentInstance)
+            } else {
+                const options = useProps(viewportFollow, {
+                    speed: undefined,
+                    acceleration: undefined,
+                    radius: undefined
+                })
+                viewport.follow(element.componentInstance, {
+                    speed: options.speed(),
+                    acceleration: options.acceleration(),
+                    radius: options.radius()
+                })
+            }
         } else {
             viewport.plugins.remove('follow')
         }

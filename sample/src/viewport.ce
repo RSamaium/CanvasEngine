@@ -8,7 +8,16 @@
   <script>
     import { signal, animatedSignal, mount, effect, animatedSequence } from "canvasengine";
    
-   const viewportFollow = signal(true);
+
+    const speed = signal(10);
+    const acceleration = signal(0.1);
+    const radius = signal(100);
+
+   const viewportFollow = signal({
+    speed,
+    //acceleration,
+    //radius,
+   });
    const clamp = {direction: 'all'};
    const x = signal(0);
    const controls = signal({
@@ -29,7 +38,11 @@
     })
 
     const click = () => {
-      viewportFollow.set(false)
+      viewportFollow.set({
+        speed: 0.1,
+        acceleration: 0.1,
+        radius: 100
+      })
       console.log('viewport follow', viewportFollow())
     }
   

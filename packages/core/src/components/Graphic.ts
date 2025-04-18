@@ -1,35 +1,31 @@
-import { effect, Signal } from "@signe/reactive";
+import { Effect, effect, Signal } from "@signe/reactive";
 import { Graphics as PixiGraphics } from "pixi.js";
 import { createComponent, registerComponent } from "../engine/reactive";
 import { DisplayObject } from "./DisplayObject";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { useProps } from "../hooks/useProps";
+import { SignalOrPrimitive } from "./types";
 
 interface GraphicsProps extends DisplayObjectProps {
   draw?: (graphics: PixiGraphics) => void;
 }
 
 interface RectProps extends DisplayObjectProps {
-  width: number;
-  height: number;
-  color: string;
+  color: SignalOrPrimitive<string>;
 }
 
 interface CircleProps extends DisplayObjectProps {
-  radius: number;
-  color: string;
+  radius: SignalOrPrimitive<number>;
+  color: SignalOrPrimitive<string>;
 }
 
 interface EllipseProps extends DisplayObjectProps {
-  width: number;
-  height: number;
-  color: string;
+  color: SignalOrPrimitive<string>;
 }
 
 interface TriangleProps extends DisplayObjectProps {
-  base: number;
-  height: number;
-  color: string;
+  base: SignalOrPrimitive<number>;
+  color: SignalOrPrimitive<string>;
 }
 
 interface SvgProps extends DisplayObjectProps {
@@ -37,14 +33,20 @@ interface SvgProps extends DisplayObjectProps {
 }
 
 class CanvasGraphics extends DisplayObject(PixiGraphics) {
+  clearEffect: Effect;
   onInit(props) {
     super.onInit(props);
     if (props.draw) {
-      effect(() => {
+      this.clearEffect = effect(() => {
         this.clear();
         props.draw?.(this);
       });
     }
+  }
+
+  onDestroy() {
+    this.clearEffect.subscription.unsubscribe();
+    super.onDestroy();
   }
 }
 

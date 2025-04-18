@@ -6,6 +6,19 @@ import { snap } from 'popmotion';
 import { addContext } from '../hooks/addContext';
 import { Subscription } from 'rxjs';
 import { useProps } from '../hooks/useProps';
+import { SignalOrPrimitive } from '../components/types';
+
+export type DragProps = {
+    move?: (event: FederatedPointerEvent) => void;
+    start?: () => void;
+    end?: () => void;
+    snap?: SignalOrPrimitive<number>;
+    direction?: SignalOrPrimitive<'x' | 'y' | 'all'>;
+    viewport?: {
+        edgeThreshold?: SignalOrPrimitive<number>;
+        maxSpeed?: SignalOrPrimitive<number>;
+    };
+}
 
 export class Drop extends Directive {
     private elementRef: Element<Container> | null = null;

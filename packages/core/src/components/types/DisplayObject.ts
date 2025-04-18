@@ -1,5 +1,7 @@
 import * as PIXI from "pixi.js";
 import { SignalOrPrimitive } from ".";
+import { DragProps } from "../../directives/Drag";
+import { ViewportFollowProps } from "../../directives/ViewportFollow";
 
 export type FlexDirection = 'row' | 'column' | 'row-reverse' | 'column-reverse';
 export type JustifyContent = 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around';
@@ -37,6 +39,11 @@ export interface DisplayObjectProps {
     blendMode?: SignalOrPrimitive<PIXI.BLEND_MODES>;
     blur?: SignalOrPrimitive<number>;
 
+    // Directives
+    drag?: DragProps;
+    viewportFollow?: ViewportFollowProps;
+
+    // Events
     click?: PIXI.FederatedEventHandler;
     mousedown?: PIXI.FederatedEventHandler;
     mouseenter?: PIXI.FederatedEventHandler;
