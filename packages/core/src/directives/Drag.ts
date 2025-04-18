@@ -1,4 +1,4 @@
-import { effect, isSignal, signal } from '@signe/reactive';
+import { effect, isComputed, isSignal, signal } from '@signe/reactive';
 import { Container, Rectangle, Point, FederatedPointerEvent } from 'pixi.js';
 import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
@@ -160,12 +160,19 @@ export class Drag extends Directive {
         this.lastPointerPosition.copyFrom(event.global);
 
         const { x: xProp, y: yProp } = propObservables as any;
-        if (xProp !== undefined && isSignal(xProp)) {
-            // xProp.set(instance.position.x)
+
+        const updatePosition = (prop: any, value: number) => {
+            if (isComputed(prop)) {
+                prop.dependencies.forEach(dependency => {
+                    dependency.set(value)
+                })
+            } else if (isSignal(prop)) {
+                prop.set(value)
+            }
         }
-        if (yProp !== undefined && isSignal(yProp)) {
-            // yProp.set(instance.position.y)
-        }
+
+        if (xProp !== undefined) updatePosition(xProp, instance.position.x)
+        if (yProp !== undefined) updatePosition(yProp, instance.position.y)
     }
 
     /**
