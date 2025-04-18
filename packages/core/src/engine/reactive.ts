@@ -1,4 +1,4 @@
-import { Signal, WritableArraySignal, WritableObjectSignal, isSignal } from "@signe/reactive";
+import { Signal, WritableArraySignal, WritableObjectSignal, isComputed, isSignal, signal } from "@signe/reactive";
 import {
   Observable,
   Subject,
@@ -309,9 +309,17 @@ export function createComponent(tag: string, props?: Props): Element {
  * @returns {Observable} An observable that emits the list of created child elements.
  */
 export function loop<T>(
-  itemsSubject: WritableArraySignal<T[]> | WritableObjectSignal<T>,
+  itemsSubject: any,
   createElementFn: (item: T, index: number | string) => Element | null
 ): FlowObservable {
+
+  if (isComputed(itemsSubject) && itemsSubject.dependencies.size == 0) {
+    itemsSubject = signal(itemsSubject());
+  }
+  else if (!isSignal(itemsSubject)) {
+    itemsSubject = signal(itemsSubject);
+  }
+
   return defer(() => {
     let elements: Element[] = [];
     let elementMap = new Map<string | number, Element>();

@@ -80,8 +80,8 @@ importers:
         specifier: ^0.0.1
         version: 0.0.1(pixi.js@8.6.6)
       '@signe/reactive':
-        specifier: ^1.1.0
-        version: 1.1.0
+        specifier: ^2.3.3
+        version: 2.3.3
       howler:
         specifier: ^2.2.4
         version: 2.2.4
@@ -841,8 +841,8 @@ packages:
   '@rpgjs/tiled@4.3.0':
     resolution: {integrity: sha512-MniF+mI3nEmJNHYvhlKV6hJ2c3nlq3V/9zZLxnyGc4Jfbw+bFsRAscqK58zMGt/R8S5ZDwbl1OngkZFG/bAt2Q==}
 
-  '@signe/reactive@1.1.0':
-    resolution: {integrity: sha512-xz8pe5PUVwguxD5Nj2CIFqktLt3XX2TXMymYVzWBFkD5RSvKO+Lzdlebh+7KZgrAGEcYg2/WWpB22bAbadKlTw==}
+  '@signe/reactive@2.3.3':
+    resolution: {integrity: sha512-EIIBfXtkzKZvVM6qz4FfDVVB4eGquUzGXafF0m36juZ2jFuuYYaMx5jLpln5JBX93BEpgn0tBCHnG7Kpzl/npw==}
 
   '@types/css-font-loading-module@0.0.12':
     resolution: {integrity: sha512-x2tZZYkSxXqWvTDgveSynfjq/T2HyiZHXb00j/+gy19yp70PHCizM48XFdjBCWH7eHBD0R5i/pw9yMBP/BH5uA==}
@@ -3138,7 +3138,7 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  '@signe/reactive@1.1.0':
+  '@signe/reactive@2.3.3':
     dependencies:
       rxjs: 7.8.1
 

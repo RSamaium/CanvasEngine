@@ -3,8 +3,31 @@ import { describe, expect, test, vi } from "vitest";
 import { TestBed } from "../../packages/core/testing";
 
 describe("loop with array", () => {
+
+  test(`Test loop with static items`, async () => {
+    const items = [1, 2, 3];
+    const value = loop(items, (item) => h(Container, { x: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    expect(container.componentInstance.children.length).toBe(3);
+  });
+
   test(`Test loop with initial items`, async () => {
     const items = signal([1, 2, 3]);
+    const value = loop(items, (item) => h(Container, { x: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    expect(container.componentInstance.children.length).toBe(3);
+  });
+
+  test(`Test loop with computed initial items`, async () => {
+    const items = computed(() => [1, 2, 3]);
+    const value = loop(items, (item) => h(Container, { x: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    expect(container.componentInstance.children.length).toBe(3);
+  });
+
+  test(`Test loop with computed`, async () => {
+    const reactive = signal([1, 2, 3])
+    const items = computed(() => reactive());
     const value = loop(items, (item) => h(Container, { x: item }));
     const container = await TestBed.createComponent(Container, {}, value);
     expect(container.componentInstance.children.length).toBe(3);
