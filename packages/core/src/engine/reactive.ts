@@ -1,4 +1,4 @@
-import { Signal, WritableArraySignal, WritableObjectSignal, isComputed, isSignal, signal } from "@signe/reactive";
+import { ArrayChange, ObjectChange, Signal, WritableArraySignal, WritableObjectSignal, isComputed, isSignal, signal } from "@signe/reactive";
 import {
   Observable,
   Subject,
@@ -16,25 +16,6 @@ import { isObject, isPromise, set } from "./utils";
 export interface Props {
   [key: string]: any;
 }
-
-export type ArrayChange<T> = {
-  type: "add" | "remove" | "update" | "init" | "reset";
-  index?: number;
-  items: T[];
-};
-
-export type ObjectChange<T> = {
-  type: "add" | "remove" | "update" | "init" | "reset";
-  key?: string;
-  value?: T;
-  items: T[];
-};
-
-type ElementObservable<T> = Observable<
-  (ArrayChange<T> | ObjectChange<T>) & {
-    value: Element | Element[];
-  }
->;
 
 type NestedSignalObjects = {
   [Key in string]: NestedSignalObjects | Signal<any>;
