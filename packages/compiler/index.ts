@@ -35,6 +35,8 @@ export default function canvasengine() {
     "NineSliceSprite",
     "Rect",
     "Circle",
+    "Ellipse",
+    "Triangle",
     "TilingSprite",
     "svg",
     "Video"

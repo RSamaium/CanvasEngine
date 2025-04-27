@@ -17,3 +17,12 @@
   }
 </Canvas>
 ```
+
+[] if you assign a value to an array, must add and update
+
+```js
+const val = signal([])
+val()[2] = 'test'  // must add because before value is undefined
+```
+
+[] Test ViewPort

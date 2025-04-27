@@ -57,7 +57,7 @@ selfClosingElement
     }
 
 openCloseElement
-  = "<" _ tagName:tagName _ attributes:attributes _ ">" _ content:content _ "</" _ closingTagName:tagName _ ">" {
+  = "<" _ tagName:tagName _ attributes:attributes _ ">" _ content:content _ "</" _ closingTagName:tagName _ ">" _ {
       if (tagName !== closingTagName) {
         error("Mismatched opening and closing tags");
       }
@@ -72,10 +72,6 @@ openCloseElement
       } else {
         return `h(${tagName})`;
       }
-    }
-
-  / "<" _ tagName:tagName _ attributes:attributes _ {
-      generateError("Syntaxe d'élément invalide", location());
     }
 
 attributes

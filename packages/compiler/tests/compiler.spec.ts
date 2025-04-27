@@ -184,6 +184,18 @@ describe("Compiler", () => {
     );
   });
 
+  test("should compile component with multiple children", () => {
+    const input = `<Container>
+        <Container></Container>
+        <Container></Container>
+    </Container>
+        `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `h(Container,null,[h(Container),h(Container)])`.replace(/\s+/g, "")
+    );
+  });
+
   test("should compile component with multi children", () => {
     const input = `
            <Sprite />
