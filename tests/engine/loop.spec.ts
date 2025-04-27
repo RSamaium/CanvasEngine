@@ -245,4 +245,21 @@ describe("loop with object", () => {
     expect(container.componentInstance.children[0].text).toBe('aaa');
     expect(container.componentInstance.children[1].text).toBe('bbb');
   });
+
+  test('Test loop with array direct index assignment', async () => {
+    const items = signal(['aaaa'])
+    
+    const value = loop(items, (item) => h(Text, { text: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(1);
+    expect(children[0].text).toBe('aaaa');
+    
+    items()[2] = 'cccc';
+
+    expect(children.length).toBe(2);
+    expect(children[0].text).toBe('aaaa');
+    expect(children[1].text).toBe('cccc');
+  });
 });

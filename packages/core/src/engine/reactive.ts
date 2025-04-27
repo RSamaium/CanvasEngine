@@ -365,6 +365,36 @@ export function loop<T>(
                 el.destroy();
                 elementMap.delete(change.index!);
               });
+            } else if (change.type === 'update' && change.index !== undefined && change.items.length === 1) {
+              const index = change.index;
+              const newItem = change.items[0];
+
+              // Check if the previous item at this index was effectively undefined or non-existent
+              if (index >= elements.length || elements[index] === undefined || !elementMap.has(index)) {
+                // Treat as add operation
+                const newElement = createElementFn(newItem as T, index);
+                if (newElement) {
+                  elements.splice(index, 0, newElement); // Insert at the correct index
+                  elementMap.set(index, newElement);
+                  // Adjust indices in elementMap for subsequent elements might be needed if map relied on exact indices
+                  // This simple implementation assumes keys are stable or createElementFn handles context correctly
+                } else {
+                     console.warn(`Element creation returned null for index ${index} during add-like update.`);
+                }
+              } else {
+                // Treat as a standard update operation
+                const oldElement = elements[index];
+                oldElement.destroy();
+                const newElement = createElementFn(newItem as T, index);
+                if (newElement) {
+                  elements[index] = newElement;
+                  elementMap.set(index, newElement);
+                } else {
+                  // Handle case where new element creation returns null
+                  elements.splice(index, 1);
+                  elementMap.delete(index);
+                }
+              }
             }
 
             subscriber.next({
