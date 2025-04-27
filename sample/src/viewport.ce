@@ -1,7 +1,7 @@
-<Viewport worldWidth={2048} worldHeight={1536} clamp={clamp} >
-    <Sprite image="http://localhost:5173/api/uploads/map-upscale.png" />
+<Viewport worldWidth={2048} worldHeight={2048} clamp={clamp} drag>
+    <Sprite image="back.png" />
     @for (sprite of sprites) {
-      <Container  x={@sprite.x} y={@sprite.@y} drag>
+      <Container  x={@sprite.x} y={@sprite.@y}>
         <Text text={@sprite.x} />
         <Sprite image={@sprite.@image} controls={@sprite.controls}   />
       </Container>
@@ -17,6 +17,11 @@
     const radius = signal(100);
 
   
+    const drag = {
+      direction: 'all',
+      keyToPress: ['space'],
+      pressDrag: false
+    }
 
    const viewportFollow = signal({
     speed,
@@ -36,11 +41,7 @@
     });
 
     const snap = signal(50);
-    const drag = signal({
-      move(event) {
-        
-      }
-    })
+    
 
     const click = () => {
       viewportFollow.set({

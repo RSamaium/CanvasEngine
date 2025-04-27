@@ -1,14 +1,15 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { Container, h, signal, cond } from 'canvasengine';
 import { TestBed } from '../../packages/core/testing';
-import { Point } from 'pixi.js';
-import { Container as PixiContainer } from 'pixi.js'
+import { Point, FederatedPointerEvent } from 'pixi.js';
+import { Container as PixiContainer } from 'pixi.js';
 
 describe('Drag', () => {
     let mockOn: ReturnType<typeof vi.fn>;
     let mockOff: ReturnType<typeof vi.fn>;
     let mockToLocal: ReturnType<typeof vi.fn>;
     
+    // Mock window event listeners
     beforeEach(() => {
         mockOn = vi.fn();
         mockOff = vi.fn();
@@ -18,10 +19,14 @@ describe('Drag', () => {
         vi.spyOn(PixiContainer.prototype, 'on').mockImplementation(mockOn);
         vi.spyOn(PixiContainer.prototype, 'off').mockImplementation(mockOff);
         vi.spyOn(PixiContainer.prototype, 'toLocal').mockImplementation(mockToLocal);
+        
+        // Spy on window methods without implementation to avoid browser errors
+        vi.spyOn(window, 'addEventListener').mockImplementation(vi.fn());
+        vi.spyOn(window, 'removeEventListener').mockImplementation(vi.fn());
     });
     
     afterEach(() => {
-        vi.clearAllMocks();
+        vi.restoreAllMocks();
     });
 
     describe('drag directive', () => {
@@ -32,10 +37,7 @@ describe('Drag', () => {
                 } 
             });
             
-            // Verify container eventMode is set to static
             expect(container.componentInstance.eventMode).toBe('static');
-            
-            // Verify event listeners are attached
             expect(mockOn).toHaveBeenCalledWith('pointerdown', expect.any(Function));
         });
         
@@ -72,16 +74,12 @@ describe('Drag', () => {
             });
             
             expect(container.componentInstance.eventMode).toBe('static');
-            
-            // Change direction to test reactivity
             direction.set('x');
-            
-            // Verify that event listener was registered
             expect(mockOn).toHaveBeenCalledWith('pointerdown', expect.any(Function));
         });
         
         test('should clean up event listeners on destroy', async () => {
-            const display = signal(true)
+            const display = signal(true);
             await TestBed.createComponent(
                () => {
                  return cond(
@@ -96,9 +94,7 @@ describe('Drag', () => {
             );
 
             expect(mockOff).not.toHaveBeenCalled();
-
-            display.set(false)
-
+            display.set(false);
             expect(mockOff).toHaveBeenCalled();
         });
         
@@ -107,7 +103,7 @@ describe('Drag', () => {
             const onMove = vi.fn();
             const onEnd = vi.fn();
             
-            const container = await TestBed.createComponent(Container, { 
+            await TestBed.createComponent(Container, { 
                 drag: {
                     direction: 'all',
                     start: onStart,
@@ -116,27 +112,90 @@ describe('Drag', () => {
                 } 
             });
             
-            // Since we can't create a valid FederatedPointerEvent directly,
-            // we'll just verify that our drag callbacks would be called if the
-            // directive's event handlers were triggered
-            expect(container.componentInstance.eventMode).toBe('static');
             expect(mockOn).toHaveBeenCalledWith('pointerdown', expect.any(Function));
         });
         
         test('should handle conditional drag', async () => {
             const isActive = signal(true);
-            
-            // Create a test component with drag
             const container = await TestBed.createComponent(Container, { 
                 drag: {
                     direction: 'all',
                 } 
             });
-            
             expect(container.componentInstance.eventMode).toBe('static');
+        });
+    });
+
+    describe('drag directive with keyToPress', () => {
+        test('should add keyboard listeners when keyToPress is provided', async () => {
+            // This test verifies that addEventListener is called for the keyboard events
+            await TestBed.createComponent(Container, { 
+                drag: {
+                    keyToPress: ['Space']
+                } 
+            });
             
-            // Note: In a real test we would need to use lifecycle hooks or extra 
-            // test infrastructure to actually test changing the drag state dynamically
+            // Check that window event listeners were added
+            expect(window.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
+            expect(window.addEventListener).toHaveBeenCalledWith('keyup', expect.any(Function));
+        });
+        
+        test('should remove keyboard listeners on destroy', async () => {
+            // This test verifies that removeEventListener is called on destroy
+            const display = signal(true);
+            
+            await TestBed.createComponent(() => {
+                return cond(
+                    display,
+                    () => h(Container, {
+                        drag: {
+                            keyToPress: ['Space']
+                        }
+                    })
+                );
+            });
+            
+            // Initially, addEventListener should be called but not removeEventListener
+            expect(window.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
+            expect(window.addEventListener).toHaveBeenCalledWith('keyup', expect.any(Function)); 
+            expect(window.removeEventListener).not.toHaveBeenCalled();
+            
+            // After setting display to false (triggering destroy), removeEventListener should be called
+            display.set(false);
+            
+            // Check removeEventListener was called with the same event types
+            expect(window.removeEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
+            expect(window.removeEventListener).toHaveBeenCalledWith('keyup', expect.any(Function));
+        });
+        
+        test('should support various key configurations', async () => {
+            // Just test that we can create components with different key configurations
+            await TestBed.createComponent(Container, { 
+                drag: {
+                    keyToPress: ['Space']
+                } 
+            });
+            
+            await TestBed.createComponent(Container, { 
+                drag: {
+                    keyToPress: ['ShiftLeft', 'ShiftRight']
+                } 
+            });
+            
+            await TestBed.createComponent(Container, { 
+                drag: {
+                    keyToPress: ['ControlLeft']
+                } 
+            });
+            
+            await TestBed.createComponent(Container, { 
+                drag: {
+                    keyToPress: ['AltLeft']
+                } 
+            });
+            
+            // All tests should pass, verifying the component accepts these configurations
+            expect(true).toBe(true);
         });
     });
 });

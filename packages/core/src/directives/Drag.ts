@@ -14,6 +14,7 @@ export type DragProps = {
     end?: () => void;
     snap?: SignalOrPrimitive<number>;
     direction?: SignalOrPrimitive<'x' | 'y' | 'all'>;
+    keyToPress?: SignalOrPrimitive<string[]>;
     viewport?: {
         edgeThreshold?: SignalOrPrimitive<number>;
         maxSpeed?: SignalOrPrimitive<number>;
@@ -46,10 +47,14 @@ export class Drag extends Directive {
     private viewport: any | null = null;
     private animationFrameId: number | null = null;
     private lastPointerPosition: Point = new Point();
+    private pressedKeys: Set<string> = new Set();
+    private pointerIsDown = false;
 
     private onDragMoveHandler: (event: FederatedPointerEvent) => void = () => {};
     private onDragEndHandler: () => void = () => {};
     private onDragStartHandler: (event: FederatedPointerEvent) => void = () => {};
+    private onKeyDownHandler: (event: KeyboardEvent) => void = () => {};
+    private onKeyUpHandler: (event: KeyboardEvent) => void = () => {};
 
     private subscriptions: Subscription[] = [];
 
@@ -58,6 +63,8 @@ export class Drag extends Directive {
         this.onDragMoveHandler = this.onDragMove.bind(this);
         this.onDragEndHandler = this.onDragEnd.bind(this);
         this.onDragStartHandler = this.onPointerDown.bind(this);
+        this.onKeyDownHandler = this.onKeyDown.bind(this);
+        this.onKeyUpHandler = this.onKeyUp.bind(this);
     }
 
     onMount(element: Element<Container>) {
@@ -89,6 +96,12 @@ export class Drag extends Directive {
         this.stageRef.on('pointerup', this.onDragEndHandler);
         this.stageRef.on('pointerupoutside', this.onDragEndHandler);
 
+        const keysToPress = dragProps.keyToPress ? dragProps.keyToPress : [];
+        
+        // Always add keyboard event listeners to track pressed keys
+        window.addEventListener('keydown', this.onKeyDownHandler);
+        window.addEventListener('keyup', this.onKeyUpHandler);
+
         this.subscriptions = [
             tick.observable.subscribe(() => {
                 if (this.isDragging && this.viewport) {
@@ -104,7 +117,8 @@ export class Drag extends Directive {
         const options = useProps(drag?.value ?? drag, {
             snap: 0,
             viewport: {},
-            direction: 'all'
+            direction: 'all',
+            keyToPress: []
         });
         options.viewport = useProps(options.viewport, {
             edgeThreshold: 300,
@@ -243,10 +257,13 @@ export class Drag extends Directive {
      * Handles drag end event and stops viewport movement
      */
     private onDragEnd() {
-        if (!this.isDragging || !this.elementRef) return;
+        this.pointerIsDown = false;
+
+        if (!this.isDragging) return;
 
         const dragProps = this.dragProps;
         this.isDragging = false;
+        
         dragProps?.end?.();
         
         if (this.stageRef) {
@@ -254,23 +271,86 @@ export class Drag extends Directive {
         }
     }
 
+    onKeyDown(event: KeyboardEvent) {
+        this.pressedKeys.add(event.code);
+        this.pressedKeys.add(event.key.toLowerCase());
+
+        if (this.pointerIsDown && !this.isDragging && this.areRequiredKeysPressed()) {
+            this.startDrag();
+        }
+    }
+
+    onKeyUp(event: KeyboardEvent) {
+        this.pressedKeys.delete(event.code);
+        this.pressedKeys.delete(event.key.toLowerCase());
+        if (this.isDragging && !this.areRequiredKeysPressed()) {
+            this.onDragEnd();
+        }
+    }
+
+    private areRequiredKeysPressed(): boolean {
+        const keyToPress = this.dragProps.keyToPress ? this.dragProps.keyToPress : [];
+        if (!keyToPress || keyToPress.length === 0) {
+            return true; // No keys required, always return true
+        }
+        
+        return keyToPress.some(key => {
+            // Check if the key is pressed directly
+            if (this.pressedKeys.has(key)) {
+                return true;
+            }
+            
+            // Check common alternative formats
+            // Space key can be "Space", " ", or "space"
+            if (key.toLowerCase() === 'space') {
+                return this.pressedKeys.has('Space') || this.pressedKeys.has(' ');
+            }
+            
+            // Shift key can be "ShiftLeft", "ShiftRight", or "shift"
+            if (key.toLowerCase() === 'shift') {
+                return this.pressedKeys.has('ShiftLeft') || this.pressedKeys.has('ShiftRight');
+            }
+            
+            // Control key can be "ControlLeft", "ControlRight", or "control"
+            if (key.toLowerCase() === 'control' || key.toLowerCase() === 'ctrl') {
+                return this.pressedKeys.has('ControlLeft') || this.pressedKeys.has('ControlRight');
+            }
+            
+            // Alt key can be "AltLeft", "AltRight", or "alt"
+            if (key.toLowerCase() === 'alt') {
+                return this.pressedKeys.has('AltLeft') || this.pressedKeys.has('AltRight');
+            }
+            
+            return false;
+        });
+    }
+
     private onPointerDown(event: FederatedPointerEvent) {
         if (!this.elementRef?.componentInstance || !this.stageRef || !this.elementRef.componentInstance.parent) return;
+        
+        this.pointerIsDown = true;
 
         const instance = this.elementRef.componentInstance;
         const parent = instance.parent;
-        const dragProps = this.dragProps;
 
         const parentLocalPointer = parent.toLocal(event.global);
 
         this.offsetInParent.x = parentLocalPointer.x - instance.position.x;
         this.offsetInParent.y = parentLocalPointer.y - instance.position.y;
-
-        this.isDragging = true;
         
         // Store initial pointer position
         this.lastPointerPosition.copyFrom(event.global);
         
+        if (this.areRequiredKeysPressed()) {
+            this.startDrag();
+        }
+    }
+
+    private startDrag() {
+        if (this.isDragging || !this.stageRef) return;
+
+        this.isDragging = true;
+        const dragProps = this.dragProps;
         dragProps?.start?.();
         this.stageRef.on('pointermove', this.onDragMoveHandler);
     }
@@ -293,8 +373,15 @@ export class Drag extends Directive {
             this.stageRef.off('pointerup', this.onDragEndHandler);
             this.stageRef.off('pointerupoutside', this.onDragEndHandler);
         }
+        
+        // Remove keyboard event listeners
+        window.removeEventListener('keydown', this.onKeyDownHandler);
+        window.removeEventListener('keyup', this.onKeyUpHandler);
+        
         this.stageRef = null;
         this.viewport = null;
+        this.pressedKeys.clear();
+        this.pointerIsDown = false;
     }
 }
 
