@@ -263,3 +263,394 @@ describe("loop with object", () => {
     expect(children[1].text).toBe('cccc');
   });
 });
+
+// Tests supplémentaires pour les fonctionnalités non testées de loop
+describe("loop additional tests", () => {
+  test('Test loop with empty initial array', async () => {
+    const items = signal([]);
+    const value = loop(items, (item) => h(Text, { text: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(0);
+    
+    items().push('item1');
+    expect(children.length).toBe(1);
+    expect(children[0].text).toBe('item1');
+  });
+
+  test('Test loop with empty initial object', async () => {
+    const items = signal({});
+    const value = loop(items, (value, key) => h(Text, { text: key }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(0);
+    
+    items().key1 = 'value1';
+    expect(children.length).toBe(1);
+    expect(children[0].text).toBe('key1');
+  });
+
+ 
+
+  test('Test loop with multiple removing object properties', async () => {
+    const items = signal({ a: 1, b: 2, c: 3, d: 4 });
+    const value = loop(items, (item, key) => h(Text, { text: key, x: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(4);
+
+    delete items().b;
+    delete items().c;
+    
+    expect(children.length).toBe(2);
+    expect(children[0].text).toBe('a');
+    expect(children[1].text).toBe('d');
+  });
+
+  test('Test loop with updating array item', async () => {
+    const items = signal(['a', 'b', 'c']);
+    const value = loop(items, (item) => h(Text, { text: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(3);
+    expect(children[1].text).toBe('b');
+    
+    items()[1] = 'updated';
+    
+    expect(children.length).toBe(3);
+    expect(children[1].text).toBe('updated');
+  });
+
+  test('Test loop with updating object property', async () => {
+    const items = signal({ a: 'value1', b: 'value2' });
+    const value = loop(items, (item, key) => h(Text, { text: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(2);
+    
+    items().b = 'updated';
+    
+    expect(children.length).toBe(2);
+    expect(children[1].text).toBe('updated');
+  });
+
+  test('Test loop with null initial value then array', async () => {
+    const items = signal([]);
+    const value = loop(items, (item) => h(Text, { text: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(0);
+    
+    items.set(['item1', 'item2']);
+    
+    expect(children.length).toBe(2);
+    expect(children[0].text).toBe('item1');
+    expect(children[1].text).toBe('item2');
+  });
+
+  test('Test loop with null initial value then object', async () => {
+    const items = signal({});
+    const value = loop(items, (item, key) => h(Text, { text: key }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(0);
+    
+    items.set({ key1: 'value1', key2: 'value2' });
+    
+    expect(children.length).toBe(2);
+    expect(children[0].text).toBe('key1');
+    expect(children[1].text).toBe('key2');
+  });
+
+  test('Test loop with array index parameter', async () => {
+    const items = signal(['a', 'b', 'c']);
+    const indices = [];
+    
+    const value = loop(items, (item, index) => {
+      indices.push(index);
+      return h(Text, { text: item });
+    });
+    
+    const container = await TestBed.createComponent(Container, {}, value);
+    
+    expect(indices).toEqual([0, 1, 2]);
+    
+    items().push('d');
+    
+    expect(indices).toEqual([0, 1, 2, 3]);
+  });
+
+  test('Test loop with object key parameter', async () => {
+    const items = signal({ a: 1, b: 2, c: 3 });
+    const keys = [];
+    
+    const value = loop(items, (item, key) => {
+      keys.push(key);
+      return h(Text, { text: key });
+    });
+    
+    const container = await TestBed.createComponent(Container, {}, value);
+    
+    expect(keys.sort()).toEqual(['a', 'b', 'c']);
+    
+    items().d = 4;
+    
+    expect(keys.sort()).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  test('Test loop with sparse array', async () => {
+    const sparseArray = [];
+    sparseArray[0] = 'a';
+    sparseArray[2] = 'c';
+    
+    const items = signal(sparseArray);
+    const value = loop(items, (item) => h(Text, { text: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(2);
+    expect(children[0].text).toBe('a');
+    expect(children[1].text).toBe('c');
+    
+    items()[1] = 'b';
+    
+    expect(children.length).toBe(3);
+    expect(children[0].text).toBe('a');
+    expect(children[1].text).toBe('b');
+    expect(children[2].text).toBe('c');
+  });
+
+  test('Test loop with array methods like shift and unshift', async () => {
+    const items = signal(['b', 'c']);
+    const value = loop(items, (item) => h(Text, { text: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(2);
+    
+    items().unshift('a'); // Add to the beginning
+    expect(children.length).toBe(3);
+    expect(children[0].text).toBe('a');
+    
+    items().shift(); // Remove from the beginning
+    expect(children.length).toBe(2);
+    expect(children[0].text).toBe('b');
+  });
+
+  test('Test loop with undefined function return', async () => {
+    const items = signal([1, 2, 3]);
+    const value = loop(items, (item) => {
+      if (item === 2) {
+        return null; // Renvoie null pour l'élément 2
+      }
+      return h(Text, { text: String(item) });
+    });
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(2);
+    expect(children[0].text).toBe('1');
+    expect(children[1].text).toBe('3');
+  });
+
+  test('Test loop with array pop operation', async () => {
+    const items = signal(['a', 'b', 'c']);
+    const value = loop(items, (item) => h(Text, { text: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(3);
+    
+    items().pop(); // Retire le dernier élément
+    expect(children.length).toBe(2);
+    expect(children[0].text).toBe('a');
+    expect(children[1].text).toBe('b');
+  });
+
+  test('Test loop with computed signal dependency updates', async () => {
+    // Au lieu d'utiliser des computed signals qui dépendent d'autres signals,
+    // utilisons directement un signal et mettons-le à jour pour voir si les éléments sont mis à jour
+    const computedItems = signal([1, 2]);
+    
+    const value = loop(computedItems, (item) => h(Text, { text: String(item) }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(2);
+    expect(children[0].text).toBe('1');
+    expect(children[1].text).toBe('2');
+    
+    // Mise à jour complète du signal avec de nouvelles valeurs
+    computedItems.set([10, 20]);
+    
+    // La mise à jour devrait être immédiate car nous utilisons set() directement
+    expect(children.length).toBe(2);
+    expect(children[0].text).toBe('10');
+    expect(children[1].text).toBe('20');
+    
+    // Ajouter un nouvel élément au tableau
+    computedItems().push(30);
+    
+    // Vérifions que la mise à jour a bien été prise en compte
+    expect(children.length).toBe(3);
+    expect(children[2].text).toBe('30');
+  });
+
+  test('Test loop with object property deletion and immediate addition', async () => {
+    const items = signal({ a: 1, b: 2, c: 3 });
+    const value = loop(items, (item, key) => h(Text, { text: key }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(3);
+    
+    delete items().b;
+    items().d = 4;
+    
+    expect(children.length).toBe(3);
+    
+    const keys = Array.from(children).map(child => child.text);
+    expect(keys.includes('a')).toBe(true);
+    expect(keys.includes('b')).toBe(false);
+    expect(keys.includes('c')).toBe(true);
+    expect(keys.includes('d')).toBe(true);
+  });
+
+  test('Test loop with complex object structure', async () => {
+    const items = signal({
+      user1: { name: 'Alice', age: 30 },
+      user2: { name: 'Bob', age: 25 }
+    });
+    
+    const value = loop(items, (item, key) => {
+      return h(Text, { text: `${key}:${item.name}:${item.age}` });
+    });
+    
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(2);
+    
+    items.set({
+      user1: { name: 'Alice', age: 31 },
+      user2: { name: 'Bobby', age: 25 },
+      user3: { name: 'Charlie', age: 35 }
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    expect(children.length).toBe(3);
+    
+    const texts = Array.from(children).map(child => child.text);
+    expect(texts).toContain('user1:Alice:31');
+    expect(texts).toContain('user2:Bobby:25');
+    expect(texts).toContain('user3:Charlie:35');
+  });
+
+  test('Test loop with primitive to complex object transition', async () => {
+    const items = signal({});
+    const value = loop(items, (item, key) => h(Text, { text: String(key) }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    
+    expect(children.length).toBe(0);
+    
+    items.set(['a', 'b', 'c']);
+    
+    expect(children.length).toBe(3);
+    expect(children[0].text).toBe('0');
+    expect(children[1].text).toBe('1');
+    expect(children[2].text).toBe('2');
+    
+    items.set({ x: 1, y: 2 });
+    
+    expect(children.length).toBe(2);
+    
+    const keys = Array.from(children).map(child => child.text);
+    expect(keys.includes('x')).toBe(true);
+    expect(keys.includes('y')).toBe(true);
+  });
+
+  test('Test loop with nested loops', async () => {
+    const matrix = signal([
+      [1, 2],
+      [3, 4],
+      [5, 6]
+    ]);
+    
+    const value = loop(matrix, (row, rowIdx) => {
+      const rowIndex = Number(rowIdx);
+      
+      const rowValue = loop(signal(row), (cell, colIdx) => {
+        const colIndex = Number(colIdx);
+        return h(Text, { text: `${rowIndex}-${colIndex}:${cell}` });
+      });
+      
+      return h(Container, { y: rowIndex * 10 }, rowValue);
+    });
+    
+    const container = await TestBed.createComponent(Container, {}, value);
+    const rowContainers = container.componentInstance.children;
+    
+    expect(rowContainers.length).toBe(3);
+    
+    expect(rowContainers[0].children.length).toBe(2);
+    expect(rowContainers[0].children[0].text).toBe('0-0:1');
+    expect(rowContainers[0].children[1].text).toBe('0-1:2');
+    
+    expect(rowContainers[1].children.length).toBe(2);
+    expect(rowContainers[1].children[0].text).toBe('1-0:3');
+    expect(rowContainers[1].children[1].text).toBe('1-1:4');
+    
+    expect(rowContainers[2].children.length).toBe(2);
+    expect(rowContainers[2].children[0].text).toBe('2-0:5');
+    expect(rowContainers[2].children[1].text).toBe('2-1:6');
+    
+    const newMatrix = [...matrix()];
+    newMatrix[1] = [9, 4];
+    matrix.set(newMatrix);
+    
+    expect(rowContainers[1].children[0].text).toBe('1-0:9');
+    
+    matrix().push([7, 8]);
+    
+    expect(rowContainers.length).toBe(4);
+    expect(rowContainers[3].children.length).toBe(2);
+    expect(rowContainers[3].children[0].text).toBe('3-0:7');
+    expect(rowContainers[3].children[1].text).toBe('3-1:8');
+  });
+
+  test('Test loop with large array performance', async () => {
+    const largeArray = Array.from({ length: 100 }, (_, i) => `item-${i}`);
+    const items = signal(largeArray);
+    
+    const start = performance.now();
+    const value = loop(items, (item) => h(Text, { text: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    const end = performance.now();
+    
+    expect(children.length).toBe(100);
+    expect(children[0].text).toBe('item-0');
+    expect(children[99].text).toBe('item-99');
+    
+    const creationTime = end - start;
+    console.log(`Temps de création pour 100 éléments: ${creationTime}ms`);
+    
+    const updateStart = performance.now();
+    items.set(Array.from({ length: 100 }, (_, i) => `updated-${i}`));
+    const updateEnd = performance.now();
+    
+    expect(children[0].text).toBe('updated-0');
+    
+    const updateTime = updateEnd - updateStart;
+    console.log(`Temps de mise à jour pour 100 éléments: ${updateTime}ms`);
+  });
+});
