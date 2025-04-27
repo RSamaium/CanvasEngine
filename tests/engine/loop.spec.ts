@@ -628,11 +628,12 @@ describe("loop additional tests", () => {
   });
 
   test('Test loop with large array performance', async () => {
+    // Create a large array with strings
     const largeArray = Array.from({ length: 100 }, (_, i) => `item-${i}`);
     const items = signal(largeArray);
     
     const start = performance.now();
-    const value = loop(items, (item) => h(Text, { text: item }));
+    const value = loop(items, (item) => h(Text, { text: String(item) }));
     const container = await TestBed.createComponent(Container, {}, value);
     const children = container.componentInstance.children;
     const end = performance.now();
@@ -641,16 +642,11 @@ describe("loop additional tests", () => {
     expect(children[0].text).toBe('item-0');
     expect(children[99].text).toBe('item-99');
     
-    const creationTime = end - start;
-    console.log(`Temps de création pour 100 éléments: ${creationTime}ms`);
-    
     const updateStart = performance.now();
-    items.set(Array.from({ length: 100 }, (_, i) => `updated-${i}`));
+    const updatedArray = Array.from({ length: 100 }, (_, i) => `updated-${i}`);
+    items.set(updatedArray);
     const updateEnd = performance.now();
     
     expect(children[0].text).toBe('updated-0');
-    
-    const updateTime = updateEnd - updateStart;
-    console.log(`Temps de mise à jour pour 100 éléments: ${updateTime}ms`);
   });
 });
