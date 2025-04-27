@@ -17,6 +17,7 @@
   "dependencies": {
     "@changesets/cli": "^2.27.10",
     "bumpp": "^9.9.1",
+    "howler": "^2.2.4",
     "pixi.js": "^8.6.6",
     "rollup-plugin-node-polyfills": "^0.2.1",
     "tsup": "^8.2.4",

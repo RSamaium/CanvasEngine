@@ -21,6 +21,7 @@ import { signal } from "canvasengine";
 const drag = {
   direction: 'all', // 'all', 'x', or 'y'
   snap: 10, // Optional: snap to grid with specified interval
+  keyToPress: ['ShiftLeft', 'ShiftRight'], // Optional: keys that must be pressed to enable dragging
   start() {
     console.log("Drag started");
   },
@@ -40,9 +41,39 @@ const drag = {
 
 - `direction`: Controls the axis of movement ('all', 'x', or 'y')
 - `snap`: Optional number that determines grid snapping
+- `keyToPress`: Optional array of key codes that must be pressed for dragging to work
 - `start()`: Callback function triggered when dragging starts
 - `move(event)`: Callback function called continuously during dragging
 - `end()`: Callback function triggered when dragging ends
+
+### Key Modifiers for Dragging
+
+The `keyToPress` option allows you to require specific keyboard keys to be pressed for dragging to work. This is useful for creating more complex interactions or preventing accidental dragging.
+
+```html
+<script>
+const drag = {
+  // Only enable dragging when Shift key is pressed
+  keyToPress: ['ShiftLeft', 'ShiftRight']
+};
+</script>
+
+<Sprite image="path/to/image.png" drag={drag} />
+```
+
+You can use standard [KeyboardEvent.code](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code) values or common key names:
+
+```html
+<script>
+// Examples of different key configurations
+const dragWithShift = { keyToPress: ['shift'] };  // Either Shift key
+const dragWithCtrl = { keyToPress: ['ctrl'] };    // Either Control key
+const dragWithAlt = { keyToPress: ['alt'] };      // Either Alt key
+const dragWithSpace = { keyToPress: ['space'] };  // Space bar
+</script>
+```
+
+The drag operation will start only when the specified key is pressed during mouse/touch interaction, and will end if the key is released during dragging.
 
 ### Disabling Drag
 
@@ -73,6 +104,7 @@ To enable viewport scrolling, add the `viewport` property to your drag configura
 const drag = {
   // Basic drag options
   direction: 'all',
+  keyToPress: ['space'], // Optional: require space bar to be pressed
   
   // Viewport scrolling options
   viewport: {
