@@ -316,6 +316,66 @@ describe("Loop", () => {
     );
   });
 
+  test("should compile loop with object", () => {
+    const input = `
+        @for (sprite of sprites.items) {
+            <Sprite />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(sprites.items,sprite=>h(Sprite))`.replace(/\s+/g, "")
+    );
+  });
+
+  test("should compile loop with deep object", () => {
+    const input = `
+        @for (sprite of sprites.items.items) {
+            <Sprite />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(sprites.items.items,sprite=>h(Sprite))`.replace(/\s+/g, "")
+    );
+  });
+
+  test("should compile loop with function", () => {
+    const input = `
+        @for (sprite of sprites()) {
+            <Sprite />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(sprites(),sprite=>h(Sprite))`.replace(/\s+/g, "")
+    );
+  });
+
+  test("should compile loop with function and params", () => {
+    const input = `
+        @for (sprite of sprites(x, y)) {
+            <Sprite />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(sprites(x,y),sprite=>h(Sprite))`.replace(/\s+/g, "")
+    );
+  });
+
+  test("should compile loop with object and function and params", () => {
+    const input = `
+        @for (sprite of sprites.items(x, y)) {
+            <Sprite />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(sprites.items(x,y),sprite=>h(Sprite))`.replace(/\s+/g, "")
+    );
+  });
+
   test("should compile loop with destructuring", () => {
     const input = `
         @for ((sprite, index) of sprites) {

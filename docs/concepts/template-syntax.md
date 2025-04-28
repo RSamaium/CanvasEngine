@@ -126,7 +126,7 @@ You can use the `@for` directive to loop over an array or an object.
 </script>
 ```
 
-To fix it, you can “undo” the transformation by signaling on the property.
+To fix it, you can "undo" the transformation by signaling on the property.
 
 ```angular-html
 <Container>
@@ -136,7 +136,7 @@ To fix it, you can “undo” the transformation by signaling on the property.
 </Container>
 ```
 
-Use `@` to “undo” the transformation.
+Use `@` to "undo" the transformation.
 :::
 
 ### With objects
@@ -152,5 +152,86 @@ You can use the `@for` directive to loop over an object.
 
 <script>
   const items = { 'Hello': 'World', 'Foo': 'Bar' }
+</script>
+```
+
+### Advanced usage
+
+The `@for` directive supports advanced iteration options:
+
+#### Using method calls
+
+You can iterate over the result of a function call:
+
+```html
+<Container>
+  @for (item of getItems()) {
+    <Text text={item} />
+  }
+</Container>
+
+<script>
+  function getItems() {
+    return ['Hello', 'World'];
+  }
+</script>
+```
+
+#### Using method calls with parameters
+
+You can pass parameters to the function:
+
+```html
+<Container>
+  @for (item of getItems(5, 'prefix')) {
+    <Text text={item} />
+  }
+</Container>
+
+<script>
+  function getItems(count, prefix) {
+    return Array.from({length: count}, (_, i) => `${prefix}-${i+1}`);
+  }
+</script>
+```
+
+#### Using object properties and methods
+
+You can iterate over object properties and methods:
+
+```html
+<Container>
+  @for (sprite of sprites.items) {
+    <Sprite texture={sprite.texture} />
+  }
+</Container>
+
+<script>
+  const sprites = {
+    items: [
+      { texture: 'player.png' },
+      { texture: 'enemy.png' }
+    ]
+  };
+</script>
+```
+
+Or combine object properties with method calls:
+
+```html
+<Container>
+  @for (sprite of gameState.getVisibleSprites(maxCount)) {
+    <Sprite texture={sprite.texture} />
+  }
+</Container>
+
+<script>
+  const maxCount = 10;
+  const gameState = {
+    getVisibleSprites(limit) {
+      // Return only visible sprites, limited by count
+      return sprites.filter(s => s.visible).slice(0, limit);
+    }
+  };
 </script>
 ```

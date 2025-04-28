@@ -254,7 +254,7 @@ textElement
     }
 
 forLoop
-  = _ "@for" _ "(" _ variableName:(tupleDestructuring / identifier) _ "of" _ iterable:identifier _ ")" _ "{" _ content:content _ "}" _ {
+  = _ "@for" _ "(" _ variableName:(tupleDestructuring / identifier) _ "of" _ iterable:iterable _ ")" _ "{" _ content:content _ "}" _ {
       return `loop(${iterable}, ${variableName} => ${content})`;
     }
 
@@ -283,7 +283,23 @@ variableName
   = [a-zA-Z_][a-zA-Z0-9_]* { return text(); }
 
 iterable
-  = [a-zA-Z_][a-zA-Z0-9_]* { return text(); }
+  = id:identifier "(" _ args:functionArgs? _ ")" { // Direct function call
+      return `${id}(${args || ''})`;
+    }
+  / first:identifier "." rest:dotFunctionChain { // Dot notation possibly with function call
+      return `${first}.${rest}`;
+    }
+  / id:identifier { return id; }
+
+dotFunctionChain
+  = segment:identifier "(" _ args:functionArgs? _ ")" rest:("." dotFunctionChain)? {
+      const restStr = rest ? `.${rest[1]}` : '';
+      return `${segment}(${args || ''})${restStr}`;
+    }
+  / segment:identifier rest:("." dotFunctionChain)? {
+      const restStr = rest ? `.${rest[1]}` : '';
+      return `${segment}${restStr}`;
+    }
 
 condition
   = functionCall
