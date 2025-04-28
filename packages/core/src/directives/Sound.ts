@@ -20,7 +20,8 @@ export class Sound extends Directive {
     onMount(element: Element<Container>) {
         const { props } = element
         const tick = props.context.tick
-        const { src, autoplay, loop, volume, spatial } = props.sound
+        const propsSound = props.sound.value ?? props.sound
+        const { src, autoplay, loop, volume, spatial } = propsSound
         this.sound = new Howl({
             src,
             autoplay,
@@ -28,8 +29,8 @@ export class Sound extends Directive {
             volume
         })
         for (let event of EVENTS) {
-            if (!props.sound[event]) continue
-            const fn = props.sound[event]
+            if (!propsSound[event]) continue
+            const fn = propsSound[event]
             this.eventsFn.push(fn)
             this.sound.on(event, fn);
         }
@@ -51,7 +52,7 @@ export class Sound extends Directive {
     }
 
     onUpdate(props: any) {
-        const { volume, loop, mute, seek, playing, rate, spatial } = props
+        const { volume, loop, mute, seek, playing, rate, spatial } = props.value ?? props
         if (volume != undefined) this.sound.volume(volume)
         if (loop != undefined) this.sound.loop(loop)
         if (mute != undefined) this.sound.mute(mute)

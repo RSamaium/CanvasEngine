@@ -1,13 +1,29 @@
 <script>
-  import { signal, animatedSignal, mount, effect, animatedSequence } from "canvasengine";
+  import {
+    signal,
+    animatedSignal,
+    mount,
+    effect,
+    animatedSequence,
+  } from "canvasengine";
   import MyViewport from "./viewport.ce";
   const display = signal(false);
 
-  setTimeout(() => {
-    display.set(true);
-  }, 1000);
+  const playing = false
+  
+  const sound = signal({
+    src: "exp.mp3",
+    loop: false,
+    volume: 1,
+    playing
+  })
+
+  const click = () => {
+    sound.update(val => ({ ...val, playing: !val.playing }))
+  }
+  
 </script>
 
-<Canvas width="100%" height="100%" >
-  <MyViewport />
+<Canvas width="100%" height="100%">
+  <Sprite sound image="exp.png" click />
 </Canvas>

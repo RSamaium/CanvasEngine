@@ -102,6 +102,10 @@ const guideMenu = [
       {
         text: "Drag",
         link: "/directives/drag",
+      },
+      {
+        text: "Sound",
+        link: "/directives/sound",
       }
     ],
   },

@@ -1,4 +1,5 @@
-import { computed, effect, isSignal, Signal, WritableSignal } from "@signe/reactive";
+import { Howl } from 'howler';
+import { computed, effect, isSignal, Signal } from "@signe/reactive";
 import {
   Assets,
   Container,
@@ -338,7 +339,12 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     const sound = this.currentAnimation.data.sound;
 
     if (sound) {
-      //RpgSound.get(sound).play()
+      new Howl({
+        src: sound,
+        autoplay: true,
+        loop: false,
+        volume: 1,
+      })
     }
 
     // Updates immediately to avoid flickering
