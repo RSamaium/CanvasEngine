@@ -18,7 +18,7 @@
 </Canvas>
 ```
 
-[] if you assign a value to an array, must add and update
+[X] if you assign a value to an array, must add and update
 
 ```js
 const val = signal([])
