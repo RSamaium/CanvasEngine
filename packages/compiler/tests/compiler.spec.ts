@@ -93,10 +93,26 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas, { width: 20 })`);
   });
 
+
   test("should compile component with object attribute", () => {
     const input = `<Canvas width={ {x: 10, y: 20} } />`;
     const output = parser.parse(input);
     expect(output).toBe(`h(Canvas, { width: ({x: 10, y: 20}) })`);
+  });
+
+  test("should compile component with complex object attribute", () => {
+    const input = `<Sprite 
+        sheet={{
+            definition,
+            playing: "stand",
+            params: {
+                direction: "right"
+            },
+            onFinish
+        }}
+    />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Sprite, { sheet: { definition, playing: "stand", params: { direction: "right" }, onFinish } })`);
   });
 
   test("should compile component with deep object attribute", () => {

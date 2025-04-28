@@ -119,6 +119,12 @@ dynamicAttribute
       const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
       const formattedName = needsQuotes ? `'${attributeName}'` : attributeName;
       
+      // If it's a complex object literal starting with curly braces, preserve it as is
+      if (attributeValue.trim().startsWith('{') && attributeValue.trim().endsWith('}')) {
+        return `${formattedName}: ${attributeValue}`;
+      }
+      
+      // Handle other types of values
       if (attributeValue.startsWith('h(') || attributeValue.includes('=>')) {
         return `${formattedName}: ${attributeValue}`;
       } else if (attributeValue.trim().match(/^[a-zA-Z_]\w*$/)) {
@@ -146,6 +152,7 @@ dynamicAttribute
 attributeValue
   = element
   / functionWithElement
+  / objectLiteral
   / $([^{}]* ("{" [^{}]* "}" [^{}]*)*) {
     const t = text().trim()
     if (t.startsWith("{") && t.endsWith("}")) {
@@ -153,6 +160,41 @@ attributeValue
     }
     return t
   }
+
+objectLiteral
+  = "{" _ objContent:objectContent _ "}" {
+    return `{ ${objContent} }`;
+  }
+
+objectContent
+  = prop:objectProperty rest:(_ "," _ objectProperty)* {
+    return [prop].concat(rest.map(r => r[3])).join(', ');
+  }
+  / "" { return ""; }
+
+objectProperty
+  = key:identifier _ ":" _ value:propertyValue {
+    return `${key}: ${value}`;
+  }
+  / key:identifier {
+    return key;
+  }
+
+propertyValue
+  = nestedObject
+  / element
+  / functionWithElement
+  / stringLiteral
+  / identifier
+
+nestedObject
+  = "{" _ objContent:objectContent _ "}" {
+    return `{ ${objContent} }`;
+  }
+
+stringLiteral
+  = '"' chars:[^"]* '"' { return text(); }
+  / "'" chars:[^']* "'" { return text(); }
 
 functionWithElement
   = "(" _ params:functionParams? _ ")" _ "=>" _ elem:element {
