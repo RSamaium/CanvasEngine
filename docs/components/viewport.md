@@ -70,7 +70,6 @@ Example with event:
 <Viewport 
   worldWidth="2000" 
   worldHeight="2000"
-  drag-start={(event) => console.log('Drag started', event)}
 />
 ```
 
@@ -88,7 +87,7 @@ This directive must be used within a `Viewport` component context.
 </Viewport>
 
 <script>
-    const viewportFollow = true
+    const viewportFollow = true // null to disable
 </script>
 ```
 

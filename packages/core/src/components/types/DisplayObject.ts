@@ -8,6 +8,10 @@ export type JustifyContent = 'flex-start' | 'flex-end' | 'center' | 'space-betwe
 export type AlignContent = 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around';
 export type Size = number | `${number}%`
 export type EdgeSize = SignalOrPrimitive<Size | [Size, Size] | [Size, Size, Size, Size]>
+export type ObjectFit = 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
+export type ObjectPosition = string;
+export type TransformOrigin = string;
+export type PositionType = 'relative' | 'absolute' | 'static';
 
 export interface DisplayObjectProps {
     attach?: any;
@@ -16,6 +20,24 @@ export interface DisplayObjectProps {
     y?: SignalOrPrimitive<number>;
     width?: SignalOrPrimitive<Size>;
     height?: SignalOrPrimitive<Size>;
+    minWidth?: SignalOrPrimitive<Size>;
+    minHeight?: SignalOrPrimitive<Size>;
+    maxWidth?: SignalOrPrimitive<Size>;
+    maxHeight?: SignalOrPrimitive<Size>;
+    aspectRatio?: SignalOrPrimitive<number>;
+    flexGrow?: SignalOrPrimitive<number>;
+    flexShrink?: SignalOrPrimitive<number>;
+    flexBasis?: SignalOrPrimitive<Size>;
+    rowGap?: SignalOrPrimitive<number>;
+    columnGap?: SignalOrPrimitive<number>;
+    positionType?: PositionType;
+    top?: SignalOrPrimitive<Size>;
+    right?: SignalOrPrimitive<Size>;
+    bottom?: SignalOrPrimitive<Size>;
+    left?: SignalOrPrimitive<Size>;
+    objectFit?: ObjectFit;
+    objectPosition?: ObjectPosition;
+    transformOrigin?: TransformOrigin;
     children?: any[];
     flexDirection?: FlexDirection;
     justifyContent?: JustifyContent;

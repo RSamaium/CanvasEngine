@@ -6,11 +6,15 @@ import type {
   EdgeSize,
   FlexDirection,
   Size,
+  ObjectFit,
+  ObjectPosition,
+  TransformOrigin,
+  PositionType,
 } from "./types/DisplayObject";
 import { effect, Signal, signal } from "@signe/reactive";
 import { DropShadowFilter } from "pixi-filters";
 import { BlurFilter, ObservablePoint } from "pixi.js";
-import { Layout, LayoutOptions } from "@pixi/layout";
+import { Layout } from "@pixi/layout";
 import { isPercent } from "../utils/functions";
 
 export interface ComponentInstance extends PixiMixins.ContainerOptions {
@@ -22,7 +26,7 @@ export interface ComponentInstance extends PixiMixins.ContainerOptions {
   onMount?(context: Element, index?: number): void;
   setWidth(width: number): void;
   setHeight(height: number): void;
-  layout: Layout;
+  layout: Layout | null;
 }
 
 export const EVENTS = [
@@ -177,6 +181,23 @@ export function DisplayObject(extendClass) {
       }
       if (props.width !== undefined) this.setWidth(props.width);
       if (props.height !== undefined) this.setHeight(props.height);
+      if (props.minWidth !== undefined) this.setMinWidth(props.minWidth);
+      if (props.minHeight !== undefined) this.setMinHeight(props.minHeight);
+      if (props.maxWidth !== undefined) this.setMaxWidth(props.maxWidth);
+      if (props.maxHeight !== undefined) this.setMaxHeight(props.maxHeight);
+      if (props.aspectRatio !== undefined) this.setAspectRatio(props.aspectRatio);
+      if (props.flexGrow !== undefined) this.setFlexGrow(props.flexGrow);
+      if (props.flexShrink !== undefined) this.setFlexShrink(props.flexShrink);
+      if (props.flexBasis !== undefined) this.setFlexBasis(props.flexBasis);
+      if (props.rowGap !== undefined) this.setRowGap(props.rowGap);
+      if (props.columnGap !== undefined) this.setColumnGap(props.columnGap);
+      if (props.top !== undefined) this.setTop(props.top);
+      if (props.left !== undefined) this.setLeft(props.left);
+      if (props.right !== undefined) this.setRight(props.right);
+      if (props.bottom !== undefined) this.setBottom(props.bottom);
+      if (props.objectFit !== undefined) this.setObjectFit(props.objectFit);
+      if (props.objectPosition !== undefined) this.setObjectPosition(props.objectPosition);
+      if (props.transformOrigin !== undefined) this.setTransformOrigin(props.transformOrigin);
       if (props.skew !== undefined) setObservablePoint(this.skew, props.skew);
       if (props.tint) this.tint = props.tint;
       if (props.rotation !== undefined) this.rotation = props.rotation;
@@ -410,6 +431,80 @@ export function DisplayObject(extendClass) {
 
     getHeight() {
       return this.displayHeight();
+    }
+
+    // Min/Max constraints
+    setMinWidth(minWidth: number | string) {
+      this.layout = { minWidth };
+    }
+
+    setMinHeight(minHeight: number | string) {
+      this.layout = { minHeight };
+    }
+
+    setMaxWidth(maxWidth: number | string) {
+      this.layout = { maxWidth };
+    }
+
+    setMaxHeight(maxHeight: number | string) {
+      this.layout = { maxHeight };
+    }
+
+    // Aspect ratio
+    setAspectRatio(aspectRatio: number) {
+      this.layout = { aspectRatio };
+    }
+
+    // Flex properties
+    setFlexGrow(flexGrow: number) {
+      this.layout = { flexGrow };
+    }
+
+    setFlexShrink(flexShrink: number) {
+      this.layout = { flexShrink };
+    }
+
+    setFlexBasis(flexBasis: number | string) {
+      this.layout = { flexBasis };
+    }
+
+    // Gap properties
+    setRowGap(rowGap: number) {
+      this.layout = { rowGap };
+    }
+
+    setColumnGap(columnGap: number) {
+      this.layout = { columnGap };
+    }
+
+    // Position insets
+    setTop(top: number | string) {
+      this.layout = { top };
+    }
+
+    setLeft(left: number | string) {
+      this.layout = { left };
+    }
+
+    setRight(right: number | string) {
+      this.layout = { right };
+    }
+
+    setBottom(bottom: number | string) {
+      this.layout = { bottom };
+    }
+
+    // Object properties
+    setObjectFit(objectFit: ObjectFit) {
+      this.layout = { objectFit };
+    }
+
+    setObjectPosition(objectPosition: ObjectPosition) {
+      this.layout = { objectPosition };
+    }
+
+    setTransformOrigin(transformOrigin: TransformOrigin) {
+      this.layout = { transformOrigin };
     }
   };
 }

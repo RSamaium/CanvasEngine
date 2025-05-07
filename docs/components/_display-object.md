@@ -18,29 +18,75 @@
 | visible        | boolean             | Visibility of the display object.                                           |
 | alpha          | number              | Alpha transparency of the display object.                                   |
 | pivot          | object              | Pivot point of the display object.                                          |
-| flexDirection  | string              | Flex direction for layout. Possible values: 'row', 'column', 'row-reverse', 'column-reverse'. |
-| flexWrap       | string              | Flex wrap for layout. Possible values: 'wrap', 'nowrap', 'wrap-reverse'.                      |
-| justifyContent | string              | Justify content for layout. Possible values: 'flex-start', 'flex-end', 'center', 'space-between', 'space-around'. |
-| alignItems     | string              | Align items for layout. Possible values: 'auto', 'flex-start', 'flex-end', 'center', 'stretch', 'baseline', 'space-between', 'space-around'. |
-| alignContent   | string              | Align content for layout. Possible values: 'flex-start', 'flex-end', 'center', 'stretch', 'baseline', 'space-between', 'space-around'. |
-| alignSelf      | string              | Align self for layout. Possible values: 'auto', 'flex-start', 'flex-end', 'center', 'stretch', 'baseline', 'space-between', 'space-around'. |
-| margin         | object              | Margin for layout.                                                          |
-| padding        | object              | Padding for layout.                                                         |
-| gap            | object              | Gap for layout.                                                             |
-| border         | object              | Border for layout.                                                          |
-| positionType   | string              | Position type for layout.                                                   |
 | filters        | array               | Filters applied to the display object.                                      |
 | maskOf         | Element             | Element that this display object masks.                                     |
 | blendMode      | string              | Blend mode for rendering.                                                   |
-| filterArea     | object              | Filter area for rendering.                                               
+| filterArea     | object              | Filter area for rendering.                                                  |
 
-## shadow 
+## Layout Properties
 
+Pour obtenir la documentation complète et détaillée sur toutes les propriétés de mise en page, consultez la documentation officielle de [PixiJS Layout](https://layout.pixijs.io/).
+
+### Sizing and Dimensions
 
 | Property       | Type                | Description                                                                 |
 |----------------|---------------------|-----------------------------------------------------------------------------|
-| Property       | Type                | Description                                                                 |  
-| blur           | number              | Blur strength.                                                                 |
-| color          | number              | Color of the shadow.                                                            |
-| offset         | object              | Offset of the shadow.                                                           |
-| quality        | number              | Quality of the shadow.                                                           |
+| width          | number/string       | Width of the display object. Accepts pixels or percentage (e.g. '50%').     |
+| height         | number/string       | Height of the display object. Accepts pixels or percentage (e.g. '50%').    |
+| minWidth       | number/string       | Minimum width the object can shrink to.                                     |
+| minHeight      | number/string       | Minimum height the object can shrink to.                                    |
+| maxWidth       | number/string       | Maximum width the object can expand to.                                     |
+| maxHeight      | number/string       | Maximum height the object can expand to.                                    |
+| aspectRatio    | number              | Ratio between width and height (e.g. 1.5 for 3:2 ratio).                    |
+
+### Flex Layout
+
+| Property       | Type                | Description                                                                 |
+|----------------|---------------------|-----------------------------------------------------------------------------|
+| flexDirection  | string              | Direction of flex items. Values: 'row', 'column', 'row-reverse', 'column-reverse'. |
+| flexWrap       | string              | Whether items wrap. Values: 'wrap', 'nowrap', 'wrap-reverse'.               |
+| justifyContent | string              | Alignment along main axis. Values: 'flex-start', 'flex-end', 'center', 'space-between', 'space-around'. |
+| alignItems     | string              | Alignment along cross axis. Values: 'flex-start', 'flex-end', 'center', 'stretch', 'baseline'. |
+| alignContent   | string              | Alignment of lines with multiple items. Values: 'flex-start', 'flex-end', 'center', 'stretch', 'space-between', 'space-around'. |
+| alignSelf      | string              | Override of parent's alignItems for specific item.                          |
+| flexGrow       | number              | Grow factor of item relative to other items.                                |
+| flexShrink     | number              | Shrink factor of item relative to other items.                              |
+| flexBasis      | number/string       | Initial size of item before flex growing/shrinking.                         |
+| gap            | number/object       | Gap between items.                                                          |
+| rowGap         | number              | Gap between rows.                                                           |
+| columnGap      | number              | Gap between columns.                                                        |
+
+### Positioning
+
+| Property       | Type                | Description                                                                 |
+|----------------|---------------------|-----------------------------------------------------------------------------|
+| positionType   | string              | Type of positioning. Values: 'relative', 'absolute', 'static'.              |
+| top            | number/string       | Distance from the top edge.                                                 |
+| right          | number/string       | Distance from the right edge.                                               |
+| bottom         | number/string       | Distance from the bottom edge.                                              |
+| left           | number/string       | Distance from the left edge.                                                |
+
+### Spacing, Margins and Borders
+
+| Property       | Type                | Description                                                                 |
+|----------------|---------------------|-----------------------------------------------------------------------------|
+| margin         | number/array        | Space outside border box. Can be single value or array for different sides. |
+| padding        | number/array        | Space inside border box. Can be single value or array for different sides.  |
+| border         | number/array        | Border width. Can be single value or array for different sides.             |
+
+### Object Fitting and Alignment
+
+| Property       | Type                | Description                                                                 |
+|----------------|---------------------|-----------------------------------------------------------------------------|
+| objectFit      | string              | How object is resized to fit layout box. Values: 'contain', 'cover', 'fill', 'none', 'scale-down'. |
+| objectPosition | string              | Anchor point of object inside layout box. E.g. 'center', 'top left'.        |
+| transformOrigin| string              | Pivot point for rotation and scaling of layout box.                         |
+
+## Shadow 
+
+| Property       | Type                | Description                                                                 |
+|----------------|---------------------|-----------------------------------------------------------------------------|
+| blur           | number              | Blur strength.                                                              |
+| color          | number              | Color of the shadow.                                                        |
+| offset         | object              | Offset of the shadow.                                                       |
+| quality        | number              | Quality of the shadow.                                                      |

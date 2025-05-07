@@ -14,8 +14,10 @@
 </script>
 
 
-<Canvas>
+<Canvas antialias="true">
   <Container flexDirection="row" width={200} height={100} flexWrap="wrap">
-    <Rect width={60} height={50} color="red" />
+    <Rect width={30} height={30} color="red" />
+    <Rect width={60} height={60} color="blue" />
+    <Rect width={90} height={90} color="green" />
   </Container>
 </Canvas>
