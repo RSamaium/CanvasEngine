@@ -10,6 +10,35 @@ const { generate } = pkg;
 
 const DEV_SRC = "../../src"
 
+/**
+ * Formats a syntax error message with visual pointer to the error location
+ * 
+ * @param {string} template - The template content that failed to parse
+ * @param {object} error - The error object with location information
+ * @returns {string} - Formatted error message with a visual pointer
+ * 
+ * @example
+ * ```
+ * const errorMessage = showErrorMessage("<Canvas>test(d)</Canvas>", syntaxError);
+ * // Returns a formatted error message with an arrow pointing to 'd'
+ * ```
+ */
+function showErrorMessage(template: string, error: any): string {
+  if (!error.location) {
+    return `Syntax error: ${error.message}`;
+  }
+
+  const lines = template.split('\n');
+  const { line, column } = error.location.start;
+  const errorLine = lines[line - 1] || '';
+  
+  // Create a visual pointer with an arrow
+  const pointer = ' '.repeat(column - 1) + '^';
+  
+  return `Syntax error at line ${line}, column ${column}: ${error.message}\n\n` +
+         `${errorLine}\n${pointer}\n`;
+}
+
 export default function canvasengine() {
   const filter = createFilter("**/*.ce");
 
@@ -59,8 +88,14 @@ export default function canvasengine() {
       template = template.replace(/<svg>([\s\S]*?)<\/svg>/g, (match, content) => {
         return `<Svg content="${content.trim()}" />`;
       });
-      
-      const parsedTemplate = parser.parse(template);
+
+      let parsedTemplate;
+      try {
+        parsedTemplate = parser.parse(template);
+      } catch (error) {
+        const errorMsg = showErrorMessage(template, error);
+        throw new Error(`Error parsing template in file ${id}:\n${errorMsg}`);
+      }
 
       // trick to avoid typescript remove imports in scriptContent
       scriptContent += FLAG_COMMENT + parsedTemplate

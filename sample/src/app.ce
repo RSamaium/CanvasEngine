@@ -8,16 +8,19 @@
   } from "canvasengine";
   import MyViewport from "./viewport.ce";
   
-  const array = signal([])
+  let bool = signal(false)
 
-  let i = 0
+  const click = () => {
+    bool.set(!bool())
+  }
 </script>
 
 
 <Canvas antialias="true">
-  <Container flexDirection="row" width={200} height={100} flexWrap="wrap">
-    <Rect width={30} height={30} color="red" />
-    <Rect width={60} height={60} color="blue" />
-    <Rect width={90} height={90} color="green" />
+  <Container>
+    @if (bool) {
+      <Rect width={30} height={30} color="red" click />
+    }
+   
   </Container>
 </Canvas>

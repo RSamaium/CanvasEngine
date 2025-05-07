@@ -6,6 +6,29 @@
     throw new Error(errorMessage);
   }
 
+  /*——— Custom error handler for syntax errors ———*/
+  function parseError(error) {
+    // error.expected : array of { type, description }
+    // error.found    : string | null
+    // error.location : { start, end }
+    const { expected, found, location } = error;
+
+    // Group expected items by description to avoid duplicates
+    const uniqueExpected = [...new Set(expected.map(e => e.description))];
+    
+    // Format the expected values in a more readable way
+    const expectedDesc = uniqueExpected
+      .map(desc => `'${desc}'`)
+      .join(' or ');
+
+    const foundDesc = found === null ? 'end of input' : `'${found}'`;
+
+    generateError(
+      `Syntax error: expected ${expectedDesc} but found ${foundDesc}`,
+      location
+    );
+  }
+
   function formatAttributes(attributes) {
     if (attributes.length === 0) {
       return null;
@@ -43,23 +66,27 @@ start
     return `[${elements.join(',')}]`;
   }
 
-element
+element "component or control structure"
   = forLoop
   / ifCondition
   / selfClosingElement
   / openCloseElement
-  / comment 
+  / openUnclosedTag
+  / comment
 
-selfClosingElement
+selfClosingElement "self-closing component tag"
   = _ "<" _ tagName:tagName _ attributes:attributes _ "/>" _ {
       const attrsString = formatAttributes(attributes);
       return attrsString ? `h(${tagName}, ${attrsString})` : `h(${tagName})`;
     }
 
-openCloseElement
+openCloseElement "component with content"
   = "<" _ tagName:tagName _ attributes:attributes _ ">" _ content:content _ "</" _ closingTagName:tagName _ ">" _ {
       if (tagName !== closingTagName) {
-        error("Mismatched opening and closing tags");
+        generateError(
+          `Mismatched tag: opened <${tagName}> but closed </${closingTagName}>`,
+          location()
+        );
       }
       const attrsString = formatAttributes(attributes);
       const children = content ? content : null;
@@ -74,35 +101,37 @@ openCloseElement
       }
     }
 
-attributes
+attributes "component attributes"
   = attrs:(attribute (_ attribute)*)? {
       return attrs
         ? [attrs[0]].concat(attrs[1].map(a => a[1]))
         : [];
     }
 
-attribute
+attribute "attribute"
   = staticAttribute
   / dynamicAttribute
   / eventHandler
   / spreadAttribute
+  / unclosedQuote
+  / unclosedBrace
 
-spreadAttribute
+spreadAttribute "spread attribute"
   = "..." expr:(functionCallExpr / dotNotation) {
       return "..." + expr;
     }
 
-functionCallExpr
+functionCallExpr "function call"
   = name:dotNotation "(" args:functionArgs? ")" {
       return `${name}(${args || ''})`;
     }
 
-dotNotation
+dotNotation "property access"
   = first:identifier rest:("." identifier)* {
       return text();
     }
 
-eventHandler
+eventHandler "event handler"
   = "@" eventName:identifier _ "=" _ "{" _ handlerName:attributeValue _ "}" {
       const needsQuotes = /[^a-zA-Z0-9_$]/.test(eventName);
       const formattedName = needsQuotes ? `'${eventName}'` : eventName;
@@ -113,7 +142,7 @@ eventHandler
       return needsQuotes ? `'${eventName}'` : eventName;
     }
 
-dynamicAttribute
+dynamicAttribute "dynamic attribute"
   = attributeName:attributeName _ "=" _ "{" _ attributeValue:attributeValue _ "}" {
       // Check if attributeName needs to be quoted (contains dash or other invalid JS identifier chars)
       const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
@@ -149,7 +178,7 @@ dynamicAttribute
       return needsQuotes ? `'${attributeName}'` : attributeName;
     }
 
-attributeValue
+attributeValue "attribute value"
   = element
   / functionWithElement
   / objectLiteral
@@ -161,7 +190,7 @@ attributeValue
     return t
   }
 
-objectLiteral
+objectLiteral "object literal"
   = "{" _ objContent:objectContent _ "}" {
     return `{ ${objContent} }`;
   }
@@ -196,7 +225,7 @@ stringLiteral
   = '"' chars:[^"]* '"' { return text(); }
   / "'" chars:[^']* "'" { return text(); }
 
-functionWithElement
+functionWithElement "function expression"
   = "(" _ params:functionParams? _ ")" _ "=>" _ elem:element {
       return `${params ? `(${params}) =>` : '() =>'} ${elem}`;
     }
@@ -215,7 +244,7 @@ simpleParams
       return [param].concat(rest.map(r => r[3])).join(', ');
     }
 
-staticAttribute
+staticAttribute "static attribute"
   = attributeName:attributeName _ "=" _ "\"" attributeValue:staticValue "\"" {
       const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
       const formattedName = needsQuotes ? `'${attributeName}'` : attributeName;
@@ -233,7 +262,7 @@ staticValue
       return `'${val}'`
     }
 
-content
+content "component content"
   = elements:(element)* {
       const filteredElements = elements.filter(el => el !== null);
       if (filteredElements.length === 0) return null;
@@ -253,27 +282,27 @@ textElement
       return trimmed ? JSON.stringify(trimmed) : null;
     }
 
-forLoop
+forLoop "for loop"
   = _ "@for" _ "(" _ variableName:(tupleDestructuring / identifier) _ "of" _ iterable:iterable _ ")" _ "{" _ content:content _ "}" _ {
       return `loop(${iterable}, ${variableName} => ${content})`;
     }
 
-tupleDestructuring
+tupleDestructuring "destructuring pattern"
   = "(" _ first:identifier _ "," _ second:identifier _ ")" {
       return `(${first}, ${second})`;
     }
 
-ifCondition
+ifCondition "if condition"
   = _ "@if" _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" _ {
       return `cond(${condition}, () => ${content})`;
     }
 
-tagName
+tagName "tag name"
   = segments:([a-zA-Z][a-zA-Z0-9]* ("." [a-zA-Z][a-zA-Z0-9]*)*) { 
     return text();
   }
 
-attributeName
+attributeName "attribute name"
   = [a-zA-Z][a-zA-Z0-9-]* { return text(); }
 
 eventName
@@ -282,7 +311,7 @@ eventName
 variableName
   = [a-zA-Z_][a-zA-Z0-9_]* { return text(); }
 
-iterable
+iterable "iterable expression"
   = id:identifier "(" _ args:functionArgs? _ ")" { // Direct function call
       return `${id}(${args || ''})`;
     }
@@ -301,11 +330,11 @@ dotFunctionChain
       return `${segment}${restStr}`;
     }
 
-condition
+condition "condition expression"
   = functionCall
   / $([^)]*) { return text().trim(); }
 
-functionCall
+functionCall "function call"
   = name:identifier "(" args:functionArgs? ")" {
     return `${name}(${args || ''})`;
   }
@@ -344,4 +373,31 @@ comment
 singleComment
   = "<!--" _ content:((!("-->") .)* "-->") _ {
       return null;
+    }
+
+// Add a special error detection rule for unclosed tags
+openUnclosedTag "unclosed tag"
+  = "<" _ tagName:tagName _ attributes:attributes _ ">" _ content:content _ !("</" _ closingTagName:tagName _ ">") {
+      generateError(
+        `Unclosed tag: <${tagName}> is missing its closing tag`,
+        location()
+      );
+    }
+
+// Add error detection for unclosed quotes in static attributes
+unclosedQuote "unclosed string"
+  = attributeName:attributeName _ "=" _ "\"" [^"]* !("\"") {
+      generateError(
+        `Missing closing quote in attribute '${attributeName}'`,
+        location()
+      );
+    }
+
+// Add error detection for unclosed braces in dynamic attributes
+unclosedBrace "unclosed brace"
+  = attributeName:attributeName _ "=" _ "{" !("}" / _ "}") [^{}]* {
+      generateError(
+        `Missing closing brace in dynamic attribute '${attributeName}'`,
+        location()
+      );
     }
