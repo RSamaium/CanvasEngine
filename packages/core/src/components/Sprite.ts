@@ -219,7 +219,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         this.sheetCurrentAnimation = StandardAnimation.Stand;
       }
 
-      this.play(this.sheetCurrentAnimation, [this.sheetParams]);
+      if (this.spritesheet) this.play(this.sheetCurrentAnimation, [this.sheetParams]);
     });
 
     super.onMount(params);

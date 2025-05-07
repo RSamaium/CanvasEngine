@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Canvas, ComponentInstance, Element } from 'canvasengine';
+import { bootstrapCanvas, Canvas, ComponentInstance, Element } from 'canvasengine';
 
 describe('Canvas', () => {
   let rootElement: HTMLElement;
-  let canvas: Element<ComponentInstance>
+  let canvasElement: Element<ComponentInstance>
 
   beforeEach(async () => {
+    const { canvasElement: value } = await bootstrapCanvas(document.getElementById('root'), Canvas)
     rootElement = document.getElementById('root')
-    canvas = await Canvas({ tickStart: false });
-    canvas.render(rootElement);
+    canvasElement = value
   });
 
   afterEach(() => {
@@ -20,24 +20,8 @@ describe('Canvas', () => {
     expect(rootElement.querySelector('canvas')).not.toBeNull();
   });
 
-  it('should resize the canvas when window is resized', async () => {
-    // Simulate window resize
-    window.innerWidth = 1024;
-    window.innerHeight = 768;
-    window.dispatchEvent(new Event('resize'));
-  });
-
-  it('should create a context with Yoga, renderer, and canvasSize', async () => {
-    const context = canvas.props.context;
-
-    expect(context).toBeDefined();
-    expect(context.Yoga).toBeDefined();
-    expect(context.renderer).toBeDefined();
-    expect(typeof context.canvasSize).toBe('function');
-  });
-
   it('should return correct canvas size when calling canvasSize', async () => {
-    const context = canvas.props.context;
+    const context = canvasElement.props.context;
     const { width, height } = context.canvasSize();
 
     expect(typeof width).toBe('number');

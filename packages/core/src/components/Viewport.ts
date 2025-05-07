@@ -54,7 +54,7 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
 
     onMount(element) {
         super.onMount(element)
-        const { tick, renderer, canvasSize } = element.props.context
+        const { tick, app, canvasSize } = element.props.context
         let isDragging = false
         
         effect(() => {
@@ -62,12 +62,19 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
             this.screenHeight = canvasSize().height
         })
 
-        renderer.events.domElement.addEventListener(
-            'wheel',
-            this.input.wheelFunction
-        );
+        effect(() => {
+            const _app = app()
+            if (!_app) return
 
-        this.options.events = renderer.events
+            const renderer = _app.renderer
+            
+            renderer.events.domElement.addEventListener(
+                'wheel',
+                this.input.wheelFunction
+            );
+
+            this.options.events = renderer.events
+        })
  
         this.tickSubscription = tick.observable.subscribe(({ value }) => {
             this.update(value.timestamp)

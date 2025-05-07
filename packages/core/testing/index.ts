@@ -5,7 +5,8 @@ export class TestBed {
         const comp = () => h(Canvas, {
             tickStart: false
         }, h(component, props, children))
-        const canvas = await bootstrapCanvas(document.getElementById('root'), comp)
-        return canvas.props.children?.[0]
+        const { canvasElement, app } = await bootstrapCanvas(document.getElementById('root'), comp)
+        app.render()
+        return canvasElement.props.children?.[0]
     }
 }

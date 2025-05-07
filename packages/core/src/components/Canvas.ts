@@ -1,7 +1,11 @@
 import { effect, Signal, signal } from "@signe/reactive";
-import { Container, autoDetectRenderer } from "pixi.js";
-import { loadYoga } from "yoga-layout";
-import { Props, createComponent, registerComponent, Element } from "../engine/reactive";
+import { Application, Container } from "pixi.js";
+import {
+  Props,
+  createComponent,
+  registerComponent,
+  Element,
+} from "../engine/reactive";
 import { useProps } from "../hooks/useProps";
 import { ComponentInstance, DisplayObject } from "./DisplayObject";
 import { ComponentFunction } from "../engine/signal";
@@ -10,12 +14,12 @@ import { Size } from "./types/DisplayObject";
 import { Scheduler, Tick } from "../directives/Scheduler";
 
 interface CanvasElement extends Element<ComponentInstance> {
-  render: (rootElement: HTMLElement) => void;
+  render: (rootElement: HTMLElement, app?: Application) => void;
   directives: {
-    tick: Scheduler
+    tick: Scheduler;
   };
   propObservables: {
-    tick: Signal<Tick>
+    tick: Signal<Tick>;
   };
 }
 
@@ -30,33 +34,26 @@ export interface CanvasProps extends Props {
   isRoot?: boolean;
   tick?: any;
   class?: SignalOrPrimitive<string>;
+  background?: string;
 }
 
 export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
   let { cursorStyles, width, height, class: className } = useProps(props);
-  const Yoga = await loadYoga();
 
-  if (!props.width) width = signal<Size>(800)
-  if (!props.height) height = signal<Size>(600)
-
-  const renderer = await autoDetectRenderer({
-    ...props,
-    width: width?.(),
-    height: height?.(),
-  });
+  if (!props.width) width = signal<Size>(800);
+  if (!props.height) height = signal<Size>(600);
 
   const canvasSize = signal({
-    width: renderer.width,
-    height: renderer.height,
+    width: 0,
+    height: 0,
   });
 
   props.isRoot = true;
   const options: CanvasProps = {
     ...props,
     context: {
-      Yoga,
-      renderer,
       canvasSize,
+      app: signal(null),
     },
     width: width?.(),
     height: height?.(),
@@ -70,9 +67,15 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
       deltaRatio: 1,
     });
   }
+
   const canvasElement = createComponent("Canvas", options) as CanvasElement;
 
-  canvasElement.render = (rootElement: HTMLElement) => {
+  canvasElement.render = (rootElement: HTMLElement, app?: Application) => {
+    if (!app) {
+      return;
+    }
+
+    const renderer = app.renderer;
     const canvasEl = renderer.view.canvas as HTMLCanvasElement;
 
     (globalThis as any).__PIXI_STAGE__ = canvasElement.componentInstance;
@@ -83,6 +86,34 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
     effect(() => {
       canvasElement.propObservables!.tick();
       renderer.render(canvasElement.componentInstance as any);
+    });
+
+    app.stage = canvasElement.componentInstance as any;
+
+    app.stage.layout = {
+      width: app.screen.width,
+      height: app.screen.height,
+      justifyContent: props.justifyContent,
+      alignItems: props.alignItems,
+    };
+
+    canvasSize.set({ width: app.screen.width, height: app.screen.height })
+
+    app.renderer.on('resize', (width: number, height: number) => {
+      canvasSize.set({ width, height });
+
+      if (app.stage.layout) {
+        app.stage.layout = {
+          width,
+          height
+        }
+      }
+    });
+
+    if (props.tickStart !== false) canvasElement.directives.tick.start();
+
+    app.ticker.add(() => {
+      canvasElement.propObservables!.tick();
     });
 
     if (cursorStyles) {
@@ -97,37 +128,14 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
       });
     }
 
-    const resizeCanvas = async () => {
-      let w, h;
-      if (width?.() === "100%" && height?.() === "100%") {
-        const parent = canvasEl.parentElement;
-        w = parent ? parent.clientWidth : window.innerWidth;
-        h = parent ? parent.clientHeight : window.innerHeight;
-      } else {
-        w = width?.() ?? canvasEl.offsetWidth;
-        h = height?.() ?? canvasEl.offsetHeight;
-      }
-      renderer.resize(w, h);
-      canvasSize.set({ width: w, height: h });
-      canvasElement.componentInstance.setWidth(w)
-      canvasElement.componentInstance.setHeight(h)
-    };
-
-    // Listen for window resize events
-    window.addEventListener("resize", resizeCanvas);
-
-    // Check if a canvas already exists in the rootElement
-    const existingCanvas = rootElement.querySelector('canvas');
+    const existingCanvas = rootElement.querySelector("canvas");
     if (existingCanvas) {
-      // If it exists, replace it with the new canvas
       rootElement.replaceChild(canvasEl, existingCanvas);
     } else {
-      // If it doesn't exist, append the new canvas
       rootElement.appendChild(canvasEl);
     }
 
-     // Initial resize
-     resizeCanvas();
+    options.context!.app.set(app)
   };
 
   return canvasElement;

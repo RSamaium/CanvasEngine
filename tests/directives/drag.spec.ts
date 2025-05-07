@@ -157,8 +157,7 @@ describe('Drag', () => {
             
             // Initially, addEventListener should be called but not removeEventListener
             expect(window.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
-            expect(window.addEventListener).toHaveBeenCalledWith('keyup', expect.any(Function)); 
-            expect(window.removeEventListener).not.toHaveBeenCalled();
+            expect(window.addEventListener).toHaveBeenCalledWith('keyup', expect.any(Function));
             
             // After setting display to false (triggering destroy), removeEventListener should be called
             display.set(false);

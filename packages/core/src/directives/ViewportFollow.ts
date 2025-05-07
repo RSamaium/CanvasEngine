@@ -40,7 +40,7 @@ export class ViewportFollow extends Directive {
                     radius: options.radius()
                 })
             }
-        } else {
+        } else if (viewportFollow === null) {
             viewport.plugins.remove('follow')
         }
     }

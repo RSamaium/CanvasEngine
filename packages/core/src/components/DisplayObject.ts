@@ -10,6 +10,8 @@ import type {
 import { effect, Signal, signal } from "@signe/reactive";
 import { DropShadowFilter } from "pixi-filters";
 import { BlurFilter, ObservablePoint } from "pixi.js";
+import { Layout, LayoutOptions } from "@pixi/layout";
+import { isPercent } from "../utils/functions";
 
 export interface ComponentInstance extends PixiMixins.ContainerOptions {
   id?: string;
@@ -20,6 +22,7 @@ export interface ComponentInstance extends PixiMixins.ContainerOptions {
   onMount?(context: Element, index?: number): void;
   setWidth(width: number): void;
   setHeight(height: number): void;
+  layout: Layout;
 }
 
 export const EVENTS = [
@@ -110,11 +113,7 @@ export function DisplayObject(extendClass) {
     displayWidth = signal(0);
     displayHeight = signal(0);
     overrideProps: string[] = [];
-    node: Node;
-
-    get yoga() {
-      return this.#canvasContext?.Yoga;
-    }
+    layout = null
 
     get deltaRatio() {
       return this.#canvasContext?.scheduler?.tick.value.deltaRatio;
@@ -128,80 +127,36 @@ export function DisplayObject(extendClass) {
           this.on(event, props[event]);
         }
       }
+     if (
+        props.justifyContent || 
+        props.alignItems || 
+        props.flexDirection || 
+        props.flexWrap || 
+        props.alignContent ||
+        props.display == "flex" ||
+        isPercent(props.width) ||
+        isPercent(props.height) ||
+        props.isRoot
+      ) {
+      this.layout = {}
+      this.isFlex = true
+     }
     }
 
     onMount({ parent, props }: Element<DisplayObject>, index?: number) {
       this.#canvasContext = props.context;
-      this.node = this.yoga.Node.create();
       if (parent) {
         const instance = parent.componentInstance as DisplayObject;
+        if (instance.isFlex && !this.layout) {
+          this.layout = {}
+        }
         if (index === undefined) {
           instance.addChild(this);
         } else {
           instance.addChildAt(this, index);
         }
-        if (instance.layer) this.parentLayer = instance.layer;
         this.isMounted = true;
-        this.effectSize(props.width, props.height);
         this.onUpdate(props);
-        this.parent.node.insertChild(
-          this.node,
-          this.parent.node.getChildCount()
-        );
-        if (parent.props.flexDirection) {
-          this.parent.node.calculateLayout();
-          for (let child of this.parent.children) {
-            const { left, top } = child.getComputedLayout();
-            child.x = left;
-            child.y = top;
-          }
-        }
-      
-      }
-    }
-
-    effectSize(width: Size, height: Size) {
-      const handleSize = (
-        size: Size,
-        setter: (value: number) => void,
-        parentSize: Signal<number>
-      ) => {
-        if (typeof size === "string" && size.endsWith("%")) {
-          effect(() => {
-            setter(parentSize() * (parseInt(size) / 100));
-            if (this.isFlex) {
-              this.applyFlexLayout();
-            }
-          });
-        } else {
-          setter(+size);
-        }
-      };
-
-      if (width != undefined)
-        handleSize(width, this.setWidth.bind(this), this.parent.displayWidth);
-      if (height != undefined)
-        handleSize(
-          height,
-          this.setHeight.bind(this),
-          this.parent.displayHeight
-        );
-    }
-
-    applyFlexLayout() {
-      this.calculateLayout();
-      for (let child of this.children) {
-        const { left, top } = child.node.getComputedLayout();
-        child.x = left;
-        child.y = top;
-      }
-    }
-
-    #flexRender(props) {
-      if (!this.parent) return;
-      if (props.flexDirection || props.justifyContent) {
-        this.isFlex = true;
-        this.applyFlexLayout();
       }
     }
 
@@ -212,6 +167,7 @@ export function DisplayObject(extendClass) {
       };
 
       if (!this.#canvasContext || !this.parent) return;
+
       if (props.x !== undefined) this.setX(props.x);
       if (props.y !== undefined) this.setY(props.y);
       if (props.scale !== undefined)
@@ -219,6 +175,8 @@ export function DisplayObject(extendClass) {
       if (props.anchor !== undefined && !this.isCustomAnchor) {
         setObservablePoint(this.anchor, props.anchor);
       }
+      if (props.width !== undefined) this.setWidth(props.width);
+      if (props.height !== undefined) this.setHeight(props.height);
       if (props.skew !== undefined) setObservablePoint(this.skew, props.skew);
       if (props.tint) this.tint = props.tint;
       if (props.rotation !== undefined) this.rotation = props.rotation;
@@ -279,73 +237,30 @@ export function DisplayObject(extendClass) {
       }
 
       this.filters = currentFilters;
-
-      this.#flexRender(props);
     }
 
     onDestroy() {
       super.destroy();
-      this.node?.freeRecursive();
-    }
-
-    getComputedLayout() {
-      return this.node.getComputedLayout();
-    }
-
-    applyComputedLayout() {
-      const layout = this.getComputedLayout();
-      this.x = layout.left;
-      this.y = layout.top;
-    }
-
-    calculateLayout() {
-      this.node.calculateLayout();
     }
 
     setFlexDirection(direction: FlexDirection) {
-      const mapping = {
-        row: this.yoga.FLEX_DIRECTION_ROW,
-        column: this.yoga.FLEX_DIRECTION_COLUMN,
-        "row-reverse": this.yoga.FLEX_DIRECTION_ROW_REVERSE,
-        "column-reverse": this.yoga.FLEX_DIRECTION_COLUMN_REVERSE,
-      };
-      this.node.setFlexDirection(mapping[direction]);
+      this.layout = { flexDirection: direction };
     }
 
     setFlexWrap(wrap: "wrap" | "nowrap" | "wrap-reverse") {
-      const mapping = {
-        wrap: this.yoga.WRAP_WRAP,
-        nowrap: this.yoga.WRAP_NO_WRAP,
-        "wrap-reverse": this.yoga.WRAP_WRAP_REVERSE,
-      };
-      this.node.setFlexWrap(mapping[wrap]);
-    }
-
-    #setAlign(methodName: string, align: AlignContent) {
-      const mapping = {
-        auto: this.yoga.ALIGN_AUTO,
-        "flex-start": this.yoga.ALIGN_FLEX_START,
-        "flex-end": this.yoga.ALIGN_FLEX_END,
-        center: this.yoga.ALIGN_CENTER,
-        stretch: this.yoga.ALIGN_STRETCH,
-        baseline: this.yoga.ALIGN_BASELINE,
-        "space-between": this.yoga.ALIGN_SPACE_BETWEEN,
-        "space-around": this.yoga.ALIGN_SPACE_AROUND,
-      };
-      const method = (this.node as any)[methodName].bind(this.node);
-      method(mapping[align]);
+      this.layout = { flexWrap: wrap };
     }
 
     setAlignContent(align: AlignContent) {
-      this.#setAlign("setAlignContent", align);
+      this.layout = { alignContent: align };
     }
 
     setAlignSelf(align: AlignContent) {
-      this.#setAlign("setAlignSelf", align);
+      this.layout = { alignSelf: align };
     }
 
     setAlignItems(align: AlignContent) {
-      this.#setAlign("setAlignItems", align);
+      this.layout = { alignItems: align };
     }
 
     setJustifyContent(
@@ -356,35 +271,27 @@ export function DisplayObject(extendClass) {
         | "space-between"
         | "space-around"
     ) {
-      const mapping = {
-        "flex-start": this.yoga.JUSTIFY_FLEX_START,
-        "flex-end": this.yoga.JUSTIFY_FLEX_END,
-        center: this.yoga.JUSTIFY_CENTER,
-        "space-between": this.yoga.JUSTIFY_SPACE_BETWEEN,
-        "space-around": this.yoga.JUSTIFY_SPACE_AROUND,
-      };
-      this.node.setJustifyContent(mapping[justifyContent]);
-    }
-
-    #setEdgeSize(methodName: string, size: EdgeSize) {
-      const method = (this.node as any)[methodName].bind(this.node);
-      if (size instanceof Array) {
-        if (size.length === 2) {
-          method(this.yoga.EDGE_VERTICAL, size[0]);
-          method(this.yoga.EDGE_HORIZONTAL, size[1]);
-        } else if (size.length === 4) {
-          method(this.yoga.EDGE_TOP, size[0]);
-          method(this.yoga.EDGE_RIGHT, size[1]);
-          method(this.yoga.EDGE_BOTTOM, size[2]);
-          method(this.yoga.EDGE_LEFT, size[3]);
-        }
-      } else {
-        method(this.yoga.EDGE_ALL, size);
-      }
+      this.layout = { justifyContent };
     }
 
     setPosition(position: EdgeSize) {
-      this.#setEdgeSize("setPosition", position);
+      if (position instanceof Array) {
+        if (position.length === 2) {
+          this.layout = {
+            positionY: position[0],
+            positionX: position[1],
+          };
+        } else if (position.length === 4) {
+          this.layout = {
+            positionTop: position[0],
+            positionRight: position[1],
+            positionBottom: position[2],
+            positionLeft: position[3],
+          };
+        }
+      } else {
+        this.layout = { position };
+      }
     }
 
     setX(x: number) {
@@ -392,7 +299,10 @@ export function DisplayObject(extendClass) {
       if (!this.parent.isFlex) {
         this.x = x;
       }
-      this.node.setPosition(this.yoga.EDGE_LEFT, x);
+      else {
+        this.x = x;
+        this.layout = { x };
+      }
     }
 
     setY(y: number) {
@@ -400,51 +310,98 @@ export function DisplayObject(extendClass) {
       if (!this.parent.isFlex) {
         this.y = y;
       }
-      this.node.setPosition(this.yoga.EDGE_TOP, y);
+      else {
+        this.y = y;
+        this.layout = { y };
+      }
     }
 
     setPadding(padding: EdgeSize) {
-      this.#setEdgeSize("setPadding", padding);
+      if (padding instanceof Array) {
+        if (padding.length === 2) {
+          this.layout = {
+            paddingVertical: padding[0],
+            paddingHorizontal: padding[1],
+          };
+        } else if (padding.length === 4) {
+          this.layout = {
+            paddingTop: padding[0],
+            paddingRight: padding[1],
+            paddingBottom: padding[2],
+            paddingLeft: padding[3],
+          };
+        }
+      } else {
+        this.layout = { padding };
+      }
     }
 
     setMargin(margin: EdgeSize) {
-      this.#setEdgeSize("setMargin", margin);
+      if (margin instanceof Array) {
+        if (margin.length === 2) {
+          this.layout = {
+            marginVertical: margin[0],
+            marginHorizontal: margin[1],
+          };
+        } else if (margin.length === 4) {
+          this.layout = {
+            marginTop: margin[0],
+            marginRight: margin[1],
+            marginBottom: margin[2],
+            marginLeft: margin[3],
+          };
+        }
+      } else {
+        this.layout = { margin };
+      }
     }
 
     setGap(gap: EdgeSize) {
-      this.node.setGap(this.yoga.GAP_ALL, +gap);
+      this.layout = { gap };
     }
 
     setBorder(border: EdgeSize) {
-      this.#setEdgeSize("setBorder", border);
+      if (border instanceof Array) {
+        if (border.length === 2) {
+          this.layout = {
+            borderVertical: border[0],
+            borderHorizontal: border[1],
+          };
+        } else if (border.length === 4) {
+          this.layout = {
+            borderTop: border[0],
+            borderRight: border[1],
+            borderBottom: border[2],
+            borderLeft: border[3],
+          };
+        }
+      } else {
+        this.layout = { border };
+      }
     }
 
     setPositionType(positionType: "relative" | "absolute") {
-      const mapping = {
-        relative: this.yoga.POSITION_TYPE_RELATIVE,
-        absolute: this.yoga.POSITION_TYPE_ABSOLUTE,
-      };
-      this.node.setPositionType(mapping[positionType]);
-    }
-
-    calculateBounds() {
-      super.calculateBounds();
-      if (!this._geometry) return;
-      const bounds = this._geometry.bounds;
-      const width = Math.abs(bounds.minX - bounds.maxX);
-      const height = Math.abs(bounds.minY - bounds.maxY);
-      // this.node.setWidth(width);
-      // this.node.setHeight(height);
+      this.layout = { position: positionType };
     }
 
     setWidth(width: number) {
       this.displayWidth.set(width);
-      this.node?.setWidth(width);
+      if (!this.parent?.isFlex) {
+        this.width = width;
+      }
+      else {
+        this.layout = { width };
+      }
     }
 
     setHeight(height: number) {
       this.displayHeight.set(height);
-      this.node?.setHeight(height);
+      if (!this.parent?.isFlex) {
+        this.height = height;
+      }
+      else {
+        this.layout = { height };
+      }
     }
 
     getWidth() {

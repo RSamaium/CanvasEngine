@@ -7,23 +7,15 @@
     animatedSequence,
   } from "canvasengine";
   import MyViewport from "./viewport.ce";
-  const display = signal(false);
-
-  const playing = false
   
-  const sound = signal({
-    src: "exp.mp3",
-    loop: false,
-    volume: 1,
-    playing
-  })
+  const array = signal([])
 
-  const click = () => {
-    sound.update(val => ({ ...val, playing: !val.playing }))
-  }
-  
+  let i = 0
 </script>
 
-<Canvas width="100%" height="100%">
-  <Sprite sound image="exp.png" click />
+
+<Canvas>
+  <Container flexDirection="row" width={200} height={100} flexWrap="wrap">
+    <Rect width={60} height={50} color="red" />
+  </Container>
 </Canvas>

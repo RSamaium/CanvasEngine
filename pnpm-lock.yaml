@@ -81,7 +81,10 @@ importers:
     dependencies:
       '@barvynkoa/particle-emitter':
         specifier: ^0.0.1
-        version: 0.0.1(pixi.js@8.6.6)
+        version: 0.0.1(pixi.js@8.9.2)
+      '@pixi/layout':
+        specifier: ^3.0.2
+        version: 3.0.2(@types/react@19.1.3)(pixi.js@8.9.2)(react@19.1.0)(yoga-layout@3.2.1)
       '@signe/reactive':
         specifier: ^2.3.3
         version: 2.3.3
@@ -90,13 +93,13 @@ importers:
         version: 2.2.4
       pixi-filters:
         specifier: ^6.0.5
-        version: 6.0.5(pixi.js@8.6.6)
+        version: 6.0.5(pixi.js@8.9.2)
       pixi-viewport:
         specifier: ^6.0.3
-        version: 6.0.3(pixi.js@8.6.6)
+        version: 6.0.3(pixi.js@8.9.2)
       pixi.js:
-        specifier: ^8.6.4
-        version: 8.6.6
+        specifier: ^8.9.2
+        version: 8.9.2
       popmotion:
         specifier: ^11.0.5
         version: 11.0.5
@@ -104,8 +107,8 @@ importers:
         specifier: ^7.8.1
         version: 7.8.1
       yoga-layout:
-        specifier: ^2.0.1
-        version: 2.0.1
+        specifier: ^3.2.1
+        version: 3.2.1
     devDependencies:
       '@types/howler':
         specifier: ^2.2.11
@@ -128,6 +131,19 @@ importers:
       revolt-fx:
         specifier: ^1.3.5
         version: 1.3.5(pixi.js@8.6.6)
+
+  sample:
+    dependencies:
+      path-browserify:
+        specifier: ^1.0.1
+        version: 1.0.1
+      vite:
+        specifier: ^6.0.5
+        version: 6.0.5(@types/node@22.10.2)(jiti@2.4.2)(lightningcss@1.28.2)
+    devDependencies:
+      '@pixi/layout':
+        specifier: ^3.0.2
+        version: 3.0.2(@types/react@19.1.3)(pixi.js@8.9.2)(react@19.1.0)(yoga-layout@3.2.1)
 
 packages:
 
@@ -737,6 +753,18 @@ packages:
   '@pixi/colord@2.9.6':
     resolution: {integrity: sha512-nezytU2pw587fQstUu1AsJZDVEynjskwOL+kibwcdxsMBFqPsFFNA7xl0ii/gXuDi6M0xj3mfRJj8pBSc2jCfA==}
 
+  '@pixi/layout@3.0.2':
+    resolution: {integrity: sha512-xZwGWhpRa7c/gnbTsN9lguDH1qVQBlqppFbsgU8EpDoSJOw3JqODnCPebeEi5ZzL3KiCz3MW1bYaUrPjeKAJnQ==}
+    peerDependencies:
+      pixi.js: ^8
+      yoga-layout: ^3
+
+  '@pixi/react@8.0.1':
+    resolution: {integrity: sha512-HN5PdmnB6dt2IB/lKN16PXcqRX4cWyJf62316qCp+hl6vSGpNqvd014NfwuqoIGOThNTm805UsmHfsiXRy1Cgw==}
+    peerDependencies:
+      pixi.js: ^8.2.6
+      react: '>=19.0.0'
+
   '@pixi/tilemap@5.0.1':
     resolution: {integrity: sha512-ePdtS7WXF0FfQM6WajIynDLKC7+57ErOxXfB1cTKG7jN0WIbZFSEoU/MSJS02kIKDWOyRRoe+R5im+3LXU5BBw==}
     peerDependencies:
@@ -867,6 +895,14 @@ packages:
 
   '@types/node@22.10.2':
     resolution: {integrity: sha512-Xxr6BBRCAOQixvonOye19wnzyDiUtTeqldOOmj3CkeblonbccA12PFwlufvRdrpjXxqnmUaeiU5EOA+7s5diUQ==}
+
+  '@types/react-reconciler@0.28.9':
+    resolution: {integrity: sha512-HHM3nxyUZ3zAylX8ZEyrDNd2XZOnQ0D5XfunJF5FLQnZbHHYq4UWvW1QfelQNXv1ICNkwYhfxjwfnqivYB6bFg==}
+    peerDependencies:
+      '@types/react': '*'
+
+  '@types/react@19.1.3':
+    resolution: {integrity: sha512-dLWQ+Z0CkIvK1J8+wrDPwGxEYFA4RAyHoZPxHVGspYmFVnwGSNT24cGIhFJrtfRnWVuW8X7NO52gCXmhkVUWGQ==}
 
   '@ungap/structured-clone@1.2.1':
     resolution: {integrity: sha512-fEzPV3hSkSMltkw152tJKNARhOupqbH96MZWyRjNaYZOMIzbrTeQDG+MTc6Mr2pgzFQzFxAfmhGDNP5QK++2ZA==}
@@ -1124,6 +1160,9 @@ packages:
   cssstyle@4.1.0:
     resolution: {integrity: sha512-h66W1URKpBS5YMI/V8PyXvTMFT8SupJ1IzoIV8IeBC/ji8WVmrO8dGlTi+2dh6whmdk6BiKJLD/ZBkhWbcg6nA==}
     engines: {node: '>=18'}
+
+  csstype@3.1.3:
+    resolution: {integrity: sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==}
 
   data-urls@5.0.0:
     resolution: {integrity: sha512-ZYP5VBHshaDAiVZxjbRVcFJpc+4xGgT0bK3vzy1HLN8jTO975HEbuYzZJcHoQEY5K1a0z8YayJkyVETa08eNTg==}
@@ -1403,6 +1442,9 @@ packages:
     resolution: {integrity: sha512-VaUJspBffn/LMCJVoMvSAdmscJyS1auj5Zulnn5UoYcY531UWmdwhRWkcGKnGU93m5HSXP9LP2usOryrBtQowA==}
     engines: {node: '>=16'}
 
+  gifuct-js@2.1.2:
+    resolution: {integrity: sha512-rI2asw77u0mGgwhV3qA+OEgYqaDn5UNqgs+Bx0FGwSpuqfYn+Ir6RQY5ENNQ8SbIiG/m5gVa7CD5RriO4f4Lsg==}
+
   giget@1.2.3:
     resolution: {integrity: sha512-8EHPljDvs7qKykr6uw8b+lqLiUc/vUg+KVTI0uND4s63TdsZM2Xus3mflvF0DDG9SiM4RlCkFGL+7aAjRmV7KA==}
     hasBin: true
@@ -1563,6 +1605,11 @@ packages:
     resolution: {integrity: sha512-BewmUXImeuRk2YY0PVbxgKAysvhRPUQE0h5QRM++nVWyubKGV0l8qQ5op8+B2DOmwSe63Jivj0BjkPQVf8fP5g==}
     engines: {node: '>=8'}
 
+  its-fine@2.0.0:
+    resolution: {integrity: sha512-KLViCmWx94zOvpLwSlsx6yOCeMhZYaxrJV87Po5k/FoZzcPSahvK5qJ7fYhS61sZi5ikmh2S3Hz55A2l3U69ng==}
+    peerDependencies:
+      react: ^19.0.0
+
   jackspeak@3.4.3:
     resolution: {integrity: sha512-OGlZQpz2yfahA/Rd1Y8Cd9SIEsqvXkLVoSw/cgwhnhFMDbsQFeZYoJJ7bIZBS9BcamUW96asq/npPWugM+RQBw==}
 
@@ -1573,6 +1620,9 @@ packages:
   joycon@3.1.1:
     resolution: {integrity: sha512-34wB/Y7MW7bzjKRjUKTa46I2Z7eV62Rkhva+KkopW7Qvv/OSWBqvkSY7vusOPrNuZcUG3tApvdVgNB8POj3SPw==}
     engines: {node: '>=10'}
+
+  js-binary-schema-parser@2.0.3:
+    resolution: {integrity: sha512-xezGJmOb4lk/M1ZZLTR/jaBHQ4gG/lqQnJqdIv4721DMggsa1bDVlHXNeHYogaIEHD9vCRv0fcL4hMA+Coarkg==}
 
   js-yaml@3.14.1:
     resolution: {integrity: sha512-okMH7OXXJ7YrN9Ok3/SXrnu4iX9yOk+25nqX4imS2npuvTYDmo/QEZoqwZkYaIDk3jVvBOTOIEgEhaLOynBS9g==}
@@ -1916,6 +1966,9 @@ packages:
   parse5@7.2.1:
     resolution: {integrity: sha512-BuBYQYlv1ckiPdQi/ohiivi9Sagc9JG+Ozs0r7b/0iK3sKmrb0b9FdWdBbOdx6hBCM/F9Ir82ofnBhtZOjCRPQ==}
 
+  path-browserify@1.0.1:
+    resolution: {integrity: sha512-b7uo2UCUOYZcnF/3ID0lulOJi/bafxa1xPe7ZPsammBSpjSWQkjNxlt635YGS2MiR9GjvuXCtz2emr3jbsz98g==}
+
   path-exists@4.0.0:
     resolution: {integrity: sha512-ak9Qy5Q7jYb2Wwcey5Fpvg2KoAc/ZIhLSLOSBmRmygPsGwkVVt0fZa0qrtMz+m6tJTAHfZQ8FnmB4MG4LWy7/w==}
     engines: {node: '>=8'}
@@ -1987,6 +2040,9 @@ packages:
   pixi.js@8.6.6:
     resolution: {integrity: sha512-o5pw7G2yuIrnBx0G4npBlmFp+XGNcapI/Ufs62rRj/4XKxc1Zo74YJr/BtEXcXTraTKd+pQvYOLvnfxRjxBMvQ==}
 
+  pixi.js@8.9.2:
+    resolution: {integrity: sha512-oLFBkOOA/O6OpT5T8o05AxgZB9x9yWNzEQ+WTNZZFoCvfU2GdT4sFTjpVFuHQzgZPmAm/1IFhKdNiXVnlL8PRw==}
+
   pkg-types@1.2.1:
     resolution: {integrity: sha512-sQoqa8alT3nHjGuTjuKgOnvjo4cljkufdtLMnO2LBP/wRwuDlo1tkaEdMxCRhyGRPacv/ztlZgDPm2b7FAmEvw==}
 
@@ -2040,6 +2096,16 @@ packages:
 
   rc9@2.1.2:
     resolution: {integrity: sha512-btXCnMmRIBINM2LDZoEmOogIZU7Qe7zn4BpomSKZ/ykbLObuBdvG+mFq11DL6fjH1DRwHhrlgtYWG96bJiC7Cg==}
+
+  react-reconciler@0.31.0:
+    resolution: {integrity: sha512-7Ob7Z+URmesIsIVRjnLoDGwBEG/tVitidU0nMsqX/eeJaLY89RISO/10ERe0MqmzuKUUB1rmY+h1itMbUHg9BQ==}
+    engines: {node: '>=0.10.0'}
+    peerDependencies:
+      react: ^19.0.0
+
+  react@19.1.0:
+    resolution: {integrity: sha512-FS+XFBNvn3GTAWq26joslQgWNoFu08F4kl0J4CgdNKADkdSGXQyTCnKteIAJy96Br6YbpEU1LSzV5dYtjMkMDg==}
+    engines: {node: '>=0.10.0'}
 
   read-yaml-file@1.1.0:
     resolution: {integrity: sha512-VIMnQi/Z4HT2Fxuwg5KrY174U1VdUIASQVWXXyqtNRtxSr9IYkn1rsI6Tb6HsrHCmB7gVpNwX6JxPTHcH6IoTA==}
@@ -2114,6 +2180,9 @@ packages:
   saxes@6.0.0:
     resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
     engines: {node: '>=v12.22.7'}
+
+  scheduler@0.25.0:
+    resolution: {integrity: sha512-xFVuu11jh+xcO7JOAGJNOXld8/TcEHK/4CituBUeUb5hqxJLj9YuemAEuvm9gQ/+pgXYfbQuqAkiYu+u7YEsNA==}
 
   semver@6.3.1:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
@@ -2564,8 +2633,8 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
-  yoga-layout@2.0.1:
-    resolution: {integrity: sha512-tT/oChyDXelLo2A+UVnlW9GU7CsvFMaEnd9kVFsaiCQonFAXd3xrHhkLYu+suwwosrAEQ746xBU+HvYtm1Zs2Q==}
+  yoga-layout@3.2.1:
+    resolution: {integrity: sha512-0LPOt3AxKqMdFBZA3HBAt/t/8vIKq7VaQYbuA8WxCgung+p9TVyKRYdpvCb80HcdTN2NkbIKbhNwKUfm3tQywQ==}
 
 snapshots:
 
@@ -2591,9 +2660,9 @@ snapshots:
       '@babel/helper-string-parser': 7.25.9
       '@babel/helper-validator-identifier': 7.25.9
 
-  '@barvynkoa/particle-emitter@0.0.1(pixi.js@8.6.6)':
+  '@barvynkoa/particle-emitter@0.0.1(pixi.js@8.9.2)':
     dependencies:
-      pixi.js: 8.6.6
+      pixi.js: 8.9.2
 
   '@bcoe/v8-coverage@0.2.3': {}
 
@@ -3068,6 +3137,26 @@ snapshots:
 
   '@pixi/colord@2.9.6': {}
 
+  '@pixi/layout@3.0.2(@types/react@19.1.3)(pixi.js@8.9.2)(react@19.1.0)(yoga-layout@3.2.1)':
+    dependencies:
+      pixi.js: 8.9.2
+      yoga-layout: 3.2.1
+    optionalDependencies:
+      '@pixi/react': 8.0.1(@types/react@19.1.3)(pixi.js@8.9.2)(react@19.1.0)
+    transitivePeerDependencies:
+      - '@types/react'
+      - react
+
+  '@pixi/react@8.0.1(@types/react@19.1.3)(pixi.js@8.9.2)(react@19.1.0)':
+    dependencies:
+      its-fine: 2.0.0(@types/react@19.1.3)(react@19.1.0)
+      pixi.js: 8.9.2
+      react: 19.1.0
+      react-reconciler: 0.31.0(react@19.1.0)
+    transitivePeerDependencies:
+      - '@types/react'
+    optional: true
+
   '@pixi/tilemap@5.0.1(pixi.js@8.6.6)':
     dependencies:
       pixi.js: 8.6.6
@@ -3160,6 +3249,16 @@ snapshots:
   '@types/node@22.10.2':
     dependencies:
       undici-types: 6.20.0
+
+  '@types/react-reconciler@0.28.9(@types/react@19.1.3)':
+    dependencies:
+      '@types/react': 19.1.3
+    optional: true
+
+  '@types/react@19.1.3':
+    dependencies:
+      csstype: 3.1.3
+    optional: true
 
   '@ungap/structured-clone@1.2.1': {}
 
@@ -3437,6 +3536,9 @@ snapshots:
   cssstyle@4.1.0:
     dependencies:
       rrweb-cssom: 0.7.1
+
+  csstype@3.1.3:
+    optional: true
 
   data-urls@5.0.0:
     dependencies:
@@ -3789,6 +3891,10 @@ snapshots:
 
   get-stream@8.0.1: {}
 
+  gifuct-js@2.1.2:
+    dependencies:
+      js-binary-schema-parser: 2.0.3
+
   giget@1.2.3:
     dependencies:
       citty: 0.1.6
@@ -3957,6 +4063,14 @@ snapshots:
       html-escaper: 2.0.2
       istanbul-lib-report: 3.0.1
 
+  its-fine@2.0.0(@types/react@19.1.3)(react@19.1.0):
+    dependencies:
+      '@types/react-reconciler': 0.28.9(@types/react@19.1.3)
+      react: 19.1.0
+    transitivePeerDependencies:
+      - '@types/react'
+    optional: true
+
   jackspeak@3.4.3:
     dependencies:
       '@isaacs/cliui': 8.0.2
@@ -3966,6 +4080,8 @@ snapshots:
   jiti@2.4.2: {}
 
   joycon@3.1.1: {}
+
+  js-binary-schema-parser@2.0.3: {}
 
   js-yaml@3.14.1:
     dependencies:
@@ -4290,6 +4406,8 @@ snapshots:
     dependencies:
       entities: 4.5.0
 
+  path-browserify@1.0.1: {}
+
   path-exists@4.0.0: {}
 
   path-is-absolute@1.0.1: {}
@@ -4327,14 +4445,14 @@ snapshots:
 
   pirates@4.0.6: {}
 
-  pixi-filters@6.0.5(pixi.js@8.6.6):
+  pixi-filters@6.0.5(pixi.js@8.9.2):
     dependencies:
       '@types/gradient-parser': 0.1.5
-      pixi.js: 8.6.6
+      pixi.js: 8.9.2
 
-  pixi-viewport@6.0.3(pixi.js@8.6.6):
+  pixi-viewport@6.0.3(pixi.js@8.9.2):
     dependencies:
-      pixi.js: 8.6.6
+      pixi.js: 8.9.2
 
   pixi.js@8.6.6:
     dependencies:
@@ -4345,6 +4463,19 @@ snapshots:
       '@xmldom/xmldom': 0.8.10
       earcut: 2.2.4
       eventemitter3: 5.0.1
+      ismobilejs: 1.1.1
+      parse-svg-path: 0.1.2
+
+  pixi.js@8.9.2:
+    dependencies:
+      '@pixi/colord': 2.9.6
+      '@types/css-font-loading-module': 0.0.12
+      '@types/earcut': 2.1.4
+      '@webgpu/types': 0.1.52
+      '@xmldom/xmldom': 0.8.10
+      earcut: 2.2.4
+      eventemitter3: 5.0.1
+      gifuct-js: 2.1.2
       ismobilejs: 1.1.1
       parse-svg-path: 0.1.2
 
@@ -4393,6 +4524,15 @@ snapshots:
     dependencies:
       defu: 6.1.4
       destr: 2.0.3
+
+  react-reconciler@0.31.0(react@19.1.0):
+    dependencies:
+      react: 19.1.0
+      scheduler: 0.25.0
+    optional: true
+
+  react@19.1.0:
+    optional: true
 
   read-yaml-file@1.1.0:
     dependencies:
@@ -4485,6 +4625,9 @@ snapshots:
   saxes@6.0.0:
     dependencies:
       xmlchars: 2.2.0
+
+  scheduler@0.25.0:
+    optional: true
 
   semver@6.3.1:
     optional: true
@@ -4881,4 +5024,4 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  yoga-layout@2.0.1: {}
+  yoga-layout@3.2.1: {}

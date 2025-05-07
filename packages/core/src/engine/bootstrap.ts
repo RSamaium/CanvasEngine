@@ -1,3 +1,5 @@
+import '@pixi/layout';
+import { Application } from "pixi.js";
 import { ComponentFunction, h } from "./signal";
 
 /**
@@ -9,11 +11,21 @@ import { ComponentFunction, h } from "./signal";
  * @throws {Error} If the provided element is not a Canvas component.
  */
 export const bootstrapCanvas = async (rootElement: HTMLElement | null, canvas: ComponentFunction<any>) => {
+  
+  const app = new Application();
+  await app.init({
+    resizeTo: rootElement,
+    autoStart: false,
+  });
+
   const canvasElement = await h(canvas);
   if (canvasElement.tag != 'Canvas') {
     throw new Error('Canvas is required');
   }
-  (canvasElement as any).render(rootElement);
+  (canvasElement as any).render(rootElement, app);
 
-  return canvasElement;
+  return {
+    canvasElement,
+    app
+  };
 };

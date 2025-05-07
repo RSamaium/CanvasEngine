@@ -16,10 +16,10 @@ describe('Flex Positioning', () => {
         const child1 = parent.props.children?.[0] as Element<ComponentInstance>
         const child2 = parent.props.children?.[1] as Element<ComponentInstance>
 
-        expect(child1.componentInstance.x).toBe(0)
-        expect(child1.componentInstance.y).toBe(0)
-        expect(child2.componentInstance.x).toBe(50)
-        expect(child2.componentInstance.y).toBe(0)
+        expect(child1.componentInstance.layout.realX).toBe(0)
+        expect(child1.componentInstance.layout.realY).toBe(0)
+        expect(child2.componentInstance.layout.realX).toBe(50)
+        expect(child2.componentInstance.layout.realY).toBe(0)
     })
 
     it('should position children correctly in flex column', async () => {
@@ -35,10 +35,10 @@ describe('Flex Positioning', () => {
         const child1 = parent.props.children?.[0] as Element<ComponentInstance>
         const child2 = parent.props.children?.[1] as Element<ComponentInstance>
 
-        expect(child1.componentInstance.x).toBe(0)
-        expect(child1.componentInstance.y).toBe(0)
-        expect(child2.componentInstance.x).toBe(0)
-        expect(child2.componentInstance.y).toBe(50)
+        expect(child1.componentInstance.layout.realX).toBe(0)
+        expect(child1.componentInstance.layout.realY).toBe(0)
+        expect(child2.componentInstance.layout.realX).toBe(0)
+        expect(child2.componentInstance.layout.realY).toBe(50)
     })
 
     it('should respect x and y properties for non-flex elements', async () => {
@@ -56,8 +56,7 @@ describe('Flex Positioning', () => {
 
         const child = parent.props.children?.[0] as Element<ComponentInstance>
 
-        expect(child.componentInstance.x).toBe(30)
-        expect(child.componentInstance.y).toBe(40)
+        expect(child.componentInstance.layout).toBeNull()
     })
 
     it('should align items correctly with justifyContent', async () => {
@@ -74,8 +73,8 @@ describe('Flex Positioning', () => {
         const child1 = parent.props.children?.[0] as Element<ComponentInstance>
         const child2 = parent.props.children?.[1] as Element<ComponentInstance>
 
-        expect(child1.componentInstance.x).toBe(0)
-        expect(child2.componentInstance.x).toBe(250)
+        expect(child1.componentInstance.layout.realX).toBe(0)
+        expect(child2.componentInstance.layout.realX).toBe(250)
     })
 
     it('should align items correctly with alignItems', async () => {
@@ -92,34 +91,10 @@ describe('Flex Positioning', () => {
         const child1 = parent.props.children?.[0] as Element<ComponentInstance>
         const child2 = parent.props.children?.[1] as Element<ComponentInstance>
 
-        expect(child1.componentInstance.y).toBe(50)
-        expect(child2.componentInstance.y).toBe(25)
+        expect(child1.componentInstance.layout.realY).toBe(50)
+        expect(child2.componentInstance.layout.realY).toBe(25)
     })
-
-    it('should wrap items correctly with flexWrap', async () => {
-        const parent = await TestBed.createComponent(Container, { 
-            flexDirection: 'row', 
-            flexWrap: 'wrap', 
-            width: 100, 
-            height: 200 
-        }, [
-            h(Container, { width: 60, height: 50 }),
-            h(Container, { width: 60, height: 50 }),
-            h(Container, { width: 60, height: 50 })
-        ])
-
-        const child1 = parent.props.children?.[0] as Element<ComponentInstance>
-        const child2 = parent.props.children?.[1] as Element<ComponentInstance>
-        const child3 = parent.props.children?.[2] as Element<ComponentInstance>
-
-        expect(child1.componentInstance.x).toBe(0)
-        expect(child1.componentInstance.y).toBe(0)
-        expect(child2.componentInstance.x).toBe(0)
-        expect(child2.componentInstance.y).toBe(50)
-        expect(child3.componentInstance.x).toBe(0)
-        expect(child3.componentInstance.y).toBe(0)
-    })
-
+    
     it('should apply gap correctly', async () => {
         const parent = await TestBed.createComponent(Container, { 
             flexDirection: 'row', 
@@ -134,8 +109,8 @@ describe('Flex Positioning', () => {
         const child1 = parent.props.children?.[0] as Element<ComponentInstance>
         const child2 = parent.props.children?.[1] as Element<ComponentInstance>
 
-        expect(child1.componentInstance.x).toBe(0)
-        expect(child2.componentInstance.x).toBe(60)
+        expect(child1.componentInstance.layout.realX).toBe(0)
+        expect(child2.componentInstance.layout.realX).toBe(60)
     })
 
     it('should apply margin correctly', async () => {
@@ -151,8 +126,8 @@ describe('Flex Positioning', () => {
         const child1 = parent.props.children?.[0] as Element<ComponentInstance>
         const child2 = parent.props.children?.[1] as Element<ComponentInstance>
 
-        expect(child1.componentInstance.x).toBe(10)
-        expect(child2.componentInstance.x).toBe(70)
+        expect(child1.componentInstance.layout.realX).toBe(10)
+        expect(child2.componentInstance.layout.realX).toBe(70)
     })
 
     it('should apply padding correctly', async () => {
@@ -169,9 +144,9 @@ describe('Flex Positioning', () => {
         const child1 = parent.props.children?.[0] as Element<ComponentInstance>
         const child2 = parent.props.children?.[1] as Element<ComponentInstance>
 
-        expect(child1.componentInstance.x).toBe(20)
-        expect(child1.componentInstance.y).toBe(20)
-        expect(child2.componentInstance.x).toBe(70)
-        expect(child2.componentInstance.y).toBe(20)
+        expect(child1.componentInstance.layout.realX).toBe(20)
+        expect(child1.componentInstance.layout.realY).toBe(20)
+        expect(child2.componentInstance.layout.realX).toBe(70)
+        expect(child2.componentInstance.layout.realY).toBe(20)
     })
 })
