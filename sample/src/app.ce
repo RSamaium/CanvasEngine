@@ -30,7 +30,9 @@
         <Rect width={300} height={300} color="red" click />
       }
       @if (!bool) {
-        <Rect width={300} height={300} alpha={opacity} color="blue" x={300} click onBeforeDestroy={beforeDestroy} />
+        <Container onBeforeDestroy={beforeDestroy}>
+          <Rect width={300} height={300} alpha={opacity} color="blue" x={300} click  />
+        </Container>
       }
     </Container>
 </Canvas>
