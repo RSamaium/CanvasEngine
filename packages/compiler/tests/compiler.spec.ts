@@ -407,6 +407,46 @@ describe("Loop", () => {
 });
 
 describe("Condition", () => {
+  test("should compile condition", () => {
+    const input = `
+            @if (sprite) {
+                <Sprite />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(sprite, () => h(Sprite))`);
+  });
+
+  test("should compile negative condition", () => {
+    const input = `
+            @if (!sprite) {
+                <Sprite />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(computed(() => !sprite()), () => h(Sprite))`);
+  });
+
+  test("should compile negative condition with multiple condition", () => {
+    const input = `
+            @if (!sprite && other) {
+                <Sprite />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(computed(() => !sprite() && other()), () => h(Sprite))`);
+  });
+
+  test("should compile negative condition with multiple condition (or)", () => {
+    const input = `
+            @if (!sprite || other) {
+                <Sprite />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(computed(() => !sprite() || other()), () => h(Sprite))`);
+  });
+
   test("should compile condition when sprite is visible", () => {
     const input = `
             @if (sprite.visible) {

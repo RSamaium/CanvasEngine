@@ -332,7 +332,26 @@ dotFunctionChain
 
 condition "condition expression"
   = functionCall
-  / $([^)]*) { return text().trim(); }
+  / text_condition:$([^)]*) {
+      const originalText = text_condition.trim();
+
+      // Transform simple identifiers to function calls like "foo" to "foo()"
+      // This regex matches identifiers not followed by an opening parenthesis.
+      // This transformation should only apply if we are wrapping in 'computed'.
+      if (originalText.includes('!') || originalText.includes('&&') || originalText.includes('||')) {
+          const transformedText = originalText.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*\()/g, (match) => {
+              // Do not transform keywords (true, false, null) or numeric literals
+              if (['true', 'false', 'null'].includes(match) || /^\d+(\.\d+)?$/.test(match)) {
+                  return match;
+              }
+              return `${match}()`;
+          });
+          return `computed(() => ${transformedText})`;
+      }
+      // For simple conditions (no !, &&, ||), return the original text as is.
+      // Cases like `myFunction()` are handled by the `functionCall` rule.
+      return originalText;
+  }
 
 functionCall "function call"
   = name:identifier "(" args:functionArgs? ")" {
