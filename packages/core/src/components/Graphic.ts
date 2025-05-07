@@ -1,7 +1,7 @@
 import { Effect, effect, Signal } from "@signe/reactive";
 import { Graphics as PixiGraphics } from "pixi.js";
-import { createComponent, registerComponent } from "../engine/reactive";
-import { DisplayObject } from "./DisplayObject";
+import { createComponent, Element, registerComponent } from "../engine/reactive";
+import { ComponentInstance, DisplayObject } from "./DisplayObject";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { useProps } from "../hooks/useProps";
 import { SignalOrPrimitive } from "./types";
@@ -44,13 +44,24 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
     }
   }
 
-  onDestroy() {
-    this.clearEffect.subscription.unsubscribe();
-    super.onDestroy();
+  /**
+   * Called when the component is about to be destroyed.
+   * This method should be overridden by subclasses to perform any cleanup.
+   * It ensures that the clearEffect subscription is unsubscribed before calling the original afterDestroy callback.
+   * @param parent The parent element.
+   * @param afterDestroy A callback function to be executed after the component's own destruction logic.
+   * @example
+   * // This method is typically called by the engine internally.
+   * // await component.onDestroy(parentElement, () => console.log('Component destroyed'));
+   */
+  async onDestroy(parent: Element<ComponentInstance>, afterDestroy: () => void): Promise<void> {
+    const _afterDestroyCallback = async () => {
+      this.clearEffect.subscription.unsubscribe();
+      afterDestroy();
+    }
+    await super.onDestroy(parent, _afterDestroyCallback);
   }
 }
-
-interface CanvasGraphics extends PixiGraphics {}
 
 registerComponent("Graphics", CanvasGraphics);
 

@@ -1,6 +1,6 @@
 import { Text as PixiText, TextStyle } from "pixi.js";
-import { createComponent, registerComponent } from "../engine/reactive";
-import { DisplayObject } from "./DisplayObject";
+import { createComponent, registerComponent, Element, Props } from "../engine/reactive";
+import { DisplayObject, ComponentInstance } from "./DisplayObject";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { Signal } from "@signe/reactive";
 import { on } from "../engine/trigger";
@@ -9,7 +9,7 @@ enum TextEffect {
   Typewriter = "typewriter",
 }
 
-interface TextProps extends DisplayObjectProps {
+export interface TextProps extends DisplayObjectProps {
   text?: string;
   style?: Partial<TextStyle>;
   color?: string;
@@ -21,6 +21,7 @@ interface TextProps extends DisplayObjectProps {
     onComplete?: () => void;
     skip?: () => void;
   };
+  context?: any; // Ensure context is available, ideally typed from a base prop or injected
 }
 
 class CanvasText extends DisplayObject(PixiText) {
@@ -32,9 +33,15 @@ class CanvasText extends DisplayObject(PixiText) {
   private typewriterOptions: any = {};
   private skipSignal?: () => void;
 
-  onMount(args) {
-    super.onMount(args);
-    const { props } = args;
+  /**
+   * Called when the component is mounted to the scene graph.
+   * Initializes the typewriter effect if configured.
+   * @param {Element<CanvasText>} element - The element being mounted. Its `props` property (of type TextProps) contains component properties and context.
+   * @param {number} [index] - The index of the component among its siblings.
+   */
+  async onMount(element: Element<CanvasText>, index?: number): Promise<void> {
+    await super.onMount(element, index);
+    const { props } = element; // props here will be of type TextProps due to Element<CanvasText>
     const tick: Signal = props.context.tick;
 
     if (props.text && props.typewriter) {
@@ -130,13 +137,22 @@ class CanvasText extends DisplayObject(PixiText) {
     this.currentIndex = this.fullText.length;
   }
 
-  onDestroy(): void {
-    super.onDestroy();
-    this.subscriptionTick.unsubscribe();
+  /**
+   * Called when the component is about to be destroyed.
+   * Unsubscribes from the tick observable.
+   * @param {Element<any>} parent - The parent element.
+   * @param {() => void} [afterDestroy] - An optional callback function to be executed after the component's own destruction logic.
+   */
+  async onDestroy(parent: Element<any>, afterDestroy?: () => void): Promise<void> {
+    const _afterDestroy = async () => {
+      this.subscriptionTick.unsubscribe();
+      afterDestroy();
+    }
+    await super.onDestroy(parent, _afterDestroy);
   }
 }
 
-interface CanvasText extends PixiText {}
+// interface CanvasText extends PixiText {} // Removed as it's redundant and causes type conflicts
 
 registerComponent("Text", CanvasText);
 

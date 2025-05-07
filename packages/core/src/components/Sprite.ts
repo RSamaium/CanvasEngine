@@ -272,8 +272,8 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     }
   }
 
-  onDestroy(): void {
-    super.onDestroy();
+  onDestroy(parent: Element, afterDestroy: () => void): void {
+    super.onDestroy(parent);
     this.subscriptionSheet.forEach((sub) => sub.unsubscribe());
     this.subscriptionTick.unsubscribe();
     if (this.currentAnimationContainer && this.parent instanceof Container) {

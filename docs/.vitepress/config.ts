@@ -46,6 +46,10 @@ const guideMenu = [
       {
         text: "Dynamic Components",
         link: "/concepts/dynamic-components",
+      },
+      {
+        text: "Primitive Animation",
+        link: "/concepts/animation",
       }
     ],
   },

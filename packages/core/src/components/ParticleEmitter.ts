@@ -1,7 +1,8 @@
 import * as particles from "@barvynkoa/particle-emitter";
-import { createComponent, registerComponent } from "../engine/reactive";
+import { createComponent, Element, registerComponent } from "../engine/reactive";
 import { CanvasContainer } from "./Container";
 import { Signal } from "@signe/reactive";
+import { ComponentInstance } from "./DisplayObject";
 
 class CanvasParticlesEmitter extends CanvasContainer {
   private emitter: particles.Emitter | null;
@@ -24,11 +25,14 @@ class CanvasParticlesEmitter extends CanvasContainer {
 
   onUpdate(props) {}
 
-  onDestroy(): void {
-    super.onDestroy();
-    this.emitter?.destroy();
-    this.emitter = null;
-    this.subscriptionTick.unsubscribe();
+  onDestroy(parent: Element<ComponentInstance>, afterDestroy: () => void) {
+    const _afterDestroy = async () => {
+      this.emitter?.destroy();
+      this.emitter = null;
+      this.subscriptionTick.unsubscribe();
+      afterDestroy();
+    }
+    super.onDestroy(parent, _afterDestroy);
   }
 }
 

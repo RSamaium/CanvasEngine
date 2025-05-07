@@ -22,7 +22,7 @@ export interface ComponentInstance extends PixiMixins.ContainerOptions {
   children?: ComponentInstance[];
   onInit?(props: Props): void;
   onUpdate?(props: Props): void;
-  onDestroy?(parent: Element): void;
+  onDestroy?(parent: Element, afterDestroy: () => void): void;
   onMount?(context: Element, index?: number): void;
   setWidth(width: number): void;
   setHeight(height: number): void;
@@ -100,6 +100,8 @@ export const EVENTS = [
   "wheelcapture",
 ];
 
+type OnHook = (() => void) | (() => Promise<void> | void);
+
 export function DisplayObject(extendClass) {
   return class DisplayObject extends extendClass {
     #canvasContext: {
@@ -108,16 +110,14 @@ export function DisplayObject(extendClass) {
     isFlex: boolean = false;
     fullProps: Props = {};
     isMounted: boolean = false;
-    _anchorPoints = new ObservablePoint(
-      { _onUpdate: () => {} },
-      0,
-      0
-    );
+    _anchorPoints = new ObservablePoint({ _onUpdate: () => {} }, 0, 0);
     isCustomAnchor: boolean = false;
     displayWidth = signal(0);
     displayHeight = signal(0);
     overrideProps: string[] = [];
-    layout = null
+    layout = null;
+    onBeforeDestroy: OnHook | null = null;
+    onAfterMount: OnHook | null = null;
 
     get deltaRatio() {
       return this.#canvasContext?.scheduler?.tick.value.deltaRatio;
@@ -131,28 +131,34 @@ export function DisplayObject(extendClass) {
           this.on(event, props[event]);
         }
       }
-     if (
-        props.justifyContent || 
-        props.alignItems || 
-        props.flexDirection || 
-        props.flexWrap || 
+      if (props.onBeforeDestroy || props['on-before-destroy']) {
+        this.onBeforeDestroy = props.onBeforeDestroy || props['on-before-destroy'];
+      }
+      if (props.onAfterMount || props['on-after-mount']) {
+        this.onAfterMount = props.onAfterMount || props['on-after-mount'];
+      }
+      if (
+        props.justifyContent ||
+        props.alignItems ||
+        props.flexDirection ||
+        props.flexWrap ||
         props.alignContent ||
         props.display == "flex" ||
         isPercent(props.width) ||
         isPercent(props.height) ||
         props.isRoot
       ) {
-      this.layout = {}
-      this.isFlex = true
-     }
+        this.layout = {};
+        this.isFlex = true;
+      }
     }
 
-    onMount({ parent, props }: Element<DisplayObject>, index?: number) {
+    async onMount({ parent, props }: Element<DisplayObject>, index?: number) {
       this.#canvasContext = props.context;
       if (parent) {
         const instance = parent.componentInstance as DisplayObject;
         if (instance.isFlex && !this.layout) {
-          this.layout = {}
+          this.layout = {};
         }
         if (index === undefined) {
           instance.addChild(this);
@@ -161,6 +167,9 @@ export function DisplayObject(extendClass) {
         }
         this.isMounted = true;
         this.onUpdate(props);
+        if (this.onAfterMount) {
+          await this.onAfterMount();
+        }
       }
     }
 
@@ -185,7 +194,8 @@ export function DisplayObject(extendClass) {
       if (props.minHeight !== undefined) this.setMinHeight(props.minHeight);
       if (props.maxWidth !== undefined) this.setMaxWidth(props.maxWidth);
       if (props.maxHeight !== undefined) this.setMaxHeight(props.maxHeight);
-      if (props.aspectRatio !== undefined) this.setAspectRatio(props.aspectRatio);
+      if (props.aspectRatio !== undefined)
+        this.setAspectRatio(props.aspectRatio);
       if (props.flexGrow !== undefined) this.setFlexGrow(props.flexGrow);
       if (props.flexShrink !== undefined) this.setFlexShrink(props.flexShrink);
       if (props.flexBasis !== undefined) this.setFlexBasis(props.flexBasis);
@@ -196,8 +206,10 @@ export function DisplayObject(extendClass) {
       if (props.right !== undefined) this.setRight(props.right);
       if (props.bottom !== undefined) this.setBottom(props.bottom);
       if (props.objectFit !== undefined) this.setObjectFit(props.objectFit);
-      if (props.objectPosition !== undefined) this.setObjectPosition(props.objectPosition);
-      if (props.transformOrigin !== undefined) this.setTransformOrigin(props.transformOrigin);
+      if (props.objectPosition !== undefined)
+        this.setObjectPosition(props.objectPosition);
+      if (props.transformOrigin !== undefined)
+        this.setTransformOrigin(props.transformOrigin);
       if (props.skew !== undefined) setObservablePoint(this.skew, props.skew);
       if (props.tint) this.tint = props.tint;
       if (props.rotation !== undefined) this.rotation = props.rotation;
@@ -260,8 +272,12 @@ export function DisplayObject(extendClass) {
       this.filters = currentFilters;
     }
 
-    onDestroy() {
+    async onDestroy(parent: Element, afterDestroy?: () => void) {
+      if (this.onBeforeDestroy) {
+        await this.onBeforeDestroy();
+      }
       super.destroy();
+      if (this.onAfterDestroy) this.onAfterDestroy()
     }
 
     setFlexDirection(direction: FlexDirection) {
@@ -319,8 +335,7 @@ export function DisplayObject(extendClass) {
       x = x + this.getWidth() * this._anchorPoints.x;
       if (!this.parent.isFlex) {
         this.x = x;
-      }
-      else {
+      } else {
         this.x = x;
         this.layout = { x };
       }
@@ -330,8 +345,7 @@ export function DisplayObject(extendClass) {
       y = y + this.getHeight() * this._anchorPoints.y;
       if (!this.parent.isFlex) {
         this.y = y;
-      }
-      else {
+      } else {
         this.y = y;
         this.layout = { y };
       }
@@ -409,8 +423,7 @@ export function DisplayObject(extendClass) {
       this.displayWidth.set(width);
       if (!this.parent?.isFlex) {
         this.width = width;
-      }
-      else {
+      } else {
         this.layout = { width };
       }
     }
@@ -419,8 +432,7 @@ export function DisplayObject(extendClass) {
       this.displayHeight.set(height);
       if (!this.parent?.isFlex) {
         this.height = height;
-      }
-      else {
+      } else {
         this.layout = { height };
       }
     }

@@ -9,20 +9,28 @@
   import MyViewport from "./viewport.ce";
   
   let bool = signal(false)
+  const opacity = animatedSignal(1, { duration: 500 });
 
-  const click = () => {
+  const click = async () => {
     bool.set(!bool())
+  }
+
+  const beforeDestroy = async () => {
+    await animatedSequence([
+      () => opacity.set(0),
+    ])
+    console.log("before destroy")
   }
 </script>
 
 
 <Canvas antialias={true}>
-  <Container>
-    @if (bool) {
-      <Rect width={300} height={300} color="red" click />
-    }
-    @if (!bool) {
-      <Rect width={300} height={300} color="blue" click />
-    }
-  </Container>
+    <Container>
+      @if (bool) {
+        <Rect width={300} height={300} color="red" click />
+      }
+      @if (!bool) {
+        <Rect width={300} height={300} alpha={opacity} color="blue" x={300} click onBeforeDestroy={beforeDestroy} />
+      }
+    </Container>
 </Canvas>

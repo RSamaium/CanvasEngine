@@ -1,8 +1,8 @@
 import { Viewport as PixiViewport } from 'pixi-viewport';
 import { Subscription } from 'rxjs';
-import { createComponent, registerComponent } from '../engine/reactive';
-import { DisplayObject } from './DisplayObject';
-import { effect } from '@signe/reactive';
+import { createComponent, registerComponent, Element, Props } from '../engine/reactive';
+import { DisplayObject, ComponentInstance } from './DisplayObject';
+import { effect, Signal } from '@signe/reactive';
 
 const EVENTS = [
     'bounce-x-end',
@@ -28,6 +28,21 @@ const EVENTS = [
     'zoomed-end'
 ]
 
+export interface ViewportProps extends Props {
+    screenWidth?: number;
+    screenHeight?: number;
+    worldWidth?: number;
+    worldHeight?: number;
+    clamp?: boolean | {
+        left?: number;
+        right?: number;
+        top?: number;
+        bottom?: number;
+    };
+    context?: any;
+    [key: string]: any;
+}
+
 export class CanvasViewport extends DisplayObject(PixiViewport) {
     private tickSubscription: Subscription
     overrideProps = ['wheel']
@@ -52,9 +67,16 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
         }
     }
 
-    onMount(element) {
-        super.onMount(element)
-        const { tick, app, canvasSize } = element.props.context
+    /**
+     * Called when the component is mounted to the scene graph.
+     * Initializes viewport settings and subscriptions.
+     * @param {Element<CanvasViewport>} element - The element being mounted. Its `props` property (of type ViewportProps) contains component properties and context.
+     * @param {number} [index] - The index of the component among its siblings.
+     */
+    async onMount(element: Element<CanvasViewport>, index?: number): Promise<void> {
+        await super.onMount(element, index);
+        const { props } = element;
+        const { tick, app, canvasSize } = props.context;
         let isDragging = false
         
         effect(() => {
@@ -81,7 +103,7 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
         })
 
         element.props.context.viewport = this
-        this.updateViewportSettings(element.props)
+        this.updateViewportSettings(props)
     }
 
     onUpdate(props) {
@@ -131,29 +153,22 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
         }
     }
 
-    onDestroy(): void {
-        super.onDestroy()
-        this.tickSubscription.unsubscribe()
+    /**
+     * Called when the component is about to be destroyed.
+     * Unsubscribes from the tick observable.
+     * @param {Element<any>} parent - The parent element.
+     * @param {() => void} [afterDestroy] - An optional callback function to be executed after the component's own destruction logic.
+     */
+    async onDestroy(parent: Element<any>, afterDestroy?: () => void): Promise<void> {
+        const _afterDestroy = async () => {
+            this.tickSubscription.unsubscribe()
+            afterDestroy()
+        }
+        await super.onDestroy(parent, _afterDestroy);
     }
 }
 
-export interface CanvasViewport extends PixiViewport { }
-
 registerComponent('Viewport', CanvasViewport)
-
-export interface ViewportProps {
-    screenWidth?: number;
-    screenHeight?: number;
-    worldWidth?: number;
-    worldHeight?: number;
-    clamp?: boolean | {
-        left?: number;
-        right?: number;
-        top?: number;
-        bottom?: number;
-    };
-    [key: string]: any;
-}
 
 export function Viewport(props: ViewportProps) {
     return createComponent('Viewport', props);
