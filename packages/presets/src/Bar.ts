@@ -8,6 +8,9 @@ interface BarProps {
   maxValue: number;
   width: number;
   height: number;
+  border?: any;
+  innerMargin?: number;
+  borderRadius?: number;
 }
 
 function componentToHex(c) {
@@ -43,22 +46,22 @@ export function Bar(opts: BarProps) {
       ...opts,
       width,
       height,
-      draw(g: PIXI.Graphics) {
+      draw(graphics: any) {
         if (borderRadius()) {
-          g.roundRect(0, 0, width(), height(), borderRadius());
+          graphics.roundRect(0, 0, width(), height(), borderRadius());
         } else {
-          g.rect(0, 0, width(), height());
+          graphics.rect(0, 0, width(), height());
         }
         if (border) {
-          g.stroke(border);
+          graphics.stroke(border);
         }
-        g.fill(backgroundColor());
+        graphics.fill(backgroundColor());
       },
     },
     h(Graphics, {
       width,
       height,
-      draw(g: PIXI.Graphics) {
+      draw(graphics: any) {
         const margin = innerMargin();
         const _borderRadius = borderRadius();
         const w = Math.max(
@@ -70,16 +73,16 @@ export function Bar(opts: BarProps) {
         );
         const h = height() - 2 * margin;
         if (borderRadius) {
-          g.roundRect(margin, margin, w, h, _borderRadius);
+          graphics.roundRect(margin, margin, w, h, _borderRadius);
         } else {
-          g.rect(margin, margin, w, h);
+          graphics.rect(margin, margin, w, h);
         }
         const color = foregroundColor();
         if (color.startsWith("rgba")) {
           const [r, g, b, a] = color.match(/\d+(\.\d+)?/g).map(Number);
-          g.fill({ color: rgbToHex(r, g, b), alpha: a });
+          graphics.fill({ color: rgbToHex(r, g, b), alpha: a });
         } else {
-          g.fill(color);
+          graphics.fill(color);
         }
       },
     })

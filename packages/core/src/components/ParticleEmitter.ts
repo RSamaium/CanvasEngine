@@ -8,8 +8,8 @@ class CanvasParticlesEmitter extends CanvasContainer {
   private emitter: particles.Emitter | null;
   private elapsed: number = Date.now();
 
-  onMount(params) {
-    super.onMount(params);
+  async onMount(params) {
+    await super.onMount(params);
     const { props } = params;
     const tick: Signal = props.context.tick;
     this.emitter = new particles.Emitter(this as any, props.config);
@@ -25,14 +25,14 @@ class CanvasParticlesEmitter extends CanvasContainer {
 
   onUpdate(props) {}
 
-  onDestroy(parent: Element<ComponentInstance>, afterDestroy: () => void) {
+  async onDestroy(parent: Element<ComponentInstance>, afterDestroy: () => void) {
     const _afterDestroy = async () => {
       this.emitter?.destroy();
       this.emitter = null;
       this.subscriptionTick.unsubscribe();
       afterDestroy();
     }
-    super.onDestroy(parent, _afterDestroy);
+    await super.onDestroy(parent, _afterDestroy);
   }
 }
 

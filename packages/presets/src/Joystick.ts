@@ -85,7 +85,7 @@ export function Joystick(opts: JoystickSettings = {}) {
     }
   }
 
-  function handleDragStart(event: PIXI.FederatedPointerEvent) {
+  function handleDragStart(event: any) {
     startPosition = event.getLocalPosition(this);
     dragging = true;
     innerAlpha.set(1);
@@ -101,7 +101,7 @@ export function Joystick(opts: JoystickSettings = {}) {
     settings.onEnd?.();
   }
 
-  function handleDragMove(event: PIXI.FederatedPointerEvent) {
+  function handleDragMove(event: any) {
     if (dragging == false) {
       return;
     }

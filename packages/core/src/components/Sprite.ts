@@ -25,6 +25,7 @@ import {
 import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { AnimatedSignal, isAnimatedSignal } from "../engine/animation";
+import { Layout } from '@pixi/layout';
 
 const log = console.log;
 
@@ -272,8 +273,8 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     }
   }
 
-  onDestroy(parent: Element, afterDestroy: () => void): void {
-    super.onDestroy(parent);
+  async onDestroy(parent: Element, afterDestroy: () => void): Promise<void> {
+    await super.onDestroy(parent);
     this.subscriptionSheet.forEach((sub) => sub.unsubscribe());
     this.subscriptionTick.unsubscribe();
     if (this.currentAnimationContainer && this.parent instanceof Container) {
@@ -463,7 +464,9 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   }
 }
 
-export interface CanvasSprite extends PixiSprite {}
+export interface CanvasSprite extends PixiSprite {
+  layout: Layout | null;
+}
 
 registerComponent("Sprite", CanvasSprite);
 

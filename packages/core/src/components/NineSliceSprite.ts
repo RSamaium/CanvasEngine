@@ -2,6 +2,7 @@ import { Assets, NineSliceSprite as PixiNineSliceSprite, Texture } from "pixi.js
 import { createComponent, registerComponent } from "../engine/reactive";
 import { DisplayObject } from "./DisplayObject";
 import { DisplayObjectProps } from "./types/DisplayObject";
+import { Layout } from "@pixi/layout";
 
 interface NineSliceSpriteProps extends DisplayObjectProps {
     image?: string;
@@ -37,7 +38,9 @@ class CanvasNineSliceSprite extends DisplayObject(PixiNineSliceSprite) {
   }
 }
 
-interface CanvasNineSliceSprite extends PixiNineSliceSprite {}
+interface CanvasNineSliceSprite extends PixiNineSliceSprite {
+  layout: Layout | null;
+}
 
 registerComponent("NineSliceSprite", CanvasNineSliceSprite);
 

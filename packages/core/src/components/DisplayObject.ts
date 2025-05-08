@@ -1,20 +1,16 @@
-import { Node } from "yoga-layout";
 import { Element, isElement, Props } from "../engine/reactive";
 import { setObservablePoint } from "../engine/utils";
 import type {
   AlignContent,
   EdgeSize,
   FlexDirection,
-  Size,
   ObjectFit,
   ObjectPosition,
   TransformOrigin,
-  PositionType,
 } from "./types/DisplayObject";
-import { effect, Signal, signal } from "@signe/reactive";
+import { signal } from "@signe/reactive";
 import { DropShadowFilter } from "pixi-filters";
 import { BlurFilter, ObservablePoint } from "pixi.js";
-import { Layout } from "@pixi/layout";
 import { isPercent } from "../utils/functions";
 
 export interface ComponentInstance extends PixiMixins.ContainerOptions {
@@ -26,7 +22,6 @@ export interface ComponentInstance extends PixiMixins.ContainerOptions {
   onMount?(context: Element, index?: number): void;
   setWidth(width: number): void;
   setHeight(height: number): void;
-  layout: Layout | null;
 }
 
 export const EVENTS = [
