@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitepress';
+import llmstxt from 'vitepress-plugin-llms'
 
 const guideMenu = [
   {
@@ -164,5 +165,8 @@ export default defineConfig({
       "/components/": guideMenu,
       "/directives/": guideMenu,
     },
-  }
+  },
+  vite: {
+    plugins: [llmstxt()]
+  },
 })
