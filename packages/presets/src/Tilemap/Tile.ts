@@ -36,6 +36,10 @@ export class Tile extends AnimatedSprite {
         this.flip()
     }
 
+    get z() {
+        return this.properties.z ?? 0
+    }
+
     get gid() {
         return this.tile.gid
     }

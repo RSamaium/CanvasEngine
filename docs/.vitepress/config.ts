@@ -125,6 +125,10 @@ const guideMenu = [
       {
         text: "Bar",
         link: "/presets/bar",
+      },
+      {
+        text: "Tilemap",
+        link: "/presets/tilemap",
       }
     ],
   },
@@ -136,6 +140,10 @@ const guideMenu = [
         text: "Element Object",
         link: "/api/element",
       },
+      {
+        text: "Use without Compiler",
+        link: "/advanced/without-compiler",
+      }
     ],
   },
 ];

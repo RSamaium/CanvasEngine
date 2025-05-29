@@ -8,7 +8,55 @@
   } from "canvasengine";
   import MyViewport from "./viewport.ce";
   import { TiledMap } from "@canvasengine/presets";
-  
+
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right
+}
+
+const x = signal(0);
+const y = signal(0);
+const speed = signal(10);
+const direction = signal(Direction.Down);
+
+const controls = signal({
+    down: {
+      repeat: true,
+      bind: ["down", 'bottom_right', 'bottom_left'],
+      keyDown() {
+        y.update((y) => y + speed());
+        direction.set(Direction.Down);
+      },
+    },
+    up: {
+      repeat: true,
+      bind: ['up', 'top_left', 'top_right'],
+      keyDown() {
+        y.update((y) => y - speed());
+        direction.set(Direction.Up);
+      },
+    },
+    left: {
+      repeat: true,
+      bind: "left",
+      keyDown() {
+        x.update((x) => x - speed());
+        direction.set(Direction.Left);
+      },
+    },
+    right: {
+      repeat: true,
+      bind: "right",
+      keyDown() {
+        x.update((x) => x + speed());
+        direction.set(Direction.Right);
+      },
+    },
+  });
+
+
   let bool = signal(false)
   const opacity = animatedSignal(1, { duration: 500 });
 
@@ -34,5 +82,5 @@
 
 
 <Canvas antialias={true}>
-  <TiledMap map={map} basePath="/map" />  
+  <TiledMap map={map} createLayersPerTilesZ={true} basePath="/map" objectLayer={(layer) => <Rect width={32} height={32} color="red" x y controls />} />  
 </Canvas>
