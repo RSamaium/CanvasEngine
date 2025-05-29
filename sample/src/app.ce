@@ -7,6 +7,7 @@
     animatedSequence,
   } from "canvasengine";
   import MyViewport from "./viewport.ce";
+  import { TiledMap } from "@canvasengine/presets";
   
   let bool = signal(false)
   const opacity = animatedSignal(1, { duration: 500 });
@@ -21,18 +22,17 @@
     ])
     console.log("before destroy")
   }
+
+  let map = signal(null)
+
+  fetch('/map/simplemap.tmx').then((res) => res.text()).then((text) => {
+    text = text.replace(/source="([^"]+)"/g, 'source="map/$1"')
+    map.set(text)
+  })
+  
 </script>
 
 
 <Canvas antialias={true}>
-    <Container>
-      @if (bool) {
-        <Rect width={300} height={300} color="red" click />
-      }
-      @if (!bool) {
-        <Container onBeforeDestroy={beforeDestroy}>
-          <Rect width={300} height={300} alpha={opacity} color="blue" x={300} click  />
-        </Container>
-      }
-    </Container>
+  <TiledMap map={map} basePath="/map" />  
 </Canvas>

@@ -90,3 +90,42 @@ Pour obtenir la documentation complète et détaillée sur toutes les propriét�
 | color          | number              | Color of the shadow.                                                        |
 | offset         | object              | Offset of the shadow.                                                       |
 | quality        | number              | Quality of the shadow.                                                      |
+
+
+# Hook before destroy
+
+
+```html
+<script>
+  import {
+    signal,
+    animatedSignal,
+    effect,
+    animatedSequence,
+  } from "canvasengine";
+  import MyViewport from "./viewport.ce";
+  
+  let bool = signal(true)
+  const opacity = animatedSignal(1, { duration: 500 });
+
+  const click = async () => {
+    bool.set(!bool())
+  }
+
+  const beforeDestroy = async () => {
+    await animatedSequence([
+      () => opacity.set(0),
+    ])
+    console.log("before destroy")
+  }
+</script>
+
+
+<Canvas antialias={true}>
+     <Container onBeforeDestroy={beforeDestroy}>
+        @if (bool) {
+            <Rect width={300} height={300} color="red" alpha={opacity} click />
+        }
+    </Container>
+</Canvas>
+```

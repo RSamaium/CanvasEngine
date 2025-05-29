@@ -118,7 +118,7 @@ importers:
     dependencies:
       '@pixi/tilemap':
         specifier: ^5.0.1
-        version: 5.0.1(pixi.js@8.6.6)
+        version: 5.0.1(pixi.js@8.9.2)
       '@rpgjs/tiled':
         specifier: ^4.3.0
         version: 4.3.0
@@ -126,24 +126,14 @@ importers:
         specifier: workspace:*
         version: link:../core
       pixi.js:
-        specifier: ^8.6.4
-        version: 8.6.6
+        specifier: ^8.9.2
+        version: 8.9.2
       revolt-fx:
         specifier: ^1.3.5
-        version: 1.3.5(pixi.js@8.6.6)
-
-  sample:
-    dependencies:
-      path-browserify:
-        specifier: ^1.0.1
-        version: 1.0.1
-      vite:
-        specifier: ^6.0.5
-        version: 6.0.5(@types/node@22.10.2)(jiti@2.4.2)(lightningcss@1.28.2)
-    devDependencies:
-      '@pixi/layout':
-        specifier: ^3.0.2
-        version: 3.0.2(@types/react@19.1.3)(pixi.js@8.9.2)(react@19.1.0)(yoga-layout@3.2.1)
+        version: 1.3.5(pixi.js@8.9.2)
+      rxjs:
+        specifier: ^7.8.1
+        version: 7.8.1
 
 packages:
 
@@ -1966,9 +1956,6 @@ packages:
   parse5@7.2.1:
     resolution: {integrity: sha512-BuBYQYlv1ckiPdQi/ohiivi9Sagc9JG+Ozs0r7b/0iK3sKmrb0b9FdWdBbOdx6hBCM/F9Ir82ofnBhtZOjCRPQ==}
 
-  path-browserify@1.0.1:
-    resolution: {integrity: sha512-b7uo2UCUOYZcnF/3ID0lulOJi/bafxa1xPe7ZPsammBSpjSWQkjNxlt635YGS2MiR9GjvuXCtz2emr3jbsz98g==}
-
   path-exists@4.0.0:
     resolution: {integrity: sha512-ak9Qy5Q7jYb2Wwcey5Fpvg2KoAc/ZIhLSLOSBmRmygPsGwkVVt0fZa0qrtMz+m6tJTAHfZQ8FnmB4MG4LWy7/w==}
     engines: {node: '>=8'}
@@ -3157,9 +3144,9 @@ snapshots:
       - '@types/react'
     optional: true
 
-  '@pixi/tilemap@5.0.1(pixi.js@8.6.6)':
+  '@pixi/tilemap@5.0.1(pixi.js@8.9.2)':
     dependencies:
-      pixi.js: 8.6.6
+      pixi.js: 8.9.2
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
@@ -4406,8 +4393,6 @@ snapshots:
     dependencies:
       entities: 4.5.0
 
-  path-browserify@1.0.1: {}
-
   path-exists@4.0.0: {}
 
   path-is-absolute@1.0.1: {}
@@ -4558,9 +4543,9 @@ snapshots:
 
   reusify@1.0.4: {}
 
-  revolt-fx@1.3.5(pixi.js@8.6.6):
+  revolt-fx@1.3.5(pixi.js@8.9.2):
     dependencies:
-      pixi.js: 8.6.6
+      pixi.js: 8.9.2
 
   rimraf@3.0.2:
     dependencies:
