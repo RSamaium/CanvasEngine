@@ -3,7 +3,7 @@ import {
   POINT_STRUCT_SIZE,
   Tilemap,
   settings,
-} from "@pixi/tilemap";
+} from "@canvasengine/tilemap";
 import { Layer, Tile as TileClass } from "@rpgjs/tiled";
 import {
   createComponent,

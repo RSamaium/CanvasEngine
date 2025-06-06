@@ -12,8 +12,7 @@ export default defineConfig({
     alias: {
       canvasengine: path.resolve(dirname, '../packages/core/src/index.ts'),
       '@canvasengine/presets': path.resolve(dirname, '../packages/presets/src/index.ts'),
-      path: 'path-browserify',
-      '@pixi/tilemap': '/home/samuel/www/libraries/tilemap/src/index.ts',
+      path: 'path-browserify'
     }
   }
 });

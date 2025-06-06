@@ -12,7 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@pixi/tilemap": "^5.0.1",
+    "@canvasengine/tilemap": "^5.0.1",
     "@rpgjs/tiled": "^4.3.0",
     "canvasengine": "workspace:*",
     "pixi.js": "^8.9.2",
