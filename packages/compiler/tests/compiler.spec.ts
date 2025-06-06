@@ -51,11 +51,49 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas)`);
   });
 
-  test("should compile component with dot notation", () => {
-    const input = `<MyComp.test />`;
-    const output = parser.parse(input);
-    expect(output).toBe(`h(MyComp.test)`);
-  });
+  describe("Dot notation", () => {
+    test("should compile component with dot notation", () => {
+      const input = `<MyComp.test />`;
+      const output = parser.parse(input);
+      expect(output).toBe(`h(MyComp.test)`);
+    });
+  
+    test("object function call", () => {
+      const input = `<MyComp.test() />`;
+      const output = parser.parse(input);
+      expect(output).toBe(`h(MyComp.test())`);
+    });
+  
+    test("function call with return object", () => {
+      const input = `<MyComp().test />`;
+      const output = parser.parse(input);
+      expect(output).toBe(`h(MyComp().test)`);
+    });
+
+    test("function call with return object and params", () => {
+      const input = `<MyComp().test(x, y) />`;
+      const output = parser.parse(input);
+      expect(output).toBe(`h(MyComp().test(x, y))`);
+    });
+
+    test("function call and params with return object and", () => {
+      const input = `<MyComp(x, y).test />`;
+      const output = parser.parse(input);
+      expect(output).toBe(`h(MyComp(x, y).test)`);
+    });
+  
+    test("function call", () => {
+      const input = `<MyComp() />`;
+      const output = parser.parse(input);
+      expect(output).toBe(`h(MyComp())`);
+    });
+  
+    test("function call and params", () => {
+      const input = `<MyComp(x, y) />`;
+      const output = parser.parse(input);
+      expect(output).toBe(`h(MyComp(x, y))`);
+    });
+  })
 
   test("should compile component with dynamic attribute", () => {
     const input = `<Canvas width={x} />`;

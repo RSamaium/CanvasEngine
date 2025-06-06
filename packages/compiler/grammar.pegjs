@@ -298,9 +298,17 @@ ifCondition "if condition"
     }
 
 tagName "tag name"
-  = segments:([a-zA-Z][a-zA-Z0-9]* ("." [a-zA-Z][a-zA-Z0-9]*)*) { 
-    return text();
-  }
+  = tagExpression
+
+tagExpression "tag expression"
+  = first:tagPart rest:("." tagPart)* {
+      return text();
+    }
+
+tagPart "tag part"
+  = name:[a-zA-Z][a-zA-Z0-9]* args:("(" functionArgs? ")")? {
+      return text();
+    }
 
 attributeName "attribute name"
   = [a-zA-Z][a-zA-Z0-9-]* { return text(); }
