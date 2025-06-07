@@ -9,8 +9,8 @@ import type {
   TransformOrigin,
 } from "./types/DisplayObject";
 import { signal } from "@signe/reactive";
-import { DropShadowFilter } from "pixi-filters";
 import { BlurFilter, ObservablePoint } from "pixi.js";
+import * as FILTERS from "pixi-filters";
 import { isPercent } from "../utils/functions";
 import { BehaviorSubject, filter, Subject } from "rxjs";
 
@@ -114,11 +114,7 @@ export function DisplayObject(extendClass) {
     layout = null;
     onBeforeDestroy: OnHook | null = null;
     onAfterMount: OnHook | null = null;
-    subjectInit = new BehaviorSubject(null).pipe(
-      filter((value) => {
-        return value.width != 0;
-      })
-    );
+    subjectInit = new BehaviorSubject(null);
     disableLayout: boolean = false;
 
     get deltaRatio() {
@@ -130,7 +126,7 @@ export function DisplayObject(extendClass) {
       return this.parent?.isFlex;
     }
 
-    onInit(props) {
+    onInit(props: Props) {
       this._id = props.id;
       for (let event of EVENTS) {
         if (props[event] && !this.overrideProps.includes(event)) {
@@ -182,7 +178,7 @@ export function DisplayObject(extendClass) {
       }
     }
 
-    onUpdate(props) {
+    onUpdate(props: Props) {
       this.fullProps = {
         ...this.fullProps,
         ...props,
@@ -243,23 +239,24 @@ export function DisplayObject(extendClass) {
       if (props.filters) this.filters = props.filters;
       if (props.maskOf) {
         if (isElement(props.maskOf)) {
-          props.maskOf.componentInstance.mask = this;
+          props.maskOf.componentInstance.mask = this as any;
         }
       }
       if (props.blendMode) this.blendMode = props.blendMode;
       if (props.filterArea) this.filterArea = props.filterArea;
       const currentFilters = this.filters || [];
 
-      if (props.shadow) {
-        let dropShadowFilter = currentFilters.find(
-          (filter) => filter instanceof DropShadowFilter
-        );
-        if (!dropShadowFilter) {
-          dropShadowFilter = new DropShadowFilter();
-          currentFilters.push(dropShadowFilter);
-        }
-        Object.assign(dropShadowFilter, props.shadow);
-      }
+      // TODO: Fix DropShadowFilter import issue
+      // if (props.shadow) {
+      //   let dropShadowFilter = currentFilters.find(
+      //     (filter) => filter instanceof FILTERS.DropShadowFilter
+      //   );
+      //   if (!dropShadowFilter) {
+      //     dropShadowFilter = new FILTERS.DropShadowFilter();
+      //     currentFilters.push(dropShadowFilter);
+      //   }
+      //   Object.assign(dropShadowFilter, props.shadow);
+      // }
 
       if (props.blur) {
         let blurFilter = currentFilters.find(

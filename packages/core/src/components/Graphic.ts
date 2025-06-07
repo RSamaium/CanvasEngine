@@ -82,7 +82,7 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
    * @param {Element<DisplayObject>} element - The element being mounted with props and propObservables.
    * @param {number} [index] - The index of the component among its siblings.
    */
-  async onMount(element: Element<DisplayObject>, index?: number): Promise<void> {
+  async onMount(element: Element<any>, index?: number): Promise<void> {
     await super.onMount(element, index);
     const { props, propObservables } = element;
     
@@ -133,7 +133,7 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
    * Updates the internal width and height signals when props change.
    * @param props - Updated properties
    */
-  onUpdate(props) {
+  onUpdate(props: any) {
     super.onUpdate(props);
     
     // Update width signal if width prop changed
@@ -245,7 +245,7 @@ export function Ellipse(props: EllipseProps) {
     border: null
   })
   return Graphics({
-    draw: (g, gWidth, gHeight) => drawShape(g, 'ellipse', { width: gWidth, height: gHeight, color, border }),
+    draw: (g, gWidth, gHeight) => drawShape(g, 'ellipse', { width: signal(gWidth), height: signal(gHeight), color, border }),
     ...props
   })
 }
@@ -257,10 +257,10 @@ export function Triangle(props: TriangleProps) {
   })
   return Graphics({
     draw: (g, gWidth, gHeight) => {
-      g.moveTo(0, gHeight());
-      g.lineTo(gWidth() / 2, 0);
-      g.lineTo(gWidth(), gHeight());
-      g.lineTo(0, gHeight());
+      g.moveTo(0, gHeight);
+      g.lineTo(gWidth / 2, 0);
+      g.lineTo(gWidth, gHeight);
+      g.lineTo(0, gHeight);
       g.fill(color());
       if (border) {
         g.stroke(border);
