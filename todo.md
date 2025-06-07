@@ -26,3 +26,5 @@ val()[2] = 'test'  // must add because before value is undefined
 ```
 
 [] Test ViewPort
+
+[] Filer blur + Tilemap + Viewport = bug

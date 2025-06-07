@@ -134,7 +134,10 @@ function reorganizeLayersByTileZ(originalLayers: TiledLayer[], tilesets: TileSet
 }
 
 export function TiledMap(props) {
-    const { map, basePath, createLayersPerTilesZ } = useProps(props)
+    const { map, basePath, createLayersPerTilesZ } = useProps(props, {
+        createLayersPerTilesZ: false,
+        basePath: ''
+    })
     const layers = signal<TiledLayer[]>([])
     const objectLayer = props.objectLayer
     let tilesets: TileSet[] = []
@@ -166,6 +169,8 @@ export function TiledMap(props) {
             mapData = await parseTmx(_map, basePath())
             tilesets = [] // Reset tilesets array
             for (let tileSet of mapData.tilesets) {
+                // @ts-ignore
+                if (tileSet.tile) tileSet.tiles = tileSet.tile
                 tilesets.push(await new TileSet(tileSet).load(tileSet.image.source))
             }
             
