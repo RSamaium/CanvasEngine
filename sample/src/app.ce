@@ -8,8 +8,22 @@
   } from "canvasengine";
 
 const text = signal("Hello, world!");
+const red = signal(true);
+
+const click = () => {
+  red.set(!red());
+}
+
+const click2 = () => {
+  console.log("click2");
+}
 </script>
 
 <Canvas antialias={true}>
-    <input type="text" value={text} />
+    <div>
+      <form submit={click2}>
+        <input type="text" />
+        <button click>Submit</button>
+      </form>
+    </div>
 </Canvas>

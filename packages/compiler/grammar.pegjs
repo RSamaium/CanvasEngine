@@ -29,6 +29,35 @@
     );
   }
 
+  // List of standard HTML DOM elements
+  const domElements = new Set([
+    'a', 'abbr', 'address', 'area', 'article', 'aside', 'audio', 'b', 'base', 'bdi', 'bdo', 'blockquote', 'body', 'br', 'button', 'caption', 'cite', 'code', 'col', 'colgroup', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'div', 'dl', 'dt', 'em', 'embed', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'i', 'iframe', 'img', 'input', 'ins', 'kbd', 'label', 'legend', 'li', 'link', 'main', 'map', 'mark', 'menu', 'meta', 'meter', 'nav', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param', 'picture', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 'samp', 's', 'script', 'section', 'select', 'slot', 'small', 'source', 'span', 'strong', 'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'u', 'ul', 'var', 'video', 'wbr'
+  ]);
+
+  // Framework components that should NOT be transformed to DOM elements
+  const frameworkComponents = new Set([
+    'Canvas', 'Container', 'Sprite', 'Text', 'DOMContainer', 'Svg'
+  ]);
+
+  // DisplayObject special attributes that should not be in attrs
+  const displayObjectAttributes = new Set([
+    'x', 'y', 'scale', 'anchor', 'skew', 'tint', 'rotation', 'angle', 
+    'zIndex', 'roundPixels', 'cursor', 'visible', 'alpha', 'pivot', 'filters', 'maskOf', 
+    'blendMode', 'filterArea', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight', 
+    'aspectRatio', 'flexGrow', 'flexShrink', 'flexBasis', 'rowGap', 'columnGap', 
+    'positionType', 'top', 'right', 'bottom', 'left', 'objectFit', 'objectPosition', 
+    'transformOrigin', 'flexDirection', 'justifyContent', 'alignItems', 'alignContent', 
+    'alignSelf', 'margin', 'padding', 'border', 'gap', 'blur', 'shadow'
+  ]);
+
+  function isDOMElement(tagName) {
+    // Don't transform framework components to DOM elements
+    if (frameworkComponents.has(tagName)) {
+      return false;
+    }
+    return domElements.has(tagName.toLowerCase());
+  }
+
   function formatAttributes(attributes) {
     if (attributes.length === 0) {
       return null;
@@ -56,6 +85,54 @@
   
     return `{ ${formattedAttrs.join(', ')} }`;
   }
+
+  function formatDOMElement(tagName, attributes) {
+    if (attributes.length === 0) {
+      return `h(DOMContainer, { element: "${tagName}" })`;
+    }
+
+    // Separate DisplayObject attributes from DOM attributes
+    const domAttrs = [];
+    const displayObjectAttrs = [];
+
+    attributes.forEach(attr => {
+      // Handle spread attributes
+      if (attr.startsWith('...')) {
+        displayObjectAttrs.push(attr);
+        return;
+      }
+
+      // Extract attribute name
+      let attrName;
+      if (attr.includes(':')) {
+        // Format: "name: value" or "'name': value"
+        attrName = attr.split(':')[0].trim().replace(/['"]/g, '');
+      } else {
+        // Standalone attribute
+        attrName = attr.replace(/['"]/g, '');
+      }
+
+      // Check if it's a DisplayObject attribute
+      if (displayObjectAttributes.has(attrName)) {
+        displayObjectAttrs.push(attr);
+      } else {
+        domAttrs.push(attr);
+      }
+    });
+
+    // Build the result
+    const parts = [`element: "${tagName}"`];
+    
+    if (domAttrs.length > 0) {
+      parts.push(`attrs: { ${domAttrs.join(', ')} }`);
+    }
+    
+    if (displayObjectAttrs.length > 0) {
+      parts.push(...displayObjectAttrs);
+    }
+
+    return `h(DOMContainer, { ${parts.join(', ')} })`;
+  }
 }
 
 start
@@ -70,6 +147,7 @@ element "component or control structure"
   = forLoop
   / ifCondition
   / svgElement
+  / domElementWithText
   / selfClosingElement
   / openCloseElement
   / openUnclosedTag
@@ -77,8 +155,116 @@ element "component or control structure"
 
 selfClosingElement "self-closing component tag"
   = _ "<" _ tagName:tagName _ attributes:attributes _ "/>" _ {
+      // Check if it's a DOM element
+      if (isDOMElement(tagName)) {
+        return formatDOMElement(tagName, attributes);
+      }
+      // Otherwise, treat as regular component
       const attrsString = formatAttributes(attributes);
       return attrsString ? `h(${tagName}, ${attrsString})` : `h(${tagName})`;
+    }
+
+domElementWithText "DOM element with text content"
+  = "<" _ tagName:tagName _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTagName:tagName _ ">" _ {
+      if (tagName !== closingTagName) {
+        generateError(
+          `Mismatched tag: opened <${tagName}> but closed </${closingTagName}>`,
+          location()
+        );
+      }
+      
+      if (isDOMElement(tagName)) {
+        if (attributes.length === 0) {
+          return `h(DOMContainer, { element: "${tagName}", textContent: ${text} })`;
+        }
+
+        // Separate DisplayObject attributes from DOM attributes
+        const domAttrs = [];
+        const displayObjectAttrs = [];
+
+        attributes.forEach(attr => {
+          // Handle spread attributes
+          if (attr.startsWith('...')) {
+            displayObjectAttrs.push(attr);
+            return;
+          }
+
+          // Extract attribute name
+          let attrName;
+          if (attr.includes(':')) {
+            // Format: "name: value" or "'name': value"
+            attrName = attr.split(':')[0].trim().replace(/['"]/g, '');
+          } else {
+            // Standalone attribute
+            attrName = attr.replace(/['"]/g, '');
+          }
+
+          // Check if it's a DisplayObject attribute
+          if (displayObjectAttributes.has(attrName)) {
+            displayObjectAttrs.push(attr);
+          } else {
+            domAttrs.push(attr);
+          }
+        });
+
+        // Build the result
+        const parts = [`element: "${tagName}"`];
+        
+        if (domAttrs.length > 0) {
+          parts.push(`attrs: { ${domAttrs.join(', ')} }`);
+        }
+        
+        parts.push(`textContent: ${text}`);
+        
+        if (displayObjectAttrs.length > 0) {
+          parts.push(...displayObjectAttrs);
+        }
+
+        return `h(DOMContainer, { ${parts.join(', ')} })`;
+      }
+      
+      // If not a DOM element, fall back to regular parsing
+      return null;
+    }
+
+simpleTextContent "simple text content"
+  = parts:(simpleDynamicPart / simpleTextPart)+ {
+      const validParts = parts.filter(p => p !== null);
+      if (validParts.length === 0) return null;
+      if (validParts.length === 1) return validParts[0];
+      
+      // Multiple parts - need to concatenate
+      const hasSignals = validParts.some(part => part && part.includes && part.includes('()'));
+      if (hasSignals) {
+        return `computed(() => ${validParts.join(' + ')})`;
+      }
+      return validParts.join(' + ');
+    }
+
+simpleTextPart "simple text part"
+  = !("@for" / "@if") text:$([^<{@]+) {
+      const trimmed = text.trim();
+      return trimmed ? `'${trimmed}'` : null;
+    }
+
+simpleDynamicPart "simple dynamic part"
+  = "{" _ expr:attributeValue _ "}" {
+      // Handle dynamic expressions like {item.name}
+      if (expr.trim().match(/^[a-zA-Z_][a-zA-Z0-9_.]*$/)) {
+        let foundSignal = false;
+        const computedValue = expr.replace(/@?[a-zA-Z_][a-zA-Z0-9_]*(?!:)/g, (match) => {
+          if (match.startsWith('@')) {
+            return match.substring(1);
+          }
+          foundSignal = true;
+          return `${match}()`;
+        });
+        if (foundSignal) {
+          return `computed(() => ${computedValue})`;
+        }
+        return computedValue;
+      }
+      return expr;
     }
 
 openCloseElement "component with content"
@@ -89,6 +275,67 @@ openCloseElement "component with content"
           location()
         );
       }
+      
+      // Check if it's a DOM element
+      if (isDOMElement(tagName)) {
+        const children = content ? content : null;
+        
+        if (attributes.length === 0) {
+          if (children) {
+            return `h(DOMContainer, { element: "${tagName}" }, ${children})`;
+          } else {
+            return `h(DOMContainer, { element: "${tagName}" })`;
+          }
+        }
+
+        // Separate DisplayObject attributes from DOM attributes
+        const domAttrs = [];
+        const displayObjectAttrs = [];
+
+        attributes.forEach(attr => {
+          // Handle spread attributes
+          if (attr.startsWith('...')) {
+            displayObjectAttrs.push(attr);
+            return;
+          }
+
+          // Extract attribute name
+          let attrName;
+          if (attr.includes(':')) {
+            // Format: "name: value" or "'name': value"
+            attrName = attr.split(':')[0].trim().replace(/['"]/g, '');
+          } else {
+            // Standalone attribute
+            attrName = attr.replace(/['"]/g, '');
+          }
+
+          // Check if it's a DisplayObject attribute
+          if (displayObjectAttributes.has(attrName)) {
+            displayObjectAttrs.push(attr);
+          } else {
+            domAttrs.push(attr);
+          }
+        });
+
+        // Build the result
+        const parts = [`element: "${tagName}"`];
+        
+        if (domAttrs.length > 0) {
+          parts.push(`attrs: { ${domAttrs.join(', ')} }`);
+        }
+        
+        if (displayObjectAttrs.length > 0) {
+          parts.push(...displayObjectAttrs);
+        }
+
+        if (children) {
+          return `h(DOMContainer, { ${parts.join(', ')} }, ${children})`;
+        } else {
+          return `h(DOMContainer, { ${parts.join(', ')} })`;
+        }
+      }
+      
+      // Otherwise, treat as regular component
       const attrsString = formatAttributes(attributes);
       const children = content ? content : null;
       if (attrsString && children) {
@@ -270,6 +517,8 @@ content "component content"
       if (filteredElements.length === 1) return filteredElements[0];
       return `[${filteredElements.join(', ')}]`;
     }
+
+
 
 textNode
   = text:$([^<]+) {

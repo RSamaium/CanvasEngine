@@ -113,9 +113,15 @@ export function DisplayObject(extendClass) {
     layout = null;
     onBeforeDestroy: OnHook | null = null;
     onAfterMount: OnHook | null = null;
+    disableLayout: boolean = false;
 
     get deltaRatio() {
       return this.#canvasContext?.scheduler?.tick.value.deltaRatio;
+    }
+
+    get parentIsFlex() {
+      if (this.disableLayout) return false;
+      return this.parent?.isFlex;
     }
 
     onInit(props) {
@@ -152,7 +158,7 @@ export function DisplayObject(extendClass) {
       this.#canvasContext = props.context;
       if (parent) {
         const instance = parent.componentInstance as DisplayObject;
-        if (instance.isFlex && !this.layout) {
+        if (instance.isFlex && !this.layout && !this.disableLayout) {
           this.layout = {};
         }
         if (index === undefined) {
@@ -272,7 +278,7 @@ export function DisplayObject(extendClass) {
         await this.onBeforeDestroy();
       }
       super.destroy();
-      if (this.onAfterDestroy) this.onAfterDestroy()
+      if (afterDestroy) afterDestroy();
     }
 
     setFlexDirection(direction: FlexDirection) {
@@ -328,7 +334,7 @@ export function DisplayObject(extendClass) {
 
     setX(x: number) {
       x = x + this.getWidth() * this._anchorPoints.x;
-      if (!this.parent.isFlex) {
+      if (!this.parentIsFlex) {
         this.x = x;
       } else {
         this.x = x;
@@ -338,7 +344,7 @@ export function DisplayObject(extendClass) {
 
     setY(y: number) {
       y = y + this.getHeight() * this._anchorPoints.y;
-      if (!this.parent.isFlex) {
+      if (!this.parentIsFlex) {
         this.y = y;
       } else {
         this.y = y;
@@ -416,7 +422,7 @@ export function DisplayObject(extendClass) {
 
     setWidth(width: number) {
       this.displayWidth.set(width);
-      if (!this.parent?.isFlex) {
+      if (!this.parentIsFlex) {
         this.width = width;
       } else {
         this.layout = { width };
@@ -425,7 +431,7 @@ export function DisplayObject(extendClass) {
 
     setHeight(height: number) {
       this.displayHeight.set(height);
-      if (!this.parent?.isFlex) {
+      if (!this.parentIsFlex) {
         this.height = height;
       } else {
         this.layout = { height };
