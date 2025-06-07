@@ -12,6 +12,7 @@ import { signal } from "@signe/reactive";
 import { DropShadowFilter } from "pixi-filters";
 import { BlurFilter, ObservablePoint } from "pixi.js";
 import { isPercent } from "../utils/functions";
+import { BehaviorSubject, filter, Subject } from "rxjs";
 
 export interface ComponentInstance extends PixiMixins.ContainerOptions {
   id?: string;
@@ -113,6 +114,11 @@ export function DisplayObject(extendClass) {
     layout = null;
     onBeforeDestroy: OnHook | null = null;
     onAfterMount: OnHook | null = null;
+    subjectInit = new BehaviorSubject(null).pipe(
+      filter((value) => {
+        return value.width != 0;
+      })
+    );
     disableLayout: boolean = false;
 
     get deltaRatio() {
@@ -152,6 +158,8 @@ export function DisplayObject(extendClass) {
         this.layout = {};
         this.isFlex = true;
       }
+
+      this.subjectInit.next(this);
     }
 
     async onMount({ parent, props }: Element<DisplayObject>, index?: number) {

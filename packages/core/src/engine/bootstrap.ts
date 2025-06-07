@@ -17,7 +17,6 @@ export const bootstrapCanvas = async (rootElement: HTMLElement | null, canvas: C
     resizeTo: rootElement,
     autoStart: false,
   });
-
   const canvasElement = await h(canvas);
   if (canvasElement.tag != 'Canvas') {
     throw new Error('Canvas is required');

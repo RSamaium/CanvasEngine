@@ -1,6 +1,7 @@
 import { Howl } from 'howler';
 import { computed, effect, isSignal, Signal } from "@signe/reactive";
 import {
+  Application,
   Assets,
   Container,
   Sprite as PixiSprite,
@@ -11,6 +12,7 @@ import { Subscription } from "rxjs";
 import {
   Element,
   createComponent,
+  isElement,
   registerComponent,
 } from "../engine/reactive";
 import { arrayEquals, isFunction } from "../engine/utils";
@@ -75,7 +77,12 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   private subscriptionSheet: Subscription[] = [];
   private sheetParams: any = {};
   private sheetCurrentAnimation: string = StandardAnimation.Stand;
+  private app: Application | null = null;
   onFinish: () => void;
+
+  get renderer() {
+    return this.app?.renderer;
+  }
 
   private currentAnimationContainer: Container | null = null;
 
@@ -169,6 +176,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     const { props, propObservables } = params;
     const tick: Signal = props.context.tick;
     const sheet = props.sheet ?? {};
+    this.app = props.context.app();
     if (sheet?.onFinish) {
       this.onFinish = sheet.onFinish;
     }
@@ -261,7 +269,16 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     else if (props.image && this.fullProps.rectangle === undefined) {
       this.texture = await setTexture(this.fullProps.image);
     } else if (props.texture) {
-      this.texture = props.texture;
+      if (isElement(props.texture)) {
+        const textureInstance = props.texture.componentInstance;
+        textureInstance.subjectInit
+        .subscribe((value) => {
+          console.log('a', value?.width)
+        })
+        this.texture = this.renderer?.generateTexture(props.texture.componentInstance);
+      } else {
+        this.texture = props.texture;
+      }
     }
     if (props.rectangle !== undefined) {
       const { x, y, width, height } = props.rectangle?.value ?? props.rectangle;

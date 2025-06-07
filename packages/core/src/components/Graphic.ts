@@ -1,13 +1,14 @@
-import { Effect, effect, Signal } from "@signe/reactive";
+import { Effect, effect, isSignal, signal, Signal, WritableSignal } from "@signe/reactive";
 import { Assets, Graphics as PixiGraphics } from "pixi.js";
 import { createComponent, Element, registerComponent } from "../engine/reactive";
 import { ComponentInstance, DisplayObject } from "./DisplayObject";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { useProps } from "../hooks/useProps";
 import { SignalOrPrimitive } from "./types";
+import { isPercent } from "../utils/functions";
 
 interface GraphicsProps extends DisplayObjectProps {
-  draw?: (graphics: PixiGraphics) => void;
+  draw?: (graphics: PixiGraphics, width: number, height: number) => void;
 }
 
 interface RectProps extends DisplayObjectProps {
@@ -39,16 +40,79 @@ interface SvgProps extends DisplayObjectProps {
 
 class CanvasGraphics extends DisplayObject(PixiGraphics) {
   clearEffect: Effect;
-  onInit(props) {
-    super.onInit(props);
+  width: WritableSignal<number>;
+  height: WritableSignal<number>;
+  
+  /**
+   * Initializes the graphics component with reactive width and height handling.
+   * 
+   * This method handles different types of width and height props:
+   * - **Numbers**: Direct pixel values
+   * - **Strings with %**: Percentage values that trigger flex layout and use layout box dimensions
+   * - **Signals**: Reactive values that update automatically
+   * 
+   * When percentage values are detected, the component:
+   * 1. Sets `display: 'flex'` to enable layout calculations
+   * 2. Listens to layout events to get computed dimensions
+   * 3. Updates internal width/height signals with layout box values
+   * 
+   * The draw function receives the reactive width and height signals as parameters.
+   * 
+   * @param props - Component properties including width, height, and draw function
+   * @example
+   * ```typescript
+   * // With pixel values
+   * Graphics({ width: 100, height: 50, draw: (g, w, h) => g.rect(0, 0, w(), h()) });
+   * 
+   * // With percentage values (uses layout box)
+   * Graphics({ width: "50%", height: "100%", draw: (g, w, h) => g.rect(0, 0, w(), h()) });
+   * 
+   * // With signals
+   * const width = signal(100);
+   * Graphics({ width, height: 50, draw: (g, w, h) => g.rect(0, 0, w(), h()) });
+   * ```
+   */
+  async onInit(props) {
+    // Initialize width and height signals
+    const width = isSignal(props.width) ? props.width : signal(props.width);
+    const height = isSignal(props.height) ? props.height : signal(props.height);
+    
+    // Check if width or height are percentages to set display flex
+    const isWidthPercentage = isPercent(width());
+    const isHeightPercentage = isPercent(height());
+    
+    await super.onInit(props);
+    
+    
     if (props.draw) {
       this.clearEffect = effect(() => {
-        this.clear?.();
-        props.draw?.(this);
+        const w = width();
+        const h = height();
+        if (typeof w == 'string' || typeof h == 'string') {
+          return
+        }
+        if (w == 0 || h == 0) {
+          return
+        }
+        this.clear();
+        props.draw?.(this, w, h);
+        this.subjectInit.next(this)
       });
     }
-  }
 
+    this.on('layout', (event) => {
+      const layoutBox = event.computedLayout;
+      // Update width if it's a percentage
+      if (isWidthPercentage) {
+        width.set(layoutBox.width);
+      }
+      
+      // Update height if it's a percentage
+      if (isHeightPercentage) {
+        height.set(layoutBox.height);
+      }
+    });
+  }
   /**
    * Called when the component is about to be destroyed.
    * This method should be overridden by subclasses to perform any cleanup.
@@ -75,16 +139,17 @@ export function Graphics(props: GraphicsProps) {
 }
 
 export function Rect(props: RectProps) {
-  const { width, height, color, borderRadius, border } = useProps(props, {
+  const { color, borderRadius, border } = useProps(props, {
     borderRadius: null,
     border: null
   })
+
   return Graphics({
-    draw: (g) => {
+    draw: (g, width, height) => {
       if (borderRadius()) {
-        g.roundRect(0, 0, width(), height(), borderRadius());
+        g.roundRect(0, 0, width, height, borderRadius());
       } else {
-        g.rect(0, 0, width(), height());
+        g.rect(0, 0, width, height);
       }
       if (border) {
         g.stroke(border);
@@ -100,8 +165,8 @@ function drawShape(g: PixiGraphics, shape: 'circle' | 'ellipse', props: {
   color: Signal<string>;
   border: Signal<number>;
 } | {
-  width: Signal<number>;
-  height: Signal<number>;
+  width: WritableSignal<number>;
+  height: WritableSignal<number>;
   color: Signal<string>;
   border: Signal<number>;
 }) {
@@ -132,7 +197,7 @@ export function Ellipse(props: EllipseProps) {
     border: null
   })
   return Graphics({
-    draw: (g) => drawShape(g, 'ellipse', { width, height, color, border }),
+    draw: (g, gWidth, gHeight) => drawShape(g, 'ellipse', { width: gWidth, height: gHeight, color, border }),
     ...props
   })
 }
@@ -143,11 +208,11 @@ export function Triangle(props: TriangleProps) {
     color: '#000'
   })
   return Graphics({
-    draw: (g) => {
-      g.moveTo(0, height());
-      g.lineTo(width() / 2, 0);
-      g.lineTo(width(), height());
-      g.lineTo(0, height());
+    draw: (g, gWidth, gHeight) => {
+      g.moveTo(0, gHeight());
+      g.lineTo(gWidth() / 2, 0);
+      g.lineTo(gWidth(), gHeight());
+      g.lineTo(0, gHeight());
       g.fill(color());
       if (border) {
         g.stroke(border);

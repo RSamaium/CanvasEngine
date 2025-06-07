@@ -86,12 +86,19 @@ export function isFunction(val: unknown): boolean {
 }
 
 /**
- * Checks if a value is a plain object
+ * Checks if a value is a plain object (not an instance of a class)
  * @param {unknown} val - Value to check
- * @returns {boolean} True if value is an object (not null and not array), false otherwise
+ * @returns {boolean} True if value is a plain object (not null, not array, not instance), false otherwise
+ * @example
+ * ```ts
+ * isObject({}) // true
+ * isObject(new Date()) // false
+ * isObject([]) // false
+ * isObject(null) // false
+ * ```
  */
 export function isObject(val: unknown): boolean {
-    return typeof val == 'object' && val != null && !Array.isArray(val)
+    return typeof val == 'object' && val != null && !Array.isArray(val) && val.constructor === Object
 }
 
 /**

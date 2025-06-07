@@ -85,7 +85,7 @@ class CanvasMesh extends DisplayObject(PixiMesh) {
    */
   onInit(props: MeshProps) {
     super.onInit(props);
-    
+
     // Set initial geometry if provided
     if (props.geometry) {
       this.geometry = props.geometry;
