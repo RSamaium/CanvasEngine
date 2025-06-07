@@ -36,12 +36,12 @@ class CanvasText extends DisplayObject(PixiText) {
   /**
    * Called when the component is mounted to the scene graph.
    * Initializes the typewriter effect if configured.
-   * @param {Element<CanvasText>} element - The element being mounted. Its `props` property (of type TextProps) contains component properties and context.
+   * @param {Element<CanvasText>} element - The element being mounted with parent and props.
    * @param {number} [index] - The index of the component among its siblings.
    */
   async onMount(element: Element<CanvasText>, index?: number): Promise<void> {
+    const { props } = element;
     await super.onMount(element, index);
-    const { props } = element; // props here will be of type TextProps due to Element<CanvasText>
     const tick: Signal = props.context.tick;
 
     if (props.text && props.typewriter) {
@@ -145,8 +145,12 @@ class CanvasText extends DisplayObject(PixiText) {
    */
   async onDestroy(parent: Element<any>, afterDestroy?: () => void): Promise<void> {
     const _afterDestroy = async () => {
-      this.subscriptionTick.unsubscribe();
-      afterDestroy();
+      if (this.subscriptionTick) {
+        this.subscriptionTick.unsubscribe();
+      }
+      if (afterDestroy) {
+        afterDestroy();
+      }
     }
     await super.onDestroy(parent, _afterDestroy);
   }

@@ -26,8 +26,18 @@ describe('Graphics', () => {
         it('should create a rect, change width', async () => {
             const width = signal(100)
             await TestBed.createComponent(Rect, { width, height: 100, color: '#fff' })
+            
+            // First call should be with initial width
+            expect(mockRect).toHaveBeenCalledWith(0, 0, 100, 100)
+            
             width.set(200)
-            expect(mockRect).toHaveBeenCalledWith(0, 0, 200, 100)
+            // Wait for the effect to run
+            await new Promise(resolve => setTimeout(resolve, 0))
+            
+            // Should be called twice now
+            expect(mockRect).toHaveBeenCalledTimes(2)
+            // Second call should be with updated width
+            expect(mockRect).toHaveBeenLastCalledWith(0, 0, 200, 100)
         })
     })
 })

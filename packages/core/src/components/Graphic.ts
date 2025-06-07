@@ -73,16 +73,30 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
    * ```
    */
   async onInit(props) {
-    // Initialize width and height signals
-    const width = isSignal(props.width) ? props.width : signal(props.width);
-    const height = isSignal(props.height) ? props.height : signal(props.height);
+    await super.onInit(props);
+  }
+
+  /**
+   * Called when the component is mounted to the scene graph.
+   * Creates the reactive effect for drawing using the original signals from propObservables.
+   * @param {Element<DisplayObject>} element - The element being mounted with props and propObservables.
+   * @param {number} [index] - The index of the component among its siblings.
+   */
+  async onMount(element: Element<DisplayObject>, index?: number): Promise<void> {
+    await super.onMount(element, index);
+    const { props, propObservables } = element;
+    
+    // Use original signals from propObservables if available, otherwise create new ones
+    const width = (isSignal(propObservables?.width) ? propObservables.width : signal(props.width || 0)) as WritableSignal<number>;
+    const height = (isSignal(propObservables?.height) ? propObservables.height : signal(props.height || 0)) as WritableSignal<number>;
+    
+    // Store as class properties for access in other methods
+    this.width = width;
+    this.height = height;
     
     // Check if width or height are percentages to set display flex
     const isWidthPercentage = isPercent(width());
     const isHeightPercentage = isPercent(height());
-    
-    await super.onInit(props);
-    
     
     if (props.draw) {
       this.clearEffect = effect(() => {
@@ -103,16 +117,50 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
     this.on('layout', (event) => {
       const layoutBox = event.computedLayout;
       // Update width if it's a percentage
-      if (isWidthPercentage) {
+      if (isWidthPercentage && isSignal(width)) {
         width.set(layoutBox.width);
       }
       
       // Update height if it's a percentage
-      if (isHeightPercentage) {
+      if (isHeightPercentage && isSignal(height)) {
         height.set(layoutBox.height);
       }
     });
   }
+
+  /**
+   * Called when component props are updated.
+   * Updates the internal width and height signals when props change.
+   * @param props - Updated properties
+   */
+  onUpdate(props) {
+    super.onUpdate(props);
+    
+    // Update width signal if width prop changed
+    if (props.width !== undefined && this.width) {
+      if (isSignal(props.width)) {
+        // If the new prop is a signal, we need to replace our local signal
+        // This shouldn't happen in normal usage, but handle it just in case
+        this.width = props.width;
+      } else {
+        // Update our local signal with the new value
+        this.width.set(props.width);
+      }
+    }
+    
+    // Update height signal if height prop changed
+    if (props.height !== undefined && this.height) {
+      if (isSignal(props.height)) {
+        // If the new prop is a signal, we need to replace our local signal
+        // This shouldn't happen in normal usage, but handle it just in case
+        this.height = props.height;
+      } else {
+        // Update our local signal with the new value
+        this.height.set(props.height);
+      }
+    }
+  }
+
   /**
    * Called when the component is about to be destroyed.
    * This method should be overridden by subclasses to perform any cleanup.
