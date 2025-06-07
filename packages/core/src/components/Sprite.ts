@@ -90,6 +90,12 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     options: Required<TextureOptionsMerging>
   ): Promise<Texture[][]> {
     const { width, height, framesHeight, framesWidth, image, offset } = options;
+    
+    if (!image || typeof image !== 'string' || image.trim() === '') {
+      console.warn('Invalid image path provided to createTextures:', image);
+      return [];
+    }
+    
     const texture = await Assets.load(image);
     const spriteWidth = options.spriteWidth;
     const spriteHeight = options.spriteHeight;
@@ -238,6 +244,11 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     super.onUpdate(props);
 
     const setTexture = async (image: string) => {
+      if (!image || typeof image !== 'string' || image.trim() === '') {
+        console.warn('Invalid image path provided to setTexture:', image);
+        return null;
+      }
+      
       const onProgress = this.fullProps.loader?.onProgress;
       const texture = await Assets.load(image, (progress) => {
         if (onProgress) onProgress(progress);
@@ -267,7 +278,10 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
     if (props.scaleMode) this.baseTexture.scaleMode = props.scaleMode;
     else if (props.image && this.fullProps.rectangle === undefined) {
-      this.texture = await setTexture(this.fullProps.image);
+      const texture = await setTexture(this.fullProps.image);
+      if (texture) {
+        this.texture = texture;
+      }
     } else if (props.texture) {
       if (isElement(props.texture)) {
         const textureInstance = props.texture.componentInstance;
@@ -283,10 +297,12 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     if (props.rectangle !== undefined) {
       const { x, y, width, height } = props.rectangle?.value ?? props.rectangle;
       const texture = await setTexture(this.fullProps.image);
-      this.texture = new Texture({
-        source: texture.source,
-        frame: new Rectangle(x, y, width, height),
-      });
+      if (texture) {
+        this.texture = new Texture({
+          source: texture.source,
+          frame: new Rectangle(x, y, width, height),
+        });
+      }
     }
   }
 

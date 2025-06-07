@@ -240,7 +240,11 @@ describe('DisplayObject Component', () => {
 
     test('handles delta ratio access', () => {
         const instance = new TestDisplayObject()
-        instance.fullProps = { context: mockContext }
+        // Set up the canvas context properly by calling onMount
+        instance.onMount({ 
+            parent: null, 
+            props: { context: mockContext } 
+        })
         
         const deltaRatio = instance.deltaRatio
         expect(deltaRatio).toBeDefined()

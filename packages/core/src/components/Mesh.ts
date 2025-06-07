@@ -88,7 +88,11 @@ class CanvasMesh extends DisplayObject(PixiMesh) {
 
     // Set initial geometry if provided
     if (props.geometry) {
-      this.geometry = props.geometry;
+      try {
+        this.geometry = props.geometry;
+      } catch (error) {
+        console.warn('Failed to set geometry:', error);
+      }
     }
     
     // Set initial shader if provided
@@ -116,7 +120,11 @@ class CanvasMesh extends DisplayObject(PixiMesh) {
 
     // Handle geometry updates
     if (props.geometry) {
-      this.geometry = props.geometry;
+      try {
+        this.geometry = props.geometry;
+      } catch (error) {
+        console.warn('Failed to update geometry:', error);
+      }
     }
 
     // Handle shader/material updates

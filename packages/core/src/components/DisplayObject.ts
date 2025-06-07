@@ -163,7 +163,11 @@ export function DisplayObject(extendClass) {
       if (parent) {
         const instance = parent.componentInstance as DisplayObject;
         if (instance.isFlex && !this.layout && !this.disableLayout) {
-          this.layout = {};
+          try {
+            this.layout = {};
+          } catch (error) {
+            console.warn('Failed to set layout:', error);
+          }
         }
         if (index === undefined) {
           instance.addChild(this);

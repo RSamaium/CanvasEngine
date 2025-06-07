@@ -3,7 +3,7 @@ import { createComponent, registerComponent, Element, Props } from "../engine/re
 import { DisplayObject, ComponentInstance } from "./DisplayObject";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { Signal } from "@signe/reactive";
-import { on } from "../engine/trigger";
+import { on, isTrigger } from "../engine/trigger";
 
 enum TextEffect {
   Typewriter = "typewriter",
@@ -51,7 +51,7 @@ class CanvasText extends DisplayObject(PixiText) {
       // Set typewriter options
       if (props.typewriter) {
         this.typewriterOptions = props.typewriter;
-        if (this.typewriterOptions.skip) {
+        if (this.typewriterOptions.skip && isTrigger(this.typewriterOptions.skip)) {
           on(this.typewriterOptions.skip, () => {
             this.skipTypewriter();
           });
