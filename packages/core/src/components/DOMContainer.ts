@@ -1,5 +1,9 @@
 import { DOMContainer as PixiDOMContainer } from "pixi.js";
-import { createComponent, Element, registerComponent } from "../engine/reactive";
+import {
+  createComponent,
+  Element,
+  registerComponent,
+} from "../engine/reactive";
 import { ComponentInstance, DisplayObject } from "./DisplayObject";
 import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
@@ -12,9 +16,9 @@ interface DOMContainerProps extends DisplayObjectProps {
       };
   textContent?: string;
   attrs?: Record<string, any> & {
-    class?: 
-      | string 
-      | string[] 
+    class?:
+      | string
+      | string[]
       | Record<string, boolean>
       | { items?: string[] }
       | { value?: string | string[] | Record<string, boolean> };
@@ -57,20 +61,20 @@ interface DOMContainerProps extends DisplayObjectProps {
  *   attrs: {
  *     // String format: space-separated classes
  *     class: 'container primary-theme',
- *     
+ *
  *     // Array format: array of class names
  *     // class: ['container', 'primary-theme'],
- *     
+ *
  *     // Object format: conditional classes
- *     // class: { 
- *     //   'container': true, 
- *     //   'primary-theme': true, 
- *     //   'disabled': false 
+ *     // class: {
+ *     //   'container': true,
+ *     //   'primary-theme': true,
+ *     //   'disabled': false
  *     // }
- *     
+ *
  *     // String format: CSS style string
  *     style: 'background-color: red; padding: 10px;',
- *     
+ *
  *     // Object format: style properties
  *     // style: {
  *     //   backgroundColor: 'red',
@@ -148,21 +152,21 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
 
   onUpdate(props: DOMContainerProps) {
     super.onUpdate(props);
-    
-        for (const [key, value] of Object.entries(props.attrs || {})) {
+
+    for (const [key, value] of Object.entries(props.attrs || {})) {
       if (key === "class") {
         const classList = value.items || value.value || value;
-        
+
         // Clear existing classes first
-        this.element.className = '';
-        
-        if (typeof classList === 'string') {
+        this.element.className = "";
+
+        if (typeof classList === "string") {
           // String: space-separated class names
           this.element.className = classList;
         } else if (Array.isArray(classList)) {
           // Array: array of class names
           this.element.classList.add(...classList);
-        } else if (typeof classList === 'object' && classList !== null) {
+        } else if (typeof classList === "object" && classList !== null) {
           // Object: { className: boolean }
           for (const [className, shouldAdd] of Object.entries(classList)) {
             if (shouldAdd) {
@@ -172,11 +176,11 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
         }
       } else if (key === "style") {
         const styleValue = value.items || value.value || value;
-        
-        if (typeof styleValue === 'string') {
+
+        if (typeof styleValue === "string") {
           // String: CSS style string
-          this.element.setAttribute('style', styleValue);
-        } else if (typeof styleValue === 'object' && styleValue !== null) {
+          this.element.setAttribute("style", styleValue);
+        } else if (typeof styleValue === "object" && styleValue !== null) {
           // Object: { property: value }
           for (const [styleProp, styleVal] of Object.entries(styleValue)) {
             if (styleVal !== null && styleVal !== undefined) {
@@ -197,7 +201,10 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
     }
   }
 
-  async onDestroy(parent: Element<ComponentInstance>, afterDestroy: () => void): Promise<void> {
+  async onDestroy(
+    parent: Element<ComponentInstance>,
+    afterDestroy: () => void
+  ): Promise<void> {
     // Remove all event listeners from the DOM element
     if (this.element) {
       for (const [event, handler] of this.eventListeners) {
@@ -205,10 +212,10 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
       }
       this.eventListeners.clear();
     }
-    
+
     const _afterDestroyCallback = async () => {
       afterDestroy();
-    }
+    };
     await super.onDestroy(parent, _afterDestroyCallback);
   }
 }

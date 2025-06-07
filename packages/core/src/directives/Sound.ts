@@ -8,8 +8,18 @@ import { calculateDistance, error } from '../engine/utils';
 
 const EVENTS = ['load', 'loaderror', 'playerror', 'play', 'end', 'pause', 'stop', 'mute', 'volume', 'rate', 'seek', 'fade', 'unlock']
 
+/**
+ * Sound directive for playing audio with support for spatial audio and multiple sound sources
+ * 
+ * This directive manages audio playback using Howler.js library. It supports:
+ * - Single or multiple sound sources
+ * - Spatial audio with distance-based volume calculation
+ * - All standard audio controls (play, pause, volume, etc.)
+ * - Event handling for audio lifecycle
+ * 
+ */
 export class Sound extends Directive {
-    private sound: Howl
+    private sounds: Howl[] = []
     private eventsFn: ((...args: any[]) => void)[] = []
     private maxVolume: number = 1
     private maxDistance: number = 100
@@ -21,21 +31,41 @@ export class Sound extends Directive {
         const { props } = element
         const tick = props.context.tick
         const propsSound = props.sound.value ?? props.sound
-        const { src, autoplay, loop, volume, spatial } = propsSound
-        this.sound = new Howl({
-            src,
-            autoplay,
-            loop,
-            volume
-        })
-        for (let event of EVENTS) {
-            if (!propsSound[event]) continue
-            const fn = propsSound[event]
-            this.eventsFn.push(fn)
-            this.sound.on(event, fn);
+
+        // Check if src is null or undefined
+        if (!propsSound.src) {
+            return
         }
 
-        if (spatial) {
+        const { src, autoplay, loop, volume, spatial } = propsSound
+        
+        // Handle multiple sources
+        const sources = Array.isArray(src) ? src : [src]
+
+        // Create Howl instances for each source
+        for (const source of sources) {
+            if (!source) continue // Skip null/undefined sources
+            
+            const sound = new Howl({
+                src: source,
+                autoplay,
+                loop,
+                volume
+            })
+ 
+            // Add event listeners for each sound
+            for (let event of EVENTS) {
+                if (!propsSound[event]) continue
+                const fn = propsSound[event]
+                this.eventsFn.push(fn)
+                sound.on(event, fn);
+            }
+            
+            this.sounds.push(sound)
+        }
+
+        // Setup spatial audio if enabled
+        if (spatial && this.sounds.length > 0) {
             const { soundListenerPosition } = props.context
             if (!soundListenerPosition) {
                 throw new error('SoundListenerPosition directive is required for spatial sound in component parent')
@@ -46,39 +76,71 @@ export class Sound extends Directive {
                 const { x, y } = element.componentInstance
                 const distance = calculateDistance(x, y, listenerX(), listenerY());
                 const volume = Math.max(this.maxVolume - (distance / this.maxDistance), 0)
-                this.sound.volume(volume)
+                
+                // Apply volume to all sounds
+                this.sounds.forEach(sound => sound.volume(volume))
             }).subscription
         }
+
+        this.onUpdate(propsSound)
     }
 
     onUpdate(props: any) {
-        const { volume, loop, mute, seek, playing, rate, spatial } = props.value ?? props
-        if (volume != undefined) this.sound.volume(volume)
-        if (loop != undefined) this.sound.loop(loop)
-        if (mute != undefined) this.sound.mute(mute)
-        if (seek != undefined) this.sound.seek(seek)
-        if (playing != undefined) {
-            if (playing) this.sound.play()
-            else this.sound.pause()
-        }
+        const soundProps = props.value ?? props
+        const { volume, loop, mute, seek, playing, rate, spatial } = soundProps
+        // Apply updates to all sounds
+        this.sounds.forEach(sound => {
+            if (volume !== undefined) sound.volume(volume)
+            if (loop !== undefined) sound.loop(loop)
+            if (mute !== undefined) sound.mute(mute)
+            if (seek !== undefined) sound.seek(seek)
+            if (playing !== undefined) {
+                if (playing) sound.play()
+                else sound.pause()
+            }
+            if (rate !== undefined) sound.rate(rate)
+        })
+        
+        // Update spatial audio settings
         if (spatial) {
             this.maxVolume = spatial.maxVolume ?? this.maxVolume
             this.maxDistance = spatial.maxDistance ?? this.maxDistance
         }
-        if (rate != undefined) this.sound.rate(rate)
     }
 
     onDestroy() {
-        this.sound.stop()
-        this.tickSubscription?.unsubscribe()
-        for (let event of EVENTS) {
-            if (this.eventsFn[event]) {
-                this.sound.off(event, this.eventsFn[event]);
+        // Stop and clean up all sounds
+        this.sounds.forEach(sound => {
+            sound.stop()
+            
+            // Remove event listeners
+            for (let event of EVENTS) {
+                const eventFn = this.eventsFn.find(fn => fn === this.eventsFn[event])
+                if (eventFn) {
+                    sound.off(event, eventFn);
+                }
             }
-        }
+        })
+        
+        this.sounds = []
+        this.eventsFn = []
+        this.tickSubscription?.unsubscribe()
     }
 }
 
+/**
+ * SoundListenerPosition directive for spatial audio
+ * 
+ * This directive provides the listener position for spatial audio calculations.
+ * It should be placed on a parent component that contains spatial sound sources.
+ * 
+ * @example
+ * ```tsx
+ * <Player soundListenerPosition={{ x: playerX, y: playerY }}>
+ *   <Enemy sound={{ src: 'growl.mp3', spatial: { maxDistance: 100 } }} />
+ * </Player>
+ * ```
+ */
 class SoundListenerPosition extends Directive {
     onMount(element: Element<any>) {
         element.props.context.soundListenerPosition = element.propObservables?.soundListenerPosition
