@@ -6,36 +6,10 @@
     effect,
     animatedSequence,
   } from "canvasengine";
-  import { Geometry, Shader } from "pixi.js";
-  import fragment from "./triangle.frag";
-  import vertex from "./triangle.vert";
-  import source from "./triangle.wgsl";
 
-  const geometry = new Geometry({
-    attributes: {
-      aPosition: [-100, -50, 100, -50, 0, 100],
-    },
-  });
-
-  const gl = { vertex, fragment };
-
-  const gpu = {
-    vertex: {
-      entryPoint: "main",
-      source,
-    },
-    fragment: {
-      entryPoint: "main",
-      source,
-    },
-  };
-
-  const shader = Shader.from({
-    gl,
-    gpu,
-  });
+const text = signal("Hello, world!");
 </script>
 
-<Canvas antialias="{true}">
-  <Mesh geometry shader />
+<Canvas antialias={true}>
+    <input type="text" value={text} />
 </Canvas>

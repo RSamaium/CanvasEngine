@@ -615,3 +615,20 @@ describe("Condition in Loops", () => {
   });
 
 });
+
+describe('Svg', () => {
+  test('should compile svg', () => {
+    const input = `<svg>
+      <path d="M 100 350 l 150 -300" stroke="red" stroke-width="4"/>
+    </svg>`;
+    const output = parser.parse(input);
+    expect(output).toBe('h(Svg, { content: `<svg><path d="M 100 350 l 150 -300" stroke="red" stroke-width="4"/></svg>` })');
+  });
+
+  test('should compile svg with canvas', () => {
+    const input = `<Canvas antialias={true}>
+    <svg height="400" width="450" xmlns="http://www.w3.org/2000/svg"></svg></Canvas>`;
+    const output = parser.parse(input);
+    expect(output).toBe('h(Canvas, { antialias: true }, h(Svg, { content: `<svg height="400" width="450" xmlns="http://www.w3.org/2000/svg"></svg>` }))');
+  });
+});

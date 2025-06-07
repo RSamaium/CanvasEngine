@@ -118,7 +118,8 @@ export default function canvasengine() {
     "TilingSprite",
     "svg",
     "Video",
-    "Mesh"
+    "Mesh",
+    "Svg"
   ];
 
   return {
@@ -133,11 +134,6 @@ export default function canvasengine() {
       // Transform SVG tags to Svg components
       let template = code.replace(/<script>[\s\S]*?<\/script>/, "")
         .replace(/^\s+|\s+$/g, '');
-      
-      // Add SVG transformation
-      template = template.replace(/<svg>([\s\S]*?)<\/svg>/g, (match, content) => {
-        return `<Svg content="${content.trim()}" />`;
-      });
 
       let parsedTemplate;
       try {

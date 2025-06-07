@@ -1,5 +1,5 @@
 import { Effect, effect, Signal } from "@signe/reactive";
-import { Graphics as PixiGraphics } from "pixi.js";
+import { Assets, Graphics as PixiGraphics } from "pixi.js";
 import { createComponent, Element, registerComponent } from "../engine/reactive";
 import { ComponentInstance, DisplayObject } from "./DisplayObject";
 import { DisplayObjectProps } from "./types/DisplayObject";
@@ -29,7 +29,12 @@ interface TriangleProps extends DisplayObjectProps {
 }
 
 interface SvgProps extends DisplayObjectProps {
-  svg: string;
+  /** SVG content as string (legacy prop) */
+  svg?: string;
+  /** URL source of the SVG file to load */
+  src?: string;
+  /** Direct SVG content as string */
+  content?: string;
 }
 
 class CanvasGraphics extends DisplayObject(PixiGraphics) {
@@ -152,9 +157,55 @@ export function Triangle(props: TriangleProps) {
   })
 }
 
+/**
+ * Creates an SVG component that can render SVG graphics from URL, content, or legacy svg prop.
+ * 
+ * This component provides three ways to display SVG graphics:
+ * - **src**: Load SVG from a URL using Assets.load with parseAsGraphicsContext option
+ * - **content**: Render SVG directly from string content using Graphics.svg() method
+ * - **svg**: Legacy prop for SVG content (for backward compatibility)
+ * 
+ * @param props - Component properties including src, content, or svg
+ * @returns A reactive SVG component
+ * @example
+ * ```typescript
+ * // Load from URL
+ * const svgFromUrl = Svg({ src: "/assets/logo.svg" });
+ * 
+ * // Direct content
+ * const svgFromContent = Svg({ 
+ *   content: `<svg viewBox="0 0 100 100">
+ *     <circle cx="50" cy="50" r="40" fill="blue"/>
+ *   </svg>` 
+ * });
+ * 
+ * // Legacy usage
+ * const svgLegacy = Svg({ svg: "<svg>...</svg>" });
+ * ```
+ */
 export function Svg(props: SvgProps) {
   return Graphics({
-    draw: (g) => g.svg(props.svg),
+    draw: async (g) => {
+      if (props.src) {
+        // Load SVG from source URL with graphics context parsing
+        const svgData = await Assets.load({
+          src: props.src,
+          data: {
+            parseAsGraphicsContext: true,
+          },
+        });
+        
+        // Apply the loaded graphics context
+        const graphics = new PixiGraphics(svgData);
+        g.context = graphics.context;
+      } else if (props.content) {
+        // Render SVG directly from content string
+        g.svg(props.content);
+      } else if (props.svg) {
+        // Legacy prop support
+        g.svg(props.svg);
+      }
+    },
     ...props
   })
 }

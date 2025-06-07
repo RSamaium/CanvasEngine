@@ -69,6 +69,7 @@ start
 element "component or control structure"
   = forLoop
   / ifCondition
+  / svgElement
   / selfClosingElement
   / openCloseElement
   / openUnclosedTag
@@ -427,4 +428,18 @@ unclosedBrace "unclosed brace"
         `Missing closing brace in dynamic attribute '${attributeName}'`,
         location()
       );
+    }
+
+svgElement "SVG element"
+  = "<svg" attrs:([^>]*) ">" content:svgInnerContent "</svg>" _ {
+      const attributes = attrs.join('').trim();
+      // Clean up the content by removing extra whitespace and newlines
+      const cleanContent = content.replace(/\s+/g, ' ').trim();
+      const rawContent = `<svg${attributes ? ' ' + attributes : ''}>${cleanContent}</svg>`;
+      return `h(Svg, { content: \`${rawContent}\` })`;
+    }
+
+svgInnerContent "SVG inner content"
+  = content:$((!("</svg>") .)*) {
+      return content;
     }
