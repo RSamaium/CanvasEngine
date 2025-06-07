@@ -6,8 +6,36 @@
     effect,
     animatedSequence,
   } from "canvasengine";
-  import MyViewport from "./viewport.ce";
+  import { Geometry, Shader } from "pixi.js";
+  import fragment from "./triangle.frag";
+  import vertex from "./triangle.vert";
+  import source from "./triangle.wgsl";
+
+  const geometry = new Geometry({
+    attributes: {
+      aPosition: [-100, -50, 100, -50, 0, 100],
+    },
+  });
+
+  const gl = { vertex, fragment };
+
+  const gpu = {
+    vertex: {
+      entryPoint: "main",
+      source,
+    },
+    fragment: {
+      entryPoint: "main",
+      source,
+    },
+  };
+
+  const shader = Shader.from({
+    gl,
+    gpu,
+  });
 </script>
-<Canvas antialias={true}>
- 
+
+<Canvas antialias="{true}">
+  <Mesh geometry shader />
 </Canvas>

@@ -39,6 +39,55 @@ function showErrorMessage(template: string, error: any): string {
          `${errorLine}\n${pointer}\n`;
 }
 
+/**
+ * Vite plugin to load shader files (.frag, .vert, .wgsl) as text strings
+ * 
+ * This plugin allows importing shader files directly as string literals in your code.
+ * It supports fragment shaders (.frag), vertex shaders (.vert), and WebGPU shaders (.wgsl).
+ * The content is loaded as a raw string and can be used directly with graphics APIs.
+ * 
+ * @returns {object} - Vite plugin configuration object
+ * 
+ * @example
+ * ```typescript
+ * // In your vite.config.ts
+ * import { shaderLoader } from './path/to/compiler'
+ * 
+ * export default defineConfig({
+ *   plugins: [shaderLoader()]
+ * })
+ * 
+ * // In your code
+ * import fragmentShader from './shader.frag'
+ * import vertexShader from './shader.vert'
+ * import computeShader from './shader.wgsl'
+ * 
+ * console.log(fragmentShader) // Raw shader code as string
+ * ```
+ */
+export function shaderLoader() {
+  const filter = createFilter(/\.(frag|vert|wgsl)$/);
+
+  return {
+    name: "vite-plugin-shader-loader",
+    transform(code: string, id: string) {
+      if (!filter(id)) return;
+
+      // Escape the shader code to be safely embedded in a JavaScript string
+      const escapedCode = code
+        .replace(/\\/g, '\\\\')  // Escape backslashes
+        .replace(/`/g, '\\`')    // Escape backticks
+        .replace(/\$/g, '\\$');  // Escape dollar signs
+
+      // Return the shader content as a default export string
+      return {
+        code: `export default \`${escapedCode}\`;`,
+        map: null,
+      };
+    },
+  };
+}
+
 export default function canvasengine() {
   const filter = createFilter("**/*.ce");
 
@@ -68,7 +117,8 @@ export default function canvasengine() {
     "Triangle",
     "TilingSprite",
     "svg",
-    "Video"
+    "Video",
+    "Mesh"
   ];
 
   return {

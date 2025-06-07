@@ -1,6 +1,7 @@
 export { Canvas } from './Canvas'
 export { Container } from './Container'
 export { Graphics, Rect, Circle, Ellipse, Triangle, Svg as svg } from './Graphic'
+export { Mesh } from './Mesh'
 export { Scene } from './Scene'
 export { ParticlesEmitter } from './ParticleEmitter'
 export { Sprite } from './Sprite'

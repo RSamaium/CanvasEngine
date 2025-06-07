@@ -38,7 +38,7 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
     super.onInit(props);
     if (props.draw) {
       this.clearEffect = effect(() => {
-        this.clear();
+        this.clear?.();
         props.draw?.(this);
       });
     }

@@ -1,17 +1,18 @@
 import { defineConfig } from 'vite'
-import canvasengine from '../packages/compiler'
+import canvasengine, { shaderLoader } from '../packages/compiler'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-const dirname = path.dirname(fileURLToPath(import.meta.url))
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [canvasengine()],
+  plugins: [canvasengine(), shaderLoader()],
   resolve: {
     alias: {
-      canvasengine: path.resolve(dirname, '../packages/core/src/index.ts'),
-      '@canvasengine/presets': path.resolve(dirname, '../packages/presets/src/index.ts'),
+      canvasengine: path.resolve(__dirname, '../packages/core/src/index.ts'),
+      '@canvasengine/presets': path.resolve(__dirname, '../packages/presets/src/index.ts'),
       path: 'path-browserify'
     }
   }
