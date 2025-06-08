@@ -7,11 +7,11 @@
     animatedSequence,
     tick
   } from "canvasengine";
-  import { Weather } from "@canvasengine/presets";
 </script>
 
 <Canvas antialias={true}>
-  <Container>
-    <Weather />
-  </Container>
+  <DOMContainer>
+    <input type="text" />
+    <button>Click me</button>
+  </DOMContainer>
 </Canvas>

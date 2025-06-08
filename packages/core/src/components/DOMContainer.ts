@@ -8,27 +8,6 @@ import { ComponentInstance, DisplayObject } from "./DisplayObject";
 import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
 
-interface DOMContainerProps extends DisplayObjectProps {
-  element:
-    | string
-    | {
-        value: HTMLElement;
-      };
-  textContent?: string;
-  attrs?: Record<string, any> & {
-    class?:
-      | string
-      | string[]
-      | Record<string, boolean>
-      | { items?: string[] }
-      | { value?: string | string[] | Record<string, boolean> };
-    style?:
-      | string
-      | Record<string, string | number>
-      | { value?: string | Record<string, string | number> };
-  };
-  sortableChildren?: boolean;
-}
 
 /**
  * DOMContainer class for managing DOM elements within the canvas engine
@@ -127,96 +106,14 @@ const EVENTS = [
 
 export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
   disableLayout = true;
-  private eventListeners: Map<string, (e: Event) => void> = new Map();
 
-  onInit(props: DOMContainerProps) {
-    super.onInit(props);
-    if (props.element === undefined) {
-      throw new Error("DOMContainer: element is required");
+  onInit(props: any) {
+    const wrapper = document.createElement("div");
+    for(const child of props.children) {
+      const element = child?.componentInstance.element;
+      wrapper.appendChild(element);
     }
-    if (typeof props.element === "string") {
-      this.element = document.createElement(props.element);
-    } else {
-      this.element = props.element.value;
-    }
-    for (const event of EVENTS) {
-      if (props.attrs?.[event]) {
-        const eventHandler = (e: Event) => {
-          props.attrs[event]?.(e);
-        };
-        this.eventListeners.set(event, eventHandler);
-        this.element.addEventListener(event, eventHandler, false);
-      }
-    }
-  }
-
-  onUpdate(props: DOMContainerProps) {
-    super.onUpdate(props);
-
-    for (const [key, value] of Object.entries(props.attrs || {})) {
-      if (key === "class") {
-        const classList = value.items || value.value || value;
-
-        // Clear existing classes first
-        this.element.className = "";
-
-        if (typeof classList === "string") {
-          // String: space-separated class names
-          this.element.className = classList;
-        } else if (Array.isArray(classList)) {
-          // Array: array of class names
-          this.element.classList.add(...classList);
-        } else if (typeof classList === "object" && classList !== null) {
-          // Object: { className: boolean }
-          for (const [className, shouldAdd] of Object.entries(classList)) {
-            if (shouldAdd) {
-              this.element.classList.add(className);
-            }
-          }
-        }
-      } else if (key === "style") {
-        const styleValue = value.items || value.value || value;
-
-        if (typeof styleValue === "string") {
-          // String: CSS style string
-          this.element.setAttribute("style", styleValue);
-        } else if (typeof styleValue === "object" && styleValue !== null) {
-          // Object: { property: value }
-          for (const [styleProp, styleVal] of Object.entries(styleValue)) {
-            if (styleVal !== null && styleVal !== undefined) {
-              (this.element.style as any)[styleProp] = styleVal;
-            }
-          }
-        }
-      } else if (!EVENTS.includes(key)) {
-        this.element.setAttribute(key, value);
-      }
-    }
-    if (props.textContent) {
-      this.element.textContent = props.textContent;
-    }
-
-    if (props.sortableChildren !== undefined) {
-      this.sortableChildren = props.sortableChildren;
-    }
-  }
-
-  async onDestroy(
-    parent: Element<ComponentInstance>,
-    afterDestroy: () => void
-  ): Promise<void> {
-    // Remove all event listeners from the DOM element
-    if (this.element) {
-      for (const [event, handler] of this.eventListeners) {
-        this.element.removeEventListener(event, handler, false);
-      }
-      this.eventListeners.clear();
-    }
-
-    const _afterDestroyCallback = async () => {
-      afterDestroy();
-    };
-    await super.onDestroy(parent, _afterDestroyCallback);
+    this.element = wrapper;
   }
 }
 
@@ -224,6 +121,6 @@ export interface CanvasDOMContainer extends DisplayObjectProps {}
 
 registerComponent("DOMContainer", CanvasDOMContainer);
 
-export const DOMContainer: ComponentFunction<DOMContainerProps> = (props) => {
+export const DOMContainer: ComponentFunction<any> = (props) => {
   return createComponent("DOMContainer", props);
 };

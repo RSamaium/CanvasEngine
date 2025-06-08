@@ -637,31 +637,31 @@ describe('DOM', () => {
   test('should compile input DOM', () => {
     const input = `<input type="text" />`;
     const output = parser.parse(input);
-    expect(output).toBe('h(DOMContainer, { element: "input", attrs: { type: \'text\' } })');
+    expect(output).toBe('h(DOMElement, { element: "input", attrs: { type: \'text\' } })');
   });
 
   test('should compile div DOM', () => {
     const input = `<div class="container" />`;
     const output = parser.parse(input);
-    expect(output).toBe('h(DOMContainer, { element: "div", attrs: { class: \'container\' } })');
+    expect(output).toBe('h(DOMElement, { element: "div", attrs: { class: \'container\' } })');
   });
 
   test('should compile button DOM', () => {
     const input = `<button type="submit" />`;
     const output = parser.parse(input);
-    expect(output).toBe('h(DOMContainer, { element: "button", attrs: { type: \'submit\' } })');
+    expect(output).toBe('h(DOMElement, { element: "button", attrs: { type: \'submit\' } })');
   });
 
   test('should compile button DOM', () => {
     const input = `<button>Text</button>`;
     const output = parser.parse(input);
-    expect(output).toBe('h(DOMContainer, { element: "button", textContent: \'Text\' })');
+    expect(output).toBe('h(DOMElement, { element: "button", textContent: \'Text\' })');
   });
 
   test('should compile textarea DOM with dynamic attributes', () => {
     const input = `<textarea rows={rows} cols={cols} />`;
     const output = parser.parse(input);
-    expect(output).toBe('h(DOMContainer, { element: "textarea", attrs: { rows: rows, cols: cols } })');
+    expect(output).toBe('h(DOMElement, { element: "textarea", attrs: { rows: rows, cols: cols } })');
   });
 
   test('should not transform Canvas to DOM', () => {
@@ -682,7 +682,7 @@ describe('DOM', () => {
       <p>Hello World</p>
     </div>`;
     const output = parser.parse(input);
-    expect(output).toBe('h(DOMContainer, { element: "div", attrs: { class: \'container\' } }, h(DOMContainer, { element: "p", textContent: \'Hello World\' }))');
+    expect(output).toBe('h(DOMElement, { element: "div", attrs: { class: \'container\' } }, h(DOMElement, { element: "p", textContent: \'Hello World\' }))');
   });
 
   test('should compile deeply nested DOM elements', () => {
@@ -694,7 +694,7 @@ describe('DOM', () => {
     </div>`;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `h(DOMContainer, { element: "div", attrs: { class: 'wrapper' } }, h(DOMContainer, { element: "section" }, [h(DOMContainer, { element: "h1", textContent: 'Title' }), h(DOMContainer, { element: "p", textContent: 'Content' })]))`.replace(/\s+/g, "")
+      `h(DOMElement, { element: "div", attrs: { class: 'wrapper' } }, h(DOMElement, { element: "section" }, [h(DOMElement, { element: "h1", textContent: 'Title' }), h(DOMElement, { element: "p", textContent: 'Content' })]))`.replace(/\s+/g, "")
     );
   });
 
@@ -706,7 +706,7 @@ describe('DOM', () => {
     </ul>`;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `h(DOMContainer, { element: "ul" }, [h(DOMContainer, { element: "li", textContent: 'Item 1' }), h(DOMContainer, { element: "li", textContent: 'Item 2' }), h(DOMContainer, { element: "li", textContent: 'Item 3' })])`.replace(/\s+/g, "")
+      `h(DOMElement, { element: "ul" }, [h(DOMElement, { element: "li", textContent: 'Item 1' }), h(DOMElement, { element: "li", textContent: 'Item 2' }), h(DOMElement, { element: "li", textContent: 'Item 3' })])`.replace(/\s+/g, "")
     );
   });
 
@@ -719,14 +719,14 @@ describe('DOM', () => {
     </div>`;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `h(DOMContainer, { element: "div", attrs: { class: 'game-container' } }, [h(Canvas, { width: 800, height: 600 }), h(DOMContainer, { element: "div", attrs: { class: 'ui' } }, h(DOMContainer, { element: "button", textContent: 'Start Game' }))])`.replace(/\s+/g, "")
+      `h(DOMElement, { element: "div", attrs: { class: 'game-container' } }, [h(Canvas, { width: 800, height: 600 }), h(DOMElement, { element: "div", attrs: { class: 'ui' } }, h(DOMElement, { element: "button", textContent: 'Start Game' }))])`.replace(/\s+/g, "")
     );
   });
 
   test('should compile DOM with attributes and text content', () => {
     const input = `<button class="btn primary" type="submit">Submit Form</button>`;
     const output = parser.parse(input);
-    expect(output).toBe('h(DOMContainer, { element: "button", attrs: { class: \'btn primary\', type: \'submit\' }, textContent: \'Submit Form\' })');
+    expect(output).toBe('h(DOMElement, { element: "button", attrs: { class: \'btn primary\', type: \'submit\' }, textContent: \'Submit Form\' })');
   });
 });
 
@@ -734,7 +734,7 @@ describe('DOM with special attributes', () => {
   test('should compile DOM with special attributes', () => {
     const input = `<input type="password" x={100} y={100} />`;
     const output = parser.parse(input);
-    expect(output).toBe('h(DOMContainer, { element: "input", attrs: { type: \'password\' }, x: 100, y: 100 })');
+    expect(output).toBe('h(DOMElement, { element: "input", attrs: { type: \'password\' }, x: 100, y: 100 })');
   });
 });
 
@@ -747,7 +747,7 @@ describe('DOM with Control Structures', () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `loop(items, item => h(DOMContainer, { element: "li", textContent: computed(() => item().name()) }))`.replace(/\s+/g, "")
+      `loop(items, item => h(DOMElement, { element: "li", textContent: computed(() => item().name()) }))`.replace(/\s+/g, "")
     );
   });
 
@@ -763,7 +763,7 @@ describe('DOM with Control Structures', () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `h(DOMContainer, { element: "ul", attrs: { class: 'menu' } }, loop(menuItems, item => h(DOMContainer, { element: "li", attrs: { class: 'menu-item' } }, h(DOMContainer, { element: "a", attrs: { href: computed(() => item().url()) }, textContent: computed(() => item().title()) }))))`.replace(/\s+/g, "")
+      `h(DOMElement, { element: "ul", attrs: { class: 'menu' } }, loop(menuItems, item => h(DOMElement, { element: "li", attrs: { class: 'menu-item' } }, h(DOMElement, { element: "a", attrs: { href: computed(() => item().url()) }, textContent: computed(() => item().title()) }))))`.replace(/\s+/g, "")
     );
   });
 
@@ -777,7 +777,7 @@ describe('DOM with Control Structures', () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `cond(showMessage, () => h(DOMContainer, { element: "div", attrs: { class: 'alert' } }, h(DOMContainer, { element: "p", textContent: 'Important message!' })))`.replace(/\s+/g, "")
+      `cond(showMessage, () => h(DOMElement, { element: "div", attrs: { class: 'alert' } }, h(DOMElement, { element: "p", textContent: 'Important message!' })))`.replace(/\s+/g, "")
     );
   });
 
@@ -789,7 +789,7 @@ describe('DOM with Control Structures', () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `cond(isVisible, () => h(DOMContainer, { element: "button", textContent: 'Click me' }))`.replace(/\s+/g, "")
+      `cond(isVisible, () => h(DOMElement, { element: "button", textContent: 'Click me' }))`.replace(/\s+/g, "")
     );
   });
 
@@ -812,7 +812,7 @@ describe('DOM with Control Structures', () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `h(DOMContainer, { element: "div", attrs: { class: 'container' } }, loop(sections, section => cond(section.visible, () => h(DOMContainer, { element: "section", attrs: { class: 'content' } }, [h(DOMContainer, { element: "h2", textContent: computed(() => section().title()) }), h(DOMContainer, { element: "div", attrs: { class: 'items' } }, loop(section.items, item => h(DOMContainer, { element: "div", attrs: { class: 'item' }, textContent: computed(() => item().name()) })))]))))`.replace(/\s+/g, "")
+      `h(DOMElement, { element: "div", attrs: { class: 'container' } }, loop(sections, section => cond(section.visible, () => h(DOMElement, { element: "section", attrs: { class: 'content' } }, [h(DOMElement, { element: "h2", textContent: computed(() => section().title()) }), h(DOMElement, { element: "div", attrs: { class: 'items' } }, loop(section.items, item => h(DOMElement, { element: "div", attrs: { class: 'item' }, textContent: computed(() => item().name()) })))]))))`.replace(/\s+/g, "")
     );
   });
 
@@ -837,7 +837,7 @@ describe('DOM with Control Structures', () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `h(DOMContainer, { element: "table" }, [h(DOMContainer, { element: "thead" }, h(DOMContainer, { element: "tr" }, [h(DOMContainer, { element: "th", textContent: 'Name' }), h(DOMContainer, { element: "th", textContent: 'Age' })])), h(DOMContainer, { element: "tbody" }, loop(users, user => h(DOMContainer, { element: "tr" }, [h(DOMContainer, { element: "td", textContent: computed(() => user().name()) }), h(DOMContainer, { element: "td", textContent: computed(() => user().age()) })])))])`.replace(/\s+/g, "")
+      `h(DOMElement, { element: "table" }, [h(DOMElement, { element: "thead" }, h(DOMElement, { element: "tr" }, [h(DOMElement, { element: "th", textContent: 'Name' }), h(DOMElement, { element: "th", textContent: 'Age' })])), h(DOMElement, { element: "tbody" }, loop(users, user => h(DOMElement, { element: "tr" }, [h(DOMElement, { element: "td", textContent: computed(() => user().name()) }), h(DOMElement, { element: "td", textContent: computed(() => user().age()) })])))])`.replace(/\s+/g, "")
     );
   });
 
@@ -857,7 +857,7 @@ describe('DOM with Control Structures', () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `h(DOMContainer, { element: "div", attrs: { class: 'status' } }, [cond(isLoading, () => h(DOMContainer, { element: "div", attrs: { class: 'spinner' }, textContent: 'Loading...' })), cond(hasError, () => h(DOMContainer, { element: "div", attrs: { class: 'error' }, textContent: 'Error occurred!' })), cond(isSuccess, () => h(DOMContainer, { element: "div", attrs: { class: 'success' }, textContent: 'Success!' }))])`.replace(/\s+/g, "")
+      `h(DOMElement, { element: "div", attrs: { class: 'status' } }, [cond(isLoading, () => h(DOMElement, { element: "div", attrs: { class: 'spinner' }, textContent: 'Loading...' })), cond(hasError, () => h(DOMElement, { element: "div", attrs: { class: 'error' }, textContent: 'Error occurred!' })), cond(isSuccess, () => h(DOMElement, { element: "div", attrs: { class: 'success' }, textContent: 'Success!' }))])`.replace(/\s+/g, "")
     );
   });
 
@@ -885,7 +885,7 @@ describe('DOM with Control Structures', () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `h(DOMContainer, { element: "div", attrs: { class: 'game-wrapper' } }, [h(Canvas, { width: 800, height: 600 }, loop(sprites, sprite => h(Sprite, { x: computed(() => sprite().x()), y: computed(() => sprite().y()) }))), h(DOMContainer, { element: "div", attrs: { class: 'ui-overlay' } }, [cond(showScore, () => h(DOMContainer, { element: "div", attrs: { class: 'score' }, textContent: computed(() => 'Score: ' + computed(() => score())) })), cond(showMenu, () => h(DOMContainer, { element: "div", attrs: { class: 'menu' } }, loop(menuOptions, option => h(DOMContainer, { element: "button", attrs: { class: 'menu-btn' }, textContent: computed(() => option().label()) }))))])])`.replace(/\s+/g, "")
+      `h(DOMElement, { element: "div", attrs: { class: 'game-wrapper' } }, [h(Canvas, { width: 800, height: 600 }, loop(sprites, sprite => h(Sprite, { x: computed(() => sprite().x()), y: computed(() => sprite().y()) }))), h(DOMElement, { element: "div", attrs: { class: 'ui-overlay' } }, [cond(showScore, () => h(DOMElement, { element: "div", attrs: { class: 'score' }, textContent: computed(() => 'Score: ' + computed(() => score())) })), cond(showMenu, () => h(DOMElement, { element: "div", attrs: { class: 'menu' } }, loop(menuOptions, option => h(DOMElement, { element: "button", attrs: { class: 'menu-btn' }, textContent: computed(() => option().label()) }))))])])`.replace(/\s+/g, "")
     );
   });
 });

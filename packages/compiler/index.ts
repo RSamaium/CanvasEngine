@@ -120,7 +120,8 @@ export default function canvasengine() {
     "Video",
     "Mesh",
     "Svg",
-    "DOMContainer"
+    "DOMContainer",
+    "DOMElement"
   ];
 
   return {

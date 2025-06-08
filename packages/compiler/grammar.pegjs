@@ -36,7 +36,7 @@
 
   // Framework components that should NOT be transformed to DOM elements
   const frameworkComponents = new Set([
-    'Canvas', 'Container', 'Sprite', 'Text', 'DOMContainer', 'Svg'
+    'Canvas', 'Container', 'Sprite', 'Text', 'DOMElement', 'Svg'
   ]);
 
   // DisplayObject special attributes that should not be in attrs
@@ -88,7 +88,7 @@
 
   function formatDOMElement(tagName, attributes) {
     if (attributes.length === 0) {
-      return `h(DOMContainer, { element: "${tagName}" })`;
+      return `h(DOMElement, { element: "${tagName}" })`;
     }
 
     // Separate DisplayObject attributes from DOM attributes
@@ -131,7 +131,7 @@
       parts.push(...displayObjectAttrs);
     }
 
-    return `h(DOMContainer, { ${parts.join(', ')} })`;
+    return `h(DOMElement, { ${parts.join(', ')} })`;
   }
 }
 
@@ -175,7 +175,7 @@ domElementWithText "DOM element with text content"
       
       if (isDOMElement(tagName)) {
         if (attributes.length === 0) {
-          return `h(DOMContainer, { element: "${tagName}", textContent: ${text} })`;
+          return `h(DOMElement, { element: "${tagName}", textContent: ${text} })`;
         }
 
         // Separate DisplayObject attributes from DOM attributes
@@ -220,7 +220,7 @@ domElementWithText "DOM element with text content"
           parts.push(...displayObjectAttrs);
         }
 
-        return `h(DOMContainer, { ${parts.join(', ')} })`;
+        return `h(DOMElement, { ${parts.join(', ')} })`;
       }
       
       // If not a DOM element, fall back to regular parsing
@@ -282,9 +282,9 @@ openCloseElement "component with content"
         
         if (attributes.length === 0) {
           if (children) {
-            return `h(DOMContainer, { element: "${tagName}" }, ${children})`;
+            return `h(DOMElement, { element: "${tagName}" }, ${children})`;
           } else {
-            return `h(DOMContainer, { element: "${tagName}" })`;
+            return `h(DOMElement, { element: "${tagName}" })`;
           }
         }
 
@@ -329,9 +329,9 @@ openCloseElement "component with content"
         }
 
         if (children) {
-          return `h(DOMContainer, { ${parts.join(', ')} }, ${children})`;
+          return `h(DOMElement, { ${parts.join(', ')} }, ${children})`;
         } else {
-          return `h(DOMContainer, { ${parts.join(', ')} })`;
+          return `h(DOMElement, { ${parts.join(', ')} })`;
         }
       }
       
