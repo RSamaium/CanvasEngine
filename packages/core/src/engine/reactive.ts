@@ -7,6 +7,7 @@ import {
   from,
   map,
   of,
+  share,
   switchMap,
 } from "rxjs";
 import { ComponentInstance } from "../components/DisplayObject";
@@ -489,7 +490,7 @@ export function cond(
   createElementFn: () => Element | Promise<Element>
 ): FlowObservable {
   let element: Element | null = null;
-  
+
   if (isSignal(condition)) {
     const signalCondition = condition as WritableObjectSignal<boolean>;
     return new Observable<{elements: Element[], type?: "init" | "remove"}>(subscriber => {
@@ -522,7 +523,7 @@ export function cond(
           });
         }
       });
-    });
+    }).pipe(share())
   } else {
     // Handle boolean case
     if (condition) {

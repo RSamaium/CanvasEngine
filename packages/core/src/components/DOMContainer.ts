@@ -5,8 +5,9 @@ import {
   registerComponent,
 } from "../engine/reactive";
 import { ComponentInstance, DisplayObject } from "./DisplayObject";
-import { ComponentFunction } from "../engine/signal";
+import { ComponentFunction, h } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
+import { CanvasDOMElement, DOMElement } from "./DOMElement";
 
 
 /**
@@ -108,12 +109,8 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
   disableLayout = true;
 
   onInit(props: any) {
-    const wrapper = document.createElement("div");
-    for(const child of props.children) {
-      const element = child?.componentInstance.element;
-      wrapper.appendChild(element);
-    }
-    this.element = wrapper;
+    const div = h(DOMElement, { element: "div" }, props.children) as unknown as Element<CanvasDOMElement>;
+    this.element = div.componentInstance.element;
   }
 }
 

@@ -96,7 +96,7 @@ export const EVENTS = [
   "wheelcapture",
 ];
 
-type OnHook = (() => void) | (() => Promise<void> | void);
+export type OnHook = (() => void) | (() => Promise<void> | void);
 
 export function DisplayObject(extendClass) {
   return class DisplayObject extends extendClass {

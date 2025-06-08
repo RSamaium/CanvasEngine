@@ -1,4 +1,5 @@
 import { ObservablePoint } from "pixi.js"
+import { Observable } from "rxjs"
 
 /**
  * Checks if code is running in a browser environment
@@ -99,6 +100,10 @@ export function isFunction(val: unknown): boolean {
  */
 export function isObject(val: unknown): boolean {
     return typeof val == 'object' && val != null && !Array.isArray(val) && val.constructor === Object
+}
+
+export function isObservable(val: unknown): boolean {
+    return val instanceof Observable
 }
 
 /**

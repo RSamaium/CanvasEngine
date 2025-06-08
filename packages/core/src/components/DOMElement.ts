@@ -4,9 +4,10 @@ import {
   Element,
   registerComponent,
 } from "../engine/reactive";
-import { ComponentInstance, DisplayObject } from "./DisplayObject";
+import { ComponentInstance, DisplayObject, OnHook } from "./DisplayObject";
 import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
+import { isObservable } from "../engine/utils";
 
 interface DOMContainerProps extends DisplayObjectProps {
   element:
@@ -27,7 +28,7 @@ interface DOMContainerProps extends DisplayObjectProps {
       | Record<string, string | number>
       | { value?: string | Record<string, string | number> };
   };
-  sortableChildren?: boolean;
+  onBeforeDestroy?: OnHook;
 }
 
 /**
@@ -126,14 +127,19 @@ const EVENTS = [
 ];
 
 export class CanvasDOMElement {
-  private element: HTMLElement;
+  public element: HTMLElement;
   private eventListeners: Map<string, (e: Event) => void> = new Map();
+  private onBeforeDestroy: OnHook | null = null;
 
   onInit(props: DOMContainerProps) {
     if (typeof props.element === "string") {
       this.element = document.createElement(props.element);
     } else {
       this.element = props.element.value;
+    }
+    if (props.onBeforeDestroy || props["on-before-destroy"]) {
+      this.onBeforeDestroy =
+        props.onBeforeDestroy || props["on-before-destroy"];
     }
     for (const event of EVENTS) {
       if (props.attrs?.[event]) {
@@ -144,9 +150,24 @@ export class CanvasDOMElement {
         this.element.addEventListener(event, eventHandler, false);
       }
     }
+    if (props.children) {
+      for (const child of props.children) {
+        if (isObservable(child)) {
+          child.subscribe(({ elements }) => {
+            for (const element of elements) {
+              this.element.appendChild(element.componentInstance.element);
+            }
+          });
+        } else {
+          this.element.appendChild(child.componentInstance.element);
+        }
+      }
+    }
+    this.onUpdate(props);
   }
 
   onUpdate(props: DOMContainerProps) {
+    if (!this.element) return;
     for (const [key, value] of Object.entries(props.attrs || {})) {
       if (key === "class") {
         const classList = value.items || value.value || value;
@@ -192,20 +213,28 @@ export class CanvasDOMElement {
   }
 
   async onDestroy(
-    parent: Element<ComponentInstance>,
+    parent: Element<CanvasDOMElement>,
     afterDestroy: () => void
   ): Promise<void> {
     // Remove all event listeners from the DOM element
+
     if (this.element) {
+      this.eventListeners.clear();
+
+      if (this.onBeforeDestroy) {
+        await this.onBeforeDestroy();
+      }
+
       for (const [event, handler] of this.eventListeners) {
         this.element.removeEventListener(event, handler, false);
       }
-      this.eventListeners.clear();
-    }
 
-    const _afterDestroyCallback = async () => {
-      afterDestroy();
-    };
+      this.element.remove();
+
+      if (afterDestroy) {
+        afterDestroy();
+      }
+    }
   }
 }
 

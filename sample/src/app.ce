@@ -7,11 +7,21 @@
     animatedSequence,
     tick
   } from "canvasengine";
+
+const text = signal("Hello");
+const show = signal(false);
+const click = () => {
+  text.set("Hello World");
+  show.set(!show());
+}
 </script>
 
-<Canvas antialias={true}>
+<Canvas antialias={true} backgroundColor="white">
   <DOMContainer>
-    <input type="text" />
-    <button>Click me</button>
+      <input type="text" value={text} />
+      <button click={click}>aa</button>
+      @if (show) {
+        <p>Hello World</p>
+      }
   </DOMContainer>
 </Canvas>
