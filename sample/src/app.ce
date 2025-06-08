@@ -10,18 +10,22 @@
 
 const text = signal("Hello");
 const show = signal(false);
-const click = () => {
-  text.set("Hello World");
-  show.set(!show());
+const array = signal([1, 2, 3]);
+const click = (event, formData) => {
+  console.log(formData)
+}
+
+const deleteItem = (item) => {
+  array().splice(array().indexOf(item), 1);
 }
 </script>
 
 <Canvas antialias={true} backgroundColor="white">
-  <DOMContainer>
-      <input type="text" value={text} />
-      <button click={click}>aa</button>
-      @if (show) {
-        <p>Hello World</p>
-      }
+  <DOMContainer x={100} y={100}>
+      <form submit={click}>
+        <input name="username" type="text" value={text} />
+        <button>aa</button>
+        <p>{text}</p>
+      </form>
   </DOMContainer>
 </Canvas>

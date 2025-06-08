@@ -249,8 +249,8 @@ simpleTextPart "simple text part"
 
 simpleDynamicPart "simple dynamic part"
   = "{" _ expr:attributeValue _ "}" {
-      // Handle dynamic expressions like {item.name}
-      if (expr.trim().match(/^[a-zA-Z_][a-zA-Z0-9_.]*$/)) {
+      // Handle dynamic expressions like {item.name} or {@text}
+      if (expr.trim().match(/^@?[a-zA-Z_][a-zA-Z0-9_.]*$/)) {
         let foundSignal = false;
         const computedValue = expr.replace(/@?[a-zA-Z_][a-zA-Z0-9_]*(?!:)/g, (match) => {
           if (match.startsWith('@')) {

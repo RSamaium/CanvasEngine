@@ -94,6 +94,10 @@ const guideMenu = [
         text: "Video",
         link: "/components/video",
       },
+      {
+        text: "DOMContainer",
+        link: "/components/dom-container",
+      },
     ],
   },
   {

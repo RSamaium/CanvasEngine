@@ -751,6 +751,16 @@ describe('DOM with Control Structures', () => {
     );
   });
 
+  test('Use literal text content', () => {
+    const input = `
+      <p>{@text}</p>
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `h(DOMElement, { element: "p", textContent: text })`.replace(/\s+/g, "")
+    );
+  })
+
   test('should compile @for loop with nested DOM structure', () => {
     const input = `
       <ul class="menu">
