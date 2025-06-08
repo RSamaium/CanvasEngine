@@ -33,10 +33,10 @@ If the attribute name is the same as the variable, you can simplify:
 
 ## Event listeners
 
-You can use event listeners in your components. Use the `@` prefix to bind an event listener.
+You can use event listeners in your components
 
 ```html
-<Rect width="100" height="100" color="red" @click={click} />
+<Rect width="100" height="100" color="red" click={click} />
 
 <script>
   const click = () => {
@@ -49,7 +49,7 @@ You can use event listeners in your components. Use the `@` prefix to bind an ev
 If the attribute name is the same as the variable, you can simplify:
 
 ```html
-<Rect width="100" height="100" color="red" @click />
+<Rect width="100" height="100" color="red" click />
 
 <script>
   const click = () => {
@@ -63,7 +63,7 @@ If the attribute name is the same as the variable, you can simplify:
 You can use arrow functions in your event listeners.
 
 ```html
-<Rect width="100" height="100" color="red" @click={() => console.log("clicked")} />
+<Rect width="100" height="100" color="red" click={() => console.log("clicked")} />
 ```
 :::
 
