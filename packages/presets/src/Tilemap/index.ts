@@ -171,6 +171,7 @@ export function TiledMap(props) {
             for (let tileSet of mapData.tilesets) {
                 // @ts-ignore
                 if (tileSet.tile) tileSet.tiles = tileSet.tile
+                if (!tileSet.tiles) tileSet.tiles = []
                 tilesets.push(await new TileSet(tileSet).load(tileSet.image.source))
             }
             
