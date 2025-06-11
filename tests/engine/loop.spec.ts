@@ -588,7 +588,10 @@ describe("loop additional tests", () => {
     const value = loop(matrix, (row, rowIdx) => {
       const rowIndex = Number(rowIdx);
       
-      const rowValue = loop(signal(row), (cell, colIdx) => {
+      // Create a computed signal that depends on the matrix and the row index
+      const rowSignal = computed(() => matrix()[rowIndex] || []);
+      
+      const rowValue = loop(rowSignal, (cell, colIdx) => {
         const colIndex = Number(colIdx);
         return h(Text, { text: `${rowIndex}-${colIndex}:${cell}` });
       });

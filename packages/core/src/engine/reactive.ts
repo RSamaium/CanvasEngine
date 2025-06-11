@@ -84,7 +84,7 @@ function destroyElement(element: Element | Element[]) {
   if (!element) {
     return;
   }
-  if (element.props.children) {
+  if (element.props?.children) {
     for (let child of element.props.children) {
       destroyElement(child)
     }
@@ -92,11 +92,18 @@ function destroyElement(element: Element | Element[]) {
   for (let name in element.directives) {
     element.directives[name].onDestroy?.(element);
   }
-  element.componentInstance.onDestroy(element.parent as any, () => {
-    element.propSubscriptions.forEach((sub) => sub.unsubscribe());
-    element.effectSubscriptions.forEach((sub) => sub.unsubscribe());
-    element.effectUnmounts.forEach((fn) => fn?.());
-  });
+  if (element.componentInstance && element.componentInstance.onDestroy) {
+    element.componentInstance.onDestroy(element.parent as any, () => {
+      element.propSubscriptions?.forEach((sub) => sub.unsubscribe());
+      element.effectSubscriptions?.forEach((sub) => sub.unsubscribe());
+      element.effectUnmounts?.forEach((fn) => fn?.());
+    });
+  } else {
+    // If componentInstance is undefined or doesn't have onDestroy, still clean up subscriptions
+    element.propSubscriptions?.forEach((sub) => sub.unsubscribe());
+    element.effectSubscriptions?.forEach((sub) => sub.unsubscribe());
+    element.effectUnmounts?.forEach((fn) => fn?.());
+  }
 }
 
 /**
