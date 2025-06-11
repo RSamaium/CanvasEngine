@@ -84,6 +84,11 @@ function destroyElement(element: Element | Element[]) {
   if (!element) {
     return;
   }
+  if (element.props.children) {
+    for (let child of element.props.children) {
+      destroyElement(child)
+    }
+  }
   for (let name in element.directives) {
     element.directives[name].onDestroy?.(element);
   }

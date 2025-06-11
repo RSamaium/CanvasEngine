@@ -1,0 +1,70 @@
+<script>
+  import { signal } from "canvasengine";
+
+  enum Direction {
+      Up,
+      Down,
+      Left,
+      Right
+  }
+
+  const x = signal(0);
+  const y = signal(0);
+  const speed = signal(10);
+  const direction = signal(Direction.Down);
+  const boot = signal(false);
+
+  const controls = signal({
+      down: {
+        repeat: true,
+        bind: ["down", 'bottom_right', 'bottom_left'],
+        keyDown() {
+          y.update((y) => y + speed());
+          direction.set(Direction.Down);
+        },
+      },
+      up: {
+        repeat: true,
+        bind: ['up', 'top_left', 'top_right'],
+        keyDown() {
+          y.update((y) => y - speed());
+          direction.set(Direction.Up);
+        },
+      },
+      left: {
+        repeat: true,
+        bind: "left",
+        keyDown() {
+          x.update((x) => x - speed());
+          direction.set(Direction.Left);
+        },
+      },
+      right: {
+        repeat: true,
+        bind: "right",
+        keyDown() {
+          x.update((x) => x + speed());
+          direction.set(Direction.Right);
+        },
+      },
+      action: {
+        bind: "space",
+        keyDown() {
+          console.log("action");
+        },
+      },
+    });
+</script>
+
+<Canvas backgroundColor="white">
+  <Container>
+    <DOMContainer>  
+        <button click={() => boot.set(!boot())}>Boot</button>
+    </DOMContainer>
+    @if (boot) {
+     <Container>
+        <Rect color="red" width={100} height={100} controls x y />  
+     </Container>
+    }
+  </Container>
+</Canvas>
