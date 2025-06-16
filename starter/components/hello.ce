@@ -1,13 +1,13 @@
-<Container flexDirection="column" width="500px">
+<Container flexDirection="row" width={500}>
     <Sprite 
         image={imgUrl} 
-        anchor="0.5" 
+        anchor={0.5}
         rotation
         scale
         @pointerenter={onEnter} 
         @pointerleave={onLeave}
     />
-    <Text text size="70" fontFamily="Helvetica" x="90" y="-30" />
+    <Text text size={70} fontFamily="Helvetica" x={50} y={40} />
 </Container>
 
 <script>

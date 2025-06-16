@@ -9,7 +9,7 @@
         height="100%" 
         justifyContent="center"
         alignItems="center">
-        <HelloWorld text="CanvasEngine" />
+        <HelloWorld text="CanvasEngine" color="black" />
     </Container>
 </Canvas>
 

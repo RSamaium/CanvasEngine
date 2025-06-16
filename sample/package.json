@@ -4,18 +4,19 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "vite"
+    "dev": "vite",
+    "build": "vite build"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "path-browserify": "^1.0.1",
+    "pixi.js": "^8.10.1",
     "vite": "^6.0.5"
   },
   "devDependencies": {
-    "@pixi/layout": "^3.0.2",
-    "devtools": "link:@pixi/layout/devtools"
+    "@pixi/layout": "^3.0.2"
   },
   "type": "module"
 }

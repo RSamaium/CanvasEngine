@@ -8,6 +8,9 @@
     "build": "tsup",
     "dev": "tsup --watch"
   },
+  "peerDependencies": {
+    "pixi.js": "^8.9.2"
+  },
   "dependencies": {
     "@barvynkoa/particle-emitter": "^0.0.1",
     "@pixi/layout": "^3.0.2",
@@ -15,7 +18,6 @@
     "howler": "^2.2.4",
     "pixi-filters": "^6.0.5",
     "pixi-viewport": "^6.0.3",
-    "pixi.js": "^8.9.2",
     "popmotion": "^11.0.5",
     "rxjs": "^7.8.1",
     "yoga-layout": "^3.2.1"
