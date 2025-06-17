@@ -39,25 +39,25 @@ the drawing is redrawn if width and height change
 ## Rectangle
 
 ```html
-<Rect x="0" y="0" width="100" height="100" color="red" />
+<Rect x={0} y={0} width={100} height={100} color="red" />
 ```
 
 ## Circle
 
 ```html
-<Circle x="0" y="0" radius="50" color="red" />
+<Circle x={0} y={0} radius={50} color="red" />
 ```
 
 ## Triangle
 
 ```html
-<Triangle x="0" y="0" width="100" height="100" color="red" />
+<Triangle x={0} y={0} width={100} height={100} color="red" />
 ```
 
 ## Ellipse
 
 ```html
-<Ellipse x="0" y="0" width="100" height="100" color="red" />
+<Ellipse x={0} y={0} width={100} height={100} color="red" />
 ```
 
 ### draw

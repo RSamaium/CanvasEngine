@@ -4,8 +4,8 @@ In CanvasEngine, you can access child components that are passed to a parent com
 
 ```html
 <Child>
-    <Rect width="100" height="100" color="red" x="0" y="0" />
-    <Rect width="100" height="100" color="green" x="0" y="0" />
+    <Rect width={100} height={100} color="red" x={0} y={0} />
+    <Rect width={100} height={100} color="green" x={0} y={0} />
 </Child>
 
 <script>

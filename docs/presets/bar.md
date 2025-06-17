@@ -6,7 +6,7 @@
 
 ```html
 <Canvas>
-    <Bar width="200" height="20" value="50" maxValue="100" backgroundColor="#333" foregroundColor="#f00" />
+    <Bar width={200} height={20} value={50} maxValue={100} backgroundColor="#333" foregroundColor="#f00" />
 </Canvas>
 
 <script>

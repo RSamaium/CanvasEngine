@@ -83,7 +83,7 @@ This directive must be used within a `Viewport` component context.
 
 ```html
 <Viewport worldWidth="2000" worldHeight="2000" clamp={ {direction: 'all'} }>
-    <Rect viewportFollow x="0" y="0" width="100" height="100" color="red" />
+    <Rect viewportFollow x={0} y={0} width={100} height={100} color="red" />
 </Viewport>
 
 <script>
@@ -97,7 +97,7 @@ In this example, the red rectangle will be followed by the viewport, keeping it 
 
 ```html
 <Viewport worldWidth="2000" worldHeight="2000" clamp={ {direction: 'all'} }>
-    <Rect viewportFollow x="0" y="0" width="100" height="100" color="red" />
+    <Rect viewportFollow x={0} y={0} width={100} height={100} color="red" />
 </Viewport>
 
 <script>

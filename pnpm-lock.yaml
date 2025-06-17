@@ -120,8 +120,8 @@ importers:
         specifier: ^5.0.1
         version: 5.0.1(pixi.js@8.9.2)
       '@rpgjs/tiled':
-        specifier: ^4.3.0
-        version: 4.3.0
+        specifier: 5.0.0-alpha.5
+        version: 5.0.0-alpha.5
       canvasengine:
         specifier: workspace:*
         version: link:../core
@@ -859,8 +859,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@rpgjs/tiled@4.3.0':
-    resolution: {integrity: sha512-MniF+mI3nEmJNHYvhlKV6hJ2c3nlq3V/9zZLxnyGc4Jfbw+bFsRAscqK58zMGt/R8S5ZDwbl1OngkZFG/bAt2Q==}
+  '@rpgjs/tiled@5.0.0-alpha.5':
+    resolution: {integrity: sha512-OwS/EfGCr6FBw52Za4KKFDGMjvGm03t5ZJ/loOIr1P2hwG80IyjW8DVI1srVdNxxei4ab8scgjTy9fBDl8PVgQ==}
 
   '@signe/reactive@2.3.3':
     resolution: {integrity: sha512-EIIBfXtkzKZvVM6qz4FfDVVB4eGquUzGXafF0m36juZ2jFuuYYaMx5jLpln5JBX93BEpgn0tBCHnG7Kpzl/npw==}
@@ -1013,9 +1013,6 @@ packages:
 
   asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
-
-  axios@1.7.9:
-    resolution: {integrity: sha512-LhLcE7Hbiryz8oMDdDptSrWowmB4Bl6RCt6sIJKpRB4XtVf0iEgewX3au/pJqm+Py1kCASkb/FFKjxQaLtxJvw==}
 
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
@@ -1382,15 +1379,6 @@ packages:
 
   flatted@3.3.2:
     resolution: {integrity: sha512-AiwGJM8YcNOaobumgtng+6NHuOqC3A7MixFeDafM3X9cIUM+xUXoS5Vfgf+OihAYe20fxqNM9yPBXJzRtZ/4eA==}
-
-  follow-redirects@1.15.9:
-    resolution: {integrity: sha512-gew4GsXizNgdoRyqmyfMHyAmXsZDk6mHkSxZFCzW9gwlbtOW44CDtYavM+y+72qD/Vq2l550kMF52DT8fOLJqQ==}
-    engines: {node: '>=4.0'}
-    peerDependencies:
-      debug: '*'
-    peerDependenciesMeta:
-      debug:
-        optional: true
 
   foreground-child@3.3.0:
     resolution: {integrity: sha512-Ld2g8rrAyMYFXBhEqMz8ZAHBi4J4uS1i/CxGMDnjyFWddMXLVcDp051DZfu+t7+ab7Wv6SMqpWmyFIj5UbfFvg==}
@@ -2067,9 +2055,6 @@ packages:
   prompts@2.4.2:
     resolution: {integrity: sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==}
     engines: {node: '>= 6'}
-
-  proxy-from-env@1.1.0:
-    resolution: {integrity: sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==}
 
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
@@ -3205,14 +3190,11 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.29.1':
     optional: true
 
-  '@rpgjs/tiled@4.3.0':
+  '@rpgjs/tiled@5.0.0-alpha.5':
     dependencies:
-      axios: 1.7.9
       buffer: 6.0.3
       xml-js: 1.6.11
       xmlbuilder: 15.1.1
-    transitivePeerDependencies:
-      - debug
 
   '@signe/reactive@2.3.3':
     dependencies:
@@ -3367,14 +3349,6 @@ snapshots:
   assertion-error@2.0.1: {}
 
   asynckit@0.4.0: {}
-
-  axios@1.7.9:
-    dependencies:
-      follow-redirects: 1.15.9
-      form-data: 4.0.1
-      proxy-from-env: 1.1.0
-    transitivePeerDependencies:
-      - debug
 
   balanced-match@1.0.2: {}
 
@@ -3821,8 +3795,6 @@ snapshots:
       rimraf: 3.0.2
 
   flatted@3.3.2: {}
-
-  follow-redirects@1.15.9: {}
 
   foreground-child@3.3.0:
     dependencies:
@@ -4483,8 +4455,6 @@ snapshots:
     dependencies:
       kleur: 3.0.3
       sisteransi: 1.0.5
-
-  proxy-from-env@1.1.0: {}
 
   punycode@2.3.1: {}
 

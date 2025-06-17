@@ -1,6 +1,6 @@
 # CanvasEngine - A reactive HTML5 Canvas management library built on top of PixiJS and Vite
 
-![CanvasEngine](logo.png)
+![CanvasEngine](docs/public/logo.png)
 
 CanvasEngine is a reactive HTML5 Canvas management library built on top of PixiJS and Vite. It provides a component-oriented approach to canvas rendering, similar to modern frontend frameworks.
 
@@ -29,16 +29,16 @@ https://canvasengine.net
 ## Example:
 
 ```html
-<Container flexDirection="column" width="500px">
+<Container flexDirection="row" width={500}>
     <Sprite 
         image="/assets/logo.png" 
-        anchor="0.5" 
+        anchor={0.5}
         rotation
         scale
         @pointerenter={onEnter} 
         @pointerleave={onLeave}
     />
-    <Text text size="70" fontFamily="Helvetica" x="90" y="-30" />
+    <Text text size={70} fontFamily="Helvetica" x={90} y={-30} />
 </Container>
 
 <script>
@@ -65,7 +65,7 @@ const onLeave = () => {
 </script>
 ```
 
-## Contributing
+## Contributing
 
 Before, install `pnpm` and run the following command:
 
@@ -82,7 +82,7 @@ To run the sample project:
 pnpm run dev:sample
 ```
 
-Documentation
+### Build Documentation/Website
 
 ```
 cd docs
@@ -90,7 +90,7 @@ pnpm install
 pnpm run dev
 ```
 
-## Release
+### Release
 
 ```bash
 pnpm run release

@@ -20,7 +20,7 @@ The Element interface represents a component in the framework. It contains all t
 ### Get the tag name
 
 ```html
-<Container x="5" y="5" />
+<Container x={5} y={5} />
 
 <script>
   import { mount } from 'canvasengine';
@@ -36,8 +36,8 @@ The Element interface represents a component in the framework. It contains all t
 ### Get the children components:
 
 ```html
-<Container x="5" y="5">
-  <Rect x="5" y="5" width="10" height="10" color="red" />
+<Container x={5} y={5}>
+  <Rect x={5} y={5} width={10} height={10} color="red" />
 </Container>
 
 <script>

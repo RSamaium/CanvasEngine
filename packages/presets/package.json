@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@canvasengine/tilemap": "^5.0.1",
-    "@rpgjs/tiled": "^4.3.0",
+    "@rpgjs/tiled": "5.0.0-alpha.5",
     "revolt-fx": "^1.3.5",
     "rxjs": "^7.8.1"
   },

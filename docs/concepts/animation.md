@@ -49,7 +49,7 @@ You can update the value of an `animatedSignal` in two ways:
     // animateElement();
     </script>
 
-    <Rect width="100" height="100" color="blue" alpha={opacity} x={positionX} click={animateElement} />
+    <Rect width={100} height={100} color="blue" alpha={opacity} x={positionX} click={animateElement} />
     ```
 
 2.  **`update(updaterFn)`**: This method takes a function that receives the current value and should return the new value. The transition to the new value will be animated using the default or previously set animation options for the signal.
@@ -70,7 +70,7 @@ You can update the value of an `animatedSignal` in two ways:
     // modifyElement();
     </script>
 
-    <Rect width="100" height="100" color="red" scale={scale} rotation={rotation} click={modifyElement} />
+    <Rect width={100} height={100} color="red" scale={scale} rotation={rotation} click={modifyElement} />
     ```
 
 ### Accessing Value
@@ -105,7 +105,7 @@ const toggleValues = () => {
 };
 </script>
 
-<Rect width="80" height="80" color="purple" alpha={rectOpacity} x={rectPositionX} click={toggleValues} />
+<Rect width={80} height={80} color="purple" alpha={rectOpacity} x={rectPositionX} click={toggleValues} />
 ```
 
 ### Animation State

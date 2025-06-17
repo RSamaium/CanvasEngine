@@ -6,7 +6,7 @@ A child component is a component that is defined inside another component.
 
 ```html
 <Container>
-  <Rect width="100" height="100" color="red" />
+  <Rect width={100} height={100} color="red" />
 </Container>
 ```
 

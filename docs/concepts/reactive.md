@@ -16,7 +16,7 @@ Signals are created using the `signal` function. For example:
   const y = signal(0);
 </script>
 
-<Rect x y width="10" height="10" color="red" />
+<Rect x y width={10} height={10} color="red" />
 ```
 
 In this example, the `Rect` component will be drawn at the initial position of `(0, 0)`. When the `x` or `y` signal changes, the `Rect` component will be re-rendered at the new position.
@@ -33,7 +33,7 @@ Animated signals are a type of signal that can be animated over time. They are c
   const y = animatedSignal(0);
 </script>
 
-<Rect x={x} y={y} width="10" height="10" color="red" />
+<Rect x={x} y={y} width={10} height={10} color="red" />
 ```
 
 In this example, the `Rect` component will be drawn at the initial position of `(0, 0)`. When the `x` or `y` signal changes, the `Rect` component will be re-rendered at the new position.
@@ -73,7 +73,7 @@ Effects are a type of signal that can be used to perform side effects. They are 
   });
 </script>
 
- <Rect x y width="10" height="10" color="red" />
+ <Rect x y width={10} height={10} color="red" />
  ```
 
 In this example, the `effect` function will log the value of the `x` and `y` signals to the console. When the `x` or `y` signal changes, the `effect` function will be re-run and the new value of the `x` and `y` signals will be logged to the console.
