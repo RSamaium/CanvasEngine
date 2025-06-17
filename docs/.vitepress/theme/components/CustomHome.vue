@@ -134,41 +134,30 @@
       </div>
     </section>
 
-    <Playground 
-      title="Playground"
-      description="Draw on the canvas with Canvas Engine"
-      :files
-    /> 
+    <!-- Examples Section -->
+    <section class="examples">
+      <div class="examples-container">
+        <h2 class="section-title">Interactive Examples</h2>
+        <p class="section-description">Try these examples directly in your browser</p>
+        
+        <div class="examples-grid">
+          <div v-for="example in examples" :key="example.title" class="example-item">
+            <Playground 
+              :title="example.title"
+              :description="example.description"
+              :files="example.files" 
+            />
+          </div>
+        </div>
+      </div>
+    </section>
 
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import Playground from './Playground.vue'
-
-const files = {
-  'app.ce': `
-<Canvas 
-    backgroundColor="#fff" 
-    width="100%" 
-    height="100%" 
-    antialias="true"
-    >
-    <Container
-        width="100%" 
-        height="100%" 
-        justifyContent="center"
-        alignItems="center">
-        <HelloWorld text="CanvasEngine" color="black" />
-    </Container>
-</Canvas>
-
-<script>
-    import HelloWorld from "./hello.ce";
-<\/script>
-  `,
-  'hello.ce': `<Text text="Hello World" size={70} fontFamily="Helvetica" x={50} y={40} />`
-}
+import examples from './example'
 </script>
 
 <style scoped>
@@ -549,6 +538,37 @@ const files = {
   line-height: 1.6;
   font-size: 1rem;
   flex-grow: 1;
+}
+
+/* Examples Section */
+.examples {
+  padding: 6rem 2rem;
+  background: var(--bg-color);
+}
+
+.examples-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.section-description {
+  text-align: center;
+  font-size: 1.2rem;
+  color: var(--text-color-light);
+  margin-bottom: 4rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.examples-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+}
+
+.example-item {
+  width: 100%;
 }
 
 /* Code Example Section */
