@@ -345,26 +345,19 @@ const clearPreview = () => {
   }
 }
 
-/**
- * Create import map for the iframe
- */
-const createImportMap = () => {
-  return {
-    "imports": {
-      "pixi.js": "https://cdn.jsdelivr.net/npm/pixi.js@8.10.1/dist/pixi.min.mjs",
-      "@pixi/layout": "https://cdn.jsdelivr.net/npm/@pixi/layout@1.0.0/dist/layout.min.js", 
-      "canvasengine": "http://localhost:3000/index.global.js"
-    }
-  }
-}
-
 
 /**
  * Generate HTML content for the iframe sandbox
  * Creates a complete HTML page with CanvasEngine imports and bootstrap code
  */
-const generateIframeContent = (componentFunction: string): string => {
-  const importMapJson = JSON.stringify(createImportMap(), null, 2)
+const generateIframeContent = (componentFunction: string, dependencies: Set<string> = new Set()): string => {
+
+  // Generate script tags for dependencies
+  const dependencyScripts = Array.from(dependencies)
+    .map(dep => dependencyConfig[dep])
+    .filter(config => config && config.url)
+    .map(config => `<script src="${config.url}"><\/script>`)
+    .join('\n    ')
   
   return `<!DOCTYPE html>
 <html lang="en">
@@ -380,15 +373,9 @@ const generateIframeContent = (componentFunction: string): string => {
     </style>
 </head>
 <body>
-    <div id="root">
-       
-    </div>
+    <div id="root"></div>
 
-    <script type="importmap">
-        ${importMapJson}
-    <\/script>
-
-    <script src="http://localhost:3000/index.global.js"><\/script>
+    ${dependencyScripts}
 
     <script type="module">
         console.log("Starting CanvasEngine playground...");
@@ -441,24 +428,131 @@ const generateIframeContent = (componentFunction: string): string => {
 }
 
 /**
- * Transform import statements to const destructuring from CanvasEngine
+ * Configuration map for external dependencies
+ */
+const dependencyConfig = {
+  'canvasengine': {
+    globalName: 'CanvasEngine',
+    url: 'https://unpkg.com/canvasengine@latest/dist/index.global.js'
+  },
+  '@canvasengine/presets': {
+    globalName: 'CanvasEnginePresets',
+    url: 'https://unpkg.com/@canvasengine/presets@latest/dist/index.global.js'
+  }
+}
+
+/**
+ * Process all imports and resolve local files
  * 
  * @param {string} scriptContent - The script content to transform
- * @returns {string} - The transformed script content
- * 
- * @example
- * transformImportsToCanvasEngine("import { signal } from 'canvasengine';")
- * // Returns: "const { signal } = CanvasEngine;"
+ * @returns {Promise<{transformedContent: string, dependencies: Set<string>}>} - The transformed script content with resolved imports and dependencies
  */
-const transformImportsToCanvasEngine = (scriptContent: string): string => {
-  return scriptContent.replace(
-    /import\s*\{\s*([^}]+)\s*\}\s*from\s*['"]canvasengine['"];?/g,
-    (match, imports) => {
-      // Clean up the imports string and preserve spacing
+const processImports = async (scriptContent: string): Promise<{transformedContent: string, dependencies: Set<string>}> => {
+  let transformedContent = scriptContent
+  let resolvedModules = ''
+  const dependencies = new Set<string>()
+  
+  // Transform external library imports
+  for (const [packageName, config] of Object.entries(dependencyConfig)) {
+    const regex = new RegExp(`import\\s*\\{\\s*([^}]+)\\s*\\}\\s*from\\s*['"]${packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"];?`, 'g')
+    transformedContent = transformedContent.replace(regex, (match, imports) => {
       const cleanImports = imports.trim()
-      return `const { ${cleanImports} } = CanvasEngine;`
+      dependencies.add(packageName)
+      return `const { ${cleanImports} } = ${config.globalName};`
+    })
+  }
+  
+  // Process local file imports
+  const importRegex = /import\s+(.+?)\s+from\s+['"](.+?)['"];?/g
+  let importMatch
+  
+  while ((importMatch = importRegex.exec(scriptContent)) !== null) {
+    const [fullMatch, importClause, filePath] = importMatch
+    
+    // Skip CanvasEngine imports (already processed)
+    if (filePath === 'canvasengine') continue
+    
+    // Resolve local file path (remove ./ and normalize)
+    const normalizedPath = filePath.replace(/^\.\//, '').replace(/^\//, '')
+    
+    // Check if file exists in allFiles
+    const targetFile = allFiles.value[normalizedPath]
+    if (!targetFile) {
+      addLog(`Warning: File not found: ${filePath}`, 'warn')
+      continue
     }
-  )
+    
+    // Process the file based on its extension
+    let processedContent = ''
+    
+    if (normalizedPath.endsWith('.ce')) {
+      // Parse .ce file like a component
+      const ceScriptMatch = targetFile.content.match(/<script>([\s\S]*?)<\/script>/)
+      const ceScriptContent = ceScriptMatch ? ceScriptMatch[1].trim() : ""
+      
+      // Recursively process imports in the .ce file
+      const processedCeScript = await processImports(ceScriptContent)
+      
+      const ceTemplate = targetFile.content.replace(/<script>[\s\S]*?<\/script>/, "")
+        .replace(/^\s+|\s+$/g, '')
+      
+      let parsedCeTemplate
+      try {
+        parsedCeTemplate = parser.parse(ceTemplate)
+      } catch (parseError: any) {
+        const errorMsg = showErrorMessage(ceTemplate, parseError)
+        throw new Error(`Error parsing template in ${normalizedPath}:\n${errorMsg}`)
+      }
+      
+      // Generate component function for .ce file
+      processedContent = `
+        function ${getModuleName(normalizedPath)}($$props = {}) {
+          const $props = useProps($$props);
+          const defineProps = useDefineProps($$props);
+          ${processedCeScript}
+          return ${parsedCeTemplate};
+        }
+      `
+         } else if (normalizedPath.endsWith('.js') || normalizedPath.endsWith('.ts')) {
+       // Process .js/.ts files
+       const result = await processImports(targetFile.content)
+       processedContent = result.transformedContent
+       // Merge dependencies from nested imports
+       result.dependencies.forEach(dep => dependencies.add(dep))
+     }
+     
+     // Add the processed content to resolved modules
+     resolvedModules += processedContent + '\n'
+     
+     // Replace the import statement with variable assignment
+     const moduleName = getModuleName(normalizedPath)
+     if (importClause.includes('default')) {
+       // Default import: import Text from './test.ce'
+       const varName = importClause.replace(/default\s+as\s+/, '').replace(/default/, '').trim()
+       transformedContent = transformedContent.replace(fullMatch, `const ${varName} = ${moduleName};`)
+     } else if (importClause.includes('{')) {
+       // Named imports: import { func1, func2 } from './utils.js'
+       transformedContent = transformedContent.replace(fullMatch, `const ${importClause} = ${moduleName};`)
+     } else {
+       // Simple default import
+       transformedContent = transformedContent.replace(fullMatch, `const ${importClause} = ${moduleName};`)
+     }
+   }
+   
+   return {
+     transformedContent: resolvedModules + transformedContent,
+     dependencies
+   }
+}
+
+/**
+ * Generate a module name from file path
+ */
+const getModuleName = (filePath: string): string => {
+  return filePath
+    .replace(/[^a-zA-Z0-9]/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_+/g, '_') + '_module'
 }
 
 /**
@@ -486,8 +580,10 @@ const runCode = async () => {
     const scriptMatch = mainFile.content.match(/<script>([\s\S]*?)<\/script>/)
     let scriptContent = scriptMatch ? scriptMatch[1].trim() : ""
     
-    // Transform imports to const destructuring from CanvasEngine
-    scriptContent = transformImportsToCanvasEngine(scriptContent)
+    // Process all imports and resolve local files
+    const importResult = await processImports(scriptContent)
+    scriptContent = importResult.transformedContent
+    const dependencies = importResult.dependencies
     
     // Extract template (everything except script)
     const template = mainFile.content.replace(/<script>[\s\S]*?<\/script>/, "")
@@ -525,7 +621,7 @@ const runCode = async () => {
       `
       
       // Generate the complete HTML for the iframe
-      const iframeContent = generateIframeContent(componentFunction)
+      const iframeContent = generateIframeContent(componentFunction, dependencies)
       
       iframe.onload = () => {
         try {

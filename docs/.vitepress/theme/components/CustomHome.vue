@@ -148,17 +148,26 @@ import Playground from './Playground.vue'
 
 const files = {
   'app.ce': `
-  <Canvas>
-    <Container>
-      <Rect color="red" width={val} height={100} />
+<Canvas 
+    backgroundColor="#fff" 
+    width="100%" 
+    height="100%" 
+    antialias="true"
+    >
+    <Container
+        width="100%" 
+        height="100%" 
+        justifyContent="center"
+        alignItems="center">
+        <HelloWorld text="CanvasEngine" color="black" />
     </Container>
-  </Canvas>
+</Canvas>
 
-  <script>
-   import { signal } from 'canvasengine';
-   const val = signal(100);
-  <\/script>
-  `
+<script>
+    import HelloWorld from "./hello.ce";
+<\/script>
+  `,
+  'hello.ce': `<Text text size={70} fontFamily="Helvetica" x={50} y={40} />`
 }
 </script>
 
