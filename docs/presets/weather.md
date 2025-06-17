@@ -94,11 +94,11 @@ The Weather component creates realistic rain effects using WebGL shaders. It sim
 
 | Prop | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| speed | number \| Signal<number> | No | 0.5 | Rain falling speed (0.1 = slow, 2.0 = fast) |
-| windDirection | number \| Signal<number> | No | 0.0 | Wind direction (-1.0 = left, 1.0 = right) |
-| windStrength | number \| Signal<number> | No | 0.2 | Wind strength (0.0 = no wind, 1.0 = strong) |
-| density | number \| Signal<number> | No | 180.0 | Rain density (50-400 raindrops) |
-| resolution | Array<number> \| Signal<Array<number>> | No | [1000, 1000] | Screen resolution for proper scaling |
+| speed | `number` \| `Signal<number>` | No | 0.5 | Rain falling speed (0.1 = slow, 2.0 = fast) |
+| windDirection | `number` \| `Signal<number>` | No | 0.0 | Wind direction (-1.0 = left, 1.0 = right) |
+| windStrength | `number` \| `Signal<number>` | No | 0.2 | Wind strength (0.0 = no wind, 1.0 = strong) |
+| density | `number` \| `Signal<number>` | No | 180.0 | Rain density (50-400 raindrops) |
+| resolution | `Array<number>` \| `Signal<Array<number>>` | No | [1000, 1000] | Screen resolution for proper scaling |
 
 ## Parameter Guidelines
 

@@ -167,7 +167,7 @@ const files = {
     import HelloWorld from "./hello.ce";
 <\/script>
   `,
-  'hello.ce': `<Text text size={70} fontFamily="Helvetica" x={50} y={40} />`
+  'hello.ce': `<Text text="Hello world" size={70} fontFamily="Helvetica" x={50} y={40} />`
 }
 </script>
 

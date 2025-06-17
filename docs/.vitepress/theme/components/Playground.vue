@@ -194,16 +194,7 @@ const showErrorMessage = (template: string, error: any): string => {
 const defaultFiles: Record<string, PlaygroundFile> = {
   'app.ce': {
     name: 'app.ce',
-    content: `<Canvas backgroundColor="white" width={600} height={400}>
-  <Container 
-      width="100%" 
-      height="100%" 
-      justifyContent="center" 
-      alignItems="center"
-  >
-      <Text text="Hello CanvasEngine!" color="black" fontSize={24} />
-  </Container>
-</Canvas>`,
+    content: ``,
     language: 'html'
   }
 }
@@ -358,6 +349,17 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
     .filter(config => config && config.url)
     .map(config => `<script src="${config.url}"><\/script>`)
     .join('\n    ')
+
+  // Generate core functions extraction code
+  const coreExtractionCode = CORE_FUNCTIONS.map(func => 
+    `if (!CanvasEngine.${func}) throw new Error("${func} function not found in CanvasEngine");
+                coreExports.${func} = CanvasEngine.${func};`
+  ).join('\n                ')
+
+  // Generate component extraction code
+  const componentExtractionCode = PRIMITIVE_COMPONENTS.map(comp => 
+    `if (CanvasEngine.${comp}) componentExports.${comp} = CanvasEngine.${comp};`
+  ).join('\n                ')
   
   return `<!DOCTYPE html>
 <html lang="en">
@@ -387,13 +389,21 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
                 const rootElement = document.getElementById("root");
                 if (!rootElement) throw new Error("Root element not found");
 
-                const { bootstrapCanvas, h, useProps, useDefineProps, Canvas, Container, Text, Rect, Sprite } = CanvasEngine;
+                // Extract all core functions and primitive components from CanvasEngine
+                const coreExports = {};
+                const componentExports = {};
                 
-                if (!bootstrapCanvas) throw new Error("bootstrapCanvas function not found");
-                if (!h) throw new Error("h function not found");
-                if (!Canvas) throw new Error("Canvas component not found");
+                // Get core functions
+                ${coreExtractionCode}
                 
-                console.log("All required functions verified");
+                // Get primitive components  
+                ${componentExtractionCode}
+                
+                // Destructure for easy access
+                const { ${CORE_FUNCTIONS.join(', ')} } = coreExports;
+                const { ${PRIMITIVE_COMPONENTS.join(', ')} } = componentExports;
+                
+                console.log("All required functions and components verified");
                 
                 ${componentFunction}
                 
@@ -429,17 +439,58 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
 
 /**
  * Configuration map for external dependencies
+ * Ensures all CanvasEngine exports from the compiler are always available
  */
 const dependencyConfig = {
   'canvasengine': {
     globalName: 'CanvasEngine',
-    url: 'https://unpkg.com/canvasengine@latest/dist/index.global.js'
+    url: 'https://cdn.jsdelivr.net/npm/canvasengine@latest/dist/index.global.js'
   },
   '@canvasengine/presets': {
     globalName: 'CanvasEnginePresets',
-    url: 'https://unpkg.com/@canvasengine/presets@latest/dist/index.global.js'
+    url: 'https://cdn.jsdelivr.net/npm/@canvasengine/presets@latest/dist/index.global.js'
   }
 }
+
+/**
+ * List of primitive components that should always be available
+ * Matches the PRIMITIVE_COMPONENTS from the compiler
+ */
+const PRIMITIVE_COMPONENTS = [
+  "Canvas",
+  "Sprite", 
+  "Text",
+  "Viewport",
+  "Graphics",
+  "Container",
+  "ImageMap",
+  "NineSliceSprite",
+  "Rect",
+  "Circle",
+  "Ellipse",
+  "Triangle",
+  "TilingSprite",
+  "svg",
+  "Video",
+  "Mesh",
+  "Svg",
+  "DOMContainer",
+  "DOMElement"
+]
+
+/**
+ * Core functions that should always be available
+ * Matches the required imports from the compiler
+ */
+const CORE_FUNCTIONS = [
+  "h",
+  "computed", 
+  "cond",
+  "loop",
+  "useProps",
+  "useDefineProps",
+  "bootstrapCanvas"
+]
 
 /**
  * Process all imports and resolve local files
@@ -493,6 +544,9 @@ const processImports = async (scriptContent: string): Promise<{transformedConten
       // Recursively process imports in the .ce file
       const processedCeScript = await processImports(ceScriptContent)
       
+      // Merge dependencies from nested imports
+      processedCeScript.dependencies.forEach(dep => dependencies.add(dep))
+
       const ceTemplate = targetFile.content.replace(/<script>[\s\S]*?<\/script>/, "")
         .replace(/^\s+|\s+$/g, '')
       
@@ -509,7 +563,7 @@ const processImports = async (scriptContent: string): Promise<{transformedConten
         function ${getModuleName(normalizedPath)}($$props = {}) {
           const $props = useProps($$props);
           const defineProps = useDefineProps($$props);
-          ${processedCeScript}
+          ${processedCeScript.transformedContent}
           return ${parsedCeTemplate};
         }
       `
@@ -526,16 +580,13 @@ const processImports = async (scriptContent: string): Promise<{transformedConten
      
      // Replace the import statement with variable assignment
      const moduleName = getModuleName(normalizedPath)
-     if (importClause.includes('default')) {
-       // Default import: import Text from './test.ce'
-       const varName = importClause.replace(/default\s+as\s+/, '').replace(/default/, '').trim()
-       transformedContent = transformedContent.replace(fullMatch, `const ${varName} = ${moduleName};`)
-     } else if (importClause.includes('{')) {
+     if (importClause.includes('{')) {
        // Named imports: import { func1, func2 } from './utils.js'
        transformedContent = transformedContent.replace(fullMatch, `const ${importClause} = ${moduleName};`)
      } else {
-       // Simple default import
-       transformedContent = transformedContent.replace(fullMatch, `const ${importClause} = ${moduleName};`)
+       // Default import: import HelloWorld from './hello.ce'
+       const varName = importClause.trim()
+       transformedContent = transformedContent.replace(fullMatch, `const ${varName} = ${moduleName};`)
      }
    }
    
@@ -584,6 +635,9 @@ const runCode = async () => {
     const importResult = await processImports(scriptContent)
     scriptContent = importResult.transformedContent
     const dependencies = importResult.dependencies
+    
+    // Always ensure CanvasEngine is available
+    dependencies.add('canvasengine')
     
     // Extract template (everything except script)
     const template = mainFile.content.replace(/<script>[\s\S]*?<\/script>/, "")
