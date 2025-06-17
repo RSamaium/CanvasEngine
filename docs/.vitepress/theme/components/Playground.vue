@@ -616,9 +616,8 @@ const runCode = async () => {
       const iframe = document.createElement('iframe')
       iframe.style.cssText = `
         width: 100%;
-        height: 400px;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
+        height: 100%;
+        border: none;
         background: white;
       `
       
@@ -827,28 +826,33 @@ onUnmounted(() => {
   flex: 1;
   overflow: hidden;
   display: flex;
-  align-items: center;
-  justify-content: center;
   background: #f8f9fa;
   height: 100%;
+  position: relative;
 }
 
 .canvas-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   width: 100%;
   height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 /* Error Display */
 .error-display {
   width: 100%;
-  max-width: 600px;
+  height: 100%;
   background: #fef2f2;
   border: 1px solid #fecaca;
   border-radius: 8px;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .error-header {
@@ -981,23 +985,112 @@ onUnmounted(() => {
 @media (max-width: 1024px) {
   .playground-content {
     flex-direction: column;
+    height: auto;
+    min-height: 600px;
   }
   
   .code-editor {
     width: 100%;
-    height: 300px;
+    height: 250px;
     border-right: none;
     border-bottom: 1px solid var(--vp-c-border);
+    overflow: hidden;
+  }
+  
+  .editor-content {
+    overflow: auto;
   }
   
   .preview-panel {
-    height: 300px;
+    flex: 1;
+    min-height: 350px;
   }
 }
 
 @media (max-width: 768px) {
   .playground-header {
     padding: 16px 20px;
+  }
+  
+  .playground-content {
+    min-height: 700px;
+  }
+  
+  .code-editor {
+    height: 280px;
+    overflow: hidden;
+  }
+  
+  .editor-content {
+    overflow: auto;
+  }
+  
+  .preview-panel {
+    min-height: 420px;
+  }
+  
+  .tabs {
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+  
+  .tab {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .console-content {
+    max-height: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  .playground-header {
+    padding: 12px 16px;
+  }
+  
+  .playground-header h3 {
+    font-size: 18px;
+  }
+  
+  .playground-description {
+    font-size: 13px;
+  }
+  
+  .playground-content {
+    min-height: 650px;
+  }
+  
+  .code-editor {
+    height: 250px;
+    overflow: hidden;
+  }
+  
+  .editor-content {
+    overflow: auto;
+  }
+  
+  .preview-panel {
+    min-height: 400px;
+  }
+  
+  .preview-header,
+  .editor-header {
+    padding: 8px 12px;
+  }
+  
+  .console-toggle {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  .console-content {
+    max-height: 120px;
+  }
+  
+  .console-line {
+    padding: 6px 12px;
+    font-size: 11px;
   }
 }
 </style> 
