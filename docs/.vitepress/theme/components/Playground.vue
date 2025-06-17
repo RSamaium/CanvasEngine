@@ -368,6 +368,7 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CanvasEngine Playground</title>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@latest/dist/pixi.min.js"><\/script>
     <style>
         body { overflow: hidden; margin: 0; padding: 0; font-family: Arial, sans-serif; background: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         #root { width: 100%; height: 100%; min-height: 400px; }

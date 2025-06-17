@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch"
+    "build": "vite build",
+    "dev": "vite build --watch"
   },
   "peerDependencies": {
     "pixi.js": "^8.9.2"
@@ -23,7 +23,9 @@
     "yoga-layout": "^3.2.1"
   },
   "devDependencies": {
-    "@types/howler": "^2.2.11"
+    "@types/howler": "^2.2.11",
+    "vite": "^5.0.0",
+    "vite-plugin-dts": "^3.0.0"
   },
   "author": "Samuel Ronce",
   "license": "MIT",

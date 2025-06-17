@@ -12,6 +12,10 @@ export const dependencyConfig = {
     '@canvasengine/presets': {
       globalName: 'CanvasEnginePresets',
       url: isDev ? 'http://localhost:3000/packages/presets/dist/index.global.js' : 'https://cdn.jsdelivr.net/npm/@canvasengine/presets@latest/dist/index.global.js'
+    },
+    'pixi.js': {
+      globalName: 'PIXI',
+      url: 'https://cdn.jsdelivr.net/npm/pixi.js@latest/dist/pixi.min.js'
     }
   }
   
