@@ -1,4 +1,4 @@
-import { TiledTileset, Tileset as TiledTilesetClass } from "@rpgjs/tiled";
+import { TiledTileset, Tileset as TiledTilesetClass } from "@canvasengine/tiled";
 import { Assets, Rectangle, Texture } from "pixi.js";
 
 export class TileSet extends TiledTilesetClass {

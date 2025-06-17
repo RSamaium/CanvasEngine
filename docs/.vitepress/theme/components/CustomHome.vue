@@ -148,28 +148,31 @@ import Playground from './Playground.vue'
 
 const files = {
   'app.ce': `
-<Canvas 
-    backgroundColor="#fff" 
-    width="100%" 
-    height="100%" 
-    antialias="true"
-    >
-    <Container
-        width="100%" 
-        height="100%" 
-        justifyContent="center"
-        alignItems="center">
-        <HelloWorld text="CanvasEngine" color="black" />
-    </Container>
+  <Canvas>
+    <TiledMap 
+        map={map} 
+        createLayersPerTilesZ={true} 
+        basePath="/map" 
+        objectLayer={(layer) => <Rect width={32} height={32} color="red" />} 
+    />
 </Canvas>
 
 <script>
-    import HelloWorld from "./hello.ce";
+    import { TiledMap } from '@canvasengine/presets'
+    import { signal } from 'canvasengine'
+    
+    let map = signal(null)
+    
+    fetch('/map/simplemap.tmx')
+        .then((res) => res.text())
+        .then((text) => {
+            map.set(text)
+        })
 <\/script>
-  `,
-  'hello.ce': `<Text text="Hello world" size={70} fontFamily="Helvetica" x={50} y={40} />`
+  `
 }
 </script>
+
 
 <style scoped>
 .custom-home {

@@ -1,4 +1,4 @@
-import { TiledLayer, TiledLayerType, TiledMap, TiledParserFile, TiledTileset } from "@rpgjs/tiled"
+import { TiledLayer, TiledLayerType, TiledMap, TiledParserFile, TiledTileset } from "@canvasengine/tiled"
 import { loop, h, Container, TilingSprite, useProps, effect, signal } from "canvasengine"
 import { CompositeTileLayer } from "./TileLayer"
 import { TileSet } from "./TileSet"
@@ -143,7 +143,7 @@ export function TiledMap(props) {
     let tilesets: TileSet[] = []
     let mapData: TiledMap = {} as TiledMap
 
-    const parseTmx = async (file: string, relativePath: string = '') => {
+    const parseTmx = async (file: string, basePath: string = '') => {
         if (typeof file !== 'string') {
             return file
         }
@@ -151,9 +151,7 @@ export function TiledMap(props) {
         const parser = new TiledParserFile(
             file,
             {
-                basePath: '',
-                staticDir: '',
-                relativePath
+                basePath
             }
         )
         const data = await parser.parseFilePromise({

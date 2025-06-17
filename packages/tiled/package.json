@@ -1,0 +1,31 @@
+{
+  "name": "@canvasengine/tiled",
+  "version": "2.0.0-beta.24",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^18.15.10",
+    "typescript": "^5.0.2",
+    "vite": "^6.2.5",
+    "vite-plugin-dts": "^4.5.3",
+    "vitest": "^3.1.1"
+  },
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "xml-js": "^1.6.11",
+    "xmlbuilder": "^15.1.1"
+  },
+  "type": "module"
+}

@@ -24,7 +24,6 @@ dist-ssr
 *.sw?
 
 lib
-public
 cache
 .vitepress/dist
 .vitepress/cache

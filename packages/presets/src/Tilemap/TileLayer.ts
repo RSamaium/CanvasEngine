@@ -4,7 +4,7 @@ import {
   Tilemap,
   settings,
 } from "@canvasengine/tilemap";
-import { Layer, Tile as TileClass } from "@rpgjs/tiled";
+import { Layer, Tile as TileClass } from "@canvasengine/tiled";
 import {
   createComponent,
   registerComponent,
