@@ -9,7 +9,7 @@
         <div class="navbar-links">
           <a href="/get_started/installation" class="nav-link">Documentation</a>
           <a href="https://github.com/RSamaium/CanvasEngine" target="_blank" class="nav-link">Github</a>
-          <a href="#" class="nav-link">Discord</a>
+          <a href="https://discord.gg/W38yDyGfwC" class="nav-link">Discord</a>
         </div>
       </div>
     </nav>

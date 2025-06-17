@@ -1,4 +1,4 @@
-const isDev = window.location.hostname === 'localhost'
+const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost'
 
 /**
  * Configuration map for external dependencies
