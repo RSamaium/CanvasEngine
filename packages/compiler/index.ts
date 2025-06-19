@@ -126,11 +126,8 @@ export default function canvasengine() {
 
   return {
     name: "vite-plugin-ce",
-    enforce: "pre",
-    load(id: string) {
+    transform(code: string, id: string) {
       if (!filter(id)) return null;
-
-      const code = fs.readFileSync(id, "utf8");
 
       // Extract the script content
       const scriptMatch = code.match(/<script>([\s\S]*?)<\/script>/);

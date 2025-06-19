@@ -30,35 +30,75 @@ const examples: Example[] = [{
         `,
         "hello.ce": `<Text text="Hello World" size={70} fontFamily="Helvetica" x={50} y={40} />`,
     },
-}, {
-    title: 'Tiled Map',
-    description: 'Example of using a Tiled map in CanvasEngine',
+}, 
+{
+    title: 'Reactivity',
+    description: 'Example of using reactivity in CanvasEngine',
     files: {
         "app.ce": `
 <Canvas>
-    <TiledMap 
-        map={map} 
-        createLayersPerTilesZ={true} 
-        basePath="/map" 
-        objectLayer={(layer) => <Rect width={32} height={32} color="red" />} 
-    />
+    <Container flexDirection="column" alignItems="center" justifyContent="center" width="100%" height="100%">
+        <Text text="Click Me" color="white" size={50} click />
+        <Text text={counter} color="white" size={70} />
+        <Text text={double} color="white" size={70} />
+    </Container>
 </Canvas>
 
 <script>
-    import { TiledMap } from '@canvasengine/presets'
-    import { signal } from 'canvasengine'
-    
-    let map = signal(null)
-    
-    fetch('/map/simplemap.tmx')
-        .then((res) => res.text())
-        .then((text) => {
-            map.set(text)
-        })
+import { signal, computed, effect } from 'canvasengine'
+
+const counter = signal(0)
+const double = computed(() => counter() * 2)
+
+effect(() => {
+    console.log(counter())
+})
+
+const click = () => {
+    counter.update(c => c + 1)
+}
 </script>
+
         `,
     },
-}, {
+},
+{
+    title: 'With loop and condition syntax',
+    description: 'Example of using loop and condition syntax in CanvasEngine',
+    files: {
+        "app.ce": `
+<Canvas>
+    <Container>
+        @if (show) {
+            <Container>
+                @for ((color,index) of colors) {
+                    <!-- we use @ in "@index" because index is not a signal -->
+                    <Rect width={100} height={100} color={color} x={@index * 100} />
+                }
+            </Container>
+        }
+        <Container x={100} y={100} click>
+            <Rect width={100} height={100} color="red" />
+            <Text text="Click me" />
+        </Container>
+    </Container>
+</Canvas>
+
+<script>
+import { signal, computed, effect } from 'canvasengine'
+
+const colors = signal(['red', 'green', 'blue'])
+const show = signal(true)
+
+const click = () => {
+    show.update(show => !show)
+}
+</script>
+
+        `,
+    },
+},
+ {
     title: 'Drag and Drop',
     description: 'Example of using drag and drop in CanvasEngine',
     files: {
@@ -142,63 +182,109 @@ const definition = {
         `,
     },
 },
+
+// {
+//     title: 'Joystick',
+//     description: 'Example of using joystick in CanvasEngine',
+//     files: {
+//         "app.ce": `
+// <Canvas>
+//     <Container>
+//         <Joystick />
+//     </Container>
+// </Canvas>
+
+// <script>
+// import { Joystick } from '@canvasengine/presets'
+// </script>
+//         `,
+//     },
+// },
 {
-    title: 'Reactivity',
-    description: 'Example of using reactivity in CanvasEngine',
-    files: {
-        "app.ce": `
-<Canvas>
-    <Container flexDirection="column" alignItems="center" justifyContent="center" width="100%" height="100%">
-        <Text text="Click Me" color="white" size={50} click />
-        <Text text={counter} color="white" size={70} />
-        <Text text={double} color="white" size={70} />
-    </Container>
-</Canvas>
-
-<script>
-import { signal, computed, effect } from 'canvasengine'
-
-const counter = signal(0)
-const double = computed(() => counter() * 2)
-
-effect(() => {
-    console.log(counter())
-})
-
-const click = () => {
-    counter.update(c => c + 1)
-}
-</script>
-
-        `,
-    },
-},
-
-{
-    title: 'Sprite Animation',
-    description: 'Example of using sprite animation in CanvasEngine',
+    title: 'Sprite Animation and controls',
+    description: 'Example of using sprite animation and controls in CanvasEngine. Use the arrow keys to move the sprite.',
     files: {
         "app.ce": `
 <Canvas>
     <Container>
         <Sprite 
+            x
+            y
             sheet={{
                 definition,
-                playing: "default"
+                playing: animationPlaying,
+                params: {
+                    direction
+                }
             }}
+            controls
         />
     </Container>
 </Canvas>
 
 <script>
 import { spritesheet } from "./spritesheet.js"
+import { signal } from 'canvasengine'
+
+const x = signal(0)
+const y = signal(0)
+const direction = signal("down")
+const speed = signal(3)
+const animationPlaying = signal("stand")
+
+const keyUp = () => {
+    animationPlaying.set("stand")
+}
+
+const controls = signal({
+    down: {
+      repeat: true,
+      bind: "down",
+      keyDown() {
+        y.update(y => y + speed());
+        direction.set("down");
+        animationPlaying.set("walk")
+      },
+      keyUp
+    },
+    up: {
+      repeat: true,
+      bind: 'up',
+      keyDown() {
+        y.update(y => y - speed());
+        direction.set("up");
+        animationPlaying.set("walk")
+      },
+      keyUp
+    },
+    left: {
+      repeat: true,
+      bind: "left",
+      keyDown() {
+        x.update(x => x - speed());
+        direction.set("left");
+        animationPlaying.set("walk")
+      },
+      keyUp
+    },
+    right: {
+      repeat: true,
+      bind: "right",
+      keyDown() {
+        x.update(x => x + speed());
+        direction.set("right");
+        animationPlaying.set("walk")
+      },
+      keyUp
+    }
+});
 
 const definition = {
     id: "hero",
     image: "./hero.png",
     width: 96,
     height: 128,
-    ...spritesheet(4, 4)
+    ...spritesheet(3, 4)
 }
 
 </script>
@@ -223,7 +309,7 @@ export const spritesheet = (framesWidth, framesHeight, frameStand = 1) => {
 
     const stand = (direction) => [{ time: 0, frameX: frameStand, frameY: frameY(direction) }]
     const walk = direction => {
-        const array: any = []
+        const array = []
         const durationFrame = 10
         for (let i = 0; i < framesWidth; i++) {
             array.push({ time: i * durationFrame, frameX: i, frameY: frameY(direction) })
@@ -247,7 +333,118 @@ export const spritesheet = (framesWidth, framesHeight, frameStand = 1) => {
 }
         `
     },
+},
+{
+    title: 'Tiled Map',
+    description: 'Example of using a Tiled map in CanvasEngine',
+    files: {
+        "app.ce": `
+<Canvas>
+    <TiledMap 
+        map={map} 
+        createLayersPerTilesZ={true} 
+        basePath="/map" 
+        objectLayer={(layer) => <Rect width={32} height={32} color="red" />} 
+    />
+</Canvas>
+
+<script>
+    import { TiledMap } from '@canvasengine/presets'
+    import { signal } from 'canvasengine'
+    
+    let map = signal(null)
+    
+    fetch('/map/simplemap.tmx')
+        .then((res) => res.text())
+        .then((text) => {
+            map.set(text)
+        })
+</script>
+        `,
+    },
+},
+{
+    title: 'DOM with form',
+    description: 'Example of using a Tiled map in CanvasEngine',
+    files: {
+        "app.ce": `
+<Canvas backgroundColor="white">
+  <DOMContainer x={100} y={100}>
+      <form submit={click}>
+        <input name="username" type="text" value={text} />
+        <button>Submit</button>
+        <p>{text}</p>
+      </form>
+  </DOMContainer>
+</Canvas>
+
+<script>
+import { signal } from "canvasengine";
+
+const text = signal("Hello");
+const click = (event, formData) => {
+  console.log(formData)
 }
+</script>
+
+
+        `,
+    },
+},
+{
+    title: 'Animated signal',
+    description: 'Example of using an animated signal in CanvasEngine. Click the rect to move it.',
+    files: {
+        "app.ce": `
+<Canvas backgroundColor="white">
+  <Container>
+    <Rect width={100} height={100} color="red" x click />
+  </Container>
+</Canvas>
+
+<script>
+import { animatedSignal, Easing } from "canvasengine";
+
+let direction = "left"
+
+const x = animatedSignal(0, {
+    duration: 1000
+})
+
+const click = () => {
+    if (direction === "left") {
+        x.update(x => x + 500)
+        direction = "right"
+    } else {
+        x.update(x => x - 500)
+        direction = "left"
+    }
+}
+</script>
+
+
+        `,
+    },
+},
+{
+    title: 'Joystick',
+    description: 'Example of using a joystick in CanvasEngine. Use the joystick to move the rect.',
+    files: {
+        "app.ce": `
+<Canvas backgroundColor="white">
+  <Container>
+    <Joystick />
+  </Container>
+</Canvas>
+
+<script>
+import { Joystick } from '@canvasengine/presets'
+</script>
+
+
+        `,
+    },
+},
 ];
 
 export default examples;

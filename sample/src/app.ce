@@ -1,31 +1,13 @@
-<script>
-  import {
-    signal,
-    animatedSignal,
-    mount,
-    effect,
-    animatedSequence,
-    tick
-  } from "canvasengine";
-
-const text = signal("Hello");
-const show = signal(false);
-const array = signal([1, 2, 3]);
-const click = (event, formData) => {
-  console.log(formData)
-}
-
-const deleteItem = (item) => {
-  array().splice(array().indexOf(item), 1);
-}
-</script>
-
-<Canvas antialias={true} backgroundColor="white">
-  <DOMContainer x={100} y={100}>
-      <form submit={click}>
-        <input name="username" type="text" value={text} />
-        <button>aa</button>
-        <p>{text}</p>
-      </form>
-  </DOMContainer>
+<Canvas>
+  <Container flexDirection="row" width="100%" height="100%">
+      @for (color of colors) {
+          <Rect width={100} height={100} color={color} />
+      }
+  </Container>
 </Canvas>
+
+<script>
+import { signal, computed, effect } from 'canvasengine'
+
+const colors = signal(['red', 'green', 'blue'])
+</script>

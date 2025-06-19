@@ -1,5 +1,5 @@
 <template>
-  <div class="playground-container">
+  <div class="playground-container" ref="playgroundContainer">
     <div class="playground-header" v-if="title || description">
       <h3 v-if="title">{{ title }}</h3>
       <p v-if="description" class="playground-description">{{ description }}</p>
@@ -94,6 +94,12 @@ const { generate } = pkg
  * - Accordion console
  * - Auto-reload on code changes
  * - Error display in preview
+ * - Automatic WebGL context management (destroys when out of viewport)
+ * 
+ * The component automatically monitors its visibility using Intersection Observer
+ * and destroys the WebGL context when the playground is not visible to prevent
+ * the "Too many active WebGL contexts" warning. It recreates the context when
+ * the playground becomes visible again.
  * 
  * @example
  * ```vue
@@ -148,6 +154,63 @@ let editorView: EditorView | null = null
 let parser: any = null
 let isConsoleScrollAtBottom = ref(true)
 let consoleScrollContainer: HTMLElement | null = null
+let messageListener: ((event: MessageEvent) => void) | null = null
+// Unique identifier for this playground instance
+const playgroundId = ref(`playground-${Math.random().toString(36).substr(2, 9)}-${Date.now()}`)
+
+// Intersection Observer for viewport detection
+let intersectionObserver: IntersectionObserver | null = null
+const isInViewport = ref(true)
+const playgroundContainer = ref<HTMLDivElement>()
+
+/**
+ * Initialize viewport intersection observer to destroy playground when not visible
+ * This prevents accumulation of WebGL contexts that cause the "Too many active WebGL contexts" warning
+ */
+const initViewportObserver = () => {
+  if (!playgroundContainer.value) return
+  
+  intersectionObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const wasInViewport = isInViewport.value
+        isInViewport.value = entry.isIntersecting
+        
+        // If playground was visible and is now not visible, destroy it
+        if (wasInViewport && !isInViewport.value) {
+          addLog('Playground moved out of viewport, destroying to free WebGL context', 'info')
+          clearPreview()
+        }
+        // If playground becomes visible again, recreate it
+        else if (!wasInViewport && isInViewport.value) {
+          addLog('Playground back in viewport, recreating', 'info')
+          // Small delay to ensure DOM is ready
+          setTimeout(() => {
+            runCode()
+          }, 100)
+        }
+      })
+    },
+    {
+      // Trigger when 10% of the playground is visible/hidden
+      threshold: 0.1,
+      // Add some margin to trigger slightly before/after entering viewport
+      rootMargin: '50px'
+    }
+  )
+  
+  intersectionObserver.observe(playgroundContainer.value)
+}
+
+/**
+ * Cleanup viewport observer
+ */
+const cleanupViewportObserver = () => {
+  if (intersectionObserver) {
+    intersectionObserver.disconnect()
+    intersectionObserver = null
+  }
+}
 
 /**
  * Check if console scroll is at bottom
@@ -418,9 +481,18 @@ const clearPreview = () => {
   error.value = ''
   logs.value = []
   
+  // Clean up message listener
+  if (messageListener) {
+    window.removeEventListener('message', messageListener)
+    messageListener = null
+  }
+  
   if (currentApp) {
     try {
-      currentApp.destroy()
+      // Destroy PIXI application properly to free WebGL context
+      if (currentApp.destroy) {
+        currentApp.destroy(true, { children: true, texture: true, baseTexture: true })
+      }
     } catch (e) {
       console.warn('Error destroying app:', e)
     }
@@ -430,7 +502,27 @@ const clearPreview = () => {
   if (canvasContainer.value) {
     // Remove all child elements including iframes
     while (canvasContainer.value.firstChild) {
-      canvasContainer.value.removeChild(canvasContainer.value.firstChild)
+      const child = canvasContainer.value.firstChild
+      // If it's an iframe, ensure proper cleanup
+      if (child instanceof HTMLIFrameElement) {
+        try {
+          // Try to destroy any PIXI apps in the iframe
+          const iframeWindow = child.contentWindow
+          if (iframeWindow && (iframeWindow as any).PIXI) {
+            const pixiApps = (iframeWindow as any).PIXI.Application?.instances || []
+            pixiApps.forEach((app: any) => {
+              try {
+                app.destroy(true, { children: true, texture: true, baseTexture: true })
+              } catch (e) {
+                console.warn('Error destroying iframe PIXI app:', e)
+              }
+            })
+          }
+        } catch (e) {
+          // Cross-origin or other access issues, ignore
+        }
+      }
+      canvasContainer.value.removeChild(child)
     }
   }
 }
@@ -459,8 +551,6 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
   const componentExtractionCode = PRIMITIVE_COMPONENTS.map(comp => 
     `if (CanvasEngine.${comp}) componentExports.${comp} = CanvasEngine.${comp};`
   ).join('\n                ')
-
-  console.log(componentFunction)
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -527,33 +617,65 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
     <script type="module">
         console.log("Starting CanvasEngine playground...");
         
+        // Enhanced error handling function
+        function handleError(error, context = 'Unknown') {
+            console.error(\`\${context} error:\`, error);
+            
+            // Send error to parent window for console logging with unique playground ID
+            try {
+                window.parent.postMessage({
+                    type: 'playground-error',
+                    playgroundId: '${playgroundId.value}',
+                    context: context,
+                    message: error.message || error.toString(),
+                    stack: error.stack || '',
+                    timestamp: new Date().toISOString()
+                }, '*');
+            } catch (postError) {
+                console.warn('Could not send error to parent:', postError);
+            }
+            
+            const rootElement = document.getElementById("root");
+            if (rootElement && !rootElement.querySelector('.error')) {
+                let errorMessage = error.message || error.toString();
+                
+                if (errorMessage.includes("already has a handler")) {
+                    errorMessage = "PixiJS extension conflict detected. Try refreshing the page.";
+                }
+                
+                // Include stack trace if available
+                let stackTrace = '';
+                if (error.stack) {
+                    stackTrace = '<br/><br/><details><summary>Stack Trace</summary><pre style="font-size: 11px; margin: 8px 0; white-space: pre-wrap;">' + 
+                        error.stack + '</pre></details>';
+                }
+                
+                rootElement.innerHTML = '<div class="error"><strong>' + context + ' Error:</strong><br/>' + 
+                    errorMessage + stackTrace + 
+                    '<br/><br/><small>If this persists, try refreshing the page.</small></div>';
+            }
+        }
+
         // Global error handler for uncaught exceptions
         window.addEventListener('error', (event) => {
             console.error('Global JavaScript Error:', event.error || event.message);
-            const rootElement = document.getElementById("root");
-            if (rootElement && !rootElement.querySelector('.error')) {
-                const errorMsg = event.error ? event.error.message : event.message;
-                const stackTrace = event.error && event.error.stack ? 
-                    '<br/><br/><details><summary>Stack Trace</summary><pre style="font-size: 11px; margin: 8px 0; white-space: pre-wrap;">' + 
-                    event.error.stack + '</pre></details>' : '';
-                
-                rootElement.innerHTML = '<div class="error"><strong>JavaScript Error:</strong><br/>' + 
-                    errorMsg + stackTrace + 
-                    '<br/><small>Check console for more details</small></div>';
-            }
+            const error = event.error || new Error(event.message);
+            handleError(error, 'Global JavaScript');
+            
+            // Prevent default browser error handling
+            event.preventDefault();
         });
         
         // Global promise rejection handler
         window.addEventListener('unhandledrejection', (event) => {
             console.error('Unhandled Promise Rejection:', event.reason);
-            const rootElement = document.getElementById("root");
-            if (rootElement && !rootElement.querySelector('.error')) {
-                const errorMsg = event.reason ? event.reason.toString() : 'Unknown error';
-                rootElement.innerHTML = '<div class="error"><strong>Promise Rejection:</strong><br/>' + 
-                    errorMsg + '<br/><small>Check console for more details</small></div>';
-            }
+            const error = event.reason instanceof Error ? event.reason : new Error(event.reason);
+            handleError(error, 'Unhandled Promise');
+            
+            // Prevent default browser rejection handling
+            event.preventDefault();
         });
-        
+
         async function initializeCanvas() {
             try {
                 console.log("Importing CanvasEngine with import map...");
@@ -591,35 +713,43 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
                 if (typeof comp !== "function") {
                     throw new Error("Component is not a function: " + typeof comp);
                 }
+
+                // Wrap the component function to catch async errors during execution
+                const wrappedComp = function(...args) {
+                    try {
+                        const result = comp(...args);
+                        // If the result is a promise, catch any rejections
+                        if (result && typeof result.then === 'function') {
+                            return result.catch(asyncError => {
+                                handleError(asyncError, 'Component Async');
+                                throw asyncError;
+                            });
+                        }
+                        return result;
+                    } catch (syncError) {
+                        handleError(syncError, 'Component Sync');
+                        throw syncError;
+                    }
+                };
  
-                const result = await bootstrapCanvas(rootElement, comp);
+                // Wrap bootstrapCanvas call with additional error handling
+                const result = await Promise.resolve(bootstrapCanvas(rootElement, wrappedComp))
+                    .catch(bootstrapError => {
+                        handleError(bootstrapError, 'Bootstrap');
+                        throw bootstrapError;
+                    });
+                    
                 console.log("CanvasEngine initialized successfully");
                 
             } catch (error) {
-                console.error("CanvasEngine error:", error);
-                const rootElement = document.getElementById("root");
-                if (rootElement) {
-                    let errorMessage = error.message || error.toString();
-                    
-                    if (errorMessage.includes("already has a handler")) {
-                        errorMessage = "PixiJS extension conflict detected. Try refreshing the page.";
-                    }
-                    
-                    // Include stack trace if available
-                    let stackTrace = '';
-                    if (error.stack) {
-                        stackTrace = '<br/><br/><details><summary>Stack Trace</summary><pre style="font-size: 11px; margin: 8px 0; white-space: pre-wrap;">' + 
-                            error.stack + '</pre></details>';
-                    }
-                    
-                    rootElement.innerHTML = '<div class="error"><strong>Error:</strong><br/>' + 
-                        errorMessage + stackTrace + 
-                        '<br/><br/><small>If this persists, try refreshing the page.</small></div>';
-                }
+                handleError(error, 'Initialization');
             }
         }
         
-        initializeCanvas();
+        // Initialize with additional promise rejection handling
+        initializeCanvas().catch(error => {
+            handleError(error, 'Main Initialization');
+        });
     <\/script>
 </body>
 </html>`
@@ -801,7 +931,7 @@ const transformExports = (jsContent: string, moduleName: string): string => {
   } else {
     transformedContent += `\n\nreturn {};`
   }
-  
+
   return transformedContent
 }
 
@@ -820,6 +950,12 @@ const getModuleName = (filePath: string): string => {
  */
 const runCode = async () => {
   try {
+    // Don't run if not in viewport to save resources
+    if (!isInViewport.value) {
+      addLog('Playground not in viewport, skipping execution', 'info')
+      return
+    }
+    
     clearPreview()
     
     // Ensure parser is initialized
@@ -845,9 +981,14 @@ const runCode = async () => {
     scriptContent = importResult.transformedContent
     const dependencies = importResult.dependencies
     
-    // Always ensure CanvasEngine is available
-    dependencies.add('canvasengine')
-    
+    // Always ensure CanvasEngine is available and is the first dependency
+    const orderedDependencies = new Set(['canvasengine'])
+    dependencies.forEach(dep => {
+      if (dep !== 'canvasengine') {
+        orderedDependencies.add(dep)
+      }
+    })
+ 
     // Extract template (everything except script)
     const template = mainFile.content.replace(/<script>[\s\S]*?<\/script>/, "")
       .replace(/^\s+|\s+$/g, '')
@@ -883,7 +1024,29 @@ const runCode = async () => {
       `
       
       // Generate the complete HTML for the iframe
-      const iframeContent = generateIframeContent(componentFunction, dependencies)
+      const iframeContent = generateIframeContent(componentFunction, orderedDependencies)
+
+      // Set up message listener for iframe communication
+      messageListener = (event: MessageEvent) => {
+        if (event.data && event.data.playgroundId === playgroundId.value) {
+          if (event.data.type === 'playground-error') {
+            const { context, message, stack } = event.data
+            const fullErrorMsg = stack ? `${message}\n\nStack trace:\n${stack}` : message
+            error.value = fullErrorMsg
+            addLog(`${context}: ${message}`, 'error')
+          } else if (event.data.type === 'playground-console') {
+            const { logType, message, isSignificantError } = event.data
+            addLog(message, logType as ConsoleLog['type'])
+            
+            // Set error in preview if it's a significant console error
+            if (isSignificantError) {
+              error.value = message
+            }
+          }
+        }
+      }
+      
+      window.addEventListener('message', messageListener)
 
       iframe.onload = () => {
         try {
@@ -892,46 +1055,83 @@ const runCode = async () => {
             const iframeWindow = iframe.contentWindow as any
             const originalConsole = iframeWindow.console
             
-            // Intercept unhandled errors
+            // Intercept unhandled errors - these should now be handled by our enhanced error system
             iframeWindow.addEventListener('error', (event: ErrorEvent) => {
-              const errorMsg = `JavaScript Error: ${event.message} at line ${event.lineno}:${event.colno}`
-              error.value = errorMsg
-              addLog(errorMsg, 'error')
+              // Send error message with playground ID to parent
+              window.parent.postMessage({
+                type: 'playground-error',
+                playgroundId: '${playgroundId.value}',
+                context: 'JavaScript Error',
+                message: `${event.message} at line ${event.lineno}:${event.colno}`,
+                stack: '',
+                timestamp: new Date().toISOString()
+              }, '*')
             })
             
-            // Intercept unhandled promise rejections
+            // Intercept unhandled promise rejections - these should now be handled by our enhanced error system
             iframeWindow.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
-              const errorMsg = `Unhandled Promise Rejection: ${event.reason}`
-              error.value = errorMsg
-              addLog(errorMsg, 'error')
+              // Send error message with playground ID to parent
+              window.parent.postMessage({
+                type: 'playground-error',
+                playgroundId: '${playgroundId.value}',
+                context: 'Unhandled Promise Rejection',
+                message: String(event.reason),
+                stack: '',
+                timestamp: new Date().toISOString()
+              }, '*')
             })
             
             if (originalConsole) {
               iframeWindow.console = {
                 ...originalConsole,
                 log: (...args: any[]) => {
-                 try {
-                  addLog(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' '), 'log')
-                 } catch (e) {
-                  // do nothing
-                 }
+                  try {
+                    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
+                    window.parent.postMessage({
+                      type: 'playground-console',
+                      playgroundId: '${playgroundId.value}',
+                      logType: 'log',
+                      message: message,
+                      timestamp: new Date().toISOString()
+                    }, '*')
+                  } catch (e) {
+                    // do nothing
+                  }
                   originalConsole.log(...args)
                 },
                 error: (...args: any[]) => {
                   const errorMsg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
-                  // Set error in preview if it's a significant error
-                  if (errorMsg.toLowerCase().includes('error') || errorMsg.toLowerCase().includes('failed')) {
-                    error.value = errorMsg
-                  }
-                  addLog(errorMsg, 'error')
+                  // Send console error with playground ID
+                  window.parent.postMessage({
+                    type: 'playground-console',
+                    playgroundId: '${playgroundId.value}',
+                    logType: 'error',
+                    message: errorMsg,
+                    timestamp: new Date().toISOString(),
+                    isSignificantError: errorMsg.toLowerCase().includes('error') || errorMsg.toLowerCase().includes('failed')
+                  }, '*')
                   originalConsole.error(...args)
                 },
                 warn: (...args: any[]) => {
-                  addLog(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' '), 'warn')
+                  const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
+                  window.parent.postMessage({
+                    type: 'playground-console',
+                    playgroundId: '${playgroundId.value}',
+                    logType: 'warn',
+                    message: message,
+                    timestamp: new Date().toISOString()
+                  }, '*')
                   originalConsole.warn(...args)
                 },
                 info: (...args: any[]) => {
-                  addLog(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' '), 'info')
+                  const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
+                  window.parent.postMessage({
+                    type: 'playground-console',
+                    playgroundId: '${playgroundId.value}',
+                    logType: 'info',
+                    message: message,
+                    timestamp: new Date().toISOString()
+                  }, '*')
                   originalConsole.info(...args)
                 }
               }
@@ -975,6 +1175,7 @@ onMounted(() => {
   nextTick(async () => {
     await initParser()
     initEditor()
+    initViewportObserver()
     runCode()
   })
 })
@@ -988,6 +1189,18 @@ onUnmounted(() => {
   if (consoleScrollContainer) {
     (consoleScrollContainer as HTMLElement).removeEventListener('scroll', checkConsoleScrollPosition)
   }
+  
+  // Clean up message listener
+  if (messageListener) {
+    window.removeEventListener('message', messageListener)
+    messageListener = null
+  }
+  
+  // Clean up viewport observer
+  cleanupViewportObserver()
+  
+  // Clean up preview resources
+  clearPreview()
   
   clearTimeout(autoReloadTimeout)
 })
