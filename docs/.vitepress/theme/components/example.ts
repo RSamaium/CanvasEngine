@@ -343,7 +343,7 @@ export const spritesheet = (framesWidth, framesHeight, frameStand = 1) => {
     <TiledMap 
         map={map} 
         createLayersPerTilesZ={true} 
-        basePath="/map" 
+        basePath="/" 
         objectLayer={(layer) => <Rect width={32} height={32} color="red" />} 
     />
 </Canvas>

@@ -834,7 +834,7 @@ const processImports = async (scriptContent: string): Promise<{transformedConten
     const [fullMatch, importClause, filePath] = importMatch
     
     // Skip CanvasEngine imports (already processed)
-    if (filePath === 'canvasengine') continue
+    if (filePath[0] != '.') continue
     
     // Resolve local file path (remove ./ and normalize)
     const normalizedPath = filePath.replace(/^\.\//, '').replace(/^\//, '')
