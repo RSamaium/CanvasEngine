@@ -615,6 +615,61 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
     ${dependencyScripts}
 
     <script type="module">
+        // Set up console interception FIRST, before anything else
+        const originalConsole = window.console;
+        window.console = {
+            ...originalConsole,
+            log: (...args) => {
+                try {
+                    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(' ');
+                    window.parent.postMessage({
+                        type: 'playground-console',
+                        playgroundId: '${playgroundId.value}',
+                        logType: 'log',
+                        message: message,
+                        timestamp: new Date().toISOString()
+                    }, '*');
+                } catch (e) {
+                    // Fallback to original console if message posting fails
+                }
+                originalConsole.log(...args);
+            },
+            error: (...args) => {
+                const errorMsg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(' ');
+                window.parent.postMessage({
+                    type: 'playground-console',
+                    playgroundId: '${playgroundId.value}',
+                    logType: 'error',
+                    message: errorMsg,
+                    timestamp: new Date().toISOString(),
+                    isSignificantError: errorMsg.toLowerCase().includes('error') || errorMsg.toLowerCase().includes('failed')
+                }, '*');
+                originalConsole.error(...args);
+            },
+            warn: (...args) => {
+                const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(' ');
+                window.parent.postMessage({
+                    type: 'playground-console',
+                    playgroundId: '${playgroundId.value}',
+                    logType: 'warn',
+                    message: message,
+                    timestamp: new Date().toISOString()
+                }, '*');
+                originalConsole.warn(...args);
+            },
+            info: (...args) => {
+                const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(' ');
+                window.parent.postMessage({
+                    type: 'playground-console',
+                    playgroundId: '${playgroundId.value}',
+                    logType: 'info',
+                    message: message,
+                    timestamp: new Date().toISOString()
+                }, '*');
+                originalConsole.info(...args);
+            }
+        };
+        
         console.log("Starting CanvasEngine playground...");
         
         // Enhanced error handling function
@@ -678,8 +733,6 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
 
         async function initializeCanvas() {
             try {
-                console.log("Importing CanvasEngine with import map...");
-                
                 const rootElement = document.getElementById("root");
                 if (!rootElement) throw new Error("Root element not found");
 
@@ -697,8 +750,6 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
                 const { ${CORE_FUNCTIONS.join(', ')} } = coreExports;
                 const { ${PRIMITIVE_COMPONENTS.join(', ')} } = componentExports;
                 
-                console.log("All required functions and components verified");
-
                 let comp = null
                 
                 // Wrap component function execution in try-catch to catch syntax errors
@@ -707,8 +758,6 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
                 } catch (syntaxError) {
                     throw new Error("Syntax error in component code: " + syntaxError.message);
                 }
-                
-                console.log("Component function defined");
 
                 if (typeof comp !== "function") {
                     throw new Error("Component is not a function: " + typeof comp);
@@ -1049,98 +1098,6 @@ const runCode = async () => {
       window.addEventListener('message', messageListener)
 
       iframe.onload = () => {
-        try {
-          // Intercept console logs and errors from iframe
-          if (iframe.contentWindow) {
-            const iframeWindow = iframe.contentWindow as any
-            const originalConsole = iframeWindow.console
-            
-            // Intercept unhandled errors - these should now be handled by our enhanced error system
-            iframeWindow.addEventListener('error', (event: ErrorEvent) => {
-              // Send error message with playground ID to parent
-              window.parent.postMessage({
-                type: 'playground-error',
-                playgroundId: '${playgroundId.value}',
-                context: 'JavaScript Error',
-                message: `${event.message} at line ${event.lineno}:${event.colno}`,
-                stack: '',
-                timestamp: new Date().toISOString()
-              }, '*')
-            })
-            
-            // Intercept unhandled promise rejections - these should now be handled by our enhanced error system
-            iframeWindow.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
-              // Send error message with playground ID to parent
-              window.parent.postMessage({
-                type: 'playground-error',
-                playgroundId: '${playgroundId.value}',
-                context: 'Unhandled Promise Rejection',
-                message: String(event.reason),
-                stack: '',
-                timestamp: new Date().toISOString()
-              }, '*')
-            })
-            
-            if (originalConsole) {
-              iframeWindow.console = {
-                ...originalConsole,
-                log: (...args: any[]) => {
-                  try {
-                    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
-                    window.parent.postMessage({
-                      type: 'playground-console',
-                      playgroundId: '${playgroundId.value}',
-                      logType: 'log',
-                      message: message,
-                      timestamp: new Date().toISOString()
-                    }, '*')
-                  } catch (e) {
-                    // do nothing
-                  }
-                  originalConsole.log(...args)
-                },
-                error: (...args: any[]) => {
-                  const errorMsg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
-                  // Send console error with playground ID
-                  window.parent.postMessage({
-                    type: 'playground-console',
-                    playgroundId: '${playgroundId.value}',
-                    logType: 'error',
-                    message: errorMsg,
-                    timestamp: new Date().toISOString(),
-                    isSignificantError: errorMsg.toLowerCase().includes('error') || errorMsg.toLowerCase().includes('failed')
-                  }, '*')
-                  originalConsole.error(...args)
-                },
-                warn: (...args: any[]) => {
-                  const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
-                  window.parent.postMessage({
-                    type: 'playground-console',
-                    playgroundId: '${playgroundId.value}',
-                    logType: 'warn',
-                    message: message,
-                    timestamp: new Date().toISOString()
-                  }, '*')
-                  originalConsole.warn(...args)
-                },
-                info: (...args: any[]) => {
-                  const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
-                  window.parent.postMessage({
-                    type: 'playground-console',
-                    playgroundId: '${playgroundId.value}',
-                    logType: 'info',
-                    message: message,
-                    timestamp: new Date().toISOString()
-                  }, '*')
-                  originalConsole.info(...args)
-                }
-              }
-            }
-          }
-        } catch (consoleError) {
-          console.warn('Could not intercept iframe console:', consoleError)
-        }
-        
         try {
           iframe.contentDocument?.open()
           iframe.contentDocument?.write(iframeContent)

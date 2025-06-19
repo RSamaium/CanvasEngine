@@ -5,7 +5,7 @@
  */
 
 import * as PIXI from "pixi.js";
-import { Container, Graphics, Sprite, h, signal } from "canvasengine";
+import { Circle, Container, Graphics, Rect, Sprite, h, signal } from "canvasengine";
 
 export interface JoystickChangeEvent {
   angle: number;
@@ -29,6 +29,8 @@ export interface JoystickSettings {
   inner?: string;
   outerScale?: { x: number; y: number };
   innerScale?: { x: number; y: number };
+  innerColor?: string;
+  outerColor?: string;
   onChange?: (data: JoystickChangeEvent) => void;
   onStart?: () => void;
   onEnd?: () => void;
@@ -39,6 +41,8 @@ export function Joystick(opts: JoystickSettings = {}) {
     {
       outerScale: { x: 1, y: 1 },
       innerScale: { x: 1, y: 1 },
+      innerColor: "black",
+      outerColor: "black",
     },
     opts
   );
@@ -140,7 +144,7 @@ export function Joystick(opts: JoystickSettings = {}) {
      */
 
     let direction = Direction.LEFT;
-
+    
     if (sideX == 0) {
       if (sideY > 0) {
         centerPoint.set(0, sideY > outerRadius ? outerRadius : sideY);
@@ -225,7 +229,6 @@ export function Joystick(opts: JoystickSettings = {}) {
     direction = getDirection(centerPoint);
     innerPositionX.set(centerPoint.x);
     innerPositionY.set(centerPoint.y);
-
     settings.onChange?.({ angle, direction, power });
   }
 
@@ -235,7 +238,7 @@ export function Joystick(opts: JoystickSettings = {}) {
   if (!settings.outer) {
     outerElement = h(Graphics, {
       draw: (g) => {
-        g.circle(0, 0, outerRadius).fill(0x000000);
+        g.circle(0, 0, outerRadius).fill(settings.outerColor);
       },
       alpha: 0.5,
     });
@@ -257,16 +260,12 @@ export function Joystick(opts: JoystickSettings = {}) {
   if (!settings.inner) {
     innerElement = h(Graphics, {
       draw: (g) => {
-        g.circle(0, 0, innerRadius * 2.5).fill(0x000000);
+        g.circle(0, 0, innerRadius * 2.5).fill(settings.innerColor);
       },
       ...innerOptions,
     });
   } else {
-    innerElement = h(Sprite, {
-      image: settings.inner,
-      anchor: { x: 0.5, y: 0.5 },
-      ...innerOptions,
-    });
+    innerElement = settings.inner
   }
 
   return h(
@@ -279,6 +278,6 @@ export function Joystick(opts: JoystickSettings = {}) {
       pointermove: handleDragMove,
     },
     outerElement,
-    innerElement
+    innerElement,
   );
 }

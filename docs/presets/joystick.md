@@ -20,6 +20,8 @@
 |----------|------|---------|-------------|
 | outer | string | - | Path to the outer joystick image |
 | inner | string | - | Path to the inner joystick image |
+| outerColor | string | - | Color of the outer joystick element |
+| innerColor | string | - | Color of the inner joystick element |
 | outerScale | `{ x: number; y: number }`| Scale of the outer joystick element |
 | innerScale | `{ x: number; y: number }` | Scale of the inner joystick element |
 | onChange | (data: JoystickChangeEvent) => void | - | Callback function triggered when joystick position changes |

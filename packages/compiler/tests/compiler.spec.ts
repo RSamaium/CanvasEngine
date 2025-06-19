@@ -131,6 +131,18 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas, { width: 20 })`);
   });
 
+  // TODO
+  // test("should compile component with templating string", () => {
+  //   const input = `<Canvas width={\`direction: \${direction}\`} />`;
+  //   const output = parser.parse(input);
+  //   expect(output).toBe(`h(Canvas, { width: \`direction: \${direction()}\` })`);
+  // });
+
+  // test("should compile component with templating string with @ (literal)", () => {
+  //   const input = `<Canvas width={\`direction: \${@direction}\`} />`;
+  //   const output = parser.parse(input);
+  //   expect(output).toBe(`h(Canvas, { width: \`direction: \${direction}\` })`);
+  // });
 
   test("should compile component with object attribute", () => {
     const input = `<Canvas width={ {x: 10, y: 20} } />`;

@@ -401,6 +401,11 @@ dynamicAttribute "dynamic attribute"
         return `${formattedName}: ${attributeValue}`;
       }
       
+      // If it's a template string, preserve it as is
+      if (attributeValue.trim().startsWith('`') && attributeValue.trim().endsWith('`')) {
+        return `${formattedName}: ${attributeValue}`;
+      }
+      
       // Handle other types of values
       if (attributeValue.startsWith('h(') || attributeValue.includes('=>')) {
         return `${formattedName}: ${attributeValue}`;

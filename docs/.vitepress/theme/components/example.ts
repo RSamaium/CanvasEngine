@@ -433,12 +433,31 @@ const click = () => {
         "app.ce": `
 <Canvas backgroundColor="white">
   <Container>
-    <Joystick />
+    <Joystick x={100} y={100} onChange={onChange} />
+    <Container x={300} flexDirection="column" top={50} gap={10}>
+        <Text text={angleStr} />
+        <Text text={directionStr} />
+        <Text text={powerStr} />
+    </Container>
   </Container>
 </Canvas>
 
 <script>
+import { signal, computed } from 'canvasengine'
 import { Joystick } from '@canvasengine/presets'
+
+const angle = signal(0)
+const direction = signal("up")
+const power = signal(0)
+const angleStr = computed(() => \`Angle: \${angle()}\`)
+const directionStr = computed(() => \`Direction: \${direction()}\`)
+const powerStr = computed(() => \`Power: \${power()}\`)
+
+const onChange = (event) => {
+    angle.set(event.angle)
+    direction.set(event.direction)
+    power.set(event.power)
+}
 </script>
 
 

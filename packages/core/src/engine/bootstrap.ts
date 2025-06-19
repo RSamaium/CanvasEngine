@@ -17,6 +17,7 @@ export const bootstrapCanvas = async (rootElement: HTMLElement | null, canvas: C
   await app.init({
     resizeTo: rootElement,
     autoStart: false,
+    antialias: true,
     ...(options ?? {})
   });
   const canvasElement = await h(canvas);

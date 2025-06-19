@@ -105,9 +105,6 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
         if (typeof w == 'string' || typeof h == 'string') {
           return
         }
-        if (w == 0 || h == 0) {
-          return
-        }
         this.clear();
         props.draw?.(this, w, h);
         this.subjectInit.next(this)
