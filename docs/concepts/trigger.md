@@ -17,7 +17,7 @@ Trigger is a type of signal that can be used to pass data to a component. They a
   }
 </script>
 
-<Rect x="0" y="0" width="10" height="10" color="red" @click={run} />
+<Rect x="0" y="0" width="10" height="10" color="red" click={run} />
 ```
 
 
@@ -36,7 +36,7 @@ if you're using native events (such as click, it takes care of the trigger autom
   })
 </script>
 
-<Rect x="0" y="0" width="10" height="10" color="red" @click />
+<Rect x="0" y="0" width="10" height="10" color="red" click />
 ```
 :::
 
@@ -59,7 +59,7 @@ if you're using native events (such as click, it takes care of the trigger autom
   }
 </script>
 
-<Rect x="0" y="0" width="10" height="10" color="red" @click={run} />
+<Rect x="0" y="0" width="10" height="10" color="red" click={run} />
 ```
 
 ::: tip
@@ -110,7 +110,7 @@ you can set global data that will be merged with the start method
 </script>
 
 <Child myEvent={myTrigger} />
-<Rect x="0" y="0" width="10" height="10" color="red" @click={myTrigger} />
+<Rect x="0" y="0" width="10" height="10" color="red" click={myTrigger} />
 ```
 
 ## Async

@@ -56,7 +56,7 @@
             <span class="toggle-icon" :class="{ rotated: consoleOpen }">▼</span>
           </button>
           
-          <div class="console-content" v-show="consoleOpen">
+          <div ref="consoleContent" class="console-content" v-show="consoleOpen">
             <div v-if="logs.length === 0" class="console-empty">
               No console output
             </div>
@@ -77,8 +77,9 @@
 import { ref, computed, onMounted, nextTick, watch, onUnmounted } from 'vue'
 import { EditorView, basicSetup } from 'codemirror'
 import { html } from '@codemirror/lang-html'
+import { javascript } from '@codemirror/lang-javascript'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { EditorState } from '@codemirror/state'
+import { EditorState, Compartment } from '@codemirror/state'
 import pkg from "peggy"
 import { dependencyConfig, CORE_FUNCTIONS, PRIMITIVE_COMPONENTS } from './config'
 
@@ -137,6 +138,7 @@ const props = withDefaults(defineProps<PlaygroundProps>(), {
 // Reactive state
 const editorContainer = ref<HTMLDivElement>()
 const canvasContainer = ref<HTMLDivElement>()
+const consoleContent = ref<HTMLDivElement>()
 const activeFile = ref('app.ce')
 const error = ref('')
 const logs = ref<ConsoleLog[]>([])
@@ -144,6 +146,47 @@ const consoleOpen = ref(false)
 let currentApp: any = null
 let editorView: EditorView | null = null
 let parser: any = null
+let isConsoleScrollAtBottom = ref(true)
+let consoleScrollContainer: HTMLElement | null = null
+
+/**
+ * Check if console scroll is at bottom
+ */
+const checkConsoleScrollPosition = () => {
+  if (consoleScrollContainer) {
+    const threshold = 5 // pixels threshold
+    const isAtBottom = (consoleScrollContainer as HTMLElement).scrollTop + (consoleScrollContainer as HTMLElement).clientHeight >= (consoleScrollContainer as HTMLElement).scrollHeight - threshold
+    isConsoleScrollAtBottom.value = isAtBottom
+  }
+}
+
+/**
+ * Scroll console to bottom if needed
+ */
+const scrollConsoleToBottomIfNeeded = () => {
+  if (isConsoleScrollAtBottom.value && consoleScrollContainer) {
+    nextTick(() => {
+      (consoleScrollContainer as HTMLElement).scrollTop = (consoleScrollContainer as HTMLElement).scrollHeight
+    })
+  }
+}
+
+/**
+ * Initialize console scroll tracking
+ */
+const initConsoleScroll = () => {
+  nextTick(() => {
+    if (consoleContent.value) {
+      consoleScrollContainer = consoleContent.value
+      
+      // Add scroll event listener
+      consoleScrollContainer.addEventListener('scroll', checkConsoleScrollPosition)
+      
+      // Initial scroll position check
+      checkConsoleScrollPosition()
+    }
+  })
+}
 
 /**
  * Add log to console
@@ -151,6 +194,7 @@ let parser: any = null
 const addLog = (message: string, type: ConsoleLog['type'] = 'log') => {
   const timestamp = new Date().toLocaleTimeString()
   logs.value.push({ timestamp, message, type })
+  scrollConsoleToBottomIfNeeded()
 }
 
 /**
@@ -240,37 +284,20 @@ const setActiveFile = (fileName: string) => {
 }
 
 /**
- * Update CodeMirror editor content
+ * Update CodeMirror editor content and language
  */
 const updateEditor = () => {
-  if (!editorView) return
+  if (!editorView || !editorContainer.value) return
   
   const currentFile = allFiles.value[activeFile.value]
   if (!currentFile) return
   
-  const transaction = editorView.state.update({
-    changes: {
-      from: 0,
-      to: editorView.state.doc.length,
-      insert: currentFile.content
-    }
-  })
-  
-  editorView.dispatch(transaction)
-}
-
-/**
- * Initialize CodeMirror editor
- */
-const initEditor = () => {
-  if (!editorContainer.value) return
-  
-  const currentFile = allFiles.value[activeFile.value]
-  if (!currentFile) return
+  // Destroy current editor and recreate with new language
+  editorView.destroy()
   
   const extensions = [
     basicSetup,
-    html(),
+    getLanguageExtension(activeFile.value),
     oneDark,
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {
@@ -294,7 +321,78 @@ const initEditor = () => {
         minHeight: '100%'
       },
       '.cm-editor': {
+        height: '100%',
+        overflow: 'auto'
+      },
+      '.cm-scroller': {
+        fontFamily: "'Monaco', 'Menlo', 'Ubuntu Mono', monospace"
+      }
+    })
+  ]
+  
+  const state = EditorState.create({
+    doc: currentFile.content,
+    extensions
+  })
+  
+  editorView = new EditorView({
+    state,
+    parent: editorContainer.value
+  })
+}
+
+/**
+ * Get language extension based on file type
+ */
+const getLanguageExtension = (fileName: string) => {
+  if (fileName.endsWith('.js')) {
+    return javascript()
+  } else if (fileName.endsWith('.ts')) {
+    return javascript({ typescript: true })
+  } else if (fileName.endsWith('.ce')) {
+    return html()
+  } else {
+    return html() // Default fallback
+  }
+}
+
+/**
+ * Initialize CodeMirror editor
+ */
+const initEditor = () => {
+  if (!editorContainer.value) return
+  
+  const currentFile = allFiles.value[activeFile.value]
+  if (!currentFile) return
+  
+  const extensions = [
+    basicSetup,
+    getLanguageExtension(activeFile.value),
+    oneDark,
+    EditorView.updateListener.of((update) => {
+      if (update.docChanged) {
+        // Update file content
+        allFiles.value[activeFile.value].content = update.state.doc.toString()
+        
+        // Auto-reload preview with debounce
+        clearTimeout(autoReloadTimeout)
+        autoReloadTimeout = setTimeout(() => {
+          runCode()
+        }, 500)
+      }
+    }),
+    EditorView.theme({
+      '&': {
+        fontSize: '14px',
         height: '100%'
+      },
+      '.cm-content': {
+        padding: '16px',
+        minHeight: '100%'
+      },
+      '.cm-editor': {
+        height: '100%',
+        overflow: 'auto'
       },
       '.cm-scroller': {
         fontFamily: "'Monaco', 'Menlo', 'Ubuntu Mono', monospace"
@@ -361,7 +459,9 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
   const componentExtractionCode = PRIMITIVE_COMPONENTS.map(comp => 
     `if (CanvasEngine.${comp}) componentExports.${comp} = CanvasEngine.${comp};`
   ).join('\n                ')
-  
+
+  console.log(componentFunction)
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -372,7 +472,50 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
     <style>
         body { overflow: hidden; margin: 0; padding: 0; font-family: Arial, sans-serif; background: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         #root { width: 100%; height: 100%; min-height: 400px; }
-        .error { color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 16px; font-family: monospace; white-space: pre-wrap; }
+        .error { 
+            color: #dc2626; 
+            background: #fef2f2; 
+            border: 1px solid #fecaca; 
+            border-radius: 8px; 
+            padding: 16px; 
+            margin: 16px; 
+            font-family: monospace; 
+            white-space: pre-wrap; 
+            line-height: 1.4;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .error strong { 
+            color: #b91c1c; 
+            font-weight: 600; 
+        }
+        .error details { 
+            margin-top: 12px; 
+            cursor: pointer; 
+        }
+        .error summary { 
+            color: #b91c1c; 
+            font-weight: 500; 
+            padding: 4px 0;
+            user-select: none;
+        }
+        .error summary:hover { 
+            background: rgba(220, 38, 38, 0.1); 
+            border-radius: 4px;
+            padding: 4px 8px;
+        }
+        .error pre { 
+            background: #fff; 
+            border: 1px solid #fecaca; 
+            border-radius: 4px; 
+            padding: 8px; 
+            margin: 8px 0; 
+            font-size: 11px; 
+            white-space: pre-wrap; 
+            overflow-x: auto;
+            max-height: 200px;
+            overflow-y: auto;
+        }
         .loading { text-align: center; padding: 20px; color: #666; }
     </style>
 </head>
@@ -383,6 +526,33 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
 
     <script type="module">
         console.log("Starting CanvasEngine playground...");
+        
+        // Global error handler for uncaught exceptions
+        window.addEventListener('error', (event) => {
+            console.error('Global JavaScript Error:', event.error || event.message);
+            const rootElement = document.getElementById("root");
+            if (rootElement && !rootElement.querySelector('.error')) {
+                const errorMsg = event.error ? event.error.message : event.message;
+                const stackTrace = event.error && event.error.stack ? 
+                    '<br/><br/><details><summary>Stack Trace</summary><pre style="font-size: 11px; margin: 8px 0; white-space: pre-wrap;">' + 
+                    event.error.stack + '</pre></details>' : '';
+                
+                rootElement.innerHTML = '<div class="error"><strong>JavaScript Error:</strong><br/>' + 
+                    errorMsg + stackTrace + 
+                    '<br/><small>Check console for more details</small></div>';
+            }
+        });
+        
+        // Global promise rejection handler
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled Promise Rejection:', event.reason);
+            const rootElement = document.getElementById("root");
+            if (rootElement && !rootElement.querySelector('.error')) {
+                const errorMsg = event.reason ? event.reason.toString() : 'Unknown error';
+                rootElement.innerHTML = '<div class="error"><strong>Promise Rejection:</strong><br/>' + 
+                    errorMsg + '<br/><small>Check console for more details</small></div>';
+            }
+        });
         
         async function initializeCanvas() {
             try {
@@ -406,29 +576,45 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
                 const { ${PRIMITIVE_COMPONENTS.join(', ')} } = componentExports;
                 
                 console.log("All required functions and components verified");
+
+                let comp = null
                 
-                ${componentFunction}
+                // Wrap component function execution in try-catch to catch syntax errors
+                try {
+                    comp = ${componentFunction}
+                } catch (syntaxError) {
+                    throw new Error("Syntax error in component code: " + syntaxError.message);
+                }
                 
                 console.log("Component function defined");
-                
-                if (typeof component !== "function") {
-                    throw new Error("Component is not a function: " + typeof component);
+
+                if (typeof comp !== "function") {
+                    throw new Error("Component is not a function: " + typeof comp);
                 }
  
-                const result = await bootstrapCanvas(rootElement, component);
+                const result = await bootstrapCanvas(rootElement, comp);
                 console.log("CanvasEngine initialized successfully");
                 
             } catch (error) {
                 console.error("CanvasEngine error:", error);
                 const rootElement = document.getElementById("root");
                 if (rootElement) {
-                    let errorMessage = error.message;
+                    let errorMessage = error.message || error.toString();
                     
                     if (errorMessage.includes("already has a handler")) {
                         errorMessage = "PixiJS extension conflict detected. Try refreshing the page.";
                     }
                     
-                    rootElement.innerHTML = '<div class="error"><strong>Error:</strong><br/>' + errorMessage + '<br/><br/><small>If this persists, try refreshing the page.</small></div>';
+                    // Include stack trace if available
+                    let stackTrace = '';
+                    if (error.stack) {
+                        stackTrace = '<br/><br/><details><summary>Stack Trace</summary><pre style="font-size: 11px; margin: 8px 0; white-space: pre-wrap;">' + 
+                            error.stack + '</pre></details>';
+                    }
+                    
+                    rootElement.innerHTML = '<div class="error"><strong>Error:</strong><br/>' + 
+                        errorMessage + stackTrace + 
+                        '<br/><br/><small>If this persists, try refreshing the page.</small></div>';
                 }
             }
         }
@@ -518,7 +704,18 @@ const processImports = async (scriptContent: string): Promise<{transformedConten
          } else if (normalizedPath.endsWith('.js') || normalizedPath.endsWith('.ts')) {
        // Process .js/.ts files
        const result = await processImports(targetFile.content)
-       processedContent = result.transformedContent
+       
+       // Transform ES6 exports to object assignments
+       const moduleName = getModuleName(normalizedPath)
+       const transformedJsContent = transformExports(result.transformedContent, moduleName)
+
+       // Wrap in a function that creates and returns the module object
+       processedContent = `
+         const ${moduleName} = (function() {
+           ${transformedJsContent}
+         })();
+       `
+       
        // Merge dependencies from nested imports
        result.dependencies.forEach(dep => dependencies.add(dep))
      }
@@ -542,6 +739,70 @@ const processImports = async (scriptContent: string): Promise<{transformedConten
      transformedContent: resolvedModules + transformedContent,
      dependencies
    }
+}
+
+/**
+ * Transform ES6 exports to return statement with object for sandbox compatibility
+ */
+const transformExports = (jsContent: string, moduleName: string): string => {
+  let transformedContent = jsContent
+  const exportedNames: string[] = []
+  let hasDefaultExport = false
+  let defaultExportValue = ''
+  
+  // Transform named exports: export const foo = ... → const foo = ...;
+  transformedContent = transformedContent.replace(/export\s+const\s+(\w+)\s*=\s*([^;]+);?/g, (match, name, value) => {
+    exportedNames.push(name)
+    return `const ${name} = ${value};`
+  })
+  
+  // Transform named exports: export function foo() {} → function foo() {}
+  transformedContent = transformedContent.replace(/export\s+function\s+(\w+)\s*\([^)]*\)\s*\{[^}]*\}/g, (match, name) => {
+    exportedNames.push(name)
+    const funcDeclaration = match.replace(/^export\s+/, '')
+    return funcDeclaration
+  })
+  
+  // Transform default export: export default ... → store the value
+  transformedContent = transformedContent.replace(/export\s+default\s+([^;]+);?/g, (match, value) => {
+    hasDefaultExport = true
+    defaultExportValue = value
+    return '' // Remove the export default line
+  })
+  
+  // Transform export { ... } syntax
+  transformedContent = transformedContent.replace(/export\s*\{\s*([^}]+)\s*\}/g, (match, exports) => {
+    const exportList = exports.split(',').map(exp => exp.trim())
+    exportList.forEach(exp => {
+      const [localName, exportedName] = exp.includes(' as ') ? exp.split(' as ').map(s => s.trim()) : [exp, exp]
+      if (!exportedNames.includes(exportedName)) {
+        exportedNames.push(exportedName)
+      }
+    })
+    return '' // Remove the export statement
+  })
+  
+  // Build the return object
+  const returnObject: string[] = []
+  
+  // Add named exports
+  exportedNames.forEach(name => {
+    returnObject.push(`${name}: ${name}`)
+  })
+  
+  // Add default export if present
+  if (hasDefaultExport) {
+    returnObject.push(`default: ${defaultExportValue}`)
+  }
+  
+  // Add return statement with the module object
+  if (returnObject.length > 0) {
+    transformedContent += `\n\nreturn {\n  ${returnObject.join(',\n  ')}\n};`
+  } else {
+    transformedContent += `\n\nreturn {};`
+  }
+  
+  return transformedContent
 }
 
 /**
@@ -623,13 +884,28 @@ const runCode = async () => {
       
       // Generate the complete HTML for the iframe
       const iframeContent = generateIframeContent(componentFunction, dependencies)
-      
+
       iframe.onload = () => {
         try {
-          // Intercept console logs from iframe
+          // Intercept console logs and errors from iframe
           if (iframe.contentWindow) {
             const iframeWindow = iframe.contentWindow as any
             const originalConsole = iframeWindow.console
+            
+            // Intercept unhandled errors
+            iframeWindow.addEventListener('error', (event: ErrorEvent) => {
+              const errorMsg = `JavaScript Error: ${event.message} at line ${event.lineno}:${event.colno}`
+              error.value = errorMsg
+              addLog(errorMsg, 'error')
+            })
+            
+            // Intercept unhandled promise rejections
+            iframeWindow.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+              const errorMsg = `Unhandled Promise Rejection: ${event.reason}`
+              error.value = errorMsg
+              addLog(errorMsg, 'error')
+            })
+            
             if (originalConsole) {
               iframeWindow.console = {
                 ...originalConsole,
@@ -642,7 +918,12 @@ const runCode = async () => {
                   originalConsole.log(...args)
                 },
                 error: (...args: any[]) => {
-                  addLog(args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' '), 'error')
+                  const errorMsg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
+                  // Set error in preview if it's a significant error
+                  if (errorMsg.toLowerCase().includes('error') || errorMsg.toLowerCase().includes('failed')) {
+                    error.value = errorMsg
+                  }
+                  addLog(errorMsg, 'error')
                   originalConsole.error(...args)
                 },
                 warn: (...args: any[]) => {
@@ -682,6 +963,13 @@ const runCode = async () => {
 
 let autoReloadTimeout: ReturnType<typeof setTimeout>
 
+// Watch for console open/close to initialize scroll tracking
+watch(consoleOpen, (isOpen) => {
+  if (isOpen) {
+    initConsoleScroll()
+  }
+})
+
 // Lifecycle
 onMounted(() => {
   nextTick(async () => {
@@ -695,6 +983,12 @@ onUnmounted(() => {
   if (editorView) {
     editorView.destroy()
   }
+  
+  // Clean up console scroll event listener
+  if (consoleScrollContainer) {
+    (consoleScrollContainer as HTMLElement).removeEventListener('scroll', checkConsoleScrollPosition)
+  }
+  
   clearTimeout(autoReloadTimeout)
 })
 </script>
@@ -779,10 +1073,12 @@ onUnmounted(() => {
 .editor-content {
   flex: 1;
   position: relative;
+  overflow: hidden;
 }
 
 .codemirror-container {
   height: 100%;
+  overflow: hidden;
 }
 
 /* Preview Panel */

@@ -262,19 +262,19 @@ describe("Compiler", () => {
   });
 
   test("should compile component with event handler", () => {
-    const input = `<Sprite @click={fn} />`;
+    const input = `<Sprite click={fn} />`;
     const output = parser.parse(input);
     expect(output).toBe(`h(Sprite, { click: fn })`);
   });
 
   test("should compile component with standalone event handler", () => {
-    const input = `<Sprite @click />`;
+    const input = `<Sprite click />`;
     const output = parser.parse(input);
     expect(output).toBe(`h(Sprite, { click })`);
   });
 
   test('should compile component with inline event handler', () => {
-      const input = `<Sprite @click={() => console.log('click')} />`;
+      const input = `<Sprite click={() => console.log('click')} />`;
       const output = parser.parse(input);
       expect(output).toBe(`h(Sprite, { click: () => console.log('click') })`);
   });

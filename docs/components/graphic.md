@@ -31,7 +31,7 @@ const click = () => {
 }
 </script>
 
-<Graphics @draw @click />
+<Graphics draw click />
 ```
 
 the drawing is redrawn if width and height change
