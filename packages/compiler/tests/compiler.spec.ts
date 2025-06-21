@@ -325,6 +325,24 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas, { width: computed(() => deep().value()) })`);
   });
 
+  test('should compile component with deep object attribute', () => {
+    const input = `<Button 
+      style={{
+        backgroundColor: {
+          normal: "#6c757d",
+          hover: "#5a6268",
+          pressed: "#545b62"
+        },
+        text: {
+          fontSize: 16,
+          color: "#ffffff"
+        }
+      }}
+    />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Button, { style: { backgroundColor: { normal: "#6c757d", hover: "#5a6268", pressed: "#545b62" }, text: { fontSize: 16, color: "#ffffff" } } })`);
+  });
+
   test("should compile component with deep object attribute but not transform to signal", () => {
     const input = `<Canvas width={@deep.value} />`;
     const output = parser.parse(input);
