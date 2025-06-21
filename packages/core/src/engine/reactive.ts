@@ -354,7 +354,7 @@ export function loop<T>(
             }
 
             if (change.type === 'init' || change.type === 'reset') {
-              elements.forEach(el => el.destroy());
+              elements.forEach(el => destroyElement(el));
               elements = [];
               elementMap.clear();
 
@@ -381,7 +381,7 @@ export function loop<T>(
             } else if (change.type === 'remove' && change.index !== undefined) {
               const removed = elements.splice(change.index, 1);
               removed.forEach(el => {
-                el.destroy();
+                destroyElement(el)
                 elementMap.delete(change.index!);
               });
             } else if (change.type === 'update' && change.index !== undefined && change.items.length === 1) {
@@ -403,7 +403,7 @@ export function loop<T>(
               } else {
                 // Treat as a standard update operation
                 const oldElement = elements[index];
-                oldElement.destroy();
+                destroyElement(oldElement)
                 const newElement = createElementFn(newItem as T, index);
                 if (newElement) {
                   elements[index] = newElement;
@@ -424,7 +424,7 @@ export function loop<T>(
             const key = change.key as string | number
             if (isFirstSubscription) {
               isFirstSubscription = false;
-              elements.forEach(el => el.destroy());
+              elements.forEach(el => destroyElement(el));
               elements = [];
               elementMap.clear();
 
@@ -445,7 +445,7 @@ export function loop<T>(
             }
 
             if (change.type === 'init' || change.type === 'reset') {
-              elements.forEach(el => el.destroy());
+              elements.forEach(el => destroyElement(el));
               elements = [];
               elementMap.clear();
 
@@ -469,14 +469,14 @@ export function loop<T>(
               const index = elements.findIndex(el => elementMap.get(key) === el);
               if (index !== -1) {
                 const [removed] = elements.splice(index, 1);
-                removed.destroy();
+                destroyElement(removed)
                 elementMap.delete(key);
               }
             } else if (change.type === 'update' && change.key && change.value !== undefined) {
               const index = elements.findIndex(el => elementMap.get(key) === el);
               if (index !== -1) {
                 const oldElement = elements[index];
-                oldElement.destroy();
+                destroyElement(oldElement)
                 const newElement = createElementFn(change.value as T, key);
                 if (newElement) {
                   elements[index] = newElement;
