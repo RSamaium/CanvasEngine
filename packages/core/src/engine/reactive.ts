@@ -1,4 +1,4 @@
-import { ArrayChange, ObjectChange, Signal, WritableArraySignal, WritableObjectSignal, isComputed, isSignal, signal } from "@signe/reactive";
+import { ArrayChange, ObjectChange, Signal, WritableArraySignal, WritableObjectSignal, isComputed, isSignal, signal, computed } from "@signe/reactive";
 import {
   Observable,
   Subject,
@@ -499,70 +499,184 @@ export function loop<T>(
 }
 
 /**
- * Conditionally creates and destroys elements based on a condition signal.
+ * Conditionally creates and destroys elements based on condition signals with support for else if and else.
  *
- * @param {Signal<boolean> | boolean} condition - A signal or boolean that determines whether to create an element.
+ * @description This function creates conditional rendering with support for multiple conditions (if/else if/else pattern).
+ * It evaluates conditions in order and renders the first matching condition's element.
+ * The function maintains full reactivity with signals and ensures proper cleanup of elements.
+ *
+ * @param {Signal<boolean> | boolean | (() => boolean)} condition - A signal, boolean, or function that determines whether to create an element.
  * @param {Function} createElementFn - A function that returns an element or a promise that resolves to an element.
- * @returns {Observable} An observable that emits the created or destroyed element.
+ * @param {...Array} additionalConditions - Additional conditions for else if and else cases.
+ *   Can be:
+ *   - A function for else case: `() => Element | Promise<Element>`
+ *   - An array for else if case: `[Signal<boolean> | boolean | (() => boolean), () => Element | Promise<Element>]`
+ * @returns {Observable} An observable that emits the created element based on the matching condition.
+ *
+ * @example
+ * ```typescript
+ * // Simple if/else
+ * cond(
+ *   signal(isVisible),
+ *   () => h(Container),
+ *   () => h(Text, { text: 'Hidden' }) // else
+ * );
+ *
+ * // Multiple else if + else
+ * cond(
+ *   signal(status === 'loading'),
+ *   () => h(LoadingSpinner),
+ *   [signal(status === 'error'), () => h(ErrorMessage)], // else if
+ *   [signal(status === 'success'), () => h(SuccessMessage)], // else if
+ *   () => h(DefaultMessage) // else
+ * );
+ * ```
  */
 export function cond(
-  condition: Signal<boolean> | boolean,
-  createElementFn: () => Element | Promise<Element>
+  condition: Signal<boolean> | boolean | (() => boolean),
+  createElementFn: () => Element | Promise<Element>,
+  ...additionalConditions: Array<
+    | (() => Element | Promise<Element>) // else final
+    | [Signal<boolean> | boolean | (() => boolean), () => Element | Promise<Element>] // else if
+  >
 ): FlowObservable {
-  let element: Element | null = null;
+  let currentElement: Element | null = null;
+  let currentConditionIndex = -1;
 
-  if (isSignal(condition)) {
-    const signalCondition = condition as WritableObjectSignal<boolean>;
-    return new Observable<{elements: Element[], type?: "init" | "remove"}>(subscriber => {
-      return signalCondition.observable.subscribe(bool => {
-        if (bool) {
-          let _el = createElementFn();
+  // Parse additional conditions
+  const elseIfConditions: Array<{
+    condition: Signal<boolean>;
+    elementFn: () => Element | Promise<Element>;
+  }> = [];
+  let elseElementFn: (() => Element | Promise<Element>) | null = null;
+
+  // Convert function conditions to computed signals
+  const convertConditionToSignal = (cond: Signal<boolean> | boolean | (() => boolean)): Signal<boolean> => {
+    if (isSignal(cond)) {
+      return cond as Signal<boolean>;
+    } else if (typeof cond === 'function') {
+      return computed(cond as () => boolean);
+    } else {
+      return signal(cond as boolean);
+    }
+  };
+
+  // Process additional conditions
+  for (const param of additionalConditions) {
+    if (Array.isArray(param)) {
+      // else if case: [condition, elementFn]
+      elseIfConditions.push({
+        condition: convertConditionToSignal(param[0]),
+        elementFn: param[1],
+      });
+    } else if (typeof param === 'function') {
+      // else case: elementFn (should be the last one)
+      elseElementFn = param;
+      break; // Stop processing after else
+    }
+  }
+
+  // Collect all conditions with their element functions
+  const allConditions = [
+    { condition: convertConditionToSignal(condition), elementFn: createElementFn },
+    ...elseIfConditions,
+  ];
+
+  // All conditions are now signals, so we always use the reactive path
+  return new Observable<{elements: Element[], type?: "init" | "remove"}>(subscriber => {
+    const subscriptions: Subscription[] = [];
+
+    const evaluateConditions = () => {
+      // Find the first matching condition
+      let matchingIndex = -1;
+      for (let i = 0; i < allConditions.length; i++) {
+        const condition = allConditions[i].condition;
+        const conditionValue = condition();
+        
+        if (conditionValue) {
+          matchingIndex = i;
+          break;
+        }
+      }
+
+      // If no condition matches and we have an else, use else
+      const shouldUseElse = matchingIndex === -1 && elseElementFn;
+      const newConditionIndex = shouldUseElse ? -2 : matchingIndex; // -2 for else, -1 for nothing
+
+      // Only update if the condition changed
+      if (newConditionIndex !== currentConditionIndex) {
+        // Destroy current element if it exists
+        if (currentElement) {
+          destroyElement(currentElement);
+          currentElement = null;
+        }
+
+        currentConditionIndex = newConditionIndex;
+
+        if (shouldUseElse) {
+          // Render else element
+          let _el = elseElementFn!();
           if (isPromise(_el)) {
             from(_el as Promise<Element>).subscribe(el => {
-              element = el;
+              currentElement = el;
               subscriber.next({
                 type: "init",
                 elements: [el],
               });
             });
           } else {
-            element = _el as Element;
+            currentElement = _el as Element;
             subscriber.next({
               type: "init",
-              elements: [element],
+              elements: [currentElement],
             });
           }
-        } else if (element) {
-          destroyElement(element);
-          subscriber.next({
-            elements: [],
-          });
+        } else if (matchingIndex >= 0) {
+          // Render matching condition element
+          let _el = allConditions[matchingIndex].elementFn();
+          if (isPromise(_el)) {
+            from(_el as Promise<Element>).subscribe(el => {
+              currentElement = el;
+              subscriber.next({
+                type: "init",
+                elements: [el],
+              });
+            });
+          } else {
+            currentElement = _el as Element;
+            subscriber.next({
+              type: "init",
+              elements: [currentElement],
+            });
+          }
         } else {
+          // No matching condition and no else
           subscriber.next({
             elements: [],
           });
         }
-      });
-    }).pipe(share())
-  } else {
-    // Handle boolean case
-    if (condition) {
-      let _el = createElementFn();
-      if (isPromise(_el)) {
-        return from(_el as Promise<Element>).pipe(
-          map((el) => ({
-            type: "init",
-            elements: [el],
-          }))
-        );
       }
-      return of({
-        type: "init",
-        elements: [_el as Element],
-      });
-    }
-    return of({
-      elements: [],
+    };
+
+    // Subscribe to all signal conditions
+    allConditions.forEach(({ condition }) => {
+      const signalCondition = condition as WritableObjectSignal<boolean>;
+      subscriptions.push(
+        signalCondition.observable.subscribe(() => {
+          evaluateConditions();
+        })
+      );
     });
-  }
+
+    // Initial evaluation
+    evaluateConditions();
+
+    // Return cleanup function
+    return () => {
+      subscriptions.forEach(sub => sub.unsubscribe());
+      if (currentElement) {
+        destroyElement(currentElement);
+      }
+    };
+  }).pipe(share());
 }

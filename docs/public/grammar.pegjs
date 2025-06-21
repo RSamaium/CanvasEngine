@@ -548,8 +548,31 @@ tupleDestructuring "destructuring pattern"
     }
 
 ifCondition "if condition"
-  = _ "@if" _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" _ {
-      return `cond(${condition}, () => ${content})`;
+  = _ "@if" _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" _ elseIfs:elseIfClause* elseClause:elseClause? _ {
+      let result = `cond(${condition}, () => ${content}`;
+      
+      // Add else if clauses
+      elseIfs.forEach(elseIf => {
+        result += `, [${elseIf.condition}, () => ${elseIf.content}]`;
+      });
+      
+      // Add else clause if present
+      if (elseClause) {
+        result += `, () => ${elseClause}`;
+      }
+      
+      result += ')';
+      return result;
+    }
+
+elseIfClause "else if clause"
+  = _ "@else" _ "if" _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" _ {
+      return { condition, content };
+    }
+
+elseClause "else clause"
+  = _ "@else" _ "{" _ content:content _ "}" _ {
+      return content;
     }
 
 tagName "tag name"
@@ -601,12 +624,26 @@ condition "condition expression"
       // Transform simple identifiers to function calls like "foo" to "foo()"
       // This regex matches identifiers not followed by an opening parenthesis.
       // This transformation should only apply if we are wrapping in 'computed'.
-      if (originalText.includes('!') || originalText.includes('&&') || originalText.includes('||')) {
-          const transformedText = originalText.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*\()/g, (match) => {
+      if (originalText.includes('!') || originalText.includes('&&') || originalText.includes('||') || 
+          originalText.includes('>=') || originalText.includes('<=') || originalText.includes('===') || 
+          originalText.includes('!==') || originalText.includes('==') || originalText.includes('!=') ||
+          originalText.includes('>') || originalText.includes('<')) {
+          const transformedText = originalText.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*\()/g, (match, p1, offset) => {
               // Do not transform keywords (true, false, null) or numeric literals
               if (['true', 'false', 'null'].includes(match) || /^\d+(\.\d+)?$/.test(match)) {
                   return match;
               }
+              // Check if the match is inside quotes
+              const beforeMatch = originalText.substring(0, offset);
+              const afterMatch = originalText.substring(offset + match.length);
+              const singleQuotesBefore = (beforeMatch.match(/'/g) || []).length;
+              const doubleQuotesBefore = (beforeMatch.match(/"/g) || []).length;
+              
+              // If we're inside quotes, don't transform
+              if (singleQuotesBefore % 2 === 1 || doubleQuotesBefore % 2 === 1) {
+                  return match;
+              }
+              
               return `${match}()`;
           });
           return `computed(() => ${transformedText})`;

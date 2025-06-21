@@ -131,7 +131,161 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas, { width: 20 })`);
   });
 
-  // TODO
+  test("should compile if/else condition", () => {
+    const input = `
+            @if (sprite) {
+                <Sprite />
+            }
+            @else {
+                <Text text="No sprite" />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(sprite, () => h(Sprite), () => h(Text, { text: 'No sprite' }))`);
+  });
+
+  test("should compile if/else if condition", () => {
+    const input = `
+            @if (score >= 90) {
+                <Text text="A+" />
+            }
+            @else if (score >= 80) {
+                <Text text="A" />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(computed(() => score() >= 90), () => h(Text, { text: 'A+' }), [computed(() => score() >= 80), () => h(Text, { text: 'A' })])`);
+  });
+
+  test("should compile if/else if/else condition", () => {
+    const input = `
+            @if (score >= 90) {
+                <Text text="A+" />
+            }
+            @else if (score >= 80) {
+                <Text text="A" />
+            }
+            @else {
+                <Text text="F" />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(computed(() => score() >= 90), () => h(Text, { text: 'A+' }), [computed(() => score() >= 80), () => h(Text, { text: 'A' })], () => h(Text, { text: 'F' }))`);
+  });
+
+  test("should compile if/else if/else condition within canvas", () => {
+    const input = `<Canvas>
+  <Container>
+    @if (score >= 90) {
+        <Text text="Grade: A+" x={100} y={100} color="gold" size={24} />
+        <Text text="Excellent work!" x={100} y={130} color="gold" size={16} />
+    }
+  </Container>
+</Canvas>
+        `;
+
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, null, h(Container, null, cond(computed(() => score() >= 90), () => [h(Text, { text: 'Grade: A+', x: 100, y: 100, color: 'gold', size: 24 }), h(Text, { text: 'Excellent work!', x: 100, y: 130, color: 'gold', size: 16 })])))`);
+  });
+
+  test("should compile multiple else if conditions", () => {
+    const input = `
+            @if (score >= 90) {
+                <Text text="A+" />
+            }
+            @else if (score >= 80) {
+                <Text text="A" />
+            }
+            @else if (score >= 70) {
+                <Text text="B" />
+            }
+            @else if (score >= 60) {
+                <Text text="C" />
+            }
+            @else {
+                <Text text="F" />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(computed(() => score() >= 90), () => h(Text, { text: 'A+' }), [computed(() => score() >= 80), () => h(Text, { text: 'A' })], [computed(() => score() >= 70), () => h(Text, { text: 'B' })], [computed(() => score() >= 60), () => h(Text, { text: 'C' })], () => h(Text, { text: 'F' }))`);
+  });
+
+  test("should compile if/else with multiple elements", () => {
+    const input = `
+            @if (user.role === 'admin') {
+                <Text text="Admin Panel" />
+                <Text text="Settings" />
+            }
+            @else {
+                <Text text="Please log in" />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(computed(() => user().role() === 'admin'), () => [h(Text, { text: 'Admin Panel' }), h(Text, { text: 'Settings' })], () => h(Text, { text: 'Please log in' }))`);
+  });
+
+  test("should compile nested if/else conditions", () => {
+    const input = `
+            @if (user) {
+                @if (user.isActive) {
+                    <Text text="Active user" />
+                }
+                @else {
+                    <Text text="Inactive user" />
+                }
+            }
+            @else {
+                <Text text="No user" />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(user, () => cond(user.isActive, () => h(Text, { text: 'Active user' }), () => h(Text, { text: 'Inactive user' })), () => h(Text, { text: 'No user' }))`);
+  });
+
+  test("should compile if/else if with simple conditions", () => {
+    const input = `
+            @if (theme === 'dark') {
+                <Text text="Dark mode" />
+            }
+            @else if (theme === 'light') {
+                <Text text="Light mode" />
+            }
+            @else {
+                <Text text="Auto mode" />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(computed(() => theme() === 'dark'), () => h(Text, { text: 'Dark mode' }), [computed(() => theme() === 'light'), () => h(Text, { text: 'Light mode' })], () => h(Text, { text: 'Auto mode' }))`);
+  });
+
+  test("should compile if/else with function conditions", () => {
+    const input = `
+            @if (isVisible()) {
+                <Sprite />
+            }
+            @else {
+                <Text text="Hidden" />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(isVisible(), () => h(Sprite), () => h(Text, { text: 'Hidden' }))`);
+  });
+
+  test("should compile if/else if with object property conditions", () => {
+    const input = `
+            @if (sprite.visible) {
+                <Sprite />
+            }
+            @else if (sprite.loading) {
+                <Text text="Loading..." />
+            }
+            @else {
+                <Text text="Not available" />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(sprite.visible, () => h(Sprite), [sprite.loading, () => h(Text, { text: 'Loading...' })], () => h(Text, { text: 'Not available' }))`);
+  });
   // test("should compile component with templating string", () => {
   //   const input = `<Canvas width={\`direction: \${direction}\`} />`;
   //   const output = parser.parse(input);
@@ -574,6 +728,43 @@ describe("Condition", () => {
     const output = parser.parse(input);
     expect(output).toBe(
       `cond(sprite.visible, () => [h(Sprite), cond(deep, () => h(Sprite)), h(Sprite)])`
+    );
+  });
+
+  test("should compile if/else within canvas", () => {
+    const input = `
+            <Canvas>
+                @if (showSprite) {
+                    <Sprite />
+                }
+                @else {
+                    <Text text="No sprite" />
+                }
+            </Canvas>
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(
+      `h(Canvas, null, cond(showSprite, () => h(Sprite), () => h(Text, { text: 'No sprite' })))`
+    );
+  });
+
+  test("should compile if/else if/else within loop", () => {
+    const input = `
+            @for (item of items) {
+                @if (item.type === 'sprite') {
+                    <Sprite />
+                }
+                @else if (item.type === 'text') {
+                    <Text />
+                }
+                @else {
+                    <Container />
+                }
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(items,item=>cond(computed(()=>item().type()==='sprite'),()=>h(Sprite),[computed(()=>item().type()==='text'),()=>h(Text)],()=>h(Container)))`.replace(/\s+/g, "")
     );
   });
 });

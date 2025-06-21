@@ -1,12 +1,34 @@
 
 <Canvas>
   <Container>
-     <Rect x={0} y={0} width={100} height={100} color="red" click />
+    @if (score >= 90) {
+        <Text text="Grade: A+" x={100} y={100} color="gold" fontSize={24} />
+        <Text text="Excellent work!" x={100} y={130} color="gold" fontSize={16} />
+    }
+    @else if (score >= 80) {
+        <Text text="Grade: A" x={100} y={100} color="green" fontSize={24} />
+        <Text text="Great job!" x={100} y={130} color="green" fontSize={16} />
+    }
+    @else if (score >= 70) {
+        <Text text="Grade: B" x={100} y={100} color="blue" fontSize={24} />
+        <Text text="Good work!" x={100} y={130} color="blue" fontSize={16} />
+    }
+    @else if (score >= 60) {
+        <Text text="Grade: C" x={100} y={100} color="orange" fontSize={24} />
+        <Text text="Keep trying!" x={100} y={130} color="orange" fontSize={16} />
+    }
+    @else {
+        <Text text="Grade: F" x={100} y={100} color="red" fontSize={24} />
+        <Text text="Need improvement" x={100} y={130} color="red" fontSize={16} />
+    }
   </Container>
 </Canvas>
 
 <script>
 import { signal } from 'canvasengine'
+
+const score = signal(0)
+
 
 const click = () => {
   console.log('click')

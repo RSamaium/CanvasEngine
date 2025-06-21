@@ -1,5 +1,9 @@
 # Template Syntax
 
+<script setup>
+import conditionalRenderingExample from './examples/conditional-rendering.js'
+</script>
+
 ## Static properties
 
 You can use static properties in your components.
@@ -86,6 +90,40 @@ You can use the `@if` directive to conditionally render a component.
 ```
 
 > `@if` cannot be used in the root, so we put it in `Container`
+
+### @if/@else if/@else
+
+You can use `@else if` and `@else` to create more complex conditional logic:
+
+```angular-html
+<Container>
+   @if (score >= 90) {
+     <Text text="Grade: A+" color="gold" />
+   }
+   @else if (score >= 80) {
+     <Text text="Grade: A" color="green" />
+   }
+   @else if (score >= 70) {
+     <Text text="Grade: B" color="blue" />
+   }
+   @else if (score >= 60) {
+     <Text text="Grade: C" color="orange" />
+   }
+   @else {
+     <Text text="Grade: F" color="red" />
+   }
+</Container>
+
+<script>
+  const score = signal(85);
+</script>
+```
+
+### Interactive Example
+
+Try this interactive example to see how `@if/@else if/@else` works:
+
+<Playground v-bind="conditionalRenderingExample" />
 
 ## Loops
 
