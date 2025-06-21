@@ -1,14 +1,14 @@
-<Canvas backgroundColor="white">
+
+<Canvas>
   <Container>
-    <Joystick x={100} y={100} onChange />
+     <Rect x={0} y={0} width={100} height={100} color="red" click />
   </Container>
 </Canvas>
 
 <script>
-import { Joystick } from '@canvasengine/presets'
+import { signal } from 'canvasengine'
 
-
-const onChange = (data) => {
-  console.log(data)
+const click = () => {
+  console.log('click')
 }
 </script>

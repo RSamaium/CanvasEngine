@@ -187,6 +187,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       this.onFinish = sheet.onFinish;
     }
     this.subscriptionTick = tick.observable.subscribe((value) => {
+      if (this.destroyed) return
       this.update(value);
     });
     if (props.sheet?.definition) {
@@ -236,11 +237,11 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
       if (this.spritesheet) this.play(this.sheetCurrentAnimation, [this.sheetParams]);
     });
-
     super.onMount(params);
   }
 
   async onUpdate(props) {
+    if (this.destroyed) return
     super.onUpdate(props);
 
     const setTexture = async (image: string) => {
@@ -307,12 +308,17 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   }
 
   async onDestroy(parent: Element, afterDestroy: () => void): Promise<void> {
-    await super.onDestroy(parent);
-    this.subscriptionSheet.forEach((sub) => sub.unsubscribe());
-    this.subscriptionTick.unsubscribe();
-    if (this.currentAnimationContainer && this.parent instanceof Container) {
-      this.parent.removeChild(this.currentAnimationContainer);
-    }
+    const _afterDestroy = async () => {
+      this.subscriptionSheet.forEach((sub) => sub.unsubscribe());
+      this.subscriptionTick.unsubscribe();
+      if (this.currentAnimationContainer && this.parent instanceof Container) {
+        this.parent.removeChild(this.currentAnimationContainer);
+      }
+      if (afterDestroy) {
+        afterDestroy();
+      }
+    };
+    await super.onDestroy(parent, _afterDestroy);
   }
 
   has(name: string): boolean {

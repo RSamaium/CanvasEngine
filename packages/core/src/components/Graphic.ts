@@ -170,7 +170,7 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
    */
   async onDestroy(parent: Element<ComponentInstance>, afterDestroy: () => void): Promise<void> {
     const _afterDestroyCallback = async () => {
-      this.clearEffect.subscription.unsubscribe();
+      this.clearEffect?.subscription.unsubscribe();
       afterDestroy();
     }
     await super.onDestroy(parent, _afterDestroyCallback);

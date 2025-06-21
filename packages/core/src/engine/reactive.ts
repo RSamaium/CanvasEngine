@@ -9,6 +9,11 @@ import {
   of,
   share,
   switchMap,
+  debounceTime,
+  distinctUntilChanged,
+  bufferTime,
+  filter,
+  throttleTime,
 } from "rxjs";
 import { ComponentInstance } from "../components/DisplayObject";
 import { Directive, applyDirective } from "./directive";
@@ -325,96 +330,99 @@ export function loop<T>(
 
     return new Observable<FlowResult>(subscriber => {
       const subscription = isArraySignal(itemsSubject)
-        ? itemsSubject.observable.subscribe(change => {
-            if (isFirstSubscription) {
-              isFirstSubscription = false;
-              elements.forEach(el => el.destroy());
-              elements = [];
-              elementMap.clear();
+        ? itemsSubject.observable
+            .pipe(
+              debounceTime(0)
+            )
+            .subscribe(change => {
+              if (isFirstSubscription) {
+                isFirstSubscription = false;
+                elements.forEach(el => el.destroy());
+                elements = [];
+                elementMap.clear();
 
-              const items = itemsSubject();
-              if (items) {
-                items.forEach((item, index) => {
-                  const element = createElementFn(item, index);
-                  if (element) {
-                    elements.push(element);
-                    elementMap.set(index, element);
-                  }
+                const items = itemsSubject();
+                if (items) {
+                  items.forEach((item, index) => {
+                    const element = createElementFn(item, index);
+                    if (element) {
+                      elements.push(element);
+                      elementMap.set(index, element);
+                    }
+                  });
+                }
+                subscriber.next({
+                  elements: [...elements]
                 });
+                return;
               }
+              if (change.type === 'init' || change.type === 'reset') {
+                elements.forEach(el => el.destroy());
+                elements = [];
+                elementMap.clear();
+
+                const items = itemsSubject();
+                if (items) {
+                  items.forEach((item, index) => {
+                    const element = createElementFn(item, index);
+                    if (element) {
+                      elements.push(element);
+                      elementMap.set(index, element);
+                    }
+                  });
+                }
+              } else if (change.type === 'add' && change.index !== undefined) {
+                const newElements = change.items.map((item, i) => {
+                  const element = createElementFn(item as T, change.index! + i);
+                  if (element) {
+                    elementMap.set(change.index! + i, element);
+                  }
+                  return element;
+                }).filter((el): el is Element => el !== null);
+                
+                elements.splice(change.index, 0, ...newElements);
+              } else if (change.type === 'remove' && change.index !== undefined) {
+                const removed = elements.splice(change.index, 1);
+                removed.forEach(el => {
+                  destroyElement(el);
+                  elementMap.delete(change.index!);
+                });
+              } else if (change.type === 'update' && change.index !== undefined && change.items.length === 1) {
+                const index = change.index;
+                const newItem = change.items[0];
+
+                // Check if the previous item at this index was effectively undefined or non-existent
+                if (index >= elements.length || elements[index] === undefined || !elementMap.has(index)) {
+                  // Treat as add operation
+                  const newElement = createElementFn(newItem as T, index);
+                  if (newElement) {
+                    elements.splice(index, 0, newElement); // Insert at the correct index
+                    elementMap.set(index, newElement);
+                    // Adjust indices in elementMap for subsequent elements might be needed if map relied on exact indices
+                    // This simple implementation assumes keys are stable or createElementFn handles context correctly
+                  } else {
+                       console.warn(`Element creation returned null for index ${index} during add-like update.`);
+                  }
+                } else {
+                  // Treat as a standard update operation
+                  const oldElement = elements[index];
+                  destroyElement(oldElement);
+                  const newElement = createElementFn(newItem as T, index);
+                  if (newElement) {
+                    elements[index] = newElement;
+                    elementMap.set(index, newElement);
+                  } else {
+                    // Handle case where new element creation returns null
+                    elements.splice(index, 1);
+                    elementMap.delete(index);
+                  }
+                }
+              }
+
               subscriber.next({
-                elements: [...elements]
+                elements: [...elements] // Create a new array to ensure change detection
               });
-              return;
-            }
-
-            if (change.type === 'init' || change.type === 'reset') {
-              elements.forEach(el => el.destroy());
-              elements = [];
-              elementMap.clear();
-
-              const items = itemsSubject();
-              if (items) {
-                items.forEach((item, index) => {
-                  const element = createElementFn(item, index);
-                  if (element) {
-                    elements.push(element);
-                    elementMap.set(index, element);
-                  }
-                });
-              }
-            } else if (change.type === 'add' && change.index !== undefined) {
-              const newElements = change.items.map((item, i) => {
-                const element = createElementFn(item as T, change.index! + i);
-                if (element) {
-                  elementMap.set(change.index! + i, element);
-                }
-                return element;
-              }).filter((el): el is Element => el !== null);
-              
-              elements.splice(change.index, 0, ...newElements);
-            } else if (change.type === 'remove' && change.index !== undefined) {
-              const removed = elements.splice(change.index, 1);
-              removed.forEach(el => {
-                el.destroy();
-                elementMap.delete(change.index!);
-              });
-            } else if (change.type === 'update' && change.index !== undefined && change.items.length === 1) {
-              const index = change.index;
-              const newItem = change.items[0];
-
-              // Check if the previous item at this index was effectively undefined or non-existent
-              if (index >= elements.length || elements[index] === undefined || !elementMap.has(index)) {
-                // Treat as add operation
-                const newElement = createElementFn(newItem as T, index);
-                if (newElement) {
-                  elements.splice(index, 0, newElement); // Insert at the correct index
-                  elementMap.set(index, newElement);
-                  // Adjust indices in elementMap for subsequent elements might be needed if map relied on exact indices
-                  // This simple implementation assumes keys are stable or createElementFn handles context correctly
-                } else {
-                     console.warn(`Element creation returned null for index ${index} during add-like update.`);
-                }
-              } else {
-                // Treat as a standard update operation
-                const oldElement = elements[index];
-                oldElement.destroy();
-                const newElement = createElementFn(newItem as T, index);
-                if (newElement) {
-                  elements[index] = newElement;
-                  elementMap.set(index, newElement);
-                } else {
-                  // Handle case where new element creation returns null
-                  elements.splice(index, 1);
-                  elementMap.delete(index);
-                }
-              }
-            }
-
-            subscriber.next({
-              elements: [...elements] // Create a new array to ensure change detection
-            });
-          })
+            })
         : (itemsSubject as WritableObjectSignal<T>).observable.subscribe(change => {
             const key = change.key as string | number
             if (isFirstSubscription) {
@@ -464,14 +472,14 @@ export function loop<T>(
               const index = elements.findIndex(el => elementMap.get(key) === el);
               if (index !== -1) {
                 const [removed] = elements.splice(index, 1);
-                removed.destroy();
+                destroyElement(removed);
                 elementMap.delete(key);
               }
             } else if (change.type === 'update' && change.key && change.value !== undefined) {
               const index = elements.findIndex(el => elementMap.get(key) === el);
               if (index !== -1) {
                 const oldElement = elements[index];
-                oldElement.destroy();
+                destroyElement(oldElement);
                 const newElement = createElementFn(change.value as T, key);
                 if (newElement) {
                   elements[index] = newElement;

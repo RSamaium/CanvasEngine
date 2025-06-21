@@ -159,6 +159,7 @@ export function DisplayObject(extendClass) {
     }
 
     async onMount({ parent, props }: Element<DisplayObject>, index?: number) {
+      if (this.destroyed) return
       this.#canvasContext = props.context;
       if (parent) {
         const instance = parent.componentInstance as DisplayObject;
@@ -188,6 +189,7 @@ export function DisplayObject(extendClass) {
         ...props,
       };
 
+      if (this.destroyed) return
       if (!this.#canvasContext || !this.parent) return;
 
       if (props.x !== undefined) this.setX(props.x);
@@ -286,8 +288,8 @@ export function DisplayObject(extendClass) {
       if (this.onBeforeDestroy) {
         await this.onBeforeDestroy();
       }
-      super.destroy();
       if (afterDestroy) afterDestroy();
+      super.destroy();
     }
 
     setFlexDirection(direction: FlexDirection) {
