@@ -121,7 +121,8 @@ export default function canvasengine() {
     "Mesh",
     "Svg",
     "DOMContainer",
-    "DOMElement"
+    "DOMElement",
+    "Button"
   ];
 
   return {

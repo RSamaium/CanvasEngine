@@ -12,6 +12,7 @@ export default {
         gap={30}>
         
         <Text text={scoreStr} color="white" size={24} />
+        <Button text="Click me" />
         
         @if (score >= 90) {
             <Text text="Grade: A+" color="#FFD700" size={48} fontWeight="bold" />

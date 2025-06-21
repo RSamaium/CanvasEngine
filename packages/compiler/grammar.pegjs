@@ -36,7 +36,7 @@
 
   // Framework components that should NOT be transformed to DOM elements
   const frameworkComponents = new Set([
-    'Canvas', 'Container', 'Sprite', 'Text', 'DOMElement', 'Svg'
+    'Canvas', 'Container', 'Sprite', 'Text', 'DOMElement', 'Svg', 'Button'
   ]);
 
   // DisplayObject special attributes that should not be in attrs

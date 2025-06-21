@@ -75,6 +75,10 @@ const guideMenu = [
         link: "/components/text",
       },
       {
+        text: "Button",
+        link: "/components/button",
+      },
+      {
         text: "Sprite",
         link: "/components/sprite",
       },
@@ -88,7 +92,7 @@ const guideMenu = [
       },
       {
         text: "TilingSprite",
-        link: "/components/tilling-sprite",
+        link: "/components/tiling-sprite",
       },
       {
         text: "Video",
