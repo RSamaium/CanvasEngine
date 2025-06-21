@@ -1,13 +1,95 @@
 <template>
-  <div class="playground-container" ref="playgroundContainer">
+  <div class="playground-container" ref="playgroundContainer" :class="{ 'fullscreen': isFullscreen }">
     <div class="playground-header" v-if="title || description">
-      <h3 v-if="title">{{ title }}</h3>
-      <p v-if="description" class="playground-description">{{ description }}</p>
+      <div class="header-content">
+        <h3 v-if="title">{{ title }}</h3>
+        <p v-if="description" class="playground-description">{{ description }}</p>
+      </div>
+      <div class="header-controls">
+        <!-- View Mode Buttons -->
+        <div class="view-mode-controls">
+          <button 
+            :class="['view-mode-btn', { active: viewMode === 'code' }]"
+            @click="setViewMode('code')"
+            title="Show code only"
+          >
+            <span class="icon">📝</span>
+            Code
+          </button>
+          <button 
+            :class="['view-mode-btn', { active: viewMode === 'preview' }]"
+            @click="setViewMode('preview')"
+            title="Show preview only"
+          >
+            <span class="icon">👁️</span>
+            Preview
+          </button>
+          <button 
+            :class="['view-mode-btn', { active: viewMode === 'both' }]"
+            @click="setViewMode('both')"
+            title="Show both code and preview"
+          >
+            <span class="icon">⚡</span>
+            Both
+          </button>
+        </div>
+        
+        <!-- Fullscreen Button -->
+        <button 
+          class="fullscreen-btn"
+          @click="toggleFullscreen"
+          :title="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+        >
+          <span class="icon">{{ isFullscreen ? '🗗' : '⛶' }}</span>
+        </button>
+      </div>
     </div>
     
-    <div class="playground-content">
+    <!-- Simplified header when no title/description but need controls -->
+    <div class="playground-controls-only" v-else>
+      <div class="header-controls">
+        <!-- View Mode Buttons -->
+        <div class="view-mode-controls">
+          <button 
+            :class="['view-mode-btn', { active: viewMode === 'code' }]"
+            @click="setViewMode('code')"
+            title="Show code only"
+          >
+            <span class="icon">📝</span>
+            Code
+          </button>
+          <button 
+            :class="['view-mode-btn', { active: viewMode === 'preview' }]"
+            @click="setViewMode('preview')"
+            title="Show preview only"
+          >
+            <span class="icon">👁️</span>
+            Preview
+          </button>
+          <button 
+            :class="['view-mode-btn', { active: viewMode === 'both' }]"
+            @click="setViewMode('both')"
+            title="Show both code and preview"
+          >
+            <span class="icon">⚡</span>
+            Both
+          </button>
+        </div>
+        
+        <!-- Fullscreen Button -->
+        <button 
+          class="fullscreen-btn"
+          @click="toggleFullscreen"
+          :title="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+        >
+          <span class="icon">{{ isFullscreen ? '🗗' : '⛶' }}</span>
+        </button>
+      </div>
+    </div>
+    
+    <div class="playground-content" :class="`view-mode-${viewMode}`">
       <!-- Code Editor with CodeMirror -->
-      <div class="code-editor">
+      <div class="code-editor" v-show="viewMode === 'code' || viewMode === 'both'">
         <div class="editor-header">
           <div class="tabs">
             <button 
@@ -26,8 +108,8 @@
         </div>
       </div>
       
-      <!-- Preview Panel (Full Width) -->
-      <div class="preview-panel">
+      <!-- Preview Panel -->
+      <div class="preview-panel" v-show="viewMode === 'preview' || viewMode === 'both'">
         <div class="preview-header">
           <span>Preview</span>
         </div>
@@ -70,6 +152,9 @@
         </div>
       </div>
     </div>
+    
+    <!-- Fullscreen overlay backdrop -->
+    <div v-if="isFullscreen" class="fullscreen-backdrop" @click="exitFullscreen"></div>
   </div>
 </template>
 
@@ -90,7 +175,8 @@ const { generate } = pkg
  * 
  * Features:
  * - CodeMirror editor with syntax highlighting
- * - Full-width preview
+ * - View mode controls (Code, Preview, Both)
+ * - Fullscreen mode
  * - Accordion console
  * - Auto-reload on code changes
  * - Error display in preview
@@ -109,6 +195,7 @@ const { generate } = pkg
  *   :files="{
  *     'app.ce': '<Canvas><Rect color="red" width={100} height={100} /></Canvas>'
  *   }"
+ *   defaultViewMode="both"
  * />
  * ```
  */
@@ -122,6 +209,8 @@ interface PlaygroundProps {
   files?: Record<string, string>
   /** Height of the playground */
   height?: number
+  /** Default view mode: 'code', 'preview', or 'both' */
+  defaultViewMode?: 'code' | 'preview' | 'both'
 }
 
 interface PlaygroundFile {
@@ -138,7 +227,8 @@ interface ConsoleLog {
 
 const props = withDefaults(defineProps<PlaygroundProps>(), {
   height: 600,
-  files: () => ({})
+  files: () => ({}),
+  defaultViewMode: 'both'
 })
 
 // Reactive state
@@ -149,6 +239,8 @@ const activeFile = ref('app.ce')
 const error = ref('')
 const logs = ref<ConsoleLog[]>([])
 const consoleOpen = ref(false)
+const viewMode = ref<'code' | 'preview' | 'both'>(props.defaultViewMode)
+const isFullscreen = ref(false)
 let currentApp: any = null
 let editorView: EditorView | null = null
 let parser: any = null
@@ -162,6 +254,69 @@ const playgroundId = ref(`playground-${Math.random().toString(36).substr(2, 9)}-
 let intersectionObserver: IntersectionObserver | null = null
 const isInViewport = ref(true)
 const playgroundContainer = ref<HTMLDivElement>()
+
+/**
+ * Set view mode and update layout
+ */
+const setViewMode = (mode: 'code' | 'preview' | 'both') => {
+  viewMode.value = mode
+  
+  // Trigger editor resize after view mode change
+  nextTick(() => {
+    if (editorView) {
+      editorView.requestMeasure()
+    }
+  })
+}
+
+/**
+ * Toggle fullscreen mode
+ */
+const toggleFullscreen = () => {
+  isFullscreen.value = !isFullscreen.value
+  
+  if (isFullscreen.value) {
+    // Add fullscreen class to body to prevent scrolling
+    document.body.classList.add('playground-fullscreen-active')
+    
+    // Add escape key listener
+    document.addEventListener('keydown', handleEscapeKey)
+  } else {
+    exitFullscreen()
+  }
+  
+  // Trigger editor resize after fullscreen change
+  nextTick(() => {
+    if (editorView) {
+      editorView.requestMeasure()
+    }
+  })
+}
+
+/**
+ * Exit fullscreen mode
+ */
+const exitFullscreen = () => {
+  isFullscreen.value = false
+  document.body.classList.remove('playground-fullscreen-active')
+  document.removeEventListener('keydown', handleEscapeKey)
+  
+  // Trigger editor resize after exiting fullscreen
+  nextTick(() => {
+    if (editorView) {
+      editorView.requestMeasure()
+    }
+  })
+}
+
+/**
+ * Handle escape key to exit fullscreen
+ */
+const handleEscapeKey = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && isFullscreen.value) {
+    exitFullscreen()
+  }
+}
 
 /**
  * Initialize viewport intersection observer to destroy playground when not visible
@@ -377,7 +532,7 @@ const updateEditor = () => {
     EditorView.theme({
       '&': {
         fontSize: '14px',
-        height: '100%'
+        height: '100%',
       },
       '.cm-content': {
         padding: '16px',
@@ -385,7 +540,6 @@ const updateEditor = () => {
       },
       '.cm-editor': {
         height: '100%',
-        overflow: 'auto'
       },
       '.cm-scroller': {
         fontFamily: "'Monaco', 'Menlo', 'Ubuntu Mono', monospace"
@@ -447,7 +601,7 @@ const initEditor = () => {
     EditorView.theme({
       '&': {
         fontSize: '14px',
-        height: '100%'
+        height: '100%',
       },
       '.cm-content': {
         padding: '16px',
@@ -455,7 +609,6 @@ const initEditor = () => {
       },
       '.cm-editor': {
         height: '100%',
-        overflow: 'auto'
       },
       '.cm-scroller': {
         fontFamily: "'Monaco', 'Menlo', 'Ubuntu Mono', monospace"
@@ -1159,6 +1312,11 @@ onUnmounted(() => {
   // Clean up preview resources
   clearPreview()
   
+  // Clean up fullscreen
+  if (isFullscreen.value) {
+    exitFullscreen()
+  }
+  
   clearTimeout(autoReloadTimeout)
 })
 </script>
@@ -1171,12 +1329,65 @@ onUnmounted(() => {
   overflow: hidden;
   background: var(--vp-c-bg);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+/* Fullscreen styles */
+.playground-container.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  border-radius: 0;
+  z-index: 9999;
+  box-shadow: none;
+}
+
+.fullscreen-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: -1;
+}
+
+:global(.playground-fullscreen-active) {
+  overflow: hidden;
 }
 
 .playground-header {
   padding: 20px 24px;
   background: var(--vp-c-bg-soft);
   border-bottom: 1px solid var(--vp-c-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.playground-controls-only {
+  padding: 12px 24px;
+  background: var(--vp-c-bg-soft);
+  border-bottom: 1px solid var(--vp-c-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .playground-header h3 {
@@ -1196,6 +1407,109 @@ onUnmounted(() => {
 .playground-content {
   display: flex;
   height: v-bind('props.height + "px"');
+}
+
+/* Fullscreen content adjustments */
+.playground-container.fullscreen .playground-content {
+  height: calc(100vh - 60px); /* Adjust for header */
+}
+
+/* View mode layouts */
+.playground-content.view-mode-code {
+  display: block;
+}
+
+.playground-content.view-mode-code .code-editor {
+  width: 100%;
+  height: 100%;
+  border-right: none;
+}
+
+.playground-content.view-mode-preview {
+  display: block;
+}
+
+.playground-content.view-mode-preview .preview-panel {
+  width: 100%;
+  height: 100%;
+}
+
+.playground-content.view-mode-both {
+  display: flex;
+}
+
+.playground-content.view-mode-both .code-editor {
+  width: 40%;
+  border-right: 1px solid var(--vp-c-border);
+}
+
+.playground-content.view-mode-both .preview-panel {
+  flex: 1;
+}
+
+/* View Mode Controls */
+.view-mode-controls {
+  display: flex;
+  gap: 4px;
+  background: var(--vp-c-bg-elv);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.view-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--vp-c-text-2);
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.view-mode-btn:hover {
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+}
+
+.view-mode-btn.active {
+  background: var(--vp-c-brand);
+  color: white;
+}
+
+.view-mode-btn .icon {
+  font-size: 14px;
+}
+
+/* Fullscreen Button */
+.fullscreen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--vp-c-border);
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-2);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+  font-size: 16px;
+}
+
+.fullscreen-btn:hover {
+  background: var(--vp-c-bg-elv);
+  color: var(--vp-c-text-1);
+  border-color: var(--vp-c-brand);
+}
+
+.fullscreen-btn .icon {
+  font-size: 18px;
 }
 
 /* Code Editor */
@@ -1243,12 +1557,13 @@ onUnmounted(() => {
 .editor-content {
   flex: 1;
   position: relative;
-  overflow: hidden;
+  overflow: auto;
+  min-height: 0;
 }
 
 .codemirror-container {
   height: 100%;
-  overflow: hidden;
+  overflow: auto;
 }
 
 /* Preview Panel */
@@ -1449,18 +1764,39 @@ onUnmounted(() => {
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .playground-content {
+  .playground-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  
+  .header-controls {
+    justify-content: center;
+  }
+  
+  .playground-controls-only {
+    justify-content: center;
+  }
+  
+  .playground-content.view-mode-both {
     flex-direction: column;
     height: auto;
     min-height: 600px;
   }
   
-  .code-editor {
+  .playground-content.view-mode-both .code-editor {
     width: 100%;
     height: 250px;
     border-right: none;
     border-bottom: 1px solid var(--vp-c-border);
-    overflow: hidden;
+  }
+  
+  .playground-content.view-mode-code .code-editor {
+    height: 100%;
+  }
+  
+  .playground-content.view-mode-preview .preview-panel {
+    height: 100%;
   }
   
   .editor-content {
@@ -1471,6 +1807,22 @@ onUnmounted(() => {
     flex: 1;
     min-height: 350px;
   }
+  
+  /* View mode controls responsive */
+  .view-mode-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .view-mode-btn {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+  
+  .fullscreen-btn {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1478,13 +1830,24 @@ onUnmounted(() => {
     padding: 16px 20px;
   }
   
-  .playground-content {
+  .playground-controls-only {
+    padding: 8px 20px;
+  }
+  
+  .playground-content.view-mode-both {
     min-height: 700px;
   }
   
-  .code-editor {
+  .playground-content.view-mode-both .code-editor {
     height: 280px;
-    overflow: hidden;
+  }
+  
+  .playground-content.view-mode-code .code-editor {
+    height: 100%;
+  }
+  
+  .playground-content.view-mode-preview .preview-panel {
+    height: 100%;
   }
   
   .editor-content {
@@ -1508,11 +1871,36 @@ onUnmounted(() => {
   .console-content {
     max-height: 150px;
   }
+  
+  /* Mobile view controls */
+  .view-mode-btn {
+    font-size: 11px;
+    padding: 6px 8px;
+    gap: 4px;
+  }
+  
+  .view-mode-btn .icon {
+    font-size: 12px;
+  }
+  
+  .fullscreen-btn {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .fullscreen-btn .icon {
+    font-size: 16px;
+  }
 }
 
 @media (max-width: 480px) {
   .playground-header {
     padding: 12px 16px;
+    gap: 12px;
+  }
+  
+  .playground-controls-only {
+    padding: 8px 16px;
   }
   
   .playground-header h3 {
@@ -1523,13 +1911,20 @@ onUnmounted(() => {
     font-size: 13px;
   }
   
-  .playground-content {
+  .playground-content.view-mode-both {
     min-height: 650px;
   }
   
-  .code-editor {
+  .playground-content.view-mode-both .code-editor {
     height: 250px;
-    overflow: hidden;
+  }
+  
+  .playground-content.view-mode-code .code-editor {
+    height: 100%;
+  }
+  
+  .playground-content.view-mode-preview .preview-panel {
+    height: 100%;
   }
   
   .editor-content {
@@ -1557,6 +1952,35 @@ onUnmounted(() => {
   .console-line {
     padding: 6px 12px;
     font-size: 11px;
+  }
+  
+  /* Extra small mobile adjustments */
+  .view-mode-controls {
+    padding: 2px;
+    gap: 2px;
+  }
+  
+  .view-mode-btn {
+    font-size: 10px;
+    padding: 4px 6px;
+    gap: 2px;
+  }
+  
+  .view-mode-btn .icon {
+    font-size: 11px;
+  }
+  
+  .fullscreen-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .fullscreen-btn .icon {
+    font-size: 14px;
+  }
+  
+  .header-controls {
+    gap: 8px;
   }
 }
 </style> 

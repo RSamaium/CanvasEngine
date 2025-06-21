@@ -71,6 +71,10 @@ const guideMenu = [
         link: "/components/graphic",
       },
       {
+        text: "Svg",
+        link: "/components/svg",
+      },
+      {
         text: "Text",
         link: "/components/text",
       },
