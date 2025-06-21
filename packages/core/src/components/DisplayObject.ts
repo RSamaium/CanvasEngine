@@ -116,6 +116,8 @@ export function DisplayObject(extendClass) {
     onAfterMount: OnHook | null = null;
     subjectInit = new BehaviorSubject(null);
     disableLayout: boolean = false;
+    // Store registered event listeners for cleanup
+    #registeredEvents: Map<string, Function> = new Map();
 
     get deltaRatio() {
       return this.#canvasContext?.scheduler?.tick.value.deltaRatio;
@@ -131,7 +133,16 @@ export function DisplayObject(extendClass) {
       for (let event of EVENTS) {
         if (props[event] && !this.overrideProps.includes(event)) {
           this.eventMode = "static";
-          this.on(event, props[event]);
+          const eventHandler = props[event];
+          
+          // Store the event handler for cleanup
+          if (event === 'click') {
+            this.on('pointertap', eventHandler);
+            this.#registeredEvents.set('pointertap', eventHandler);
+          } else {
+            this.on(event, eventHandler);
+            this.#registeredEvents.set(event, eventHandler);
+          }
         }
       }
       if (props.onBeforeDestroy || props['on-before-destroy']) {
@@ -285,6 +296,12 @@ export function DisplayObject(extendClass) {
     }
 
     async onDestroy(parent: Element, afterDestroy?: () => void) {
+      // Remove all registered event listeners
+      for (const [eventName, eventHandler] of this.#registeredEvents) {
+        this.off(eventName, eventHandler);
+      }
+      this.#registeredEvents.clear();
+
       if (this.onBeforeDestroy) {
         await this.onBeforeDestroy();
       }
