@@ -1,0 +1,120 @@
+---
+description: Create Playground
+globs: 
+alwaysApply: false
+---
+**How to Create Interactive Playgrounds in CanvasEngine Documentation**
+
+The CanvasEngine documentation uses an interactive `Playground` component that allows users to write, edit, and run CanvasEngine code directly in the browser. Here's how to create and use playgrounds in your documentation:
+
+### Basic Playground Syntax
+
+```vue
+<Playground
+  title="Your Example Title"
+  description="Brief description of what this example demonstrates"
+  :files="{
+    'app.ce': 'Your CanvasEngine code here'
+  }"
+/>
+```
+
+### Component Properties
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `title` | `string` | No | Title displayed above the playground |
+| `description` | `string` | No | Description text explaining the example |
+| `files` | `Record<string, string>` | No | Object containing file names as keys and their content as values |
+| `height` | `number` | No | Height of the playground in pixels (default: 600) |
+
+### Simple Example
+
+```vue
+<Playground
+  title="Basic Rectangle"
+  description="A simple red rectangle rendered on a canvas"
+  :files="{
+    'app.ce': `<Canvas>
+  <Rect 
+    x={100} 
+    y={100} 
+    width={200} 
+    height={100} 
+    color=\"red\" 
+  />
+</Canvas>`
+  }"
+/>
+```
+
+### Multi-File Example
+
+```vue
+<Playground
+  title="Component with Script"
+  description="Interactive example with reactive signals"
+  :files="{
+    'app.ce': `<Canvas>
+  <Container>
+    <Text 
+      text={message} 
+      x={50} 
+      y={50} 
+      style=\"{ fontSize: 24, fill: 'white' }\"
+    />
+    <Rect 
+      x={position().x} 
+      y={position().y} 
+      width={100} 
+      height={100} 
+      color=\"blue\"
+      interactive={true}
+      @click={moveRect}
+    />
+  </Container>
+</Canvas>
+
+<script>
+import { signal } from 'canvasengine';
+
+const message = signal('Click the rectangle!');
+const position = signal({ x: 100, y: 100 });
+
+const moveRect = () => {
+  position.update(pos => ({
+    x: Math.random() * 400,
+    y: Math.random() * 300
+  }));
+  message.set('Rectangle moved!');
+};
+<\/script>`,
+    'helper.js': `export const randomColor = () => {
+  const colors = ['red', 'blue', 'green', 'yellow', 'purple'];
+  return colors[Math.floor(Math.random() * colors.length)];
+};`
+  }"
+/>
+```
+
+### Instructions
+
+1. **Keep Examples Focused**: Each playground should demonstrate one specific concept or feature
+2. **Provide Clear Titles**: Use descriptive titles that explain what the example shows
+3. **Add Helpful Descriptions**: Include brief explanations of what users can expect to see or interact with
+4. **Use Meaningful Variable Names**: Make the code self-documenting
+5. **Include Comments**: Add comments for complex logic or CanvasEngine-specific patterns
+6. **Progressive Complexity**: Start with simple examples and gradually introduce more advanced concepts
+7. **Interactive Elements**: When possible, make examples interactive to engage users
+8. **Error Handling**: Consider edge cases and provide examples that won't easily break
+
+Externalize file content to avoid errors in VueJS. Go to examples directory of the folder containing the md and create the .js file
+Next, import in top of md file:
+
+<script setup>
+import myExample from './examples/my-example.js'
+</script>
+
+Next use ind md:
+
+<Playground v-bind="myExample" />

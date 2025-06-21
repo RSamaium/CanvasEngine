@@ -1,15 +1,20 @@
 # Use Graphics component
 
+<script setup>
+import polygonExample from './examples/polygon-example.js'
+</script>
+
 Common example:
 
 ```html
 <script>
+    
 const draw = (g) => {
     g.rect(0, 0, 100, 100).fill('red')
 }
 </script>
 
-<Graphics @draw />
+<Graphics draw />
 ```
 
 Example with width and height:
@@ -21,8 +26,8 @@ import { signal } from 'canvasengine'
 const width = signal(100)
 const height = signal(100)
 
-const draw = (g) => {
-    g.rect(0, 0, width(), height()).fill('red')
+const draw = (g, width, height) => {
+    g.rect(0, 0, width, height).fill('red')
 }
 
 const click = () => {
@@ -31,10 +36,14 @@ const click = () => {
 }
 </script>
 
-<Graphics draw click />
+<Graphics draw click width height />
 ```
 
 the drawing is redrawn if width and height change
+
+## Polygon Example
+
+<Playground v-bind="polygonExample" />
 
 ## Rectangle
 
