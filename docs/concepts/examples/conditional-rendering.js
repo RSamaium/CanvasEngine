@@ -11,22 +11,24 @@ export default {
         justifyContent="center"
         gap={30}>
         
-        <Text text={scoreStr} color="white" size={24} />
-        <Button text="Click me" />
+        <Container y={-40}>
+            <Text text={scoreStr} color="white" size={24} y={-80} />
+            <Button text="Increment" click={() => score.update(s => s + 1)} />
+        </Container>
         
-        @if (score >= 90) {
+        @if (score >= 9) {
             <Text text="Grade: A+" color="#FFD700" size={48} fontWeight="bold" />
             <Text text="Excellent work!" color="#FFD700" size={18} />
         }
-        @else if (score >= 80) {
+        @else if (score >= 8) {
             <Text text="Grade: A" color="#32CD32" size={48} fontWeight="bold" />
             <Text text="Great job!" color="#32CD32" size={18} />
         }
-        @else if (score >= 70) {
+        @else if (score >= 7) {
             <Text text="Grade: B" color="#1E90FF" size={48} fontWeight="bold" />
             <Text text="Good work!" color="#1E90FF" size={18} />
         }
-        @else if (score >= 60) {
+        @else if (score >= 6) {
             <Text text="Grade: C" color="#FFA500" size={48} fontWeight="bold" />
             <Text text="Keep trying!" color="#FFA500" size={18} />
         }
@@ -34,6 +36,8 @@ export default {
             <Text text="Grade: F" color="#FF6347" size={48} fontWeight="bold" />
             <Text text="Need improvement" color="#FF6347" size={18} />
         }
+
+        
     
     </Container>
 </Canvas>
@@ -41,7 +45,7 @@ export default {
 <script>
 import { signal } from 'canvasengine';
 
-const score = signal(85);
+const score = signal(5);
 const scoreStr = computed(() => \`Score: \${score()}\`);
 </script>`
   }

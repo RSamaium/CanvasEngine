@@ -42,7 +42,8 @@ export const dependencyConfig = {
     "Mesh",
     "Svg",
     "DOMContainer",
-    "DOMElement"
+    "DOMElement",
+    "Button"
   ]
   
   /**

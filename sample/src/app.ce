@@ -22,6 +22,7 @@
         <Text text="Need improvement" x={100} y={130} color="red" fontSize={16} />
     }
   </Container>
+
 </Canvas>
 
 <script>
