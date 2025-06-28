@@ -5,7 +5,8 @@
       playing: animationPlaying,
       params: {
           direction
-      }
+      },
+      hitbox
     }}
     controls />
   </Container>
@@ -36,6 +37,11 @@
     Walk = "walk",
     Attack = "attack",
     Skill = "skill",
+  }
+
+  const hitbox = {
+    w: 32, 
+    h: 32
   }
 
   const LPCSpritesheetPreset = (options) => {

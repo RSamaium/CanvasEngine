@@ -975,6 +975,24 @@ describe('DOM with special attributes', () => {
     const output = parser.parse(input);
     expect(output).toBe('h(DOMElement, { element: "input", attrs: { type: \'password\' }, x: 100, y: 100 })');
   });
+
+  test('should compile DOM with text object', () => {
+    const input = `<p>{{ object.x }}</p>`;
+    const output = parser.parse(input);
+    expect(output).toBe('h(DOMElement, { element: "p", textContent: computed(() => object().x()) })');
+  });
+
+  test('should compile DOM with text object with @', () => {
+    const input = `<p>{{ @object.x }}</p>`;
+    const output = parser.parse(input);
+    expect(output).toBe('h(DOMElement, { element: "p", textContent: computed(() => object.x()) })');
+  });
+
+  test('should compile DOM with text object with literal ', () => {
+    const input = `<p>{{ @object.@x }}</p>`;
+    const output = parser.parse(input);
+    expect(output).toBe('h(DOMElement, { element: "p", textContent: object.x })');
+  });
 });
 
 describe('DOM with Control Structures', () => {

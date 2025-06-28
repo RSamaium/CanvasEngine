@@ -248,8 +248,49 @@ simpleTextPart "simple text part"
     }
 
 simpleDynamicPart "simple dynamic part"
-  = "{" _ expr:attributeValue _ "}" {
-      // Handle dynamic expressions like {item.name} or {@text}
+  = "{{" _ expr:attributeValue _ "}}" {
+      // Handle double brace expressions like {{ object.x }} or {{ @object.x }} or {{ @object.@x }}
+      if (expr.trim().match(/^(@?[a-zA-Z_][a-zA-Z0-9_]*)(\.@?[a-zA-Z_][a-zA-Z0-9_]*)*$/)) {
+        let foundSignal = false;
+        let hasLiterals = false;
+        
+        // Split by dots to handle each part separately
+        const parts = expr.split('.');
+        const allLiterals = parts.every(part => part.trim().startsWith('@'));
+        
+        let computedValue;
+        
+        if (allLiterals) {
+          // All parts are literals, just remove @ prefixes
+          computedValue = parts.map(part => part.replace('@', '')).join('.');
+          hasLiterals = true;
+        } else {
+          // Transform each part individually
+          computedValue = parts.map(part => {
+            const trimmedPart = part.trim();
+            if (trimmedPart.startsWith('@')) {
+              hasLiterals = true;
+              return trimmedPart.substring(1); // Remove @ prefix for literals
+            } else {
+              // Don't transform keywords
+              if (['true', 'false', 'null'].includes(trimmedPart)) {
+                return trimmedPart;
+              }
+              foundSignal = true;
+              return `${trimmedPart}()`;
+            }
+          }).join('.');
+        }
+        
+        if (foundSignal && !allLiterals) {
+          return `computed(() => ${computedValue})`;
+        }
+        return computedValue;
+      }
+      return expr;
+    }
+  / "{" _ expr:attributeValue _ "}" {
+      // Handle single brace expressions like {item.name} or {@text}
       if (expr.trim().match(/^@?[a-zA-Z_][a-zA-Z0-9_.]*$/)) {
         let foundSignal = false;
         const computedValue = expr.replace(/@?[a-zA-Z_][a-zA-Z0-9_]*(?!:)/g, (match) => {
