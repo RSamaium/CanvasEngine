@@ -63,6 +63,17 @@ const onFinish = () => {
 />
 ```
 
+## Sprite with Hitbox:
+
+```html
+<Sprite 
+    image="path/to/character.png"
+    hitbox={{ w: 32, h: 48 }}
+/>
+```
+
+When using a hitbox, the sprite's anchor will be automatically calculated based on the `rectHeight` and `spriteRealSize` properties to properly align the sprite with its collision box. This is particularly useful for character sprites where the visual representation might be larger than the actual collision area.
+
 ## Available Sheet Definition Parameters
 
 | Parameter | Type | Description |
@@ -121,5 +132,6 @@ Each frame in an animation can have these properties:
 | `loader.onProgress` | function | Progress callback for loading |
 | `loader.onComplete` | function | Completion callback for loading |
 | `scaleMode` | number | PIXI.js scale mode for the texture |
+| `hitbox` | `{ w: number, h: number }` | (Optional) Collision box dimensions. Automatically calculates anchor positioning based on `rectHeight` and `spriteRealSize` to properly align the sprite with its hitbox |
 
 <!-- @include: ./_display-object.md -->

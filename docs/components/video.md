@@ -4,7 +4,7 @@
 <Video src="myvideo.mp4" play={true} />
 ```
 
-## Props
+## Props
 
 - `src`: string
 - `paused`: boolean
@@ -17,7 +17,7 @@
 }
 
 
-## Events
+## Events
 
 - `play`: () => void;
 - `pause`: () => void;

@@ -275,7 +275,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       this.play(this.sheetCurrentAnimation, [this.sheetParams]);
     }
 
-    if (props.hitbox) this.hitbox = props.hitbox;
+    if (props.hitbox) this.hitbox = props.hitbox.value ?? props.hitbox;
 
     if (props.scaleMode) this.baseTexture.scaleMode = props.scaleMode;
     else if (props.image && this.fullProps.rectangle === undefined) {

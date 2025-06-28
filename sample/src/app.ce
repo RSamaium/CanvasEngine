@@ -1,11 +1,11 @@
 <Canvas>
   <Container>
-    <Sprite x y sheet={{
+    <Sprite x y hitbox sheet={{
       definition,
       playing: animationPlaying,
       params: {
           direction
-      },
+      }
     }}
     controls />
   </Container>
@@ -38,7 +38,7 @@
     Skill = "skill",
   }
 
-  const hitbox = {
+  const hitbox = signal({
     w: 32, 
     h: 32
   }
@@ -191,6 +191,12 @@
         animationPlaying.set("walk");
       },
       keyUp,
+    },
+    action: {
+      bind: "space",
+      keyDown() {
+        animationPlaying.set("attack");
+      },
     },
   });
 
