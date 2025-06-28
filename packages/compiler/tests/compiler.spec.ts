@@ -286,17 +286,18 @@ describe("Compiler", () => {
     const output = parser.parse(input);
     expect(output).toBe(`cond(sprite.visible, () => h(Sprite), [sprite.loading, () => h(Text, { text: 'Loading...' })], () => h(Text, { text: 'Not available' }))`);
   });
-  // test("should compile component with templating string", () => {
-  //   const input = `<Canvas width={\`direction: \${direction}\`} />`;
-  //   const output = parser.parse(input);
-  //   expect(output).toBe(`h(Canvas, { width: \`direction: \${direction()}\` })`);
-  // });
+  
+  test("should compile component with templating string", () => {
+    const input = `<Canvas width={\`direction: \${direction}\`} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: \`direction: \${direction()}\` })`);
+  });
 
-  // test("should compile component with templating string with @ (literal)", () => {
-  //   const input = `<Canvas width={\`direction: \${@direction}\`} />`;
-  //   const output = parser.parse(input);
-  //   expect(output).toBe(`h(Canvas, { width: \`direction: \${direction}\` })`);
-  // });
+  test("should compile component with templating string with @ (literal)", () => {
+    const input = `<Canvas width={\`direction: \${@direction}\`} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: \`direction: \${direction}\` })`);
+  });
 
   test("should compile component with object attribute", () => {
     const input = `<Canvas width={ {x: 10, y: 20} } />`;

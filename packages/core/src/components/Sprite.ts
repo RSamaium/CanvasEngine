@@ -459,6 +459,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       const widthOfSprite =
         typeof realSize == "number" ? realSize : realSize?.width;
 
+
       const applyAnchorBySize = () => {
         if (heightOfSprite && this.hitbox) {
           const { spriteWidth, spriteHeight } = data;

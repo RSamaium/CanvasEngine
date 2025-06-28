@@ -444,9 +444,43 @@ dynamicAttribute "dynamic attribute"
           return `${formattedName}: ${attributeValue}`;
         }
         
-        // If it's a template string, preserve it as is
+        // If it's a template string, transform expressions inside ${}
       if (attributeValue.trim().startsWith('`') && attributeValue.trim().endsWith('`')) {
-        return `${formattedName}: ${attributeValue}`;
+        // Transform expressions inside ${} in template strings
+        let transformedTemplate = attributeValue;
+        
+        // Find and replace ${expression} patterns
+        let startIndex = 0;
+        while (true) {
+          const dollarIndex = transformedTemplate.indexOf('${', startIndex);
+          if (dollarIndex === -1) break;
+          
+          const braceIndex = transformedTemplate.indexOf('}', dollarIndex);
+          if (braceIndex === -1) break;
+          
+          const expr = transformedTemplate.substring(dollarIndex + 2, braceIndex);
+          const trimmedExpr = expr.trim();
+          
+          let replacement;
+          if (trimmedExpr.startsWith('@')) {
+            // Remove @ prefix for literals
+            replacement = '${' + trimmedExpr.substring(1) + '}';
+          } else if (trimmedExpr.match(/^[a-zA-Z_][a-zA-Z0-9_.]*$/)) {
+            // Transform identifiers to signals
+            replacement = '${' + trimmedExpr + '()}';
+          } else {
+            // Keep as is for complex expressions
+            replacement = '${' + expr + '}';
+          }
+          
+          transformedTemplate = transformedTemplate.substring(0, dollarIndex) + 
+                               replacement + 
+                               transformedTemplate.substring(braceIndex + 1);
+          
+          startIndex = dollarIndex + replacement.length;
+        }
+        
+        return formattedName + ': ' + transformedTemplate;
       }
       
       // Handle other types of values
