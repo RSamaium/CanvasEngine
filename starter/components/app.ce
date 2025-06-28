@@ -1,8 +1,7 @@
 <Canvas 
     backgroundColor="#fff" 
     width="100%" 
-    height="100%" 
-    antialias="true"
+    height="100%"
     >
     <Container
         width="100%" 

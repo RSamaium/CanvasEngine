@@ -1,37 +1,123 @@
-
 <Canvas>
   <Container>
-    @if (score >= 90) {
-        <Text text="Grade: A+" x={100} y={100} color="gold" fontSize={24} />
-        <Text text="Excellent work!" x={100} y={130} color="gold" fontSize={16} />
-    }
-    @else if (score >= 80) {
-        <Text text="Grade: A" x={100} y={100} color="green" fontSize={24} />
-        <Text text="Great job!" x={100} y={130} color="green" fontSize={16} />
-    }
-    @else if (score >= 70) {
-        <Text text="Grade: B" x={100} y={100} color="blue" fontSize={24} />
-        <Text text="Good work!" x={100} y={130} color="blue" fontSize={16} />
-    }
-    @else if (score >= 60) {
-        <Text text="Grade: C" x={100} y={100} color="orange" fontSize={24} />
-        <Text text="Keep trying!" x={100} y={130} color="orange" fontSize={16} />
-    }
-    @else {
-        <Text text="Grade: F" x={100} y={100} color="red" fontSize={24} />
-        <Text text="Need improvement" x={100} y={130} color="red" fontSize={16} />
-    }
+    <Sprite x y sheet={{
+      definition,
+      playing: animationPlaying,
+      params: {
+          direction
+      }
+    }}
+    controls />
   </Container>
-
 </Canvas>
 
 <script>
-import { signal } from 'canvasengine'
+  import { signal } from "canvasengine";
 
-const score = signal(0)
+  const x = signal(0);
+  const y = signal(0);
+  const direction = signal("down");
+  const speed = signal(3);
+  const animationPlaying = signal("stand");
 
+  const keyUp = () => {
+    animationPlaying.set("stand");
+  };
 
-const click = () => {
-  console.log('click')
-}
+  const spritesheet = (framesWidth, framesHeight, frameStand = 1) => {
+    if (framesWidth <= frameStand) {
+      frameStand = framesWidth - 1;
+    }
+
+    const frameY = (direction) => {
+      const gap = Math.max(4 - framesHeight, 0);
+      return {
+        down: 0,
+        left: Math.max(0, 1 - gap),
+        right: Math.max(0, 2 - gap),
+        up: Math.max(0, 3 - gap),
+      }[direction];
+    };
+
+    const stand = (direction) => [
+      { time: 0, frameX: frameStand, frameY: frameY(direction) },
+    ];
+    const walk = (direction) => {
+      const array = [];
+      const durationFrame = 10;
+      for (let i = 0; i < framesWidth; i++) {
+        array.push({
+          time: i * durationFrame,
+          frameX: i,
+          frameY: frameY(direction),
+        });
+      }
+      array.push({ time: array[array.length - 1].time + durationFrame });
+      return array;
+    };
+
+    return {
+      textures: {
+        stand: {
+          animations: ({ direction }) => [stand(direction)],
+        },
+        walk: {
+          animations: ({ direction }) => [walk(direction)],
+        },
+      },
+      framesHeight,
+      framesWidth,
+    };
+  };
+
+  const controls = signal({
+    down: {
+      repeat: true,
+      bind: "down",
+      keyDown() {
+        y.update((y) => y + speed());
+        direction.set("down");
+        animationPlaying.set("walk");
+      },
+      keyUp,
+    },
+    up: {
+      repeat: true,
+      bind: "up",
+      keyDown() {
+        y.update((y) => y - speed());
+        direction.set("up");
+        animationPlaying.set("walk");
+      },
+      keyUp,
+    },
+    left: {
+      repeat: true,
+      bind: "left",
+      keyDown() {
+        x.update((x) => x - speed());
+        direction.set("left");
+        animationPlaying.set("walk");
+      },
+      keyUp,
+    },
+    right: {
+      repeat: true,
+      bind: "right",
+      keyDown() {
+        x.update((x) => x + speed());
+        direction.set("right");
+        animationPlaying.set("walk");
+      },
+      keyUp,
+    },
+  });
+
+  const definition = {
+    id: "hero",
+    image: "./hero.png",
+    width: 96,
+    height: 128,
+    ...spritesheet(3, 4),
+  };
 </script>

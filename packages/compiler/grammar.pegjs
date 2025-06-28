@@ -414,31 +414,43 @@ dynamicAttribute "dynamic attribute"
       } else if (attributeValue.trim().match(/^[a-zA-Z_]\w*$/)) {
         return `${formattedName}: ${attributeValue}`;
       } else {
+        // Check if this is an object literal that was already processed by objectProperty rules
+        const isObjectLiteral = attributeValue.trim().startsWith('{ ') && attributeValue.trim().endsWith(' }');
+        const hasPropertySyntax = attributeValue.includes(':');
+        
         let foundSignal = false;
         let hasLiterals = false;
-        const computedValue = attributeValue.replace(/@?([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*:)/g, (match, p1, offset) => {
-          // Don't transform keywords, numbers, or if we're inside quotes
-          if (['true', 'false', 'null'].includes(p1) || /^\d+(\.\d+)?$/.test(p1)) {
-            return match;
-          }
-          
-          // Check if we're inside a string literal
-          const beforeMatch = attributeValue.substring(0, offset);
-          const singleQuotesBefore = (beforeMatch.match(/'/g) || []).length;
-          const doubleQuotesBefore = (beforeMatch.match(/"/g) || []).length;
-          
-          // If we're inside quotes, don't transform
-          if (singleQuotesBefore % 2 === 1 || doubleQuotesBefore % 2 === 1) {
-            return match;
-          }
-          
-          if (match.startsWith('@')) {
-            hasLiterals = true;
-            return p1; // Remove @ prefix
-          }
-          foundSignal = true;
-          return `${p1}()`;
-        });
+        let computedValue = attributeValue;
+        
+        // Only apply signal transformation if it's NOT an object literal with property syntax
+        if (!isObjectLiteral || !hasPropertySyntax) {
+          computedValue = attributeValue.replace(/@?([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*:)/g, (match, p1, offset) => {
+            // Don't transform keywords, numbers, or if we're inside quotes
+            if (['true', 'false', 'null'].includes(p1) || /^\d+(\.\d+)?$/.test(p1)) {
+              return match;
+            }
+            
+            // Check if we're inside a string literal
+            const beforeMatch = attributeValue.substring(0, offset);
+            const singleQuotesBefore = (beforeMatch.match(/'/g) || []).length;
+            const doubleQuotesBefore = (beforeMatch.match(/"/g) || []).length;
+            
+            // If we're inside quotes, don't transform
+            if (singleQuotesBefore % 2 === 1 || doubleQuotesBefore % 2 === 1) {
+              return match;
+            }
+            
+            if (match.startsWith('@')) {
+              hasLiterals = true;
+              return p1; // Remove @ prefix
+            }
+            foundSignal = true;
+            return `${p1}()`;
+          });
+        } else {
+          // For object literals, check if any values contain signals (ending with ())
+          foundSignal = attributeValue.includes('()');
+        }
         
         if (foundSignal) {
           // For objects, wrap in parentheses
@@ -506,7 +518,18 @@ propertyValue
   / functionWithElement
   / stringLiteral
   / number
-  / identifier
+  / literalIdentifier
+  / signalIdentifier
+
+literalIdentifier
+  = "@" id:identifier {
+    return id;
+  }
+
+signalIdentifier
+  = id:identifier {
+    return `${id}()`;
+  }
 
 nestedObject
   = "{" _ objContent:objectContent _ "}" {

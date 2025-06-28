@@ -343,6 +343,24 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Button, { style: { backgroundColor: { normal: "#6c757d", hover: "#5a6268", pressed: "#545b62" }, text: { fontSize: 16, color: "#ffffff" } } })`);
   });
 
+  test('should compile component with deep object attribute and signal', () => {
+    const input = `<Canvas>
+  <Container>
+    <Sprite x y sheet={{
+      definition,
+      playing: animationPlaying,
+      params: {
+          direction
+      }
+    }}
+    controls />
+  </Container>
+</Canvas>
+`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, null, h(Container, null, h(Sprite, { x, y, sheet: computed(() => ({definition, playing: animationPlaying(), params: {direction}})), controls })))`);
+  });
+
   test("should compile component with deep object attribute but not transform to signal", () => {
     const input = `<Canvas width={@deep.value} />`;
     const output = parser.parse(input);
