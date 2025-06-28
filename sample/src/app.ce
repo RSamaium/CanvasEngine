@@ -23,53 +23,129 @@
   const keyUp = () => {
     animationPlaying.set("stand");
   };
+  
+  enum Direction {
+    Down = "down",
+    Left = "left",
+    Right = "right",
+    Up = "up",
+  }
 
-  const spritesheet = (framesWidth, framesHeight, frameStand = 1) => {
-    if (framesWidth <= frameStand) {
-      frameStand = framesWidth - 1;
-    }
+  enum Animation {
+    Stand = "stand",
+    Walk = "walk",
+    Attack = "attack",
+    Skill = "skill",
+  }
 
-    const frameY = (direction) => {
-      const gap = Math.max(4 - framesHeight, 0);
+  const LPCSpritesheetPreset = (options) => {
+    const ratio = options.ratio ?? 1;
+
+    const frameY = (direction: Direction) => {
       return {
-        down: 0,
-        left: Math.max(0, 1 - gap),
-        right: Math.max(0, 2 - gap),
-        up: Math.max(0, 3 - gap),
+        [Direction.Down]: 2,
+        [Direction.Left]: 1,
+        [Direction.Right]: 3,
+        [Direction.Up]: 0,
       }[direction];
     };
-
-    const stand = (direction) => [
-      { time: 0, frameX: frameStand, frameY: frameY(direction) },
+  
+    const stand = (direction: Direction) => [
+      { time: 0, frameX: 0, frameY: frameY(direction) },
     ];
-    const walk = (direction) => {
-      const array = [];
-      const durationFrame = 10;
+    const anim = (
+      direction: Direction,
+      framesWidth: number,
+      speed: number = 5
+    ) => {
+      const array: any = [];
       for (let i = 0; i < framesWidth; i++) {
-        array.push({
-          time: i * durationFrame,
-          frameX: i,
-          frameY: frameY(direction),
-        });
+        array.push({ time: i * speed, frameX: i, frameY: frameY(direction) });
       }
-      array.push({ time: array[array.length - 1].time + durationFrame });
       return array;
     };
-
+  
     return {
+      id: options.id,
+      image: options.imageSource,
+      width: options.width,
+      height: options.height,
+      opacity: 1,
+      rectWidth: 64 * ratio,
+      rectHeight: 64 * ratio,
+      framesWidth: 6,
+      framesHeight: 4,
+      spriteRealSize: {
+        width: 48 * ratio,
+        height: 52 * ratio,
+      },
       textures: {
-        stand: {
+        [Animation.Stand]: {
+          offset: {
+            x: 0,
+            y: 512 * ratio,
+          },
           animations: ({ direction }) => [stand(direction)],
         },
-        walk: {
-          animations: ({ direction }) => [walk(direction)],
+        [Animation.Walk]: {
+          offset: {
+            x: 0,
+            y: 512 * ratio,
+          },
+          framesWidth: 9,
+          framesHeight: 4,
+          animations: ({ direction }) => [anim(direction, 9)],
         },
+        [Animation.Attack]: {
+          offset: {
+            x: 0,
+            y: 768 * ratio,
+          },
+          framesWidth: 6,
+          framesHeight: 4,
+          animations: ({ direction }) => [anim(direction, 6, 3)],
+        },
+        [Animation.Skill]: {
+          framesWidth: 7,
+          framesHeight: 4,
+          animations: ({ direction }) => [anim(direction, 7, 3)],
+        },
+        attack2: {
+          offset: {
+            x: 0,
+            y: 256 * ratio,
+          },
+          framesWidth: 7,
+          framesHeight: 8,
+          animations: ({ direction }) => [anim(direction, 7, 3)],
+        },
+        ...(options.height > 3000
+          ? {
+              attack3: {
+                offset: {
+                  x: 0,
+                  y: 5568 - 288 * 4,
+                },
+                rectWidth: 288,
+                rectHeight: 288,
+                framesWidth: 6,
+                framesHeight: 4,
+                animations: ({ direction }) => [anim(direction, 6, 3)],
+              },
+            }
+          : {}),
       },
-      framesHeight,
-      framesWidth,
     };
   };
-
+  
+  const spritesheet = LPCSpritesheetPreset({
+      id: "hero",
+      imageSource: "hero.png",
+      width: 1728,
+      height: 5568,
+      ratio: 1.5,
+    })
+  
   const controls = signal({
     down: {
       repeat: true,
@@ -113,11 +189,13 @@
     },
   });
 
+  console.log(spritesheet)
+
   const definition = {
     id: "hero",
     image: "./hero.png",
     width: 96,
     height: 128,
-    ...spritesheet(3, 4),
+    ...spritesheet,
   };
 </script>

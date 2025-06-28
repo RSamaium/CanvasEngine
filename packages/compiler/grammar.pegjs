@@ -414,16 +414,22 @@ dynamicAttribute "dynamic attribute"
       } else if (attributeValue.trim().match(/^[a-zA-Z_]\w*$/)) {
         return `${formattedName}: ${attributeValue}`;
       } else {
-        // Check if this is an object literal that was already processed by objectProperty rules
+        // Check if this is an object or array literal
         const isObjectLiteral = attributeValue.trim().startsWith('{ ') && attributeValue.trim().endsWith(' }');
-        const hasPropertySyntax = attributeValue.includes(':');
+        const isArrayLiteral = attributeValue.trim().startsWith('[') && attributeValue.trim().endsWith(']');
         
         let foundSignal = false;
         let hasLiterals = false;
         let computedValue = attributeValue;
         
-        // Only apply signal transformation if it's NOT an object literal with property syntax
-        if (!isObjectLiteral || !hasPropertySyntax) {
+        // For simple object and array literals (like {x: x, y: 20} or [x, 20]), 
+        // don't use computed() at all and don't transform identifiers
+        if ((isObjectLiteral || isArrayLiteral) && !attributeValue.includes('()')) {
+          // Don't transform anything, return as is
+          foundSignal = false;
+          computedValue = attributeValue;
+        } else {
+          // Apply signal transformation for other values
           computedValue = attributeValue.replace(/@?([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*:)/g, (match, p1, offset) => {
             // Don't transform keywords, numbers, or if we're inside quotes
             if (['true', 'false', 'null'].includes(p1) || /^\d+(\.\d+)?$/.test(p1)) {
@@ -447,9 +453,11 @@ dynamicAttribute "dynamic attribute"
             foundSignal = true;
             return `${p1}()`;
           });
-        } else {
-          // For object literals, check if any values contain signals (ending with ())
-          foundSignal = attributeValue.includes('()');
+          
+          // Check if any values already contain signals (ending with ())
+          if (attributeValue.includes('()')) {
+            foundSignal = true;
+          }
         }
         
         if (foundSignal) {
@@ -467,12 +475,7 @@ dynamicAttribute "dynamic attribute"
           return `${formattedName}: ${computedValue}`;
         }
         
-        // For static objects, add parentheses if it's an object
-        if (attributeValue.trim().startsWith('{') && attributeValue.trim().endsWith('}')) {
-          // Remove spaces for objects in parentheses
-          const cleanedObject = computedValue.replace(/{ /g, '{').replace(/ }/g, '}');
-          return `${formattedName}: (${cleanedObject})`;
-        }
+        // For static objects and arrays, return as is without parentheses
         return `${formattedName}: ${computedValue}`;
       }
     }
@@ -486,11 +489,7 @@ attributeValue "attribute value"
   / functionWithElement
   / objectLiteral
   / $([^{}]* ("{" [^{}]* "}" [^{}]*)*) {
-    const t = text().trim()
-    if (t.startsWith("{") && t.endsWith("}")) {
-      return `(${t})`;
-    }
-    return t
+    return text().trim()
   }
 
 objectLiteral "object literal"
@@ -518,18 +517,7 @@ propertyValue
   / functionWithElement
   / stringLiteral
   / number
-  / literalIdentifier
-  / signalIdentifier
-
-literalIdentifier
-  = "@" id:identifier {
-    return id;
-  }
-
-signalIdentifier
-  = id:identifier {
-    return `${id}()`;
-  }
+  / identifier
 
 nestedObject
   = "{" _ objContent:objectContent _ "}" {

@@ -353,7 +353,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       );
     }
 
-    const cloneParams = structuredClone(params);
+    const cloneParams = (params);
 
     this.removeChildren();
     animation.sprites = [];

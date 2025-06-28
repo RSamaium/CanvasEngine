@@ -28,3 +28,4 @@ cache
 .vitepress/dist
 .vitepress/cache
 coverage
+sample/public
