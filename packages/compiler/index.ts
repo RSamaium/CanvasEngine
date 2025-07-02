@@ -146,8 +146,25 @@ export default function canvasengine() {
         throw new Error(`Error parsing template in file ${id}:\n${errorMsg}`);
       }
 
-      // trick to avoid typescript remove imports in scriptContent
-      scriptContent += FLAG_COMMENT + parsedTemplate
+      // Extract variables declared with defineProps to avoid TypeScript removing them
+      const definePropsVarRegex = /(?:const|let|var)\s+(?:\{\s*([^}]+)\s*\}|(\w+))\s*=\s*defineProps\s*\(/g;
+      const definePropsVars: string[] = [];
+      let match;
+      
+      while ((match = definePropsVarRegex.exec(scriptContent)) !== null) {
+        if (match[1]) {
+          // Destructured variables like: const { text, value } = defineProps()
+          const destructuredVars = match[1].split(',').map(v => v.trim().split(':')[0].trim());
+          definePropsVars.push(...destructuredVars);
+        } else if (match[2]) {
+          // Simple variable like: const props = defineProps()
+          definePropsVars.push(match[2]);
+        }
+      }
+
+      // trick to avoid typescript remove imports and defineProps variables in scriptContent
+      let varRefs = definePropsVars.length > 0 ? `;${definePropsVars.join(';')};` : '';
+      scriptContent += FLAG_COMMENT + parsedTemplate + varRefs
 
       let transpiledCode = ts.transpileModule(scriptContent, {
         compilerOptions: {

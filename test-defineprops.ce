@@ -1,0 +1,7 @@
+<Canvas>
+    <Text text />
+</Canvas>
+
+<script>
+const props = defineProps();
+</script>
