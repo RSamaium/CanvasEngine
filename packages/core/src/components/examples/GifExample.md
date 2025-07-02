@@ -71,14 +71,16 @@ gifRef.current?.gotoAndPlay(5);   // Aller à la frame 5 et jouer
 gifRef.current?.gotoAndStop(10);  // Aller à la frame 10 et s'arrêter
 ```
 
-## Propriétés en lecture seule
+## Propriétés disponibles
 
 ```typescript
-// Informations sur l'animation
+// Informations sur l'animation (disponibles directement sur l'instance)
 const duration = gifRef.current?.duration;      // Durée totale
 const currentFrame = gifRef.current?.currentFrame; // Frame actuelle
 const totalFrames = gifRef.current?.totalFrames;   // Nombre total de frames
-const isPlaying = gifRef.current?.isPlaying;       // État de lecture
+const isPlaying = gifRef.current?.isPlaying;       // État de lecture (getter)
+const animationSpeed = gifRef.current?.animationSpeed; // Vitesse d'animation
+const loop = gifRef.current?.loop;               // État de boucle
 ```
 
 ## Exemple complet
@@ -123,14 +125,17 @@ function AnimatedCharacter() {
 
 ## Notes techniques
 
+- **Héritage direct** : Le composant `CanvasGif` hérite directement de `GifSprite` (ou `AnimatedGIF` en fallback)
 - Le composant utilise le plugin `@pixi/gif` et supporte automatiquement :
   - `GifSprite` - classe recommandée pour les nouvelles implémentations
   - `AnimatedGIF` - classe legacy, mais toujours supportée
+  - Classe mock en fallback si le plugin n'est pas disponible
 - Détection automatique de la classe disponible au runtime
 - Les GIF sont chargés de manière asynchrone via différentes méthodes :
   - `fromURL()` pour les URLs
   - `fromBuffer()` pour les buffers de données
-  - Constructeur avec texture en fallback
+  - Texture régulière en fallback
+- **Copie des propriétés** : Les données du GIF chargé sont copiées sur l'instance du composant
 - Le composant gère automatiquement le nettoyage des ressources
 - Compatible avec toutes les props de `DisplayObject` (position, rotation, scale, etc.)
-- Support des méthodes optionnelles (certaines propriétés peuvent ne pas être disponibles selon la classe utilisée)
+- Support gracieux : si le plugin n'est pas disponible, le composant fonctionne comme un sprite normal
