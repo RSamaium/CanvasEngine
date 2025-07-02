@@ -146,23 +146,32 @@ export default function canvasengine() {
         throw new Error(`Error parsing template in file ${id}:\n${errorMsg}`);
       }
 
-      // Extract variables declared with defineProps to avoid TypeScript removing them
-      const definePropsVarRegex = /(?:const|let|var)\s+(?:\{\s*([^}]+)\s*\}|(\w+))\s*=\s*defineProps\s*\(/g;
+      // Extract ALL variables declared with defineProps to avoid TypeScript removing them
+      // This handles both simple and destructured declarations
+      const definePropsRegex = /(?:const|let|var)\s+([^=]+?)\s*=\s*defineProps\s*\(/g;
       const definePropsVars: string[] = [];
       let match;
       
-      while ((match = definePropsVarRegex.exec(scriptContent)) !== null) {
-        if (match[1]) {
+      while ((match = definePropsRegex.exec(scriptContent)) !== null) {
+        const declaration = match[1].trim();
+        
+        if (declaration.startsWith('{') && declaration.endsWith('}')) {
           // Destructured variables like: const { text, value } = defineProps()
-          const destructuredVars = match[1].split(',').map(v => v.trim().split(':')[0].trim());
+          const destructuredContent = declaration.slice(1, -1);
+          const destructuredVars = destructuredContent.split(',').map(v => {
+            // Handle both "prop" and "prop: alias" cases
+            const cleanVar = v.trim().split(':')[0].trim();
+            return cleanVar;
+          });
           definePropsVars.push(...destructuredVars);
-        } else if (match[2]) {
+        } else {
           // Simple variable like: const props = defineProps()
-          definePropsVars.push(match[2]);
+          definePropsVars.push(declaration);
         }
       }
 
       // trick to avoid typescript remove imports and defineProps variables in scriptContent
+      // We reference all defineProps variables so TypeScript doesn't remove them
       let varRefs = definePropsVars.length > 0 ? `;${definePropsVars.join(';')};` : '';
       scriptContent += FLAG_COMMENT + parsedTemplate + varRefs
 
