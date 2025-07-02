@@ -1,4 +1,4 @@
-# Composant Gif
+# Gif Component
 
 Le composant `Gif` permet d'afficher et de contrôler des animations GIF dans votre application PixiJS. Il hérite directement de `GifSprite` de PixiJS.
 
@@ -12,34 +12,71 @@ npm install @pixi/gif
 
 Le plugin doit être installé et configuré avec PixiJS pour que `GifSprite` soit disponible dans l'import `pixi.js`.
 
-## Utilisation de base
+## Basic GIF:
 
-```typescript
-import { Gif } from '@your-package/core';
-
-// Utilisation simple
+```html
 <Gif 
-  src="./path/to/your/animation.gif" 
-  x={100} 
-  y={100} 
-/>
-
-// Avec contrôles avancés
-<Gif 
-  src="./path/to/your/animation.gif"
-  x={100}
-  y={100}
-  animationSpeed={0.5}
-  loop={true}
-  autoPlay={true}
-  onComplete={() => console.log('Animation terminée')}
-  onFrameChange={(frame) => console.log('Frame:', frame)}
+    src="./path/to/animation.gif" 
+    x={100} 
+    y={100} 
 />
 ```
 
-## Props
+## GIF with Controls:
 
-| Prop | Type | Description | Défaut |
+```html
+<Gif 
+    src="./path/to/animation.gif"
+    x={100}
+    y={100}
+    animationSpeed={1.5}
+    loop={true}
+    autoPlay={true}
+    onComplete={() => console.log('Animation terminée')}
+    onFrameChange={(frame) => console.log('Frame:', frame)}
+/>
+```
+
+## Programmatic Control:
+
+```html
+<script>
+let gifRef;
+
+const play = () => gifRef?.play();
+const stop = () => gifRef?.stop();
+const goToFrame = (frame) => gifRef?.gotoAndPlay(frame);
+</script>
+
+<Gif 
+    bind:this={gifRef}
+    src="./assets/character-walk.gif"
+    x={200}
+    y={200}
+    autoPlay={false}
+/>
+
+<button onclick={play}>Play</button>
+<button onclick={stop}>Stop</button>
+<button onclick={() => goToFrame(5)}>Go to Frame 5</button>
+```
+
+## Frame Control:
+
+```html
+<Gif 
+    src="./animation.gif"
+    currentFrame={10}
+    playing={false}
+    onFrameChange={(frame) => {
+        console.log('Current frame:', frame);
+    }}
+/>
+```
+
+## Gif Props
+
+| Prop | Type | Description | Default |
 |------|------|-------------|---------|
 | `src` | `string` | Chemin vers le fichier GIF (requis) | - |
 | `animationSpeed` | `number` | Vitesse de l'animation (1 = vitesse normale, 0.5 = moitié, 2 = double) | `1` |
@@ -55,71 +92,63 @@ import { Gif } from '@your-package/core';
 
 Le composant hérite directement des méthodes de `GifSprite` :
 
-```typescript
-const gifRef = useRef<CanvasGif>();
-
+```javascript
 // Contrôles (méthodes héritées de GifSprite)
-gifRef.current?.play();           // Démarrer l'animation
-gifRef.current?.stop();           // Arrêter l'animation
-gifRef.current?.gotoAndPlay(5);   // Aller à la frame 5 et jouer
-gifRef.current?.gotoAndStop(10);  // Aller à la frame 10 et s'arrêter
+gifRef.play();           // Démarrer l'animation
+gifRef.stop();           // Arrêter l'animation
+gifRef.gotoAndPlay(5);   // Aller à la frame 5 et jouer
+gifRef.gotoAndStop(10);  // Aller à la frame 10 et s'arrêter
 ```
 
 ## Propriétés disponibles
 
-```typescript
+```javascript
 // Propriétés héritées de GifSprite (accès direct)
-const duration = gifRef.current?.duration;      // Durée totale
-const currentFrame = gifRef.current?.currentFrame; // Frame actuelle
-const totalFrames = gifRef.current?.totalFrames;   // Nombre total de frames
-const playing = gifRef.current?.playing;           // État de lecture
-const animationSpeed = gifRef.current?.animationSpeed; // Vitesse d'animation
-const loop = gifRef.current?.loop;               // État de boucle
+const duration = gifRef.duration;      // Durée totale
+const currentFrame = gifRef.currentFrame; // Frame actuelle
+const totalFrames = gifRef.totalFrames;   // Nombre total de frames
+const playing = gifRef.playing;           // État de lecture
+const animationSpeed = gifRef.animationSpeed; // Vitesse d'animation
+const loop = gifRef.loop;               // État de boucle
 
 // Callbacks disponibles
-gifRef.current.onComplete = () => console.log('Animation terminée');
-gifRef.current.onFrameChange = (frame) => console.log('Frame:', frame);
-gifRef.current.onLoop = () => console.log('Boucle');
+gifRef.onComplete = () => console.log('Animation terminée');
+gifRef.onFrameChange = (frame) => console.log('Frame:', frame);
+gifRef.onLoop = () => console.log('Boucle');
 ```
 
 ## Exemple complet
 
-```typescript
+```html
+<script>
 import { Gif } from '@your-package/core';
-import { useState } from 'react';
 
-function AnimatedCharacter() {
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [currentFrame, setCurrentFrame] = useState(0);
+let isPlaying = true;
+let currentFrame = 0;
 
-  return (
-    <Container>
-      <Gif 
+const togglePlay = () => {
+    isPlaying = !isPlaying;
+};
+</script>
+
+<div>
+    <Gif 
         src="./assets/character-walk.gif"
         x={200}
         y={200}
         animationSpeed={1.5}
         loop={true}
         playing={isPlaying}
-        onFrameChange={setCurrentFrame}
+        onFrameChange={(frame) => currentFrame = frame}
         onComplete={() => console.log('Cycle terminé')}
-      />
-      
-      <Button 
-        x={50} 
-        y={50}
-        text={isPlaying ? "Pause" : "Play"}
-        onClick={() => setIsPlaying(!isPlaying)}
-      />
-      
-      <Text
-        x={50}
-        y={100}
-        text={`Frame: ${currentFrame}`}
-      />
-    </Container>
-  );
-}
+    />
+    
+    <button onclick={togglePlay}>
+        {isPlaying ? "Pause" : "Play"}
+    </button>
+    
+    <p>Frame: {currentFrame}</p>
+</div>
 ```
 
 ## Notes techniques
@@ -134,3 +163,5 @@ function AnimatedCharacter() {
 - Le composant gère automatiquement le nettoyage des ressources
 - Compatible avec toutes les props de `DisplayObject` (position, rotation, scale, etc.)
 - API native PixiJS : accès direct aux méthodes et propriétés de `GifSprite`
+
+<!-- @include: ./_display-object.md -->
