@@ -6,9 +6,18 @@ import path from "path";
 import * as ts from "typescript";
 import { fileURLToPath } from 'url';
 
+// Export HMR utilities
+export * from './hmr-client.js';
+
 const { generate } = pkg;
 
 const DEV_SRC = "../../src"
+
+// Generate unique ID for HMR
+function generateHMRId(id: string): string {
+  // Use btoa for base64 encoding (browser-compatible)
+  return btoa(id).replace(/[^a-zA-Z0-9]/g, '');
+}
 
 /**
  * Formats a syntax error message with visual pointer to the error location
@@ -99,7 +108,16 @@ export default function canvasengine() {
     path.join(__dirname, "grammar.pegjs").replace("dist/grammar.pegjs", "grammar.pegjs"), 
   "utf8");
   const parser = generate(grammar);
-  const isDev = process.env.NODE_ENV === "dev";
+  // Check for development mode using various methods
+  const isDev = (() => {
+    try {
+      return (globalThis as any).process?.env?.NODE_ENV === "development" || 
+             (globalThis as any).process?.env?.NODE_ENV === "dev" ||
+             (globalThis as any).__DEV__ === true;
+    } catch {
+      return false;
+    }
+  })();
   const FLAG_COMMENT = "/*--[TPL]--*/";
 
   const PRIMITIVE_COMPONENTS = [
@@ -230,6 +248,62 @@ export default function canvasengine() {
         }
       });
 
+      // Generate HMR code for development
+      const hmrId = generateHMRId(id);
+      let hmrCode = '';
+      
+      if (isDev) {
+        hmrCode = `
+// HMR Support for CanvasEngine .ce components
+if (import.meta.hot) {
+  const hmrId = "${hmrId}";
+  
+  // Store the component reference for HMR
+  if (!import.meta.hot.data.ceComponents) {
+    import.meta.hot.data.ceComponents = new Map();
+  }
+  
+  // Function to update component instances
+  const updateComponent = (newComponent) => {
+    if (import.meta.hot.data.ceComponents.has(hmrId)) {
+      const instances = import.meta.hot.data.ceComponents.get(hmrId);
+      instances.forEach(instance => {
+        if (instance && typeof instance.update === 'function') {
+          // Update the component instance with new logic
+          instance.update(newComponent);
+        } else if (instance && instance.parent) {
+          // Force re-render by updating parent
+          if (typeof instance.parent.forceUpdate === 'function') {
+            instance.parent.forceUpdate();
+          }
+        }
+      });
+    }
+    console.log(\`[HMR] Updated CanvasEngine component: \${hmrId}\`);
+  };
+  
+  // Accept HMR updates
+  import.meta.hot.accept((newModule) => {
+    if (newModule && newModule.default) {
+      updateComponent(newModule.default);
+      
+      // Trigger a re-render signal if available
+      if (window.__CANVASENGINE_HMR_UPDATE__) {
+        window.__CANVASENGINE_HMR_UPDATE__(hmrId, newModule.default);
+      }
+    }
+  });
+  
+  // Clean up on disposal
+  import.meta.hot.dispose(() => {
+    if (import.meta.hot.data.ceComponents) {
+      import.meta.hot.data.ceComponents.delete(hmrId);
+    }
+  });
+}
+        `;
+      }
+
       // Generate the output
       const output = String.raw`
       ${importsCode}
@@ -240,8 +314,25 @@ export default function canvasengine() {
         const defineProps = useDefineProps($$props)
         ${nonImportCode}
         let $this = ${parsedTemplate}
+        
+        ${isDev ? `
+        // Register component instance for HMR
+        if (import.meta.hot && $this) {
+          const hmrId = "${hmrId}";
+          if (!import.meta.hot.data.ceComponents) {
+            import.meta.hot.data.ceComponents = new Map();
+          }
+          if (!import.meta.hot.data.ceComponents.has(hmrId)) {
+            import.meta.hot.data.ceComponents.set(hmrId, new Set());
+          }
+          import.meta.hot.data.ceComponents.get(hmrId).add($this);
+        }
+        ` : ''}
+        
         return $this
       }
+      
+      ${hmrCode}
       `;
 
       return {
