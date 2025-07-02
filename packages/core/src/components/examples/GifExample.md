@@ -1,6 +1,6 @@
 # Composant Gif
 
-Le composant `Gif` permet d'afficher et de contrôler des animations GIF dans votre application PixiJS.
+Le composant `Gif` permet d'afficher et de contrôler des animations GIF dans votre application PixiJS. Il supporte à la fois `GifSprite` et `AnimatedGIF` du plugin `@pixi/gif`.
 
 ## Prérequis
 
@@ -15,6 +15,8 @@ Puis l'importer dans votre application :
 ```javascript
 import '@pixi/gif';
 ```
+
+Le composant détectera automatiquement quelle classe est disponible (`GifSprite` ou `AnimatedGIF`) et l'utilisera en conséquence.
 
 ## Utilisation de base
 
@@ -121,7 +123,14 @@ function AnimatedCharacter() {
 
 ## Notes techniques
 
-- Le composant utilise le plugin `@pixi/gif` qui convertit les GIF en `AnimatedSprite` PixiJS
-- Les GIF sont chargés de manière asynchrone
+- Le composant utilise le plugin `@pixi/gif` et supporte automatiquement :
+  - `GifSprite` - classe recommandée pour les nouvelles implémentations
+  - `AnimatedGIF` - classe legacy, mais toujours supportée
+- Détection automatique de la classe disponible au runtime
+- Les GIF sont chargés de manière asynchrone via différentes méthodes :
+  - `fromURL()` pour les URLs
+  - `fromBuffer()` pour les buffers de données
+  - Constructeur avec texture en fallback
 - Le composant gère automatiquement le nettoyage des ressources
 - Compatible avec toutes les props de `DisplayObject` (position, rotation, scale, etc.)
+- Support des méthodes optionnelles (certaines propriétés peuvent ne pas être disponibles selon la classe utilisée)

@@ -16,30 +16,31 @@ import { DisplayObject } from "./DisplayObject";
 import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
 
-// AnimatedGIF interface - this requires @pixi/gif plugin to be installed
-interface AnimatedGIF extends Container {
+// GIF sprite interfaces - supports both AnimatedGIF and GifSprite from @pixi/gif plugin
+interface GifSpriteBase extends Container {
   play(): void;
   stop(): void;
-  gotoAndPlay(frame: number): void;
-  gotoAndStop(frame: number): void;
-  duration: number;
-  currentFrame: number;
-  totalFrames: number;
-  animationSpeed: number;
-  loop: boolean;
-  playing: boolean;
+  gotoAndPlay?(frame: number): void;
+  gotoAndStop?(frame: number): void;
+  duration?: number;
+  currentFrame?: number;
+  totalFrames?: number;
+  animationSpeed?: number;
+  loop?: boolean;
+  playing?: boolean;
   onComplete?: () => void;
   onFrameChange?: (frame: number) => void;
   onLoop?: () => void;
 }
 
-interface AnimatedGIFStatic {
-  fromBuffer(buffer: ArrayBuffer): Promise<AnimatedGIF>;
-  fromURL(url: string): Promise<AnimatedGIF>;
+interface GifSpriteStatic {
+  fromBuffer?(buffer: ArrayBuffer): Promise<GifSpriteBase>;
+  fromURL?(url: string): Promise<GifSpriteBase>;
+  new?(texture?: any): GifSpriteBase;
 }
 
 export class CanvasGif extends DisplayObject(Container) {
-  private animatedGif: any | null = null;
+  private gifSprite: GifSpriteBase | null = null;
   private app: Application | null = null;
   private subscriptionTick: Subscription | null = null;
 
@@ -64,50 +65,50 @@ export class CanvasGif extends DisplayObject(Container) {
     }
 
     // Update animation properties
-    if (this.animatedGif) {
-      if (props.animationSpeed !== undefined) {
-        this.animatedGif.animationSpeed = props.animationSpeed;
+    if (this.gifSprite) {
+      if (props.animationSpeed !== undefined && this.gifSprite.animationSpeed !== undefined) {
+        this.gifSprite.animationSpeed = props.animationSpeed;
       }
       
-      if (props.loop !== undefined) {
-        this.animatedGif.loop = props.loop;
+      if (props.loop !== undefined && this.gifSprite.loop !== undefined) {
+        this.gifSprite.loop = props.loop;
       }
 
-      if (props.autoPlay !== false && !this.animatedGif.playing) {
-        this.animatedGif.play();
+      if (props.autoPlay !== false && this.gifSprite.playing !== undefined && !this.gifSprite.playing) {
+        this.gifSprite.play();
       }
 
-      if (props.autoPlay === false && this.animatedGif.playing) {
-        this.animatedGif.stop();
+      if (props.autoPlay === false && this.gifSprite.playing !== undefined && this.gifSprite.playing) {
+        this.gifSprite.stop();
       }
 
       // Set event handlers
       if (props.onComplete) {
-        this.animatedGif.onComplete = props.onComplete;
+        this.gifSprite.onComplete = props.onComplete;
       }
 
       if (props.onFrameChange) {
-        this.animatedGif.onFrameChange = props.onFrameChange;
+        this.gifSprite.onFrameChange = props.onFrameChange;
       }
 
       if (props.onLoop) {
-        this.animatedGif.onLoop = props.onLoop;
+        this.gifSprite.onLoop = props.onLoop;
       }
 
       // Handle specific frame control
-      if (props.currentFrame !== undefined && props.currentFrame !== this.animatedGif.currentFrame) {
-        if (props.playing !== false) {
-          this.animatedGif.gotoAndPlay(props.currentFrame);
-        } else {
-          this.animatedGif.gotoAndStop(props.currentFrame);
+      if (props.currentFrame !== undefined && this.gifSprite.currentFrame !== undefined && props.currentFrame !== this.gifSprite.currentFrame) {
+        if (props.playing !== false && this.gifSprite.gotoAndPlay) {
+          this.gifSprite.gotoAndPlay(props.currentFrame);
+        } else if (this.gifSprite.gotoAndStop) {
+          this.gifSprite.gotoAndStop(props.currentFrame);
         }
       }
 
       // Handle play/stop commands
-      if (props.playing === true && !this.animatedGif.playing) {
-        this.animatedGif.play();
-      } else if (props.playing === false && this.animatedGif.playing) {
-        this.animatedGif.stop();
+      if (props.playing === true && this.gifSprite.playing !== undefined && !this.gifSprite.playing) {
+        this.gifSprite.play();
+      } else if (props.playing === false && this.gifSprite.playing !== undefined && this.gifSprite.playing) {
+        this.gifSprite.stop();
       }
     }
   }
@@ -115,53 +116,73 @@ export class CanvasGif extends DisplayObject(Container) {
   private async loadGif(src: string) {
     try {
       // Remove existing gif if any
-      if (this.animatedGif) {
-        this.removeChild(this.animatedGif);
-        this.animatedGif = null;
+      if (this.gifSprite) {
+        this.removeChild(this.gifSprite);
+        this.gifSprite = null;
       }
 
-      // Check if @pixi/gif is available
-      if (typeof (globalThis as any).PIXI?.AnimatedGIF === 'undefined') {
-        console.warn('AnimatedGIF is not available. Please install and import @pixi/gif plugin.');
+      // Check for available GIF classes
+      const PIXI_GIF = (globalThis as any).PIXI;
+      let GifClass: GifSpriteStatic | null = null;
+      
+      // Try GifSprite first, then AnimatedGIF
+      if (PIXI_GIF?.GifSprite) {
+        GifClass = PIXI_GIF.GifSprite;
+      } else if (PIXI_GIF?.AnimatedGIF) {
+        GifClass = PIXI_GIF.AnimatedGIF;
+      } else {
+        console.warn('No GIF sprite class found. Please install and import @pixi/gif plugin.');
         return;
       }
 
-      const AnimatedGIF = (globalThis as any).PIXI.AnimatedGIF;
+      // Load the GIF using different methods based on available API
+      let gif: GifSpriteBase;
 
-      // Load the GIF
-      let gif;
-      if (src.startsWith('http') || src.startsWith('/') || src.startsWith('./')) {
-        // Load from URL
-        gif = await AnimatedGIF.fromURL(src);
-      } else {
-        // Try to load from Assets first
+      if (GifClass.fromURL && (src.startsWith('http') || src.startsWith('/') || src.startsWith('./'))) {
+        // Use fromURL if available
+        gif = await GifClass.fromURL(src);
+      } else if (GifClass.fromBuffer) {
+        // Try to load as buffer first
         try {
           const buffer = await Assets.load(src);
           if (buffer instanceof ArrayBuffer) {
-            gif = await AnimatedGIF.fromBuffer(buffer);
+            gif = await GifClass.fromBuffer(buffer);
+          } else if (GifClass.fromURL) {
+            gif = await GifClass.fromURL(src);
           } else {
-            gif = await AnimatedGIF.fromURL(src);
+            throw new Error('No suitable loading method available');
           }
         } catch {
-          gif = await AnimatedGIF.fromURL(src);
+          if (GifClass.fromURL) {
+            gif = await GifClass.fromURL(src);
+          } else {
+            throw new Error('Failed to load GIF and no fallback method available');
+          }
         }
+      } else if (GifClass.new) {
+        // Fallback to constructor if available
+        const texture = await Assets.load(src);
+        gif = GifClass.new(texture);
+      } else {
+        console.warn('No compatible loading method found for GIF sprite.');
+        return;
       }
 
-      this.animatedGif = gif;
-      this.addChild(this.animatedGif);
+      this.gifSprite = gif;
+      this.addChild(this.gifSprite);
 
       // Set initial properties
       const props = this.fullProps;
-      if (props.animationSpeed !== undefined) {
-        this.animatedGif.animationSpeed = props.animationSpeed;
+      if (props.animationSpeed !== undefined && this.gifSprite.animationSpeed !== undefined) {
+        this.gifSprite.animationSpeed = props.animationSpeed;
       }
       
-      if (props.loop !== undefined) {
-        this.animatedGif.loop = props.loop;
+      if (props.loop !== undefined && this.gifSprite.loop !== undefined) {
+        this.gifSprite.loop = props.loop;
       }
 
       if (props.autoPlay !== false) {
-        this.animatedGif.play();
+        this.gifSprite.play();
       }
 
     } catch (error) {
@@ -175,9 +196,9 @@ export class CanvasGif extends DisplayObject(Container) {
         this.subscriptionTick.unsubscribe();
       }
 
-      if (this.animatedGif) {
-        this.removeChild(this.animatedGif);
-        this.animatedGif = null;
+      if (this.gifSprite) {
+        this.removeChild(this.gifSprite);
+        this.gifSprite = null;
       }
 
       if (afterDestroy) {
@@ -189,44 +210,44 @@ export class CanvasGif extends DisplayObject(Container) {
 
   // Control methods
   play() {
-    if (this.animatedGif) {
-      this.animatedGif.play();
+    if (this.gifSprite) {
+      this.gifSprite.play();
     }
   }
 
   stop() {
-    if (this.animatedGif) {
-      this.animatedGif.stop();
+    if (this.gifSprite) {
+      this.gifSprite.stop();
     }
   }
 
   gotoAndPlay(frame: number) {
-    if (this.animatedGif) {
-      this.animatedGif.gotoAndPlay(frame);
+    if (this.gifSprite && this.gifSprite.gotoAndPlay) {
+      this.gifSprite.gotoAndPlay(frame);
     }
   }
 
   gotoAndStop(frame: number) {
-    if (this.animatedGif) {
-      this.animatedGif.gotoAndStop(frame);
+    if (this.gifSprite && this.gifSprite.gotoAndStop) {
+      this.gifSprite.gotoAndStop(frame);
     }
   }
 
   // Getters for animation properties
   get duration() {
-    return this.animatedGif?.duration || 0;
+    return this.gifSprite?.duration || 0;
   }
 
   get currentFrame() {
-    return this.animatedGif?.currentFrame || 0;
+    return this.gifSprite?.currentFrame || 0;
   }
 
   get totalFrames() {
-    return this.animatedGif?.totalFrames || 0;
+    return this.gifSprite?.totalFrames || 0;
   }
 
   get isPlaying() {
-    return this.animatedGif?.playing || false;
+    return this.gifSprite?.playing || false;
   }
 }
 
