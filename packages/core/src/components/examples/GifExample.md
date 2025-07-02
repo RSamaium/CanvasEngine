@@ -1,6 +1,6 @@
 # Composant Gif
 
-Le composant `Gif` permet d'afficher et de contrôler des animations GIF dans votre application PixiJS. Il supporte à la fois `GifSprite` et `AnimatedGIF` du plugin `@pixi/gif`.
+Le composant `Gif` permet d'afficher et de contrôler des animations GIF dans votre application PixiJS. Il hérite directement de `GifSprite` de PixiJS.
 
 ## Prérequis
 
@@ -10,13 +10,7 @@ Ce composant nécessite l'installation du plugin `@pixi/gif` :
 npm install @pixi/gif
 ```
 
-Puis l'importer dans votre application :
-
-```javascript
-import '@pixi/gif';
-```
-
-Le composant détectera automatiquement quelle classe est disponible (`GifSprite` ou `AnimatedGIF`) et l'utilisera en conséquence.
+Le plugin doit être installé et configuré avec PixiJS pour que `GifSprite` soit disponible dans l'import `pixi.js`.
 
 ## Utilisation de base
 
@@ -59,12 +53,12 @@ import { Gif } from '@your-package/core';
 
 ## Méthodes de contrôle
 
-Vous pouvez accéder aux méthodes de contrôle via une référence au composant :
+Le composant hérite directement des méthodes de `GifSprite` :
 
 ```typescript
 const gifRef = useRef<CanvasGif>();
 
-// Contrôles
+// Contrôles (méthodes héritées de GifSprite)
 gifRef.current?.play();           // Démarrer l'animation
 gifRef.current?.stop();           // Arrêter l'animation
 gifRef.current?.gotoAndPlay(5);   // Aller à la frame 5 et jouer
@@ -74,13 +68,18 @@ gifRef.current?.gotoAndStop(10);  // Aller à la frame 10 et s'arrêter
 ## Propriétés disponibles
 
 ```typescript
-// Informations sur l'animation (disponibles directement sur l'instance)
+// Propriétés héritées de GifSprite (accès direct)
 const duration = gifRef.current?.duration;      // Durée totale
 const currentFrame = gifRef.current?.currentFrame; // Frame actuelle
 const totalFrames = gifRef.current?.totalFrames;   // Nombre total de frames
-const isPlaying = gifRef.current?.isPlaying;       // État de lecture (getter)
+const playing = gifRef.current?.playing;           // État de lecture
 const animationSpeed = gifRef.current?.animationSpeed; // Vitesse d'animation
 const loop = gifRef.current?.loop;               // État de boucle
+
+// Callbacks disponibles
+gifRef.current.onComplete = () => console.log('Animation terminée');
+gifRef.current.onFrameChange = (frame) => console.log('Frame:', frame);
+gifRef.current.onLoop = () => console.log('Boucle');
 ```
 
 ## Exemple complet
@@ -125,17 +124,13 @@ function AnimatedCharacter() {
 
 ## Notes techniques
 
-- **Héritage direct** : Le composant `CanvasGif` hérite directement de `GifSprite` (ou `AnimatedGIF` en fallback)
-- Le composant utilise le plugin `@pixi/gif` et supporte automatiquement :
-  - `GifSprite` - classe recommandée pour les nouvelles implémentations
-  - `AnimatedGIF` - classe legacy, mais toujours supportée
-  - Classe mock en fallback si le plugin n'est pas disponible
-- Détection automatique de la classe disponible au runtime
-- Les GIF sont chargés de manière asynchrone via différentes méthodes :
-  - `fromURL()` pour les URLs
-  - `fromBuffer()` pour les buffers de données
-  - Texture régulière en fallback
+- **Héritage direct** : Le composant `CanvasGif` hérite directement de `GifSprite` de PixiJS
+- Import direct : `import { GifSprite } from 'pixi.js'`
+- Utilise exclusivement `GifSprite` - pas de fallback
+- Les GIF sont chargés de manière asynchrone via :
+  - `GifSprite.fromURL()` pour les URLs
+  - `GifSprite.fromBuffer()` pour les buffers de données
 - **Copie des propriétés** : Les données du GIF chargé sont copiées sur l'instance du composant
 - Le composant gère automatiquement le nettoyage des ressources
 - Compatible avec toutes les props de `DisplayObject` (position, rotation, scale, etc.)
-- Support gracieux : si le plugin n'est pas disponible, le composant fonctionne comme un sprite normal
+- API native PixiJS : accès direct aux méthodes et propriétés de `GifSprite`
