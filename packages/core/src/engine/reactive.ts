@@ -81,33 +81,40 @@ export function registerComponent(name, component) {
   components[name] = component;
 }
 
-function destroyElement(element: Element | Element[]) {
+async function destroyElement(element: Element | Element[]) {
   if (Array.isArray(element)) {
-    element.forEach((e) => destroyElement(e));
+    await Promise.all(element.map((e) => destroyElement(e)));
     return;
   }
   if (!element) {
     return;
   }
-  if (element.props?.children) {
-    for (let child of element.props.children) {
-      destroyElement(child)
-    }
-  }
-  for (let name in element.directives) {
-    element.directives[name].onDestroy?.(element);
-  }
+  
+  // First, handle onBeforeDestroy and prepare for destruction
   if (element.componentInstance && element.componentInstance.onDestroy) {
-    element.componentInstance.onDestroy(element.parent as any, () => {
-      element.propSubscriptions?.forEach((sub) => sub.unsubscribe());
-      element.effectSubscriptions?.forEach((sub) => sub.unsubscribe());
-      element.effectUnmounts?.forEach((fn) => fn?.());
+    await new Promise<void>((resolve) => {
+      element.componentInstance.onDestroy(element.parent as any, () => {
+        element.propSubscriptions?.forEach((sub) => sub.unsubscribe());
+        element.effectSubscriptions?.forEach((sub) => sub.unsubscribe());
+        element.effectUnmounts?.forEach((fn) => fn?.());
+        resolve();
+      });
     });
   } else {
     // If componentInstance is undefined or doesn't have onDestroy, still clean up subscriptions
     element.propSubscriptions?.forEach((sub) => sub.unsubscribe());
     element.effectSubscriptions?.forEach((sub) => sub.unsubscribe());
     element.effectUnmounts?.forEach((fn) => fn?.());
+  }
+  
+  // Then destroy children after parent's onBeforeDestroy is complete
+  if (element.props?.children) {
+    await Promise.all(element.props.children.map(child => destroyElement(child)));
+  }
+  
+  // Finally destroy directives
+  for (let name in element.directives) {
+    element.directives[name].onDestroy?.(element);
   }
 }
 
@@ -137,8 +144,8 @@ export function createComponent(tag: string, props?: Props): Element {
     effectUnmounts: [],
     effectSubscriptions: [],
     effectMounts: [],
-    destroy() {
-      destroyElement(this);
+    async destroy() {
+      await destroyElement(this);
     },
     allElements: new Subject(),
   };
@@ -236,7 +243,7 @@ export function createComponent(tag: string, props?: Props): Element {
                   throw new Error(`attach in ${element.tag} is undefined or null, add a component`)
                 }
                 if (lastElement) {
-                  destroyElement(lastElement)
+                  await destroyElement(lastElement)
                 }
                 lastElement = value
                 await createElement(element, value)
@@ -354,7 +361,7 @@ export function loop<T>(
             }
 
             if (change.type === 'init' || change.type === 'reset') {
-              elements.forEach(el => destroyElement(el));
+              elements.forEach(el => destroyElement(el).catch(console.error));
               elements = [];
               elementMap.clear();
 
@@ -381,7 +388,7 @@ export function loop<T>(
             } else if (change.type === 'remove' && change.index !== undefined) {
               const removed = elements.splice(change.index, 1);
               removed.forEach(el => {
-                destroyElement(el)
+                destroyElement(el).catch(console.error);
                 elementMap.delete(change.index!);
               });
             } else if (change.type === 'update' && change.index !== undefined && change.items.length === 1) {
@@ -403,7 +410,7 @@ export function loop<T>(
               } else {
                 // Treat as a standard update operation
                 const oldElement = elements[index];
-                destroyElement(oldElement)
+                destroyElement(oldElement).catch(console.error);
                 const newElement = createElementFn(newItem as T, index);
                 if (newElement) {
                   elements[index] = newElement;
@@ -424,7 +431,7 @@ export function loop<T>(
             const key = change.key as string | number
             if (isFirstSubscription) {
               isFirstSubscription = false;
-              elements.forEach(el => destroyElement(el));
+              elements.forEach(el => destroyElement(el).catch(console.error));
               elements = [];
               elementMap.clear();
 
@@ -445,7 +452,7 @@ export function loop<T>(
             }
 
             if (change.type === 'init' || change.type === 'reset') {
-              elements.forEach(el => destroyElement(el));
+              elements.forEach(el => destroyElement(el).catch(console.error));
               elements = [];
               elementMap.clear();
 
@@ -469,14 +476,14 @@ export function loop<T>(
               const index = elements.findIndex(el => elementMap.get(key) === el);
               if (index !== -1) {
                 const [removed] = elements.splice(index, 1);
-                destroyElement(removed)
+                destroyElement(removed).catch(console.error);
                 elementMap.delete(key);
               }
             } else if (change.type === 'update' && change.key && change.value !== undefined) {
               const index = elements.findIndex(el => elementMap.get(key) === el);
               if (index !== -1) {
                 const oldElement = elements[index];
-                destroyElement(oldElement)
+                destroyElement(oldElement).catch(console.error);
                 const newElement = createElementFn(change.value as T, key);
                 if (newElement) {
                   elements[index] = newElement;
@@ -604,7 +611,7 @@ export function cond(
       if (newConditionIndex !== currentConditionIndex) {
         // Destroy current element if it exists
         if (currentElement) {
-          destroyElement(currentElement);
+          destroyElement(currentElement).catch(console.error);
           currentElement = null;
         }
 
@@ -672,7 +679,7 @@ export function cond(
     return () => {
       subscriptions.forEach(sub => sub.unsubscribe());
       if (currentElement) {
-        destroyElement(currentElement);
+        destroyElement(currentElement).catch(console.error);
       }
     };
   }).pipe(share());
