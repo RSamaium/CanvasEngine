@@ -16,6 +16,6 @@ export { isObservable } from 'rxjs'
 export * as Utils from './engine/utils'
 export * as Howl from 'howler'
 
-// Export gamepad and keyboard controls
-export { GamepadControls, GamepadInput, GamepadOptions } from './directives/GamepadControls'
-export { KeyboardControls, Input, ControlOptions, Controls } from './directives/KeyboardControls'
+// Export keyboard controls with gamepad support
+export { KeyboardControls, Input, GamepadInput } from './directives/KeyboardControls'
+export type { ControlOptions, Controls, GamepadOptions } from './directives/KeyboardControls'

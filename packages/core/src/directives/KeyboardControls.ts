@@ -1,6 +1,9 @@
 import { Directive, registerDirective } from "../engine/directive";
 import { Element } from "../engine/reactive";
 import { fps2ms } from "../engine/utils";
+import 'joypad.js';
+
+declare const joypad: any;
 
 export enum Input {
     Break = 'break',
@@ -156,6 +159,54 @@ export interface ControlOptions {
 }
 export interface Controls {
     [controlName: string]: ControlOptions;
+}
+
+export interface GamepadOptions {
+    connect?: {
+        message?: string;
+        time?: number;
+        icon?: string;
+        sound?: string;
+    };
+    disconnect?: {
+        message?: string;
+        time?: number;
+        icon?: string;
+        sound?: string;
+    };
+}
+
+export enum GamepadInput {
+    Button0 = 'button_0',
+    Button1 = 'button_1',
+    Button2 = 'button_2',
+    Button3 = 'button_3',
+    Button4 = 'button_4',
+    Button5 = 'button_5',
+    Button6 = 'button_6',
+    Button7 = 'button_7',
+    Button8 = 'button_8',
+    Button9 = 'button_9',
+    Button10 = 'button_10',
+    Button11 = 'button_11',
+    Button12 = 'button_12',
+    Button13 = 'button_13',
+    Button14 = 'button_14',
+    Button15 = 'button_15',
+    Button16 = 'button_16',
+    Button17 = 'button_17',
+    DpadUp = 'dpad_up',
+    DpadDown = 'dpad_down',
+    DpadLeft = 'dpad_left',
+    DpadRight = 'dpad_right',
+    LeftStickUp = 'left_stick_up',
+    LeftStickDown = 'left_stick_down',
+    LeftStickLeft = 'left_stick_left',
+    LeftStickRight = 'left_stick_right',
+    RightStickUp = 'right_stick_up',
+    RightStickDown = 'right_stick_down',
+    RightStickLeft = 'right_stick_left',
+    RightStickRight = 'right_stick_right'
 }
 
 // keyboard handling
@@ -365,11 +416,28 @@ export class KeyboardControls extends Directive {
         right: false
     };
 
+    // Gamepad properties
+    private gamepadOptions: GamepadOptions = {}
+    private isGamepadConnected: boolean = false
+    private gamepadMoving: boolean = false
+    private gamepadDirections: {[key: string]: boolean} = {}
+    private gamepadAxisDate: number = 0
+    private readonly DIRECTIONS = ['up', 'down', 'left', 'right']
+
     onInit(element: Element) {
         const value = element.props.controls.value ?? element.props.controls
+        const gamepadOptions = element.props.gamepadOptions?.value ?? element.props.gamepadOptions
+        
+        if (gamepadOptions) {
+            this.gamepadOptions = gamepadOptions
+        }
+
         if (!value) return
+        
         this.setupListeners();
+        this.setupGamepadListeners();
         this.setInputs(value)
+        
         // The processing is outside the rendering loop because if the FPS are lower (or higher) then the sending to the server would be slower or faster. Here it is constant
         this.interval = setInterval(() => {
             this.preStep()
@@ -379,7 +447,12 @@ export class KeyboardControls extends Directive {
     onMount(element: Element) {}
 
     onUpdate(props) {
-        this.setInputs(props)
+        if (props.controls) {
+            this.setInputs(props.controls)
+        }
+        if (props.gamepadOptions) {
+            this.gamepadOptions = props.gamepadOptions
+        }
     }
 
     onDestroy() {
@@ -409,6 +482,9 @@ export class KeyboardControls extends Directive {
                 this.applyInput(keyName);
             }
         }
+
+        // Handle gamepad movement
+        this.handleGamepadMovement();
     }
 
     private applyInput(keyName: string) {
@@ -433,6 +509,128 @@ export class KeyboardControls extends Directive {
     private setupListeners() {
         document.addEventListener('keydown', (e) => { this.onKeyChange(e, true); });
         document.addEventListener('keyup', (e) => { this.onKeyChange(e, false); });
+    }
+
+    private setupGamepadListeners() {
+        if (typeof joypad === 'undefined') {
+            console.warn('joypad.js not loaded, gamepad support disabled');
+            return;
+        }
+
+        const defaultConnectOptions = {
+            message: 'Your gamepad is connected!',
+            time: 2000,
+            sound: 'connect',
+            ...this.gamepadOptions.connect || {}
+        }
+        
+        const defaultDisconnectOptions = {
+            message: 'Your gamepad is disconnected!',
+            time: 2000,
+            sound: 'disconnect',
+            ...this.gamepadOptions.disconnect || {}
+        }
+
+        // Handle gamepad connection
+        joypad.on('connect', (e: any) => {
+            this.isGamepadConnected = true
+            // Emit notification if RpgGui is available
+            if (typeof window !== 'undefined' && (window as any).RpgGui) {
+                (window as any).RpgGui.display('rpg-notification', defaultConnectOptions)
+            }
+            console.log('Gamepad connected:', e.gamepad?.id)
+        })
+
+        // Handle gamepad disconnection
+        joypad.on('disconnect', (e: any) => {
+            this.isGamepadConnected = false
+            // Emit notification if RpgGui is available
+            if (typeof window !== 'undefined' && (window as any).RpgGui) {
+                (window as any).RpgGui.display('rpg-notification', defaultDisconnectOptions)
+            }
+            console.log('Gamepad disconnected:', e.gamepad?.id)
+        })
+
+        // Handle button presses
+        joypad.on('button_press', (e: any) => {
+            const { buttonName } = e.detail;
+            this.handleGamepadButtonPress(buttonName)
+        })
+
+        // Handle button releases
+        joypad.on('button_release', (e: any) => {
+            const { buttonName } = e.detail;
+            this.handleGamepadButtonRelease(buttonName)
+        })
+
+        // Handle axis movement (analog sticks)
+        joypad.on('axis_move', (e: any) => {
+            this.gamepadMoving = true
+            this.gamepadAxisDate = Date.now()
+            
+            let direction = e.detail.directionOfMovement
+            // Convert joypad direction names to our direction names
+            if (direction === 'bottom') direction = 'down'
+            else if (direction === 'top') direction = 'up'
+            else if (direction === 'left') direction = 'left'
+            else if (direction === 'right') direction = 'right'
+            
+            this.gamepadDirections = {
+                [direction]: true
+            }
+            
+            // Release other directions
+            for (let dir of this.DIRECTIONS) {
+                if (!this.gamepadDirections[dir]) {
+                    this.applyControl(dir, false)
+                }
+            }
+        })
+    }
+
+    private handleGamepadButtonPress(buttonName: string) {
+        // Handle bound gamepad buttons
+        if (this.boundKeys[buttonName]) {
+            const boundKey = this.boundKeys[buttonName]
+            const { keyDown } = boundKey.options
+            if (keyDown) {
+                keyDown(boundKey)
+            }
+        }
+    }
+
+    private handleGamepadButtonRelease(buttonName: string) {
+        // Handle bound gamepad buttons
+        if (this.boundKeys[buttonName]) {
+            const boundKey = this.boundKeys[buttonName]
+            const { keyUp } = boundKey.options
+            if (keyUp) {
+                keyUp(boundKey)
+            }
+        }
+    }
+
+    private handleGamepadMovement() {
+        if (!this.isGamepadConnected) return;
+
+        // Handle gamepad movement similar to keyboard movement
+        if (this.gamepadMoving) {
+            for (let dir in this.gamepadDirections) {
+                if (this.gamepadDirections[dir]) {
+                    this.applyControl(dir, true)
+                }
+            }
+        }
+
+        // Handle axis timeout
+        let now = Date.now()
+        if (now - this.gamepadAxisDate > 100 && this.gamepadMoving) {
+            for (let dir of this.DIRECTIONS) {
+                this.gamepadDirections = {}
+                this.gamepadMoving = false
+                this.applyControl(dir, false)
+            }
+        }
     }
 
     private bindKey(keys: Input | Input[], actionName: string, options: ControlOptions, parameters?: object) {
@@ -918,6 +1116,13 @@ export class KeyboardControls extends Directive {
 
     get options(): Controls {
         return this._controlsOptions
+    }
+
+    /**
+     * Check if gamepad is connected
+     */
+    get gamepadConnected(): boolean {
+        return this.isGamepadConnected
     }
 }
 
