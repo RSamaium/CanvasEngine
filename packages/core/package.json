@@ -16,6 +16,7 @@
     "@pixi/layout": "^3.0.2",
     "@signe/reactive": "^2.3.3",
     "howler": "^2.2.4",
+    "joypad.js": "^2.3.5",
     "pixi-filters": "^6.0.5",
     "pixi-viewport": "^6.0.3",
     "popmotion": "^11.0.5",
