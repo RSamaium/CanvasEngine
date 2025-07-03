@@ -8,7 +8,7 @@ La directive `controls` (KeyboardControls) gère maintenant à la fois les entr�
 - ✅ **Gamepad** : Détection automatique des manettes de jeu
 - ✅ **Unifiée** : Une seule directive pour les deux types d'entrée
 - ✅ **Flexible** : Bind clavier ET gamepad sur la même action
-- ✅ **Notifications** : Messages de connexion/déconnexion gamepad
+- ✅ **Callbacks** : Hooks personnalisés connexion/déconnexion gamepad
 - ✅ **Sticks analogiques** : Support des mouvements directionnels
 - ✅ **Boutons standards** : Compatible Xbox, PlayStation, etc.
 
@@ -52,15 +52,15 @@ const controlsConfiguration = {
     }
 }
 
-// Options gamepad
+// Options gamepad (callbacks personnalisés)
 const gamepadOptions = {
-    connect: {
-        message: 'Manette connectée ! 🎮',
-        time: 2000
+    onConnect: (gamepad) => {
+        console.log('Manette connectée:', gamepad.id)
+        // Votre logique de connexion personnalisée
     },
-    disconnect: {
-        message: 'Manette déconnectée ❌',
-        time: 2000
+    onDisconnect: (gamepad) => {
+        console.log('Manette déconnectée:', gamepad.id)
+        // Votre logique de déconnexion personnalisée
     }
 }
 ```
@@ -226,17 +226,21 @@ controls.applyControl('jump')
 
 ```typescript
 const gamepadOptions = {
-    connect: {
-        message: 'Manette détectée !',
-        time: 3000,
-        icon: '/path/to/gamepad-icon.svg',
-        sound: 'gamepad-connect'
+    onConnect: (gamepad) => {
+        console.log('Manette détectée:', gamepad.id)
+        // Ici vous pouvez :
+        // - Afficher votre propre notification
+        // - Jouer un son
+        // - Mettre à jour l'interface
+        // - Enregistrer l'état
     },
-    disconnect: {
-        message: 'Manette déconnectée',
-        time: 2000,
-        icon: '/path/to/disconnect-icon.svg',
-        sound: 'gamepad-disconnect'
+    onDisconnect: (gamepad) => {
+        console.log('Manette déconnectée:', gamepad.id)
+        // Ici vous pouvez :
+        // - Afficher votre propre notification
+        // - Mettre en pause le jeu
+        // - Basculer vers clavier
+        // - Nettoyer l'état
     }
 }
 ```

@@ -162,18 +162,9 @@ export interface Controls {
 }
 
 export interface GamepadOptions {
-    connect?: {
-        message?: string;
-        time?: number;
-        icon?: string;
-        sound?: string;
-    };
-    disconnect?: {
-        message?: string;
-        time?: number;
-        icon?: string;
-        sound?: string;
-    };
+    // Options pour callbacks personnalisés si nécessaire
+    onConnect?: (gamepad: any) => void;
+    onDisconnect?: (gamepad: any) => void;
 }
 
 export enum GamepadInput {
@@ -517,38 +508,26 @@ export class KeyboardControls extends Directive {
             return;
         }
 
-        const defaultConnectOptions = {
-            message: 'Your gamepad is connected!',
-            time: 2000,
-            sound: 'connect',
-            ...this.gamepadOptions.connect || {}
-        }
-        
-        const defaultDisconnectOptions = {
-            message: 'Your gamepad is disconnected!',
-            time: 2000,
-            sound: 'disconnect',
-            ...this.gamepadOptions.disconnect || {}
-        }
-
         // Handle gamepad connection
         joypad.on('connect', (e: any) => {
             this.isGamepadConnected = true
-            // Emit notification if RpgGui is available
-            if (typeof window !== 'undefined' && (window as any).RpgGui) {
-                (window as any).RpgGui.display('rpg-notification', defaultConnectOptions)
-            }
             console.log('Gamepad connected:', e.gamepad?.id)
+            
+            // Call custom callback if provided
+            if (this.gamepadOptions.onConnect) {
+                this.gamepadOptions.onConnect(e.gamepad)
+            }
         })
 
         // Handle gamepad disconnection
         joypad.on('disconnect', (e: any) => {
             this.isGamepadConnected = false
-            // Emit notification if RpgGui is available
-            if (typeof window !== 'undefined' && (window as any).RpgGui) {
-                (window as any).RpgGui.display('rpg-notification', defaultDisconnectOptions)
-            }
             console.log('Gamepad disconnected:', e.gamepad?.id)
+            
+            // Call custom callback if provided
+            if (this.gamepadOptions.onDisconnect) {
+                this.gamepadOptions.onDisconnect(e.gamepad)
+            }
         })
 
         // Handle button presses

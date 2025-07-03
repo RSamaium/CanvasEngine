@@ -89,17 +89,15 @@ const controlsConfiguration = {
     }
 }
 
-// Options de notification gamepad
+// Options gamepad (bas niveau)
 const gamepadOptions = {
-    connect: {
-        message: 'Manette connectée ! 🎮',
-        time: 3000,
-        sound: 'connect'
+    onConnect: (gamepad) => {
+        console.log('Manette connectée:', gamepad.id)
+        // Votre logique de connexion ici
     },
-    disconnect: {
-        message: 'Manette déconnectée ❌',
-        time: 3000,
-        sound: 'disconnect'
+    onDisconnect: (gamepad) => {
+        console.log('Manette déconnectée:', gamepad.id)
+        // Votre logique de déconnexion ici
     }
 }
 
