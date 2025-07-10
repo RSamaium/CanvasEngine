@@ -3,6 +3,7 @@ import {
 } from "rxjs";
 import type { Element } from "./reactive";
 import { Tick } from "../directives/Scheduler";
+import { Container } from "../components";
 
 type MountFunction = (fn: (element: Element) => void) => void;
 
@@ -91,7 +92,7 @@ export function tick(fn: (tickValue: Tick, element: Element) => void) {
  * ```
  */
 export function h<C extends ComponentFunction<any>>(
-  componentFunction: C,
+  componentFunction: C | Element,
   props: Parameters<C>[0] = {} as Parameters<C>[0],
   ...children: any[]
 ): ReturnType<C> {
@@ -110,7 +111,22 @@ export function h<C extends ComponentFunction<any>>(
     children = children[0]
   }
 
-  let component = componentFunction({ ...props, children }) as Element;
+  let component: Element
+
+  if (Array.isArray(componentFunction)) {
+    if (componentFunction.length === 1) {
+      component = componentFunction[0]
+    }
+    else {
+      component = h(Container, {}, ...componentFunction) as Element
+    }
+  }
+  else if ('tag' in componentFunction) {
+    component = componentFunction
+  }
+  else {
+    component = componentFunction({ ...props, children }) as Element;
+  }
 
   if (!component) {
     component = {} as any

@@ -5,7 +5,6 @@ In CanvasEngine, you can access child components that are passed to a parent com
 ```html
 <Child>
     <Rect width={100} height={100} color="red" x={0} y={0} />
-    <Rect width={100} height={100} color="green" x={0} y={0} />
 </Child>
 
 <script>
@@ -19,28 +18,36 @@ How to access the children components in the `Child` component?
 
 In the `Child` component, you can access the children components using the `defineProps()` function.
 
-```typescript
+```html
+<slot />
+
+<script>
 const { children } = defineProps()
+const slot = children[0]
+</script>
 ```
 
 Children are accessible as an array, where `children[0]` is the first child, `children[1]` is the second child, etc.
 
-## Attaching Children to Containers
+## Multiple Children
 
-To attach a child to a Container component, use the `attach` prop:
+You can pass multiple children to a component:
 
 ```html
-<Container x="10" y="10" attach={child} />
+@for (child of children) {
+    <child />
+}
 
 <script>
+    import { signal } from 'canvasengine'
+    
     const { children } = defineProps()
-    const child = children[0] // children[0] is the first child
 </script>
 ```
 
 ## Dynamic Child Switching
 
-You can dynamically switch between children using signals:
+You can dynamically switch between children using signals. You can also use the `attach` prop to attach a child to a container.
 
 ```html
 <Container attach={activeChild} />
