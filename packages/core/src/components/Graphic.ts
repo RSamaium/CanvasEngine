@@ -40,8 +40,8 @@ interface SvgProps extends DisplayObjectProps {
 
 class CanvasGraphics extends DisplayObject(PixiGraphics) {
   clearEffect: Effect;
-  width: WritableSignal<number>;
-  height: WritableSignal<number>;
+  _width: WritableSignal<number>;
+  _height: WritableSignal<number>;
   
   /**
    * Initializes the graphics component with reactive width and height handling.
@@ -89,10 +89,10 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
     // Use original signals from propObservables if available, otherwise create new ones
     const width = (isSignal(propObservables?.width) ? propObservables.width : signal(props.width || 0)) as WritableSignal<number>;
     const height = (isSignal(propObservables?.height) ? propObservables.height : signal(props.height || 0)) as WritableSignal<number>;
-    
+
     // Store as class properties for access in other methods
-    this.width = width;
-    this.height = height;
+    this._width = width;
+    this._height = height;
     
     // Check if width or height are percentages to set display flex
     const isWidthPercentage = isPercent(width());
@@ -113,13 +113,13 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
 
     this.on('layout', (event) => {
       const layoutBox = event.computedLayout;
-      // Update width if it's a percentage
-      if (isWidthPercentage && isSignal(width)) {
+      // Update width if it's a percentage and value has changed
+      if (isWidthPercentage && isSignal(width) && width() !== layoutBox.width) {
         width.set(layoutBox.width);
       }
       
-      // Update height if it's a percentage
-      if (isHeightPercentage && isSignal(height)) {
+      // Update height if it's a percentage and value has changed
+      if (isHeightPercentage && isSignal(height) && height() !== layoutBox.height) {
         height.set(layoutBox.height);
       }
     });
@@ -132,29 +132,15 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
    */
   onUpdate(props: any) {
     super.onUpdate(props);
-    
-    // Update width signal if width prop changed
-    if (props.width !== undefined && this.width) {
-      if (isSignal(props.width)) {
-        // If the new prop is a signal, we need to replace our local signal
-        // This shouldn't happen in normal usage, but handle it just in case
-        this.width = props.width;
-      } else {
-        // Update our local signal with the new value
-        this.width.set(props.width);
-      }
+
+    // Update width signal if width prop changed and value is different
+    if (props.width !== undefined && this._width && this._width() !== props.width) {
+      this._width.set(props.width);
     }
     
-    // Update height signal if height prop changed
-    if (props.height !== undefined && this.height) {
-      if (isSignal(props.height)) {
-        // If the new prop is a signal, we need to replace our local signal
-        // This shouldn't happen in normal usage, but handle it just in case
-        this.height = props.height;
-      } else {
-        // Update our local signal with the new value
-        this.height.set(props.height);
-      }
+    // Update height signal if height prop changed and value is different
+    if (props.height !== undefined && this._height && this._height() !== props.height) {
+      this._height.set(props.height);
     }
   }
 
@@ -210,8 +196,8 @@ function drawShape(g: PixiGraphics, shape: 'circle' | 'ellipse', props: {
   color: Signal<string>;
   border: Signal<number>;
 } | {
-  width: WritableSignal<number>;
-  height: WritableSignal<number>;
+  width: Signal<number>;
+  height: Signal<number>;
   color: Signal<string>;
   border: Signal<number>;
 }) {
@@ -242,7 +228,13 @@ export function Ellipse(props: EllipseProps) {
     border: null
   })
   return Graphics({
-    draw: (g, gWidth, gHeight) => drawShape(g, 'ellipse', { width: signal(gWidth), height: signal(gHeight), color, border }),
+    draw: (g, gWidth, gHeight) => {
+      g.ellipse(0, 0, gWidth / 2, gHeight / 2);
+      if (border()) {
+        g.stroke(border());
+      }
+      g.fill(color());
+    },
     ...props
   })
 }
