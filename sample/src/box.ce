@@ -1,0 +1,86 @@
+<Container justifyContent="center" alignItems="center" width="100%" height="100%">
+    <Container
+      ref="dialogbox"
+      scale={{ x: scaleX }}
+      anchor={[0.5, 0.5]}
+      width={700}
+      height
+      positionType="absolute"
+      bottom={10}
+    >
+    <Rect width={700} height={250} color="#1a1a2e" />
+      <Rect
+        x={0}
+        y={0}
+        width={700}
+        height
+        color="#1a1a2e"
+        alpha={0.9}
+        borderRadius={10}
+        border
+        shadow
+      />
+        <Container
+          flexDirection="row"
+          width={700}
+          height
+          alpha={contentOpacity}
+        >
+          <Container flexDirection="column">
+            <Text
+              text="Hello"
+              color="#fff"
+              fontSize={18}
+              margin={40}
+              style={textStyle}
+            />
+          </Container>
+      </Container>
+  </Container>  
+  
+    
+  </Container>
+
+  <script>
+
+    import {
+      animatedSignal,
+      computed,
+      effect,
+      signal,
+      trigger,
+      mount
+    } from "canvasengine";
+    import Child  from "./child.ce";
+  
+    let isDestroyed = false;
+  
+    const texts = ['Hello']
+    const height = signal(250);
+    const isTextCompleted = signal(false);
+    const display1 = signal(false);
+    const display2 = signal(true);
+  
+    const border = signal({ width: 5, color: "#595971" });
+    const shadow = signal({ color: "#000", blur: 10, offsetX: 10, offsetY: 10 });
+  
+    const contentOpacity = animatedSignal(0, {
+      duration: 1000,
+    });
+  
+    const scaleX = animatedSignal(0, {
+      duration: 500,
+    });
+  
+    scaleX.set(1);
+    contentOpacity.set(1);
+    
+    const textStyle = {
+      wordWrap: true,
+      wordWrapWidth: 700 - 256 - 80
+    }
+  
+     setTimeout(() => {
+      display1.set(true);
+     }, 1000);
+  </script>
