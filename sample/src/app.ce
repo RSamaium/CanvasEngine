@@ -1,11 +1,11 @@
 <Canvas width="100%" height="100%">
-   @for (g of gui) {
-    <Container display="flex">
-     @if (g.display) {
-      <g.component />
-     }
-    </Container>
-   }
+   <Child>
+      @for (obj of gui) {
+        @for (obj of gui) {
+          <Text text={obj} color="red" />
+        }
+      }
+   </Child>
   
 </Canvas>
 <script>
@@ -19,24 +19,6 @@
     mount
   } from "canvasengine";
   import Child  from "./child.ce";
-  import Box  from "./box.ce";
-
-  const display1 = signal(false);
-  const display2 = signal(false);
-
-  const gui = [{
-    component: Child,
-    display: display1
-  }, {
-    component: Box,
-    display: display2
-  }]
-
-  setTimeout(() => {
-    display1.set(true);
-  }, 1000);
-
-  setTimeout(() => {
-    display2.set(true);
-  }, 2000);
+  
+  const gui = [1, 2, 3]
 </script>

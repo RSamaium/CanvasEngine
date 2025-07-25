@@ -1,4 +1,5 @@
 import {
+  Observable,
     Subscription
 } from "rxjs";
 import type { Element } from "./reactive";
@@ -123,6 +124,9 @@ export function h<C extends ComponentFunction<any>>(
   }
   else if ('tag' in componentFunction) {
     component = componentFunction
+  }
+  else if (componentFunction instanceof Observable) {
+    component = componentFunction as any
   }
   else {
     component = componentFunction({ ...props, children }) as Element;

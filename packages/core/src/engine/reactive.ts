@@ -254,44 +254,116 @@ export function createComponent(tag: string, props?: Props): Element {
     }
   };
 
-  async function createElement(parent: Element, child: Element) {
+     /**
+    * Creates and mounts a child element to a parent element.
+    * Handles different types of children: Elements, Promises resolving to Elements, and Observables.
+    * 
+    * @description This function is designed to handle reactive child components that can be:
+    * - Direct Element instances
+    * - Promises that resolve to Elements (for async components)
+    * - Observables that emit Elements, arrays of Elements, or FlowObservable results
+    * - Nested observables within arrays or FlowObservable results (handled recursively)
+    * 
+    * For Observables, it subscribes to the stream and automatically mounts/unmounts elements
+    * as they are emitted. The function handles nested observables recursively, ensuring that
+    * observables within arrays or FlowObservable results are also properly subscribed to.
+    * All subscriptions are stored in the parent's effectSubscriptions for automatic cleanup.
+    * 
+    * @param {Element} parent - The parent element to mount the child to
+    * @param {Element | Observable<any> | Promise<Element>} child - The child to create and mount
+    * 
+    * @example
+    * ```typescript
+    * // Direct element
+    * await createElement(parent, childElement);
+    * 
+    * // Observable of elements (from cond, loop, etc.)
+    * await createElement(parent, cond(signal(visible), () => h(Container)));
+    * 
+    * // Observable that emits arrays containing other observables
+    * await createElement(parent, observableOfObservables);
+    * 
+    * // Promise resolving to element
+    * await createElement(parent, import('./MyComponent').then(mod => h(mod.default)));
+    * ```
+    */
+  async function createElement(parent: Element, child: Element | Observable<any> | Promise<Element>) {
     if (isPromise(child)) {
       child = await child;
     }
     if (child instanceof Observable) {
-      child.subscribe(
-        ({
-          elements: comp,
-          prev,
-        }: {
-          elements: Element[];
-          prev?: Element;
-        }) => {
-          // if prev, insert element after this
-          const components = comp.filter((c) => c !== null);
-          if (prev) {
-            components.forEach((c) => {
-              const index = parent.props.children.indexOf(prev.props.key);
-              onMount(parent, c, index + 1);
-              propagateContext(c);
-            });
-            return;
-          }
-          components.forEach((component) => {
-            if (!Array.isArray(component)) {
-              onMount(parent, component);
-              propagateContext(component);
-            } else {
-              component.forEach((comp) => {
-                onMount(parent, comp);
-                propagateContext(comp);
-              });
-            }
-          });
-          elementsListen.next(undefined)
+      // Subscribe to the observable and handle the emitted values
+      const subscription = child.subscribe(
+        (value: any) => {
+          // Handle different types of observable emissions
+          if (value && typeof value === 'object' && 'elements' in value) {
+            // Handle FlowObservable result (from loop, cond, etc.)
+            const {
+              elements: comp,
+              prev,
+            }: {
+              elements: Element[];
+              prev?: Element;
+            } = value;
+            
+            const components = comp.filter((c) => c !== null);
+                         if (prev) {
+               components.forEach(async (c) => {
+                 const index = parent.props.children.indexOf(prev.props.key);
+                 if (c instanceof Observable) {
+                   // Handle observable component recursively
+                   await createElement(parent, c);
+                 } else if (isElement(c)) {
+                   onMount(parent, c, index + 1);
+                   propagateContext(c);
+                 }
+               });
+               return;
+             }
+                         components.forEach(async (component) => {
+               if (!Array.isArray(component)) {
+                 if (component instanceof Observable) {
+                   // Handle observable component recursively
+                   await createElement(parent, component);
+                 } else if (isElement(component)) {
+                   onMount(parent, component);
+                   propagateContext(component);
+                 }
+               } else {
+                 component.forEach(async (comp) => {
+                   if (comp instanceof Observable) {
+                     // Handle observable component recursively
+                     await createElement(parent, comp);
+                   } else if (isElement(comp)) {
+                     onMount(parent, comp);
+                     propagateContext(comp);
+                   }
+                 });
+               }
+             });
+          } else if (isElement(value)) {
+            // Handle direct Element emission
+            onMount(parent, value);
+            propagateContext(value);
+                     } else if (Array.isArray(value)) {
+             // Handle array of elements (which can also be observables)
+             value.forEach(async (element) => {
+               if (element instanceof Observable) {
+                 // Handle observable element recursively
+                 await createElement(parent, element);
+               } else if (isElement(element)) {
+                 onMount(parent, element);
+                 propagateContext(element);
+               }
+             });
+           }
+          elementsListen.next(undefined);
         }
       );
-    } else {
+      
+      // Store subscription for cleanup
+      parent.effectSubscriptions.push(subscription);
+    } else if (isElement(child)) {
       onMount(parent, child);
       await propagateContext(child);
     }
