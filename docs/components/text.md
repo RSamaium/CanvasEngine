@@ -48,12 +48,21 @@ La famille de police à utiliser (raccourci pour style.fontFamily)
   speed?: number;
   onComplete?: () => void;
   skip?: Trigger;
+  sound?: {
+    src: string;
+    volume?: number;
+    rate?: number;
+  };
 }`
 
 Object to configure typewriter effect:
 - `speed`: Animation speed of the typewriter effect
 - `onComplete`: Callback function when the animation completes
 - `skip`: Trigger to skip the current animation
+- `sound`: Sound configuration for typewriter effect
+  - `src`: Path to the audio file to play for each character
+  - `volume`: Volume level from 0.0 to 1.0 (default: 0.5)
+  - `rate`: Playback rate/speed of the sound (default: 1.0)
 
 ### Example with skip trigger
 
@@ -69,5 +78,23 @@ const skip = trigger()
 skip.start()
 </script>
 ```
+
+### Example with sound effect
+
+```html
+<Text 
+  text="Hello World! This is a typewriter effect with sound." 
+  typewriter={{ 
+    speed: 1,
+    sound: {
+      src: "/assets/typewriter.mp3",
+      volume: 0.3,
+      rate: 1.2
+    }
+  }} 
+/>
+```
+
+This will play a typewriter sound effect for each character as the text appears. The sound system automatically calculates the duration of the audio file and uses it to prevent overlapping sounds, ensuring a clean typewriter effect even at high speeds.
 
 <!-- @include: ./_display-object.md -->

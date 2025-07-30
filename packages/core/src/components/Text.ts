@@ -4,6 +4,7 @@ import { DisplayObject, ComponentInstance } from "./DisplayObject";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { Signal } from "@signe/reactive";
 import { on, isTrigger } from "../engine/trigger";
+import { Howl } from "howler";
 
 enum TextEffect {
   Typewriter = "typewriter",
@@ -20,6 +21,11 @@ export interface TextProps extends DisplayObjectProps {
     start?: () => void;
     onComplete?: () => void;
     skip?: () => void;
+    sound?: {
+      src: string;
+      volume?: number;
+      rate?: number;
+    };
   };
   context?: any; // Ensure context is available, ideally typed from a base prop or injected
 }
@@ -32,6 +38,9 @@ class CanvasText extends DisplayObject(PixiText) {
   private _wordWrapWidth: number = 0;
   private typewriterOptions: any = {};
   private skipSignal?: () => void;
+  private typewriterSound?: Howl;
+  private lastSoundTime: number = 0;
+  private soundDuration: number = 0; // Duration of the sound in milliseconds
 
   /**
    * Called when the component is mounted to the scene graph.
@@ -56,6 +65,10 @@ class CanvasText extends DisplayObject(PixiText) {
             this.skipTypewriter();
           });
         }
+        // Initialize typewriter sound if configured
+        if (this.typewriterOptions.sound) {
+          this.initializeTypewriterSound();
+        }
       }
       // Update layout after initializing typewriter
       this.updateLayout();
@@ -72,6 +85,10 @@ class CanvasText extends DisplayObject(PixiText) {
     if (props.typewriter) {
       if (props.typewriter) {
         this.typewriterOptions = props.typewriter;
+        // Reinitialize sound if sound configuration changed
+        if (props.typewriter.sound) {
+          this.initializeTypewriterSound();
+        }
       }
     }
     if (props.text !== undefined) {
@@ -111,6 +128,45 @@ class CanvasText extends DisplayObject(PixiText) {
   }
 
   /**
+   * Initializes the typewriter sound effect using Howler.
+   * Creates a Howl instance with the configured sound settings.
+   * Calculates the sound duration to prevent overlapping sounds.
+   */
+  private initializeTypewriterSound() {
+    if (!this.typewriterOptions.sound?.src) return;
+    
+    this.typewriterSound = new Howl({
+      src: [this.typewriterOptions.sound.src],
+      volume: this.typewriterOptions.sound.volume ?? 0.5,
+      rate: this.typewriterOptions.sound.rate ?? 1.0,
+      preload: true,
+      onload: () => {
+        // Calculate sound duration in milliseconds
+        if (this.typewriterSound) {
+          const duration = this.typewriterSound.duration();
+          const rate = this.typewriterOptions.sound?.rate ?? 1.0;
+          this.soundDuration = (duration / rate) * 1000;
+        }
+      }
+    });
+  }
+
+  /**
+   * Plays the typewriter sound with duration-based cooldown to prevent overlapping sounds.
+   * @param {number} currentTime - The current timestamp to check against sound duration.
+   */
+  private playTypewriterSound(currentTime: number) {
+    if (!this.typewriterSound || !this.typewriterOptions.sound) return;
+    
+    // Check if enough time has passed since the last sound play
+    // Use the actual sound duration to prevent overlap
+    if (this.soundDuration > 0 && currentTime - this.lastSoundTime < this.soundDuration) return;
+    
+    this.typewriterSound.play();
+    this.lastSoundTime = currentTime;
+  }
+
+  /**
    * Updates the layout properties of the text component.
    * This method ensures consistent width, height and word wrap behavior.
    */
@@ -131,6 +187,11 @@ class CanvasText extends DisplayObject(PixiText) {
       );
       this.text = this.fullText.slice(0, nextIndex);
       this.currentIndex = nextIndex;
+
+      // Play typewriter sound if configured
+      if (this.typewriterOptions.sound) {
+        this.playTypewriterSound(Date.now());
+      }
 
       // Update layout after text change to maintain proper word wrap and dimensions
       this.updateLayout();
@@ -159,7 +220,7 @@ class CanvasText extends DisplayObject(PixiText) {
 
   /**
    * Called when the component is about to be destroyed.
-   * Unsubscribes from the tick observable.
+   * Unsubscribes from the tick observable and cleans up sound resources.
    * @param {Element<any>} parent - The parent element.
    * @param {() => void} [afterDestroy] - An optional callback function to be executed after the component's own destruction logic.
    */
@@ -167,6 +228,12 @@ class CanvasText extends DisplayObject(PixiText) {
     const _afterDestroy = async () => {
       if (this.subscriptionTick) {
         this.subscriptionTick.unsubscribe();
+      }
+      // Clean up typewriter sound
+      if (this.typewriterSound) {
+        this.typewriterSound.stop();
+        this.typewriterSound.unload();
+        this.typewriterSound = undefined;
       }
       if (afterDestroy) {
         afterDestroy();

@@ -154,4 +154,39 @@ describe('Text Component', () => {
         sizeSignal.set(24)
         expect((textElement.componentInstance as any).style.fontSize).toBe(24)
     })
+
+    test('handles typewriter sound configuration', async () => {
+        const textElement = await TestBed.createComponent(Text, {
+            text: 'Text with sound',
+            typewriter: {
+                speed: 1,
+                sound: {
+                    src: '/assets/typewriter.mp3',
+                    volume: 0.5,
+                    rate: 1.0
+                }
+            }
+        })
+
+        const instance = textElement.componentInstance as any
+        expect(instance.typewriterOptions.sound).toBeDefined()
+        expect(instance.typewriterOptions.sound.src).toBe('/assets/typewriter.mp3')
+        expect(instance.typewriterOptions.sound.volume).toBe(0.5)
+        expect(instance.typewriterOptions.sound.rate).toBe(1.0)
+        expect(instance.typewriterSound).toBeDefined()
+        expect(instance.soundDuration).toBe(0) // Initially 0 until sound loads
+    })
+
+    test('handles typewriter without sound configuration', async () => {
+        const textElement = await TestBed.createComponent(Text, {
+            text: 'Text without sound',
+            typewriter: {
+                speed: 1
+            }
+        })
+
+        const instance = textElement.componentInstance as any
+        expect(instance.typewriterOptions.sound).toBeUndefined()
+        expect(instance.typewriterSound).toBeUndefined()
+    })
 }) 
