@@ -57,6 +57,8 @@ class CanvasText extends DisplayObject(PixiText) {
           });
         }
       }
+      // Update layout after initializing typewriter
+      this.updateLayout();
     }
     this.subscriptionTick = tick.observable.subscribe(() => {
       if (props.typewriter) {
@@ -79,6 +81,8 @@ class CanvasText extends DisplayObject(PixiText) {
       this.text = "";
       this.currentIndex = 0;
       this.fullText = props.text;
+      // Update layout after resetting typewriter
+      this.updateLayout();
     }
     if (props.style) {
       for (const key in props.style) {
@@ -97,16 +101,26 @@ class CanvasText extends DisplayObject(PixiText) {
     if (props.fontFamily) {
       this.style.fontFamily = props.fontFamily;
     }
+    
+    // Use the centralized layout update method
+    this.updateLayout();
+  }
+
+  get onCompleteCallback() {
+    return this.typewriterOptions.onComplete;
+  }
+
+  /**
+   * Updates the layout properties of the text component.
+   * This method ensures consistent width, height and word wrap behavior.
+   */
+  private updateLayout() {
     if (this._wordWrapWidth) {
       this.setWidth(this._wordWrapWidth);
     } else {
       this.setWidth(this.width);
     }
     this.setHeight(this.height);
-  }
-
-  get onCompleteCallback() {
-    return this.typewriterOptions.onComplete;
   }
 
   private typewriterEffect() {
@@ -117,6 +131,9 @@ class CanvasText extends DisplayObject(PixiText) {
       );
       this.text = this.fullText.slice(0, nextIndex);
       this.currentIndex = nextIndex;
+
+      // Update layout after text change to maintain proper word wrap and dimensions
+      this.updateLayout();
 
       // Check if typewriter effect is complete
       if (
@@ -135,6 +152,9 @@ class CanvasText extends DisplayObject(PixiText) {
     }
     this.text = this.fullText;
     this.currentIndex = this.fullText.length;
+    
+    // Update layout after setting full text to maintain proper word wrap and dimensions
+    this.updateLayout();
   }
 
   /**

@@ -1,24 +1,56 @@
-<Canvas width="100%" height="100%">
-   <Child>
-      @for (obj of gui) {
-        @for (obj of gui) {
-          <Text text={obj} color="red" />
-        }
-      }
-   </Child>
+<Canvas>
   
+  <Container justifyContent="center" alignItems="center" width="100%" height="100%">
+    <Container
+      ref="dialogbox"
+      scale={{ x: scaleX }}
+      anchor={[0.5, 0.5]}
+      width={700}
+      height={250}
+      positionType="absolute"
+      bottom={10}
+    >
+    <Rect width={700} height={250} color="#1a1a2e" />
+      <Rect
+        x={0}
+        y={0}
+        width={700}
+        height={250}
+        color="#1a1a2e"
+        alpha={0.9}
+        borderRadius={10}
+       
+      />
+        <Container
+          flexDirection="row"
+          width={700}
+          height={250}
+        >
+          <Container flexDirection="column">
+            <Text
+              text={text}
+              color="#fff"
+              margin={40}
+              fontSize={18}
+              typewriter
+              style={textStyle}
+            />
+          </Container>
+      </Container>
+  </Container>  
+</Container>
 </Canvas>
-<script>
 
-  import {
-    animatedSignal,
-    computed,
-    effect,
-    signal,
-    trigger,
-    mount
-  } from "canvasengine";
-  import Child  from "./child.ce";
-  
-  const gui = [1, 2, 3]
+<script>
+  const text = "Hello, world! Hello, world! Hello, world! Hello, world! Hello, world! Hello, world! Hello, world!";
+  const scaleX = 1;
+
+  const typewriter = {
+    speed: 0.3
+  }
+
+  const textStyle = {
+   wordWrap: true,
+   wordWrapWidth: 700 - 256 - 80,
+  };
 </script>

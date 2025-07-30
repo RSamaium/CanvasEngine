@@ -354,7 +354,7 @@ export const spritesheet = (framesWidth, framesHeight, frameStand = 1) => {
     
     let map = signal(null)
     
-    fetch('/map/simplemap.tmx')
+    fetch('/simplemap.tmx')
         .then((res) => res.text())
         .then((text) => {
             map.set(text)
