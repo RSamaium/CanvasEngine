@@ -1,72 +1,50 @@
-<Canvas>
-  
-  <Container justifyContent="center" alignItems="center" width="100%" height="100%">
-    <Container
-      ref="dialogbox"
-      scale={{ x: scaleX }}
-      anchor={[0.5, 0.5]}
-      width={700}
-      height={250}
-      positionType="absolute"
-      bottom={10}
-    >
-    <Rect width={700} height={250} color="#1a1a2e" />
-      <Rect
-        x={0}
-        y={0}
-        width={700}
-        height={250}
-        color="#1a1a2e"
-        alpha={0.9}
-        borderRadius={10}
-       
-      />
-        <Container
-          flexDirection="row"
-          width={700}
-          height={250}
-        >
-          <Container flexDirection="row">
-            <Container flexDirection="column">
-              <Text
-                text={text}
-                color="#fff"
-                margin={40}
-                fontSize={18}
-                typewriter
-                style={textStyle}
-              />
-            </Container>
-            <Sprite
-              image="faceset.png"
-              rectangle={{
-                x: 0,
-                y: 0,
-                width: 341,
-                height: 256,
-              }}
-            />
-          </Container>
-      </Container>
-  </Container>  
-</Container>
-</Canvas>
-
 <script>
-  const text = "Hello, world! Hello, world! Hello, world! Hello, world! Hello, world! Hello, world! Hello, world!";
-  const scaleX = 1;
 
-  const typewriter = {
-    speed: 0.3,
-    sound: {
-      src: "typewriter.wav",
-      volume: 0.3,
-      rate: 1.2
-    }
+  import { signal } from "canvasengine"
+
+
+const definition = signal({
+  id: "ai generated",
+  image: "./ai generated_idle.png",
+  width: 802,
+  height: 373,
+  framesWidth: 4,
+  framesHeight: 1,
+  textures: {
+      stand: {
+          animations: ({ direction }) => [
+              [{ time: 0, frameX: direction, frameY: 0 }]
+          ]
+      },
+      idle: {
+          animations: ({ direction }) => [
+              [
+                  { time: 0, frameX: 0, frameY: 0 },
+                  { time: 100, frameX: 1, frameY: 0 },
+                  { time: 200, frameX: 2, frameY: 0 },
+                  { time: 300, frameX: 3, frameY: 0 }
+              ]
+          ]
+      }
   }
+})
 
-  const textStyle = {
-   wordWrap: true,
-   wordWrapWidth: 700 - 256 - 80,
-  };
+const direction = signal(0)
+
+setInterval(() => {
+  direction.set(direction() === 0 ? 1 : 0)
+}, 1000)
+
 </script>
+
+<Canvas>
+  <Sprite 
+    sheet={{
+        definition,
+        playing: "stand",
+        params: {
+            direction: direction
+        }
+    }}
+  />
+</Canvas>

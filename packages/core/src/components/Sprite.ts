@@ -182,6 +182,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     const { props, propObservables } = params;
     const tick: Signal = props.context.tick;
     const sheet = props.sheet ?? {};
+    const definition = props.sheet?.definition ?? {};
     this.app = props.context.app();
     if (sheet?.onFinish) {
       this.onFinish = sheet.onFinish;
@@ -190,8 +191,8 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       if (this.destroyed) return
       this.update(value);
     });
-    if (props.sheet?.definition) {
-      this.spritesheet = props.sheet.definition;
+    if (definition) {
+      this.spritesheet = definition.value ?? definition;
       await this.createAnimations();
     }
     if (sheet.params) {
@@ -267,7 +268,14 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       return texture
     }
 
-    const sheet = props.sheet;
+    const sheet = props.sheet
+    const definition = props.sheet?.definition ?? {};
+
+    if (definition?.type === 'reset') {
+      this.spritesheet = definition.value ?? definition;
+      await this.resetAnimations();
+    }
+
     if (sheet?.params) this.sheetParams = sheet?.params;
 
     if (sheet?.playing && this.isMounted) {
@@ -287,9 +295,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       if (isElement(props.texture)) {
         const textureInstance = props.texture.componentInstance;
         textureInstance.subjectInit
-        .subscribe((value) => {
-          console.log('a', value?.width)
-        })
+        .subscribe()
         this.texture = this.renderer?.generateTexture(props.texture.componentInstance);
       } else {
         this.texture = props.texture;
@@ -337,7 +343,6 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
   stop() {
     this.currentAnimation = null;
-    this.destroy();
   }
 
   play(name: string, params: any[] = []) {
@@ -353,7 +358,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       );
     }
 
-    const cloneParams = (params);
+    const cloneParams = structuredClone(params);
 
     this.removeChildren();
     animation.sprites = [];
@@ -391,6 +396,44 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     this.update({
       deltaRatio: 1,
     });
+  }
+
+  /**
+   * Resets the sprite by destroying and recreating all animations
+   * This method clears the current animation state, destroys existing textures,
+   * and recreates all animations from the spritesheet
+   * 
+   * @example
+   * ```typescript
+   * // Reset all animations to their initial state
+   * sprite.resetAnimations();
+   * 
+   * // Reset and then play a specific animation
+   * await sprite.resetAnimations();
+   * sprite.play('walk');
+   * ```
+   */
+  async resetAnimations(): Promise<void> {
+    // Stop current animation
+    this.stop();
+    
+    // Clear all animations and textures
+    this.animations.clear();
+    
+    // Reset animation state
+    this.currentAnimation = null;
+    this.currentAnimationContainer = null;
+    this.time = 0;
+    this.frameIndex = 0;
+    
+    // Clear children
+    this.removeChildren();
+
+    // Recreate animations from spritesheet
+    if (this.spritesheet) {
+      await this.createAnimations();
+      this.play(this.sheetCurrentAnimation, [this.sheetParams]);
+    }
   }
 
   update({ deltaRatio }) {
