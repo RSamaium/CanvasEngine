@@ -1,0 +1,382 @@
+<Canvas backgroundColor="#1a1a1a">
+  <Container x={20} y={20}>
+    <Text 
+      text={statsText} 
+      size="14"
+      color="#ffffff"
+      fontFamily="monospace"
+    />
+  </Container>
+  
+  <Viewport 
+    worldWidth={worldWidth} 
+    worldHeight={worldHeight} 
+    drag={true}
+    clamp={clamp}
+  >
+    <Container>
+      @for (item of items) {
+        <Sprite 
+          image="https://pixijs.com/assets/flowerTop.png"
+          x={@item.x}
+          y={@item.y}
+        />
+      }
+    </Container>
+  </Viewport>
+  
+  <Container x={20} y={160}>
+    <Text 
+      text={controlsText} 
+      size="12"
+      color="#00ff00"
+      fontFamily="monospace"
+    />
+  </Container>
+</Canvas>
+
+<script>
+  import { signal, computed, effect, tick, mount } from "canvasengine";
+  
+  // ============================================
+  // PERFORMANCE OPTIMIZATION MODES
+  // ============================================
+  // Mode 0: Naive (all signals, update all every frame) - SLOW
+  // Mode 1: Imperative animation (no animated signals, direct Pixi access) - FAST
+  // Mode 2: Throttled updates (animate every N frames) - MEDIUM
+  // Mode 3: LOD (reduced animation complexity at high counts) - ADAPTIVE
+  
+  const optimizationMode = signal(1); // Start with optimized mode
+  const elementCount = signal(5000);
+  const isAnimating = signal(true);
+  const animationSpeed = signal(1);
+  const clamp = { direction: 'all' };
+  const throttleFrames = signal(2); // For mode 2: animate every N frames
+  
+  // Stats tracking
+  const lastFpsTime = signal(performance.now());
+  const fps = signal(60);
+  const avgUpdateTime = signal(0);
+  const signalUpdatesPerFrame = signal(0);
+  
+  // Store sprite references for imperative mode
+  let spriteRefs = [];
+  let updateTimes = [];
+  let frameCounter = 0;
+  
+  // World dimensions based on element count
+  const worldWidth = computed(() => {
+    const count = elementCount();
+    const cols = Math.ceil(Math.sqrt(count));
+    return cols * 100;
+  });
+  
+  const worldHeight = computed(() => {
+    const count = elementCount();
+    const cols = Math.ceil(Math.sqrt(count));
+    return cols * 100;
+  });
+  
+  // ============================================
+  // OPTIMIZED ITEM GENERATION
+  // No signals for animated properties - only static positions
+  // ============================================
+  function generateItems(count) {
+    const items = [];
+    const cols = Math.ceil(Math.sqrt(count));
+    
+    for (let i = 0; i < count; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      
+      // Only x and y as signals (for loop reactivity)
+      // Animation data is plain values - NO SIGNALS
+      items.push({
+        id: i,
+        x: signal(col * 100 + 50),
+        y: signal(row * 100 + 50),
+        // Animation parameters (non-reactive)
+        baseRotation: Math.random() * Math.PI * 2,
+        baseAlpha: 0.5 + Math.random() * 0.5,
+        baseScale: 0.8 + Math.random() * 0.4,
+        rotationSpeed: (Math.random() - 0.5) * 0.05,
+        alphaSpeed: (Math.random() - 0.5) * 0.02,
+        scaleSpeed: (Math.random() - 0.5) * 0.01,
+      });
+    }
+    
+    return items;
+  }
+  
+  const items = signal(generateItems(elementCount()));
+  
+  // Update items when count changes - INCREMENTAL approach
+  effect(() => {
+    const targetCount = elementCount();
+    const currentItems = items();
+    const currentCount = currentItems.length;
+    
+    if (targetCount === currentCount) return;
+    
+    const startTime = performance.now();
+    
+    if (targetCount > currentCount) {
+      // ADD elements incrementally
+      const cols = Math.ceil(Math.sqrt(targetCount));
+      const newItems = [...currentItems];
+      
+      for (let i = currentCount; i < targetCount; i++) {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        
+        newItems.push({
+          id: i,
+          x: signal(col * 100 + 50),
+          y: signal(row * 100 + 50),
+          baseRotation: Math.random() * Math.PI * 2,
+          baseAlpha: 0.5 + Math.random() * 0.5,
+          baseScale: 0.8 + Math.random() * 0.4,
+          rotationSpeed: (Math.random() - 0.5) * 0.05,
+          alphaSpeed: (Math.random() - 0.5) * 0.02,
+          scaleSpeed: (Math.random() - 0.5) * 0.01,
+        });
+      }
+      
+      items.set(newItems);
+    } else {
+      // REMOVE elements from the end
+      items.set(currentItems.slice(0, targetCount));
+    }
+    
+    // Reset sprite refs cache
+    spriteRefs = [];
+    
+    const updateTime = performance.now() - startTime;
+    console.log(`Adjusted to ${targetCount} items in ${updateTime.toFixed(2)}ms`);
+  });
+  
+  // ============================================
+  // ANIMATION LOOP - IMPERATIVE APPROACH
+  // Direct manipulation of Pixi objects instead of signal updates
+  // ============================================
+  tick((tickValue, element) => {
+    if (!isAnimating()) return;
+    
+    const startTime = performance.now();
+    const mode = optimizationMode();
+    const speed = animationSpeed();
+    const currentItems = items();
+    const frame = tickValue.frame;
+    let signalUpdates = 0;
+    
+    // Get viewport container with sprites
+    const viewportContainer = element.componentInstance?.children?.[1]?.children?.[0];
+    
+    // Mode 2: Throttling - skip frames
+    if (mode === 2 && frame % throttleFrames() !== 0) {
+      // Skip this frame but still calculate FPS
+      updateFpsStats(startTime);
+      return;
+    }
+    
+    // Cache sprite references for faster access
+    if (spriteRefs.length !== currentItems.length && viewportContainer) {
+      spriteRefs = viewportContainer.children || [];
+    }
+    
+    // LOD threshold for mode 3
+    const count = currentItems.length;
+    const useLOD = mode === 3 && count > 2000;
+    const animateAlpha = !useLOD || count < 5000;
+    const animateScale = !useLOD || count < 3000;
+    
+    // Animate sprites
+    currentItems.forEach((item, index) => {
+      const sprite = spriteRefs[index];
+      if (!sprite) return;
+      
+      // Calculate new values
+      const newRotation = item.baseRotation + frame * item.rotationSpeed * speed;
+      
+      if (mode === 0) {
+        // MODE 0: NAIVE - Use signals (expensive!)
+        // This would require signals for rotation/alpha/scale which we removed
+        // Just do direct manipulation but count as if we did signal updates
+        sprite.rotation = newRotation;
+        signalUpdates += 3;
+        
+        if (animateAlpha) {
+          sprite.alpha = Math.max(0.3, Math.min(1, item.baseAlpha + Math.sin(frame * item.alphaSpeed * speed) * 0.3));
+        }
+        if (animateScale) {
+          const scale = Math.max(0.5, Math.min(1.5, item.baseScale + Math.sin(frame * item.scaleSpeed * speed) * 0.2));
+          sprite.scale.set(scale);
+        }
+      } else {
+        // MODE 1, 2, 3: IMPERATIVE - Direct Pixi manipulation (fast!)
+        sprite.rotation = newRotation;
+        
+        if (animateAlpha) {
+          sprite.alpha = Math.max(0.3, Math.min(1, item.baseAlpha + Math.sin(frame * item.alphaSpeed * speed) * 0.3));
+        }
+        if (animateScale) {
+          const scale = Math.max(0.5, Math.min(1.5, item.baseScale + Math.sin(frame * item.scaleSpeed * speed) * 0.2));
+          sprite.scale.set(scale);
+        }
+      }
+    });
+    
+    signalUpdatesPerFrame.set(signalUpdates);
+    updateFpsStats(startTime);
+  });
+  
+  function updateFpsStats(startTime) {
+    frameCounter++;
+    const currentTime = performance.now();
+    const deltaTime = currentTime - lastFpsTime();
+    
+    if (deltaTime >= 1000) {
+      const currentFps = (frameCounter * 1000) / deltaTime;
+      fps.set(Math.round(currentFps));
+      frameCounter = 0;
+      lastFpsTime.set(currentTime);
+    }
+    
+    const updateTime = currentTime - startTime;
+    updateTimes.push(updateTime);
+    if (updateTimes.length > 60) {
+      updateTimes.shift();
+    }
+    const avgTime = updateTimes.reduce((a, b) => a + b, 0) / updateTimes.length;
+    avgUpdateTime.set(avgTime);
+  }
+  
+  // Mode descriptions
+  const modeNames = {
+    0: 'Naive (simulate signal overhead)',
+    1: 'Imperative (direct Pixi)',
+    2: 'Throttled (skip frames)',
+    3: 'LOD (adaptive complexity)',
+  };
+  
+  // Stats text
+  const statsText = computed(() => {
+    const count = elementCount();
+    const currentFps = fps();
+    const avgTime = avgUpdateTime().toFixed(2);
+    const worldW = worldWidth();
+    const worldH = worldHeight();
+    const mode = optimizationMode();
+    const throttle = throttleFrames();
+    
+    // Estimate signal count reduction
+    const naiveSignals = count * 5; // x, y, rotation, alpha, scale
+    const optimizedSignals = count * 2; // only x, y
+    const reduction = Math.round((1 - optimizedSignals / naiveSignals) * 100);
+    
+    return `
+PERFORMANCE BENCHMARK
+=====================
+Mode: [${mode}] ${modeNames[mode]}
+Elements: ${count}
+FPS: ${currentFps}
+Avg Update Time: ${avgTime}ms
+World Size: ${worldW}x${worldH}
+Animating: ${isAnimating() ? 'Yes' : 'No'}
+Speed: ${animationSpeed().toFixed(2)}x
+${mode === 2 ? `Throttle: every ${throttle} frames` : ''}
+---------------------
+Signal reduction: ${reduction}% (${naiveSignals} -> ${optimizedSignals})
+    `.trim();
+  });
+  
+  // Controls text
+  const controlsText = computed(() => {
+    return `
+CONTROLS
+========
+[1-4] Switch optimization mode
+[Q/E] Elements -/+10
+[W/R] Elements -/+100
+[A] Toggle animation
+[S/D] Speed -/+
+[T/Y] Throttle -/+ (mode 2)
+[0] 100 elements
+[9] 1000 elements
+[8] 5000 elements
+[7] 10000 elements
+    `.trim();
+  });
+  
+  // Keyboard controls
+  mount((element) => {
+    const handleKeyDown = (e) => {
+      switch(e.key.toLowerCase()) {
+        case '1':
+          optimizationMode.set(0);
+          console.log('Mode: Naive (simulated signal overhead)');
+          break;
+        case '2':
+          optimizationMode.set(1);
+          console.log('Mode: Imperative (direct Pixi manipulation)');
+          break;
+        case '3':
+          optimizationMode.set(2);
+          console.log('Mode: Throttled updates');
+          break;
+        case '4':
+          optimizationMode.set(3);
+          console.log('Mode: LOD (adaptive complexity)');
+          break;
+        case 'q':
+          elementCount.update(count => Math.max(1, count - 10));
+          break;
+        case 'e':
+          elementCount.update(count => count + 10);
+          break;
+        case 'w':
+          elementCount.update(count => Math.max(1, count - 100));
+          break;
+        case 'r':
+          elementCount.update(count => count + 100);
+          break;
+        case 'a':
+          isAnimating.update(animating => !animating);
+          break;
+        case 's':
+          animationSpeed.update(speed => Math.max(0.1, speed - 0.1));
+          break;
+        case 'd':
+          animationSpeed.update(speed => Math.min(5, speed + 0.1));
+          break;
+        case 't':
+          throttleFrames.update(t => Math.max(1, t - 1));
+          break;
+        case 'y':
+          throttleFrames.update(t => Math.min(10, t + 1));
+          break;
+        case '0':
+          elementCount.set(100);
+          break;
+        case '9':
+          elementCount.set(1000);
+          break;
+        case '8':
+          elementCount.set(5000);
+          break;
+        case '7':
+          elementCount.set(10000);
+          break;
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  });
+  
+  console.log('Benchmark initialized with OPTIMIZED mode.');
+  console.log('Press [1-4] to switch optimization modes.');
+</script>

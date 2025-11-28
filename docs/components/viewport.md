@@ -122,4 +122,105 @@ In this example, the red rectangle will be followed by the viewport, keeping it 
 **Important**: When an element has `viewportFollow` set to `true`, it will automatically disable the dragging functionality of the parent viewport. This is by design as viewport dragging would conflict with the following behavior.
 :::
 
+## Performance Optimization
+
+When rendering large numbers of elements (1000+) inside a Viewport, consider these optimization strategies:
+
+### 1. Viewport Culling
+
+The `viewportCull` directive automatically hides elements outside the visible area, significantly reducing render overhead:
+
+```html
+<Viewport worldWidth="5000" worldHeight="5000" drag={true}>
+  <Container viewportCull={true}>
+    @for (item of items) {
+      <Sprite image={@item.image} x={@item.x} y={@item.y} />
+    }
+  </Container>
+</Viewport>
+```
+
+::: tip
+Culling is most effective when only a small portion of the world is visible at once. If most elements are always on screen, culling overhead may not be worth it.
+:::
+
+### 2. Reduce Signal Granularity
+
+Instead of creating signals for every animated property, use direct Pixi manipulation in `tick()`:
+
+```html
+<script>
+  import { tick, mount } from 'canvasengine';
+  
+  // BAD: 5 signals per element = expensive with 1000+ elements
+  const items = signal(data.map(d => ({
+    x: signal(d.x),
+    y: signal(d.y),
+    rotation: signal(0),    // Don't do this for animations!
+    alpha: signal(1),       // Don't do this for animations!
+    scale: signal(1),       // Don't do this for animations!
+  })));
+  
+  // GOOD: Only position signals, animate imperatively
+  const items = signal(data.map(d => ({
+    x: signal(d.x),
+    y: signal(d.y),
+    rotationSpeed: Math.random() * 0.1,
+  })));
+  
+  tick((tickValue, element) => {
+    const viewport = element.componentInstance.children[0];
+    viewport.children.forEach((sprite, i) => {
+      sprite.rotation += items()[i].rotationSpeed;
+    });
+  });
+</script>
+```
+
+### 3. Throttle Updates
+
+For non-critical animations, update every N frames instead of every frame:
+
+```html
+<script>
+  tick((tickValue) => {
+    if (tickValue.frame % 2 !== 0) return; // Skip every other frame
+    
+    // Animation logic here
+  });
+</script>
+```
+
+### 4. Level of Detail (LOD)
+
+Reduce animation complexity based on element count:
+
+```html
+<script>
+  tick((tickValue, element) => {
+    const count = items().length;
+    
+    sprites.forEach(sprite => {
+      sprite.rotation += 0.01; // Always animate rotation
+      
+      if (count < 3000) {
+        sprite.alpha = Math.sin(tickValue.frame * 0.05); // Alpha only below 3k
+      }
+      if (count < 1000) {
+        sprite.scale.set(1 + Math.sin(tickValue.frame * 0.02) * 0.1); // Scale only below 1k
+      }
+    });
+  });
+</script>
+```
+
+### Performance Summary
+
+| Element Count | Recommended Strategy |
+|---------------|---------------------|
+| < 500 | Full reactivity (signals for all props) |
+| 500 - 2000 | Imperative animations + position signals |
+| 2000 - 5000 | + Viewport culling + throttled updates |
+| > 5000 | + LOD + consider chunked rendering |
+
 <!-- @include: ./_display-object.md -->
