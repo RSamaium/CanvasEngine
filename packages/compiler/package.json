@@ -4,6 +4,9 @@
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup && cp grammar.pegjs ../../docs/public/grammar.pegjs",
     "dev": "tsup --watch"

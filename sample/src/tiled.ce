@@ -1,0 +1,30 @@
+<Canvas>
+    <TiledMap 
+        map={map} 
+        createLayersPerTilesZ={true} 
+        basePath="/map" 
+        objectLayer={(layer) => <Rect width={32} height={32} color="red" />} 
+    />
+</Canvas>
+
+<script>
+    import { TiledMap } from '@canvasengine/presets'
+    import { signal } from 'canvasengine'
+    
+    let map = signal(null)
+    
+    fetch('/simplemap.tmx')
+        .then((res) => res.text())
+        .then((text) => {
+            map.set(text)
+        })
+
+    setTimeout(() => {
+        console.log('loading map.tmx')
+        fetch('/map.tmx')
+        .then((res) => res.text())
+        .then((text) => {
+            map.set(text)
+        })
+    }, 3000)
+</script>

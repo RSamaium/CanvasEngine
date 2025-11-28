@@ -1,50 +1,22 @@
-<script>
-
-  import { signal } from "canvasengine"
-
-
-const definition = signal({
-  id: "ai generated",
-  image: "./ai generated_idle.png",
-  width: 802,
-  height: 373,
-  framesWidth: 4,
-  framesHeight: 1,
-  textures: {
-      stand: {
-          animations: ({ direction }) => [
-              [{ time: 0, frameX: direction, frameY: 0 }]
-          ]
-      },
-      idle: {
-          animations: ({ direction }) => [
-              [
-                  { time: 0, frameX: 0, frameY: 0 },
-                  { time: 100, frameX: 1, frameY: 0 },
-                  { time: 200, frameX: 2, frameY: 0 },
-                  { time: 300, frameX: 3, frameY: 0 }
-              ]
-          ]
-      }
-  }
-})
-
-const direction = signal(0)
-
-setInterval(() => {
-  direction.set(direction() === 0 ? 1 : 0)
-}, 1000)
-
-</script>
 
 <Canvas>
-  <Sprite 
-    sheet={{
-        definition,
-        playing: "stand",
-        params: {
-            direction: direction
-        }
-    }}
-  />
+  <Container  x y>
+    <Sprite image="https://pixijs.com/assets/flowerTop.png"  />
+  </Container>
 </Canvas>
+
+<script>
+  import { TiledMap } from '@canvasengine/presets'
+  import { signal } from 'canvasengine'
+  
+  let map = signal({})
+  
+  const x = signal(0)
+  const y = signal(0)
+
+  setInterval(() => {
+    x.update(x => x + 1)
+    y.update(y => y + 1)
+  }, 16)
+</script>
+      

@@ -1,4 +1,6 @@
 import { defineConfig } from 'tsup'
+import { copyFileSync } from 'fs'
+import { join } from 'path'
 
 export default  defineConfig({
     format: ['esm'],
@@ -11,4 +13,11 @@ export default  defineConfig({
     entry: ['index.ts'],
     outDir: 'dist',
     external: ['vite', 'acorn', 'peggy', 'typescript'],
+    onSuccess: async () => {
+        // Copy grammar.pegjs to dist directory
+        copyFileSync(
+            join(process.cwd(), 'grammar.pegjs'),
+            join(process.cwd(), 'dist', 'grammar.pegjs')
+        )
+    },
 })

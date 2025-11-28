@@ -248,8 +248,49 @@ simpleTextPart "simple text part"
     }
 
 simpleDynamicPart "simple dynamic part"
-  = "{" _ expr:attributeValue _ "}" {
-      // Handle dynamic expressions like {item.name} or {@text}
+  = "{{" _ expr:attributeValue _ "}}" {
+      // Handle double brace expressions like {{ object.x }} or {{ @object.x }} or {{ @object.@x }}
+      if (expr.trim().match(/^(@?[a-zA-Z_][a-zA-Z0-9_]*)(\.@?[a-zA-Z_][a-zA-Z0-9_]*)*$/)) {
+        let foundSignal = false;
+        let hasLiterals = false;
+        
+        // Split by dots to handle each part separately
+        const parts = expr.split('.');
+        const allLiterals = parts.every(part => part.trim().startsWith('@'));
+        
+        let computedValue;
+        
+        if (allLiterals) {
+          // All parts are literals, just remove @ prefixes
+          computedValue = parts.map(part => part.replace('@', '')).join('.');
+          hasLiterals = true;
+        } else {
+          // Transform each part individually
+          computedValue = parts.map(part => {
+            const trimmedPart = part.trim();
+            if (trimmedPart.startsWith('@')) {
+              hasLiterals = true;
+              return trimmedPart.substring(1); // Remove @ prefix for literals
+            } else {
+              // Don't transform keywords
+              if (['true', 'false', 'null'].includes(trimmedPart)) {
+                return trimmedPart;
+              }
+              foundSignal = true;
+              return `${trimmedPart}()`;
+            }
+          }).join('.');
+        }
+        
+        if (foundSignal && !allLiterals) {
+          return `computed(() => ${computedValue})`;
+        }
+        return computedValue;
+      }
+      return expr;
+    }
+  / "{" _ expr:attributeValue _ "}" {
+      // Handle single brace expressions like {item.name} or {@text}
       if (expr.trim().match(/^@?[a-zA-Z_][a-zA-Z0-9_.]*$/)) {
         let foundSignal = false;
         const computedValue = expr.replace(/@?[a-zA-Z_][a-zA-Z0-9_]*(?!:)/g, (match) => {
@@ -396,14 +437,50 @@ dynamicAttribute "dynamic attribute"
       const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
       const formattedName = needsQuotes ? `'${attributeName}'` : attributeName;
       
-      // If it's a complex object literal starting with curly braces, preserve it as is
-      if (attributeValue.trim().startsWith('{') && attributeValue.trim().endsWith('}')) {
-        return `${formattedName}: ${attributeValue}`;
-      }
       
-      // If it's a template string, preserve it as is
+        // If it's a complex object with strings, preserve it as is
+        if (attributeValue.trim().startsWith('{') && attributeValue.trim().endsWith('}') && 
+            (attributeValue.includes('"') || attributeValue.includes("'"))) {
+          return `${formattedName}: ${attributeValue}`;
+        }
+        
+        // If it's a template string, transform expressions inside ${}
       if (attributeValue.trim().startsWith('`') && attributeValue.trim().endsWith('`')) {
-        return `${formattedName}: ${attributeValue}`;
+        // Transform expressions inside ${} in template strings
+        let transformedTemplate = attributeValue;
+        
+        // Find and replace ${expression} patterns
+        let startIndex = 0;
+        while (true) {
+          const dollarIndex = transformedTemplate.indexOf('${', startIndex);
+          if (dollarIndex === -1) break;
+          
+          const braceIndex = transformedTemplate.indexOf('}', dollarIndex);
+          if (braceIndex === -1) break;
+          
+          const expr = transformedTemplate.substring(dollarIndex + 2, braceIndex);
+          const trimmedExpr = expr.trim();
+          
+          let replacement;
+          if (trimmedExpr.startsWith('@')) {
+            // Remove @ prefix for literals
+            replacement = '${' + trimmedExpr.substring(1) + '}';
+          } else if (trimmedExpr.match(/^[a-zA-Z_][a-zA-Z0-9_.]*$/)) {
+            // Transform identifiers to signals
+            replacement = '${' + trimmedExpr + '()}';
+          } else {
+            // Keep as is for complex expressions
+            replacement = '${' + expr + '}';
+          }
+          
+          transformedTemplate = transformedTemplate.substring(0, dollarIndex) + 
+                               replacement + 
+                               transformedTemplate.substring(braceIndex + 1);
+          
+          startIndex = dollarIndex + replacement.length;
+        }
+        
+        return formattedName + ': ' + transformedTemplate;
       }
       
       // Handle other types of values
@@ -412,17 +489,68 @@ dynamicAttribute "dynamic attribute"
       } else if (attributeValue.trim().match(/^[a-zA-Z_]\w*$/)) {
         return `${formattedName}: ${attributeValue}`;
       } else {
+        // Check if this is an object or array literal
+        const isObjectLiteral = attributeValue.trim().startsWith('{ ') && attributeValue.trim().endsWith(' }');
+        const isArrayLiteral = attributeValue.trim().startsWith('[') && attributeValue.trim().endsWith(']');
+        
         let foundSignal = false;
-        const computedValue = attributeValue.replace(/@?[a-zA-Z_][a-zA-Z0-9_]*(?!:)/g, (match) => {
-          if (match.startsWith('@')) {
-            return match.substring(1);
+        let hasLiterals = false;
+        let computedValue = attributeValue;
+        
+        // For simple object and array literals (like {x: x, y: 20} or [x, 20]), 
+        // don't use computed() at all and don't transform identifiers
+        if ((isObjectLiteral || isArrayLiteral) && !attributeValue.includes('()')) {
+          // Don't transform anything, return as is
+          foundSignal = false;
+          computedValue = attributeValue;
+        } else {
+          // Apply signal transformation for other values
+          computedValue = attributeValue.replace(/@?([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*:)/g, (match, p1, offset) => {
+            // Don't transform keywords, numbers, or if we're inside quotes
+            if (['true', 'false', 'null'].includes(p1) || /^\d+(\.\d+)?$/.test(p1)) {
+              return match;
+            }
+            
+            // Check if we're inside a string literal
+            const beforeMatch = attributeValue.substring(0, offset);
+            const singleQuotesBefore = (beforeMatch.match(/'/g) || []).length;
+            const doubleQuotesBefore = (beforeMatch.match(/"/g) || []).length;
+            
+            // If we're inside quotes, don't transform
+            if (singleQuotesBefore % 2 === 1 || doubleQuotesBefore % 2 === 1) {
+              return match;
+            }
+            
+            if (match.startsWith('@')) {
+              hasLiterals = true;
+              return p1; // Remove @ prefix
+            }
+            foundSignal = true;
+            return `${p1}()`;
+          });
+          
+          // Check if any values already contain signals (ending with ())
+          if (attributeValue.includes('()')) {
+            foundSignal = true;
           }
-          foundSignal = true;
-          return `${match}()`;
-        });
+        }
+        
         if (foundSignal) {
+          // For objects, wrap in parentheses
+          if (attributeValue.trim().startsWith('{') && attributeValue.trim().endsWith('}')) {
+            // Remove spaces for objects in parentheses
+            const cleanedObject = computedValue.replace(/{ /g, '{').replace(/ }/g, '}');
+            return `${formattedName}: computed(() => (${cleanedObject}))`;
+          }
           return `${formattedName}: computed(() => ${computedValue})`;
         }
+        
+        // If only literals (all @), don't use computed
+        if (hasLiterals && !foundSignal) {
+          return `${formattedName}: ${computedValue}`;
+        }
+        
+        // For static objects and arrays, return as is without parentheses
         return `${formattedName}: ${computedValue}`;
       }
     }
@@ -436,11 +564,7 @@ attributeValue "attribute value"
   / functionWithElement
   / objectLiteral
   / $([^{}]* ("{" [^{}]* "}" [^{}]*)*) {
-    const t = text().trim()
-    if (t.startsWith("{") && t.endsWith("}")) {
-      return `(${t})`;
-    }
-    return t
+    return text().trim()
   }
 
 objectLiteral "object literal"
@@ -467,6 +591,7 @@ propertyValue
   / element
   / functionWithElement
   / stringLiteral
+  / number
   / identifier
 
 nestedObject

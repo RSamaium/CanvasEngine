@@ -96,8 +96,9 @@ export default function canvasengine() {
   const __dirname = path.dirname(__filename);
 
   const grammar = fs.readFileSync(
-    path.join(__dirname, "grammar.pegjs").replace("dist/grammar.pegjs", "grammar.pegjs"), 
-  "utf8");
+    path.join(__dirname, "grammar.pegjs"),
+    "utf8"
+  );
   const parser = generate(grammar);
   const isDev = process.env.NODE_ENV === "dev";
   const FLAG_COMMENT = "/*--[TPL]--*/";
