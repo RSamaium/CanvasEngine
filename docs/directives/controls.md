@@ -71,3 +71,51 @@ const controls = signal({
     y
 />
 ```
+
+## Getting the Controls Instance
+
+To access the controls directive instance and use its methods, you can use the `mount()` hook:
+
+```html
+<script>
+import { signal, mount } from "canvasengine";
+
+// ... controls configuration ...
+
+mount((element) => {
+  const controlsInstance = element.directives.controls;
+  
+  if (controlsInstance) {
+    // Get a specific control
+    const leftControl = controlsInstance.getControl('left');
+    
+    // Get all controls
+    const allControls = controlsInstance.getControls();
+    
+    // Stop listening to inputs
+    controlsInstance.stopInputs();
+    
+    // Resume listening to inputs
+    controlsInstance.listenInputs();
+    
+    // Programmatically trigger a control
+    controlsInstance.applyControl('right', true); // keydown
+    controlsInstance.applyControl('right', false); // keyup
+    
+    // Access the controls options
+    const options = controlsInstance.options;
+  }
+});
+</script>
+```
+
+### Available Methods
+
+The `KeyboardControls` directive instance provides the following methods:
+
+- `getControl(inputName: string)` - Get a specific control by input name
+- `getControls()` - Get all bound controls
+- `applyControl(controlName: string, isDown?: boolean)` - Programmatically trigger a control
+- `stopInputs()` - Stop listening to keyboard inputs
+- `listenInputs()` - Resume listening to keyboard inputs
+- `options` - Access the controls configuration object

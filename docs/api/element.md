@@ -85,3 +85,33 @@ The Element interface represents a component in the framework. It contains all t
 </script>
 
 ```
+
+### Get directives
+
+You can access directive instances through the `directives` property. Each directive is stored with its attribute name as the key.
+
+```html
+<Sprite image="path/to/image.png" controls drag />
+
+<script>
+  import { mount } from 'canvasengine';
+
+  mount((element) => {
+    // Access the controls directive instance
+    const controlsInstance = element.directives.controls;
+    
+    if (controlsInstance) {
+      // Use methods from the directive instance
+      // For example, with controls directive:
+      // controlsInstance.stopInputs()
+      // controlsInstance.getControls()
+    }
+    
+    // Access the drag directive instance
+    const dragInstance = element.directives.drag;
+    
+    // Check all available directives
+    console.log(Object.keys(element.directives));
+  });
+</script>
+```
