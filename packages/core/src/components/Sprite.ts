@@ -86,10 +86,65 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
   private currentAnimationContainer: Container | null = null;
 
+  /**
+   * Auto-detects image dimensions by loading the image and reading its natural size
+   * This is used when width/height are not explicitly provided in the spritesheet definition
+   * 
+   * @param imagePath - Path to the image file
+   * @returns Object containing the detected width and height of the image
+   * 
+   * @example
+   * ```typescript
+   * const { width, height } = await sprite.detectImageDimensions('path/to/image.png');
+   * // width: 256, height: 128
+   * ```
+   */
+  private async detectImageDimensions(imagePath: string): Promise<{ width: number; height: number }> {
+    if (!imagePath || typeof imagePath !== 'string' || imagePath.trim() === '') {
+      throw new Error(`Invalid image path provided to detectImageDimensions: ${imagePath}`);
+    }
+    
+    const texture = await Assets.load(imagePath);
+    return {
+      width: texture.width,
+      height: texture.height,
+    };
+  }
+
+  /**
+   * Creates textures from a spritesheet image by cutting it into frames
+   * Automatically detects image dimensions if width/height are not provided
+   * 
+   * @param options - Texture options containing image path, dimensions, and frame configuration
+   * @returns A 2D array of textures organized by rows and columns
+   * 
+   * @example
+   * ```typescript
+   * // With explicit dimensions
+   * const textures = await sprite.createTextures({
+   *   image: 'path/to/image.png',
+   *   width: 256,
+   *   height: 128,
+   *   framesWidth: 4,
+   *   framesHeight: 2,
+   *   spriteWidth: 64,
+   *   spriteHeight: 64
+   * });
+   * 
+   * // Without dimensions (automatically detected)
+   * const textures = await sprite.createTextures({
+   *   image: 'path/to/image.png',
+   *   framesWidth: 4,
+   *   framesHeight: 2,
+   *   spriteWidth: 64,
+   *   spriteHeight: 64
+   * });
+   * ```
+   */
   private async createTextures(
     options: Required<TextureOptionsMerging>
   ): Promise<Texture[][]> {
-    const { width, height, framesHeight, framesWidth, image, offset } = options;
+    let { width, height, framesHeight, framesWidth, image, offset } = options;
     
     if (!image || typeof image !== 'string' || image.trim() === '') {
       console.warn('Invalid image path provided to createTextures:', image);
@@ -97,6 +152,17 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     }
     
     const texture = await Assets.load(image);
+    
+    // Auto-detect width and height from the image if not provided
+    if (!width || width <= 0) {
+      width = texture.width;
+      options.width = width;
+    }
+    if (!height || height <= 0) {
+      height = texture.height;
+      options.height = height;
+    }
+    
     const spriteWidth = options.spriteWidth;
     const spriteHeight = options.spriteHeight;
     const frames: Texture[][] = [];
@@ -155,12 +221,30 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       } as any;
       const {
         rectWidth,
-        width = 0,
+        width: widthOption = 0,
         framesWidth = 1,
         rectHeight,
-        height = 0,
+        height: heightOption = 0,
         framesHeight = 1,
+        image,
       } = optionsTextures;
+      
+      // Auto-detect width and height from the image if not provided
+      let width = widthOption;
+      let height = heightOption;
+      
+      if (image && ((!width || width <= 0) || (!height || height <= 0))) {
+        const dimensions = await this.detectImageDimensions(image);
+        if (!width || width <= 0) {
+          width = dimensions.width;
+          optionsTextures.width = width;
+        }
+        if (!height || height <= 0) {
+          height = dimensions.height;
+          optionsTextures.height = height;
+        }
+      }
+      
       optionsTextures.spriteWidth = rectWidth ? rectWidth : width / framesWidth;
       optionsTextures.spriteHeight = rectHeight
         ? rectHeight

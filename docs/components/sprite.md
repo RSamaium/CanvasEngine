@@ -19,6 +19,8 @@
 
 ## Sprite Sheet:
 
+### With explicit dimensions:
+
 ```html
 <script>
 const definition = {
@@ -63,6 +65,40 @@ const onFinish = () => {
 />
 ```
 
+### With auto-detected dimensions:
+
+The `width` and `height` parameters are optional. If not provided, they will be automatically detected from the image dimensions when the sprite is loaded.
+
+```html
+<script>
+const definition = {
+    id: "explosion",
+    image: "./exp.png",
+    framesWidth: 4,
+    framesHeight: 4,
+    textures: {
+        default: {
+             animations: () => [
+                [ 
+                    { time: 0, frameX: 0, frameY: 0 },
+                    { time: 10, frameX: 1, frameY: 0 },
+                    { time: 20, frameX: 2, frameY: 0 },
+                    { time: 30, frameX: 3, frameY: 0 }
+                ]
+             ]
+        }
+    }
+}
+</script>
+
+<Sprite 
+    sheet={{
+        definition,
+        playing: "default"
+    }}
+/>
+```
+
 ## Sprite with Hitbox:
 
 ```html
@@ -80,8 +116,8 @@ When using a hitbox, the sprite's anchor will be automatically calculated based 
 |-----------|------|-------------|
 | `id` | string | Unique identifier for the spritesheet |
 | `image` | string | Path to the spritesheet image |
-| `width` | number | Total width of the spritesheet image |
-| `height` | number | Total height of the spritesheet image |
+| `width` | number | (Optional) Total width of the spritesheet image. If not provided, will be automatically detected from the image dimensions |
+| `height` | number | (Optional) Total height of the spritesheet image. If not provided, will be automatically detected from the image dimensions |
 | `framesWidth` | number | Number of frames horizontally in the spritesheet |
 | `framesHeight` | number | Number of frames vertically in the spritesheet |
 | `rectWidth` | number | (Optional) Width of each frame if not equal to width/framesWidth |

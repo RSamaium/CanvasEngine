@@ -1,0 +1,106 @@
+<Canvas backgroundColor="#2c3e50">
+  <Container>
+    <Rect 
+      color="#3498db" 
+      width={60} 
+      height={60} 
+      borderRadius={8}
+      controls 
+      x 
+      y 
+    />
+    
+    <!-- Display gamepad status -->
+    <Text 
+      text={gamepadStatus}
+      x={10}
+      y={10}
+      color="#ecf0f1"
+      size="16"
+      fontFamily="Arial"
+    />
+    
+    <!-- Instructions -->
+    <Text 
+      text="Use arrow keys or a gamepad to move the rectangle"
+      x={10}
+      y={40}
+      color="#95a5a6"
+      size="12"
+      fontFamily="Arial"
+    />
+  </Container>
+</Canvas>
+
+<script>
+  import { signal, computed, effect } from "canvasengine";
+
+  // Rectangle position
+  const x = signal(200);
+  const y = signal(200);
+  
+  // Movement speed
+  const speed = signal(5);
+
+  // Gamepad connection status signal
+  const gamepadConnected = signal(false);
+  
+  // Gamepad status text (reactive, updated when gamepadConnected changes)
+  const gamepadStatus = computed(() => 
+    gamepadConnected() ? "Gamepad: Connected ✅" : "Gamepad: Not connected"
+  );
+
+  effect(() => {
+    console.log(gamepadConnected());
+  });
+
+  // Controls configuration
+  const controls = signal({
+    up: {
+      repeat: true,
+      bind: "up",
+      keyDown() {
+        y.update((y) => Math.max(0, y - speed()));
+      },
+    },
+    down: {
+      repeat: true,
+      bind: "down",
+      keyDown() {
+        y.update((y) => y + speed());
+      },
+    },
+    left: {
+      repeat: true,
+      bind: "left",
+      keyDown() {
+        x.update((x) => Math.max(0, x - speed()));
+      },
+    },
+    right: {
+      repeat: true,
+      bind: "right",
+      keyDown() {
+        x.update((x) => x + speed());
+      },
+    },
+    // Gamepad configuration with callbacks and signal
+    gamepad: {
+      enabled: true,
+      // Default mappings will be used if joypad.js is available
+      // button_0 -> action, button_1 -> back
+      // Left stick axes will be mapped to up/down/left/right directions
+      
+      // Signal to track connection status (automatically updated)
+      gamepadConnected: gamepadConnected,
+      
+      // Optional callbacks
+      onConnect() {
+        console.log("Gamepad connected!");
+      },
+      onDisconnect() {
+        console.log("Gamepad disconnected!");
+      }
+    }
+  });
+</script>

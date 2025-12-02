@@ -1,5 +1,5 @@
 
-import './directives'
+export * from './directives'
 export * from '@signe/reactive'
 export { Howler } from 'howler'
 export * from './components'
