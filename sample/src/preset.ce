@@ -1,7 +1,8 @@
 <Canvas>
     <Container>
         <Weather
-            effect="snow"
+            effect="rain"
+            speed={0.2}
         />
     </Container>
 </Canvas>

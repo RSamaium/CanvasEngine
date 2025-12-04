@@ -4,6 +4,8 @@ import {
   h,
   Mesh,
   signal,
+  mount,
+  effect,
 } from "canvasengine";
 import { Geometry, Shader, UniformGroup } from "pixi.js";
 import { createRainShader } from "./rain";
@@ -16,13 +18,32 @@ import { createSnowShader } from "./snow";
 export const WeatherEffect = (options) => {
   const {
     effect = signal('rain'),
-    speed = signal(0.1),
+    speed = signal(0.5),
     windDirection = signal(0.0),
     windStrength = signal(0.2),
     density = signal(180.0),
-    maxDrops = signal(60.0),
-    resolution = signal([1000, 1000]),
+    maxDrops = signal(120.0),
+    resolution,
   } = useProps(options);
+
+  // Auto-detect resolution from canvas if not provided
+  const defaultResolution = signal([1000, 1000]);
+  const resolutionSignal = resolution
+    ? (typeof resolution === "function" ? resolution : signal(resolution))
+    : defaultResolution;
+
+  // Try to get canvas size from context if available
+  mount((element) => {
+    const context = element.props.context;
+    if (context?.canvasSize) {
+      effect(() => {
+        const size = context.canvasSize();
+        if (size && size.width > 0 && size.height > 0) {
+          defaultResolution.set([size.width, size.height]);
+        }
+      });
+    }
+  });
 
   const speedSignal = typeof speed === "function" ? speed : signal(speed);
   const windDirectionSignal =
@@ -33,8 +54,6 @@ export const WeatherEffect = (options) => {
     typeof density === "function" ? density : signal(density);
   const maxDropsSignal =
     typeof maxDrops === "function" ? maxDrops : signal(maxDrops);
-  const resolutionSignal =
-    typeof resolution === "function" ? resolution : signal(resolution);
 
   let glProgram;
   let uniformConfig;
@@ -80,8 +99,12 @@ export const WeatherEffect = (options) => {
     indexBuffer: [0, 1, 2, 0, 2, 3],
   });
 
+  // Initialize time with a random offset to prevent initial clustering
+  let timeAccumulator = Math.random() * 10.0;
+  
   tick(({ deltaTime }) => {
-    uniformGroup.uniforms.uTime = (uniformGroup.uniforms.uTime as number) + deltaTime / 600;
+    timeAccumulator += deltaTime / 600;
+    uniformGroup.uniforms.uTime = timeAccumulator;
 
     uniformGroup.uniforms.uResolution = resolutionSignal();
     uniformGroup.uniforms.uWindDirection = windDirectionSignal();
@@ -101,6 +124,8 @@ export const WeatherEffect = (options) => {
   return h(Mesh, {
     geometry,
     shader,
+    width: "100%",
+    height: "100%",
   });
 };
 
