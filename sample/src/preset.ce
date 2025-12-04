@@ -1,0 +1,11 @@
+<Canvas backgroundColor="white">
+    <Container>
+        <NightAmbiant>
+            <LightSpot radius={100} />
+        </NightAmbiant>
+    </Container>
+</Canvas>
+
+<script>
+    import { NightAmbiant, LightSpot } from '@canvasengine/presets'
+</script>

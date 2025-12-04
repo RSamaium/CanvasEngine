@@ -1,3 +1,4 @@
+import { isSignal } from "@signe/reactive"
 import { ObservablePoint } from "pixi.js"
 import { Observable } from "rxjs"
 
@@ -197,6 +198,9 @@ export function setObservablePoint(
     }
     else if (Array.isArray(point)) {
         observablePoint.set(point[0], point[1]);
+    }
+    else if (isObject(point) && 'value' in point) {
+        observablePoint.set((point as any).value.x, (point as any).value.y);
     }
     else {
         observablePoint.set(point.x, point.y);

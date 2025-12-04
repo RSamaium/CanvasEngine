@@ -88,14 +88,10 @@ export function NightAmbiant(props) {
   };
 
   mount((el) => {
-    effect(() => {
-      const { displayWidth, displayHeight } = el.componentInstance as any
-      const w = +displayWidth()
-      const h = +displayHeight()
-      setTimeout(() => {
-        width.update(() => w)
-        height.update(() => h)
-      }, 0) // hack
+    // Listen to layout events to get computed dimensions
+    (el.componentInstance as any).on('layout', (event) => {
+        width.update(() => (el.componentInstance as any).getWidth());
+        height.update(() => (el.componentInstance as any).getHeight());
     });
   });
 

@@ -143,8 +143,16 @@ const guideMenu = [
         link: "/presets/bar",
       },
       {
+        text: "Loading",
+        link: "/presets/loading",
+      },
+      {
         text: "Tilemap",
         link: "/presets/tilemap",
+      },
+      {
+        text: "Weather",
+        link: "/presets/weather",
       }
     ],
   },

@@ -21,10 +21,42 @@ class MockContainer {
     mask = null;
     parent = null;
     children = [];
+    eventMode = 'auto';
+    destroyed = false;
+    #eventListeners: Map<string, Function[]> = new Map();
     
     addChild() {}
     addChildAt() {}
-    destroy() {}
+    destroy() {
+        this.destroyed = true;
+        this.#eventListeners.clear();
+    }
+    
+    on(event: string, handler: Function) {
+        if (!this.#eventListeners.has(event)) {
+            this.#eventListeners.set(event, []);
+        }
+        this.#eventListeners.get(event)!.push(handler);
+    }
+    
+    off(event: string, handler?: Function) {
+        if (!this.#eventListeners.has(event)) return;
+        if (handler) {
+            const handlers = this.#eventListeners.get(event)!;
+            const index = handlers.indexOf(handler);
+            if (index > -1) {
+                handlers.splice(index, 1);
+            }
+        } else {
+            this.#eventListeners.delete(event);
+        }
+    }
+    
+    emit(event: string, data?: any) {
+        if (this.#eventListeners.has(event)) {
+            this.#eventListeners.get(event)!.forEach(handler => handler(data));
+        }
+    }
 }
 
 describe('DisplayObject Component', () => {
@@ -258,5 +290,286 @@ describe('DisplayObject Component', () => {
         instance.parent = { isFlex: true }
         
         expect(instance.parentIsFlex).toBe(true)
+    })
+
+    test('getWidth returns static width when not using percentages', () => {
+        const instance = new TestDisplayObject()
+        const props = { width: 250, height: 150, context: mockContext }
+        instance.onInit(props)
+        instance.width = 250
+        instance.setWidth(250)
+        
+        // Update fullProps via onUpdate
+        instance.onUpdate(props)
+        
+        expect(instance.getWidth()).toBe(250)
+    })
+
+    test('getHeight returns static height when not using percentages', () => {
+        const instance = new TestDisplayObject()
+        const props = { width: 250, height: 150, context: mockContext }
+        instance.onInit(props)
+        instance.height = 150
+        instance.setHeight(150)
+        
+        // Update fullProps via onUpdate
+        instance.onUpdate(props)
+        
+        expect(instance.getHeight()).toBe(150)
+    })
+
+    test('getWidth returns displayWidth when native width is 0', () => {
+        const instance = new TestDisplayObject()
+        const props = { width: 300, context: mockContext }
+        instance.onInit(props)
+        instance.width = 0
+        instance.setWidth(300)
+        
+        // Update fullProps via onUpdate
+        instance.onUpdate(props)
+        
+        expect(instance.getWidth()).toBe(300)
+    })
+
+    test('getHeight returns displayHeight when native height is 0', () => {
+        const instance = new TestDisplayObject()
+        const props = { height: 200, context: mockContext }
+        instance.onInit(props)
+        instance.height = 0
+        instance.setHeight(200)
+        
+        // Update fullProps via onUpdate
+        instance.onUpdate(props)
+        
+        expect(instance.getHeight()).toBe(200)
+    })
+
+    test('getWidth returns 0 when no width is set', () => {
+        const instance = new TestDisplayObject()
+        const props = { context: mockContext }
+        instance.onInit(props)
+        instance.width = 0
+        
+        // Update fullProps via onUpdate
+        instance.onUpdate(props)
+        
+        expect(instance.getWidth()).toBe(0)
+    })
+
+    test('getHeight returns 0 when no height is set', () => {
+        const instance = new TestDisplayObject()
+        const props = { context: mockContext }
+        instance.onInit(props)
+        instance.height = 0
+        
+        // Update fullProps via onUpdate
+        instance.onUpdate(props)
+        
+        expect(instance.getHeight()).toBe(0)
+    })
+
+    test('getWidth returns computed layout width for percentages', async () => {
+        const instance = new TestDisplayObject()
+        const parentInstance = new TestDisplayObject()
+        parentInstance.isFlex = false
+        
+        const props = { width: '100%', height: '100%', context: mockContext }
+        instance.onInit(props)
+        
+        await instance.onMount({
+            parent: {
+                componentInstance: parentInstance
+            },
+            props
+        })
+        
+        // Emit layout event with computed dimensions
+        instance.emit('layout', {
+            computedLayout: {
+                width: 800,
+                height: 600
+            }
+        })
+        
+        expect(instance.getWidth()).toBe(800)
+    })
+
+    test('getHeight returns computed layout height for percentages', async () => {
+        const instance = new TestDisplayObject()
+        const parentInstance = new TestDisplayObject()
+        parentInstance.isFlex = false
+        
+        const props = { width: '100%', height: '100%', context: mockContext }
+        instance.onInit(props)
+        
+        await instance.onMount({
+            parent: {
+                componentInstance: parentInstance
+            },
+            props
+        })
+        
+        // Emit layout event with computed dimensions
+        instance.emit('layout', {
+            computedLayout: {
+                width: 800,
+                height: 600
+            }
+        })
+        
+        expect(instance.getHeight()).toBe(600)
+    })
+
+    test('getWidth falls back to native width when layout not computed for percentages', async () => {
+        const instance = new TestDisplayObject()
+        const parentInstance = new TestDisplayObject()
+        parentInstance.isFlex = false
+        
+        const props = { width: '100%', context: mockContext }
+        instance.onInit(props)
+        instance.width = 500
+        
+        await instance.onMount({
+            parent: {
+                componentInstance: parentInstance
+            },
+            props
+        })
+        
+        // Before layout event, should fallback to native width
+        expect(instance.getWidth()).toBe(500)
+    })
+
+    test('getHeight falls back to native height when layout not computed for percentages', async () => {
+        const instance = new TestDisplayObject()
+        const parentInstance = new TestDisplayObject()
+        parentInstance.isFlex = false
+        
+        const props = { height: '100%', context: mockContext }
+        instance.onInit(props)
+        instance.height = 400
+        
+        await instance.onMount({
+            parent: {
+                componentInstance: parentInstance
+            },
+            props
+        })
+        
+        // Before layout event, should fallback to native height
+        expect(instance.getHeight()).toBe(400)
+    })
+
+    test('layout event updates computed layout box', async () => {
+        const instance = new TestDisplayObject()
+        const parentInstance = new TestDisplayObject()
+        parentInstance.isFlex = false
+        
+        const props = { width: '50%', height: '75%', context: mockContext }
+        instance.onInit(props)
+        
+        await instance.onMount({
+            parent: {
+                componentInstance: parentInstance
+            },
+            props
+        })
+        
+        // Emit layout event
+        instance.emit('layout', {
+            computedLayout: {
+                width: 400,
+                height: 450
+            }
+        })
+        
+        // getWidth and getHeight should now return computed values
+        expect(instance.getWidth()).toBe(400)
+        expect(instance.getHeight()).toBe(450)
+    })
+
+    test('layout event listener is registered during onMount', async () => {
+        const instance = new TestDisplayObject()
+        const parentInstance = new TestDisplayObject()
+        parentInstance.isFlex = false
+        
+        const props = { width: '100%', context: mockContext }
+        instance.onInit(props)
+        
+        await instance.onMount({
+            parent: {
+                componentInstance: parentInstance
+            },
+            props
+        })
+        
+        // Verify layout event listener is registered by emitting an event
+        // and checking that getWidth returns the computed value
+        instance.emit('layout', {
+            computedLayout: { width: 800, height: 600 }
+        })
+        
+        // Verify the layout box was updated
+        expect(instance.getWidth()).toBe(800)
+    })
+
+    test('getWidth handles mixed percentage and static values', async () => {
+        const instance = new TestDisplayObject()
+        const parentInstance = new TestDisplayObject()
+        parentInstance.isFlex = false
+        
+        const props = { width: '100%', height: 200, context: mockContext }
+        instance.onInit(props)
+        instance.height = 200
+        instance.setHeight(200)
+        
+        await instance.onMount({
+            parent: {
+                componentInstance: parentInstance
+            },
+            props
+        })
+        
+        // Emit layout event
+        instance.emit('layout', {
+            computedLayout: {
+                width: 800,
+                height: 600
+            }
+        })
+        
+        // Width should use computed layout, height should use static value
+        expect(instance.getWidth()).toBe(800)
+        expect(instance.getHeight()).toBe(200)
+    })
+
+    test('getHeight handles mixed percentage and static values', async () => {
+        const instance = new TestDisplayObject()
+        const parentInstance = new TestDisplayObject()
+        parentInstance.isFlex = false
+        
+        const props = { width: 300, height: '100%', context: mockContext }
+        instance.onInit(props)
+        instance.width = 300
+        instance.setWidth(300)
+        
+        await instance.onMount({
+            parent: {
+                componentInstance: parentInstance
+            },
+            props
+        })
+        
+        // Emit layout event
+        instance.emit('layout', {
+            computedLayout: {
+                width: 800,
+                height: 600
+            }
+        })
+        
+        // Width should use static value, height should use computed layout
+        expect(instance.getWidth()).toBe(300)
+        expect(instance.getHeight()).toBe(600)
     })
 }) 

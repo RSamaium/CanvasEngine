@@ -4,6 +4,7 @@ import { DisplayObject } from "./DisplayObject";
 import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { setObservablePoint } from "../engine/utils";
+import { isPercent } from "../utils/functions";
 
 interface ContainerProps extends DisplayObjectProps {
   sortableChildren?: boolean;
@@ -32,6 +33,22 @@ export class CanvasContainer extends DisplayObject(PixiContainer) {
     if (pixiChildren) {
       pixiChildren.forEach((child) => {
         componentInstance.addChild(child);
+      });
+    }
+
+    // Listen to layout events to update displayWidth and displayHeight with computed values
+    const isWidthPercentage = isPercent(props.width);
+    const isHeightPercentage = isPercent(props.height);
+
+    if (isWidthPercentage || isHeightPercentage) {
+      this.on('layout', (event) => {
+        const layoutBox = event.computedLayout;
+        if (isWidthPercentage && layoutBox.width !== undefined) {
+          this.displayWidth.set(layoutBox.width);
+        }
+        if (isHeightPercentage && layoutBox.height !== undefined) {
+          this.displayHeight.set(layoutBox.height);
+        }
       });
     }
   }

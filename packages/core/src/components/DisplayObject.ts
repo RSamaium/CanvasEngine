@@ -118,6 +118,8 @@ export function DisplayObject(extendClass) {
     disableLayout: boolean = false;
     // Store registered event listeners for cleanup
     #registeredEvents: Map<string, Function> = new Map();
+    // Store computed layout box dimensions
+    #computedLayoutBox: { width?: number; height?: number } | null = null;
 
     get deltaRatio() {
       return this.#canvasContext?.scheduler?.tick.value.deltaRatio;
@@ -188,6 +190,19 @@ export function DisplayObject(extendClass) {
         }
         this.isMounted = true;
         this.onUpdate(props);
+        
+        // Listen to layout events to store computed layout dimensions
+        const layoutHandler = (event: any) => {
+          if (event.computedLayout) {
+            this.#computedLayoutBox = {
+              width: event.computedLayout.width,
+              height: event.computedLayout.height,
+            };
+          }
+        };
+        this.on('layout', layoutHandler);
+        this.#registeredEvents.set('layout', layoutHandler);
+        
         if (this.onAfterMount) {
           await this.onAfterMount();
         }
@@ -466,12 +481,36 @@ export function DisplayObject(extendClass) {
       }
     }
 
-    getWidth() {
-      return this.displayWidth();
+    getWidth(): number {
+      // If width is a percentage, use computed layout box
+      if (isPercent(this.fullProps.width)) {
+        if (this.#computedLayoutBox?.width !== undefined) {
+          return this.#computedLayoutBox.width;
+        }
+        // Fallback to native width if layout not yet computed
+        return typeof this.width === 'number' ? this.width : 0;
+      }
+      // For static values, use native PixiJS width or displayWidth signal
+      const staticWidth = typeof this.width === 'number' && this.width > 0 
+        ? this.width 
+        : (typeof this.displayWidth() === 'number' ? this.displayWidth() : 0);
+      return staticWidth;
     }
 
-    getHeight() {
-      return this.displayHeight();
+    getHeight(): number {
+      // If height is a percentage, use computed layout box
+      if (isPercent(this.fullProps.height)) {
+        if (this.#computedLayoutBox?.height !== undefined) {
+          return this.#computedLayoutBox.height;
+        }
+        // Fallback to native height if layout not yet computed
+        return typeof this.height === 'number' ? this.height : 0;
+      }
+      // For static values, use native PixiJS height or displayHeight signal
+      const staticHeight = typeof this.height === 'number' && this.height > 0 
+        ? this.height 
+        : (typeof this.displayHeight() === 'number' ? this.displayHeight() : 0);
+      return staticHeight;
     }
 
     // Min/Max constraints
