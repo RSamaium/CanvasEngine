@@ -55,12 +55,14 @@ function createRainShader() {
         // Random X position
         float x = rnd0 * 2.4 - 1.2;
 
-        // Base speed + variation
-        float baseSpeed = 1.0 + rnd1 * 1.5;
+        // Base speed + variation (reduced for smoother falling)
+        float baseSpeed = 0.3 + rnd1 * 0.4;
         float speed = baseSpeed * uRainSpeed;
 
-        // Y position (from 1.2 to -1.2)
-        float y = 1.2 - fract(t * speed + rnd2) * 2.4;
+        // Y position: use mod instead of fract(t*speed) to ensure proper distribution
+        // rnd2 provides the initial offset (0-1), then we add time-based movement
+        float yProgress = mod(rnd2 + t * speed, 1.0);
+        float y = 1.2 - yProgress * 2.4;
 
         // Fall progress (0 top -> 1 bottom)
         float fallProgress = (1.2 - y) / 2.4;
@@ -136,22 +138,22 @@ function createRainShader() {
 }
 
 /**
- * Creates a snow shader program
+ * Creates a slow & smooth snow shader program
  */
 function createSnowShader() {
-  // Vertex shader - full screen quad
+  // Vertex shader
   const vertexSrc = /* glsl */ `
     precision mediump float;
     attribute vec2 aPosition;
     attribute vec2 aUV;
     varying   vec2 vUV;
     void main() {
-        vUV = aUV;
-        gl_Position = vec4(aPosition, 0.0, 1.0);
+      vUV = aUV;
+      gl_Position = vec4(aPosition, 0.0, 1.0);
     }
   `;
 
-  // Fragment shader optimized for snow
+  // Fragment shader optimized for soft falling snow
   const fragmentSrc = /* glsl */ `
     precision mediump float;
 
@@ -165,103 +167,109 @@ function createSnowShader() {
     uniform float uSnowDensity;
     uniform float uMaxFlakes;
 
-    // Hash function
+    // Cheap hash (no trig)
     float hash(float n) {
-        return fract(n * 0.1031);
+      return fract(n * 0.1031);
     }
 
     // A snow flake
-    float snowFlake(vec2 uv, float t, float seed) {
-        // Pre-generate some randoms
-        float rnd0 = hash(seed);
-        float rnd1 = hash(seed + 1.0);
-        float rnd2 = hash(seed + 2.0);
-        float rnd3 = hash(seed + 3.0);
-        float rnd4 = hash(seed + 4.0);
+    float snowFlake(vec2 uv, float t, float seed, float aspectX) {
+      float rnd0 = hash(seed);
+      float rnd1 = hash(seed + 1.0);
+      float rnd2 = hash(seed + 2.0);
+      float rnd3 = hash(seed + 3.0);
 
-        // Random X position with some drift
-        float x = rnd0 * 2.6 - 1.3 + sin(t * 0.5 + rnd1 * 6.28) * 0.1;
+      // Depth (0.5 near, 1.0 far)
+      float depth = 0.5 + 0.5 * rnd0;
+      float scale = depth;
 
-        // Base speed + variation (slower than rain)
-        float baseSpeed = 0.3 + rnd2 * 0.4;
-        float speed = baseSpeed * uSnowSpeed;
+      // Random X base
+      float xBase = rnd1 * 2.4 - 1.2;
 
-        // Y position (from 1.3 to -1.3)
-        float y = 1.3 - fract(t * speed + rnd3) * 2.6;
+      // Very slow base speed + variation
+      float baseSpeed = 0.008 + rnd2 * 0.017;
 
-        // Wind effect (gentler for snow)
-        float windOffset = uWindDirection * uWindStrength * (1.3 - y) * 0.3;
-        x += windOffset;
+      // Depth factor (less extreme than before)
+      float depthFactor = (0.5 + 0.5 * scale);
 
-        // Early discard if out of zone
-        if (x < -1.5 || x > 1.5 || y < -1.5 || y > 1.5) {
-            return 0.0;
-        }
+      // Final speed
+      float speed = baseSpeed * uSnowSpeed * depthFactor;
 
-        vec2 flakePos = vec2(x, y);
-        vec2 diff = uv - flakePos;
+      // Y position: use mod to ensure proper distribution across the screen
+      // rnd3 provides initial offset, time adds movement
+      float fallTime = t * speed;
+      float yProgress = mod(rnd3 + fallTime, 1.0);
+      float y = 1.1 - yProgress * 2.2;
 
-        // Circular flake shape with some randomness
-        float size = 0.008 + rnd4 * 0.006;
-        float dist = length(diff) / size;
+      // Global wind
+      float wind = uWindDirection * uWindStrength * (1.3 - y) * 0.4;
 
-        // Soft circular falloff
-        float intensity = 1.0 - smoothstep(0.0, 1.0, dist);
-        intensity *= 0.6 + 0.4 * hash(seed + 5.0);
+      // Very gentle sway and turbulence (low frequency for smooth motion)
+      float sway = sin(fallTime * 0.3 + rnd0 * 6.283) * 0.03;
+      float turb = sin((seed + t) * 0.15 + y * 2.0) * 0.02 * (1.2 - depth);
 
-        // Fade at edges of screen
-        intensity *= smoothstep(-1.3, -0.9, y) * smoothstep(1.3, 0.9, y);
+      // Final X
+      float x = xBase + wind + sway + turb;
 
-        return intensity;
+      // Early discard
+      if (x < -1.4 || x > 1.4 || y < -1.4 || y > 1.4)
+        return 0.0;
+
+      vec2 flakePos = vec2(x, y);
+
+      vec2 diff = uv - flakePos;
+      diff.x *= aspectX;
+
+      float size = (0.006 + rnd2 * 0.008) * scale;
+
+      float dist = length(diff) / size;
+
+      float intensity = 1.0 - smoothstep(0.0, 1.0, dist);
+
+      intensity *= depth * depth;
+
+      // Very subtle twinkle (slow)
+      intensity *= 0.92 + 0.08 * sin(t * 0.5 + rnd3 * 6.283);
+
+      // Fade top/bottom
+      intensity *= smoothstep(-1.2, -0.9, y) * smoothstep(1.2, 0.9, y);
+
+      return intensity;
     }
 
     void main() {
-        // Normalized uv coordinates centered
-        vec2 uv = (gl_FragCoord.xy - 0.5 * uResolution.xy)
-                  / min(uResolution.x, uResolution.y);
+      vec2 uv = (gl_FragCoord.xy - 0.5 * uResolution.xy)
+                / min(uResolution.x, uResolution.y);
 
-        float snow = 0.0;
+      float snow = 0.0;
 
-        // Clamp number of flakes
-        float maxFlakes = clamp(uMaxFlakes, 10.0, 150.0);
+      float maxFlakes = clamp(uMaxFlakes, 10.0, 200.0);
+      float aspectX = uResolution.x / uResolution.y;
 
-        // Loop through flakes
-        for (float i = 0.0; i < 150.0; i++) {
-            if (i >= maxFlakes) {
-                break;
-            }
-            snow += snowFlake(uv, uTime, i * 15.67);
-        }
+      for (float i = 0.0; i < 200.0; i++) {
+        if (i >= maxFlakes) break;
+        snow += snowFlake(uv, uTime, i * 17.23, aspectX);
+      }
 
-        // Adjustment by current density
-        snow *= (uSnowDensity / maxFlakes);
+      snow *= (uSnowDensity / 120.0);
 
-        // Snow color (slightly warmer than rain)
-        vec3 snowColor = vec3(0.95, 0.98, 1.0);
+      vec3 snowColor = vec3(0.96, 0.98, 1.0);
 
-        gl_FragColor = vec4(snowColor * snow, snow * 0.9);
+      gl_FragColor = vec4(snowColor * snow, snow);
     }
   `;
 
   return new GlProgram({ vertex: vertexSrc, fragment: fragmentSrc });
 }
 
+
 /**
  * Weather Effect Component (optimized)
- *
- * @param {Object} options
- * @param {string} [options.effect='rain']                  - Weather effect type ('rain', 'snow', etc.)
- * @param {number|Signal<number>} [options.speed=0.5]       - Falling speed
- * @param {number|Signal<number>} [options.windDirection=0] - Wind direction (-1 -> left, 1 -> right)
- * @param {number|Signal<number>} [options.windStrength=0.2]- Wind strength
- * @param {number|Signal<number>} [options.density=180]     - Rain density
- * @param {number|Signal<number>} [options.maxDrops=60]     - Max number of drops simulated per pixel (10–200)
- * @param {Array<number>|Signal<[number,number]>} [options.resolution=[1000,1000]]
  */
 export const WeatherEffect = (options) => {
   const {
     effect = signal('rain'),
-    speed = signal(0.01),
+    speed = signal(0.1),
     windDirection = signal(0.0),
     windStrength = signal(0.2),
     density = signal(180.0),
@@ -269,7 +277,6 @@ export const WeatherEffect = (options) => {
     resolution = signal([1000, 1000]),
   } = useProps(options);
 
-  // Convert to signals if not already
   const speedSignal = typeof speed === "function" ? speed : signal(speed);
   const windDirectionSignal =
     typeof windDirection === "function" ? windDirection : signal(windDirection);
@@ -282,7 +289,6 @@ export const WeatherEffect = (options) => {
   const resolutionSignal =
     typeof resolution === "function" ? resolution : signal(resolution);
 
-  // Create appropriate shader based on effect
   let glProgram;
   let uniformConfig;
 
@@ -309,21 +315,16 @@ export const WeatherEffect = (options) => {
       uMaxFlakes: { value: maxDropsSignal(), type: "f32" },
     };
   } else {
-    throw new Error(`Unknown weather effect: ${effect()}. Supported effects: 'rain', 'snow'`);
+    throw new Error(`Unknown weather effect: ${effect()}. Supported: rain, snow`);
   }
 
-  // Uniform group for shader parameters
   const uniformGroup = new UniformGroup(uniformConfig);
 
-  // Create shader with program and resources
   const shader = new Shader({
     glProgram,
-    resources: {
-      uniforms: uniformGroup,
-    },
+    resources: { uniforms: uniformGroup },
   });
 
-  // Full-screen quad geometry
   const geometry = new Geometry({
     attributes: {
       aPosition: [-1, -1, 1, -1, 1, 1, -1, 1],
@@ -332,22 +333,18 @@ export const WeatherEffect = (options) => {
     indexBuffer: [0, 1, 2, 0, 2, 3],
   });
 
-  // Animation loop - update time and reactive uniforms
   tick(({ deltaTime }) => {
-    // Update time
-    uniformGroup.uniforms.uTime = (uniformGroup.uniforms.uTime as number) + deltaTime;
+    uniformGroup.uniforms.uTime = (uniformGroup.uniforms.uTime) + deltaTime;
 
-    // Update common uniforms
     uniformGroup.uniforms.uResolution = resolutionSignal();
     uniformGroup.uniforms.uWindDirection = windDirectionSignal();
     uniformGroup.uniforms.uWindStrength = windStrengthSignal();
 
-    // Update effect-specific uniforms
-    if (effect === 'rain') {
+    if (effect() === 'rain') {
       uniformGroup.uniforms.uRainSpeed = speedSignal();
       uniformGroup.uniforms.uRainDensity = densitySignal();
       uniformGroup.uniforms.uMaxDrops = maxDropsSignal();
-    } else if (effect === 'snow') {
+    } else {
       uniformGroup.uniforms.uSnowSpeed = speedSignal();
       uniformGroup.uniforms.uSnowDensity = densitySignal();
       uniformGroup.uniforms.uMaxFlakes = maxDropsSignal();
@@ -360,5 +357,4 @@ export const WeatherEffect = (options) => {
   });
 };
 
-// Export as Weather for easier usage
 export const Weather = WeatherEffect;
