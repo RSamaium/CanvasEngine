@@ -18,6 +18,8 @@ The Weather component creates realistic weather effects using WebGL shaders. It 
 
 ## Basic Usage
 
+### Simple Weather Effects
+
 ```html
 <Canvas>
     <!-- Basic rain with default settings -->
@@ -32,9 +34,32 @@ The Weather component creates realistic weather effects using WebGL shaders. It 
 </script>
 ```
 
+### Quick Examples
+
+```html
+<Canvas>
+    <!-- Gentle snowfall for winter scenes -->
+    <Weather effect="snow" speed={0.3} density={80} />
+
+    <!-- Light rain for atmosphere -->
+    <Weather effect="rain" speed={0.4} density={100} />
+
+    <!-- Storm effect -->
+    <Weather 
+        effect="rain" 
+        speed={1.5} 
+        windDirection={0.7} 
+        windStrength={0.6} 
+        density={300} 
+    />
+</Canvas>
+```
+
 ## Advanced Usage
 
 ### Static Configuration
+
+You can configure weather effects with static values for consistent behavior:
 
 ```html
 <Canvas>
@@ -74,7 +99,33 @@ The Weather component creates realistic weather effects using WebGL shaders. It 
 </Canvas>
 ```
 
+### Understanding Parameters
+
+**Speed**: Controls how fast particles fall
+- Lower values (0.1-0.3) = Slow, gentle precipitation
+- Medium values (0.4-0.7) = Normal weather
+- Higher values (0.8-2.0) = Fast, intense weather
+
+**Wind Direction**: Horizontal movement direction
+- Negative values (-1.0 to 0) = Wind blows from right to left
+- Zero (0.0) = No horizontal wind
+- Positive values (0 to 1.0) = Wind blows from left to right
+
+**Wind Strength**: How much wind affects particles
+- 0.0 = No wind effect
+- 0.1-0.3 = Light breeze
+- 0.4-0.6 = Moderate wind
+- 0.7-1.0 = Strong wind/storm
+
+**Density**: Number of visible particles
+- 50-100 = Light weather (sparse)
+- 100-200 = Normal weather
+- 200-300 = Heavy weather
+- 300-400 = Extreme weather (may impact performance)
+
 ### Dynamic Control with Signals
+
+Use signals to create interactive weather systems that respond to game events or user input:
 
 ```html
 <Canvas>
@@ -131,19 +182,91 @@ The Weather component creates realistic weather effects using WebGL shaders. It 
         windStrength.set(0.3)
         weatherDensity.set(80)
     }
+
+    // Example: Change weather based on game state
+    function onEnterWinterArea() {
+        currentEffect.set('snow')
+        weatherSpeed.set(0.4)
+        weatherDensity.set(120)
+    }
+
+    // Example: Gradual weather transition
+    function transitionToStorm() {
+        currentEffect.set('rain')
+        // Gradually increase intensity
+        weatherSpeed.set(0.5)
+        weatherDensity.set(150)
+        
+        setTimeout(() => {
+            weatherSpeed.set(1.2)
+            windStrength.set(0.5)
+            weatherDensity.set(250)
+        }, 2000)
+    }
 </script>
+```
+
+### Common Use Cases
+
+**Background Atmosphere**: Use light weather for ambient effects
+```html
+<Weather effect="snow" speed={0.3} density={60} windStrength={0.1} />
+```
+
+**Weather Transitions**: Change weather based on game events
+```javascript
+// When player enters a storm area
+function enterStormZone() {
+    currentEffect.set('rain')
+    weatherSpeed.set(1.5)
+    windStrength.set(0.7)
+    weatherDensity.set(280)
+}
+```
+
+**Performance-Conscious**: Reduce density for mobile devices
+```html
+<!-- Lower density for better performance on mobile -->
+<Weather effect="rain" speed={0.6} density={100} />
 ```
 
 ## Props
 
 | Prop | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| effect | `string` | No | 'rain' | Weather effect type ('rain', 'snow') |
-| speed | `number` \| `Signal<number>` | No | 0.5 | Falling speed (0.1 = slow, 2.0 = fast) |
-| windDirection | `number` \| `Signal<number>` | No | 0.0 | Wind direction (-1.0 = left, 1.0 = right) |
-| windStrength | `number` \| `Signal<number>` | No | 0.2 | Wind strength (0.0 = no wind, 1.0 = strong) |
-| density | `number` \| `Signal<number>` | No | 180.0 | Particle density (50-400 particles) |
-| resolution | `Array<number>` \| `Signal<Array<number>>` | No | [1000, 1000] | Screen resolution for proper scaling |
+| effect | `string` | No | 'rain' | Weather effect type: `'rain'` or `'snow'` |
+| speed | `number` \| `Signal<number>` | No | 0.5 | Falling speed multiplier (0.1 = slow, 2.0 = fast) |
+| windDirection | `number` \| `Signal<number>` | No | 0.0 | Wind direction (-1.0 = left, 0.0 = none, 1.0 = right) |
+| windStrength | `number` \| `Signal<number>` | No | 0.2 | Wind strength (0.0 = no wind, 1.0 = maximum) |
+| density | `number` \| `Signal<number>` | No | 180.0 | Particle density (50-400, affects visible particle count) |
+| maxDrops | `number` \| `Signal<number>` | No | 60.0 | Maximum number of particles (30-150 for snow, 10-200 for rain) |
+| resolution | `Array<number>` \| `Signal<Array<number>>` | No | [1000, 1000] | Screen resolution `[width, height]` for proper scaling |
+
+### Prop Examples
+
+```html
+<!-- Static values -->
+<Weather effect="snow" speed={0.4} density={100} />
+
+<!-- Using signals for reactivity -->
+<Weather 
+    effect={weatherType}
+    speed={speedSignal}
+    windDirection={windDirSignal}
+    density={densitySignal}
+/>
+
+<!-- Full configuration -->
+<Weather
+    effect="rain"
+    speed={1.2}
+    windDirection={0.5}
+    windStrength={0.6}
+    density={250}
+    maxDrops={80}
+    resolution={[1920, 1080]}
+/>
+```
 
 ## Parameter Guidelines
 
@@ -174,46 +297,73 @@ The Weather component creates realistic weather effects using WebGL shaders. It 
 
 ## Performance Notes
 
-- The Weather component uses WebGL shaders for optimal performance
-- Density values above 400 may impact performance on lower-end devices
-- The effect is designed to run smoothly at 60fps on modern hardware
-- Consider reducing density on mobile devices for better performance
+The Weather component is optimized for performance but here are some guidelines:
+
+### Performance Guidelines
+
+- **WebGL Shaders**: Uses efficient GPU-accelerated shaders for optimal performance
+- **Density Limits**: 
+  - Desktop: Up to 400 density works well
+  - Mobile: Keep density between 60-150 for best performance
+  - Low-end devices: Use density 50-100
+- **Target FPS**: Designed to run smoothly at 60fps on modern hardware
+- **Multiple Instances**: Avoid using multiple Weather components simultaneously
+
+### Optimization Tips
+
+1. **Reduce Density on Mobile**: Lower density values (60-120) work better on mobile devices
+2. **Adjust for Context**: Use lighter weather when other effects are active
+3. **Monitor Performance**: Test on target devices and adjust density accordingly
+4. **Resolution**: The `resolution` prop should match your canvas size for optimal scaling
 
 ## Weather Presets
 
-Here are some pre-configured weather scenarios:
+Here are pre-configured weather scenarios you can use directly or as starting points:
 
-```javascript
-// Light Spring Rain
+### Rain Presets
+
+```html
+<!-- Light Spring Rain - Gentle, atmospheric -->
 <Weather effect="rain" speed={0.3} windDirection={0.1} windStrength={0.15} density={120} />
 
-// Summer Storm
+<!-- Summer Storm - Intense, dramatic -->
 <Weather effect="rain" speed={1.6} windDirection={0.8} windStrength={0.7} density={320} />
 
-// Gentle Drizzle
+<!-- Gentle Drizzle - Very light, subtle -->
 <Weather effect="rain" speed={0.2} windDirection={0.0} windStrength={0.05} density={80} />
 
-// Windy Rain
+<!-- Windy Rain - Strong horizontal movement -->
 <Weather effect="rain" speed={0.8} windDirection={-0.6} windStrength={0.9} density={200} />
 
-// Heavy Downpour
+<!-- Heavy Downpour - Maximum intensity -->
 <Weather effect="rain" speed={1.8} windDirection={0.2} windStrength={0.4} density={380} />
+```
 
-// Light Snowfall
+### Snow Presets
+
+```html
+<!-- Light Snowfall - Peaceful, gentle -->
 <Weather effect="snow" speed={0.4} windDirection={0.2} windStrength={0.2} density={80} />
 
-// Winter Blizzard
+<!-- Winter Blizzard - Intense snowstorm -->
 <Weather effect="snow" speed={1.4} windDirection={0.8} windStrength={0.8} density={280} />
 
-// Gentle Snow
+<!-- Gentle Snow - Very light, calm -->
 <Weather effect="snow" speed={0.3} windDirection={0.0} windStrength={0.1} density={60} />
 
-// Windy Snow
+<!-- Windy Snow - Snow with strong wind -->
 <Weather effect="snow" speed={0.9} windDirection={-0.7} windStrength={0.6} density={180} />
 
-// Heavy Snowstorm
+<!-- Heavy Snowstorm - Maximum snow intensity -->
 <Weather effect="snow" speed={1.6} windDirection={0.3} windStrength={0.5} density={350} />
 ```
+
+### Tips for Choosing Presets
+
+- **Atmospheric Background**: Use light presets (density 60-100) for subtle ambiance
+- **Gameplay Events**: Use medium presets (density 150-250) for weather-related gameplay
+- **Dramatic Moments**: Use heavy presets (density 280-380) for cutscenes or intense moments
+- **Performance**: Lower density (60-120) for mobile devices or when many effects are active
 
 ## Technical Details
 
