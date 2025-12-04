@@ -1,11 +1,11 @@
-<Canvas backgroundColor="white">
+<Canvas>
     <Container>
-        <NightAmbiant>
-            <LightSpot radius={100} />
-        </NightAmbiant>
+        <Weather
+            effect="snow"
+        />
     </Container>
 </Canvas>
 
 <script>
-    import { NightAmbiant, LightSpot } from '@canvasengine/presets'
+    import { Weather } from '@canvasengine/presets'
 </script>
