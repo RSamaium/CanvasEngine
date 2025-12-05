@@ -87,17 +87,21 @@ export function createSnowShader(): GlProgram {
         return 0.0;
       }
       
-      vec2 flakePos = vec2(x, y);
-      vec2 diff = uv - flakePos;
+      vec2 diff = uv - vec2(x, y);
       
-      // Flake size (circular)
-      float flakeSize = 0.008 + rnd3 * 0.006;
-      
-      // Circular distance for flake shape (optimized with distSq)
+      // Fast distance check before expensive calculations
       float distSq = dot(diff, diff);
+      
+      // Early exit if too far (major performance boost)
+      if (distSq > 0.015) {  // ~0.12 units distance
+        return 0.0;
+      }
+      
+      // Flake size (circular) - only calculate if close
+      float flakeSize = 0.008 + rnd3 * 0.006;
       float sizeSq = flakeSize * flakeSize;
       
-      // Early exit if too far
+      // Additional early exit check
       if (distSq > sizeSq * 1.5) {
         return 0.0;
       }
@@ -126,12 +130,22 @@ export function createSnowShader(): GlProgram {
       // Calculate number of flakes based on density (optimized for performance)
       // Density 50-400 corresponds to approximately 40-150 flakes (reduced for performance)
       float targetFlakes = 40.0 + (uSnowDensity - 50.0) * (110.0 / 350.0);
-      float maxFlakes = clamp(max(uMaxFlakes, targetFlakes), 30.0, 150.0);
+      float maxFlakes = clamp(max(uMaxFlakes, targetFlakes), 30.0, 120.0);
       
-      // Generate flakes (limited to 150 for performance)
-      for (float i = 0.0; i < 150.0; i++) {
-        if (i >= maxFlakes) break;
-        snow += snowFlake(uv, uTime, i * 15.67);
+      // Performance optimization: reduce loop iterations based on resolution
+      float pixelCount = uResolution.x * uResolution.y;
+      float resolutionFactor = clamp(pixelCount / 500000.0, 0.5, 1.0);  // LOD based on resolution
+      float effectiveMaxFlakes = maxFlakes * resolutionFactor;
+      float loopMax = min(effectiveMaxFlakes, 120.0);
+      
+      // Generate flakes (limited to 120 for performance)
+      for (float i = 0.0; i < 120.0; i++) {
+        if (i >= loopMax) break;
+        float flakeValue = snowFlake(uv, uTime, i * 15.67);
+        snow += flakeValue;
+        
+        // Early exit if we've accumulated enough intensity (performance optimization)
+        if (snow > 2.5) break;
       }
       
       // Intensity adjustment based on density (normalization)

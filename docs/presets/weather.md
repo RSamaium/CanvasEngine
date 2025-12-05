@@ -4,11 +4,11 @@
 
 ## Overview
 
-The Weather component creates realistic weather effects using WebGL shaders. It supports multiple weather types including rain and snow, with customizable parameters for wind influence, density, and speed control. The effects are inspired by Zelda-style weather systems and provide beautiful, performant weather overlays for your games.
+The Weather component creates realistic weather effects using WebGL shaders. It supports multiple weather types including rain, snow, and fog, with customizable parameters for wind influence, density, and speed control. The effects are inspired by Zelda-style weather systems and provide beautiful, performant weather overlays for your games.
 
 ## Features
 
-- **Multiple Weather Effects**: Support for rain and snow with different visual characteristics
+- **Multiple Weather Effects**: Support for rain, snow, and fog with different visual characteristics
 - **Procedural Generation**: Weather particles are generated using hash functions for natural randomness
 - **Wind Simulation**: Particles are affected by wind direction and strength as they fall
 - **Density Control**: Adjust the number of visible particles from light to heavy weather
@@ -27,6 +27,9 @@ The Weather component creates realistic weather effects using WebGL shaders. It 
 
     <!-- Basic snow with default settings -->
     <Weather effect="snow" />
+
+    <!-- Basic fog with default settings -->
+    <Weather effect="fog" />
 </Canvas>
 
 <script>
@@ -52,6 +55,9 @@ The Weather component creates realistic weather effects using WebGL shaders. It 
         windStrength={0.6} 
         density={300} 
     />
+
+    <!-- Misty fog for atmospheric scenes -->
+    <Weather effect="fog" speed={0.03} density={0.8} height={0.2} />
 </Canvas>
 ```
 
@@ -96,6 +102,24 @@ You can configure weather effects with static values for consistent behavior:
         density={60}
         windStrength={0.2}
     />
+
+    <!-- Misty valley fog -->
+    <Weather
+        effect="fog"
+        speed={0.03}
+        windDirection={0.5}
+        density={0.8}
+        height={0.2}
+    />
+
+    <!-- Thick ground fog -->
+    <Weather
+        effect="fog"
+        speed={0.02}
+        windDirection={0.3}
+        density={1.2}
+        height={0.0}
+    />
 </Canvas>
 ```
 
@@ -117,11 +141,15 @@ You can configure weather effects with static values for consistent behavior:
 - 0.4-0.6 = Moderate wind
 - 0.7-1.0 = Strong wind/storm
 
-**Density**: Number of visible particles
-- 50-100 = Light weather (sparse)
-- 100-200 = Normal weather
-- 200-300 = Heavy weather
-- 300-400 = Extreme weather (may impact performance)
+**Density**: Number of visible particles (or fog intensity for fog effect)
+- Rain/Snow: 50-100 = Light weather (sparse), 100-200 = Normal weather, 200-300 = Heavy weather, 300-400 = Extreme weather
+- Fog: 0.3-0.6 = Light mist, 0.6-1.0 = Moderate fog, 1.0-1.5 = Thick fog, 1.5-2.0 = Dense fog
+
+**Height** (Fog only): Controls where fog concentrates vertically
+- 0.0 = Ground-level fog (concentrates at bottom)
+- 0.2-0.4 = Low-lying fog
+- 0.5 = Mid-height fog
+- 0.6-1.0 = High fog (distributed more evenly)
 
 ### Dynamic Control with Signals
 
@@ -183,6 +211,22 @@ Use signals to create interactive weather systems that respond to game events or
         weatherDensity.set(80)
     }
 
+    // Control fog dynamically
+    function startFog() {
+        currentEffect.set('fog')
+        weatherSpeed.set(0.03)
+        windDirection.set(0.5)
+        weatherDensity.set(0.8)
+    }
+
+    function thickGroundFog() {
+        currentEffect.set('fog')
+        weatherSpeed.set(0.02)
+        windDirection.set(0.3)
+        weatherDensity.set(1.5)
+        // height would be set via a separate signal if needed
+    }
+
     // Example: Change weather based on game state
     function onEnterWinterArea() {
         currentEffect.set('snow')
@@ -230,16 +274,23 @@ function enterStormZone() {
 <Weather effect="rain" speed={0.6} density={100} />
 ```
 
+**Atmospheric Fog**: Use fog for mysterious or moody scenes
+```html
+<!-- Valley mist for mysterious atmosphere -->
+<Weather effect="fog" speed={0.03} density={0.8} height={0.1} />
+```
+
 ## Props
 
 | Prop | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| effect | `string` | No | 'rain' | Weather effect type: `'rain'` or `'snow'` |
-| speed | `number` \| `Signal<number>` | No | 0.5 | Falling speed multiplier (0.1 = slow, 2.0 = fast) |
+| effect | `string` | No | 'rain' | Weather effect type: `'rain'`, `'snow'`, or `'fog'` |
+| speed | `number` \| `Signal<number>` | No | 0.5 | Falling/movement speed multiplier (0.1 = slow, 2.0 = fast). For fog, use lower values (0.01-0.05) |
 | windDirection | `number` \| `Signal<number>` | No | 0.0 | Wind direction (-1.0 = left, 0.0 = none, 1.0 = right) |
-| windStrength | `number` \| `Signal<number>` | No | 0.2 | Wind strength (0.0 = no wind, 1.0 = maximum) |
-| density | `number` \| `Signal<number>` | No | 180.0 | Particle density (50-400, affects visible particle count) |
-| maxDrops | `number` \| `Signal<number>` | No | 60.0 | Maximum number of particles (30-150 for snow, 10-200 for rain) |
+| windStrength | `number` \| `Signal<number>` | No | 0.2 | Wind strength (0.0 = no wind, 1.0 = maximum). Not used for fog |
+| density | `number` \| `Signal<number>` | No | 180.0 | Particle density for rain/snow (50-400) or fog intensity (0.3-2.0) |
+| maxDrops | `number` \| `Signal<number>` | No | 60.0 | Maximum number of particles (30-150 for snow, 10-200 for rain). Not used for fog |
+| height | `number` \| `Signal<number>` | No | 0.2 | Fog height parameter (0.0 = bottom/concentrated, 1.0 = top/distributed). Only used for fog |
 | resolution | `Array<number>` \| `Signal<Array<number>>` | No | [1000, 1000] | Screen resolution `[width, height]` for proper scaling |
 
 ### Prop Examples
@@ -256,7 +307,7 @@ function enterStormZone() {
     density={densitySignal}
 />
 
-<!-- Full configuration -->
+<!-- Full configuration for rain -->
 <Weather
     effect="rain"
     speed={1.2}
@@ -266,15 +317,31 @@ function enterStormZone() {
     maxDrops={80}
     resolution={[1920, 1080]}
 />
+
+<!-- Full configuration for fog -->
+<Weather
+    effect="fog"
+    speed={0.03}
+    windDirection={0.5}
+    density={0.8}
+    height={0.2}
+    resolution={[1920, 1080]}
+/>
 ```
 
 ## Parameter Guidelines
 
 ### Speed
-- **0.1 - 0.3**: Light precipitation (gentle rain or snow)
-- **0.4 - 0.7**: Normal weather
-- **0.8 - 1.2**: Heavy weather
-- **1.3 - 2.0**: Extreme weather (storm or blizzard)
+- **Rain/Snow:**
+  - **0.1 - 0.3**: Light precipitation (gentle rain or snow)
+  - **0.4 - 0.7**: Normal weather
+  - **0.8 - 1.2**: Heavy weather
+  - **1.3 - 2.0**: Extreme weather (storm or blizzard)
+- **Fog:**
+  - **0.01 - 0.02**: Very slow, almost static mist
+  - **0.02 - 0.04**: Slow, gentle movement
+  - **0.04 - 0.06**: Moderate fog movement
+  - **0.06 - 0.1**: Fast-moving fog/mist
 
 ### Wind Direction
 - **-1.0**: Strong wind from right to left
@@ -290,10 +357,22 @@ function enterStormZone() {
 - **0.7 - 1.0**: Strong wind/storm
 
 ### Density
-- **50 - 100**: Light weather, sparse particles
-- **100 - 200**: Normal weather
-- **200 - 300**: Heavy weather
-- **300 - 400**: Extreme weather (downpour or heavy snow)
+- **Rain/Snow:**
+  - **50 - 100**: Light weather, sparse particles
+  - **100 - 200**: Normal weather
+  - **200 - 300**: Heavy weather
+  - **300 - 400**: Extreme weather (downpour or heavy snow)
+- **Fog:**
+  - **0.3 - 0.6**: Light mist, subtle atmosphere
+  - **0.6 - 1.0**: Moderate fog, visible mist
+  - **1.0 - 1.5**: Thick fog, limited visibility
+  - **1.5 - 2.0**: Dense fog, very limited visibility
+
+### Height (Fog only)
+- **0.0 - 0.2**: Ground-level fog (valley effect, concentrates at bottom)
+- **0.2 - 0.4**: Low-lying fog
+- **0.4 - 0.6**: Mid-height fog
+- **0.6 - 1.0**: High fog (distributed more evenly across screen)
 
 ## Performance Notes
 
@@ -358,12 +437,35 @@ Here are pre-configured weather scenarios you can use directly or as starting po
 <Weather effect="snow" speed={1.6} windDirection={0.3} windStrength={0.5} density={350} />
 ```
 
+### Fog Presets
+
+```html
+<!-- Light Valley Mist - Subtle, atmospheric -->
+<Weather effect="fog" speed={0.02} windDirection={0.3} density={0.5} height={0.1} />
+
+<!-- Ground Fog - Low-lying, concentrated at bottom -->
+<Weather effect="fog" speed={0.03} windDirection={0.5} density={0.8} height={0.0} />
+
+<!-- Thick Mist - Moderate visibility reduction -->
+<Weather effect="fog" speed={0.04} windDirection={0.4} density={1.0} height={0.2} />
+
+<!-- Dense Fog - Heavy visibility reduction -->
+<Weather effect="fog" speed={0.03} windDirection={0.6} density={1.5} height={0.3} />
+
+<!-- High Altitude Fog - Distributed evenly -->
+<Weather effect="fog" speed={0.02} windDirection={0.2} density={0.7} height={0.7} />
+
+<!-- Moving Mist - Faster movement -->
+<Weather effect="fog" speed={0.06} windDirection={0.8} density={0.9} height={0.2} />
+```
+
 ### Tips for Choosing Presets
 
-- **Atmospheric Background**: Use light presets (density 60-100) for subtle ambiance
-- **Gameplay Events**: Use medium presets (density 150-250) for weather-related gameplay
-- **Dramatic Moments**: Use heavy presets (density 280-380) for cutscenes or intense moments
-- **Performance**: Lower density (60-120) for mobile devices or when many effects are active
+- **Atmospheric Background**: Use light presets (density 60-100 for rain/snow, 0.3-0.6 for fog) for subtle ambiance
+- **Gameplay Events**: Use medium presets (density 150-250 for rain/snow, 0.7-1.0 for fog) for weather-related gameplay
+- **Dramatic Moments**: Use heavy presets (density 280-380 for rain/snow, 1.2-1.5 for fog) for cutscenes or intense moments
+- **Performance**: Lower density (60-120 for rain/snow, 0.3-0.6 for fog) for mobile devices or when many effects are active
+- **Fog Specific**: Use ground fog (height 0.0-0.2) for valley/mountain scenes, high fog (height 0.6-1.0) for atmospheric backgrounds
 
 ## Technical Details
 
@@ -383,4 +485,12 @@ The Weather component uses specialized fragment shaders for each effect:
 4. **Optimizes rendering** using efficient GPU calculations
 5. **Supports real-time updates** through uniform buffer updates
 
-Both shaders render approximately 150-200 potential particles per frame, with the actual visible count controlled by the density parameter. 
+### Fog Shader
+1. **Generates organic fog layers** using fractal noise (FBM) for natural cloud-like shapes
+2. **Creates multiple fog layers** with depth perception and overlapping patterns
+3. **Simulates natural movement** with wind direction and vertical wave oscillations
+4. **Applies height-based concentration** for valley effect (fog gathers at bottom)
+5. **Optimizes rendering** using efficient GPU calculations with multiple layered passes
+6. **Supports real-time updates** through uniform buffer updates
+
+Both rain and snow shaders render approximately 150-200 potential particles per frame, with the actual visible count controlled by the density parameter. The fog shader uses 4 overlapping layers with fractal noise generation for organic, realistic fog patterns. 

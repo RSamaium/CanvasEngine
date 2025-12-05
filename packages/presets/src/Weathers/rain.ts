@@ -49,42 +49,32 @@ export function createRainShader(): GlProgram {
         return fract(n * 0.1031);
     }
 
-    // Generate a single rain drop with fine realistic streak (optimized)
+    // Generate a single rain drop with fine realistic streak (highly optimized)
     float rainDrop(vec2 uv, float t, float seed, float dropIndex, float maxDrops, float cosA, float sinA) {
-        // Pre-generate only necessary random values (reduced from 6 to 4)
+        // Pre-generate only necessary random values (reduced from 6 to 3)
         float rnd0 = hash(seed);
         float rnd1 = hash(seed + 1.0);
         float rnd2 = hash(seed + 2.0);
-        float rnd3 = hash(seed + 3.0);
 
-        // Better distribution: combine random and structured placement
-        // X position: mix of random and structured for full width coverage
-        float xRandom = rnd0;  // Fully random X
-        float xStructured = mod(dropIndex, 35.0) / 35.0;  // Structured grid
-        float x = mix(xRandom, xStructured, 0.4) * 2.4 - 1.2;  // Mix for coverage
+        // Simplified X position calculation
+        float xStructured = mod(dropIndex, 35.0) / 35.0;
+        float x = mix(rnd0, xStructured, 0.4) * 2.4 - 1.2;
 
-        // Base speed + variation for each drop
+        // Base speed + variation
         float speed = (0.4 + rnd1 * 0.6) * uRainSpeed;
 
-        // Y position: ensure full height coverage with better distribution
-        // Use a combination of index-based and random to fill screen immediately
-        float yRandom = rnd2;  // Random Y position
-        float yStructured = mod(dropIndex, maxDrops) / max(maxDrops, 1.0);  // Evenly distributed
-        
-        // Mix: 70% structured (guarantees coverage), 30% random (natural look)
-        float initialYOffset = mix(yRandom, yStructured, 0.7);
-        
-        // Y position: start from distributed position, then fall continuously
-        // This ensures the entire screen is filled from the start
+        // Simplified Y position calculation
+        float yStructured = mod(dropIndex, maxDrops) / max(maxDrops, 1.0);
+        float initialYOffset = mix(rnd2, yStructured, 0.7);
         float yProgress = mod(initialYOffset + t * speed, 1.0);
         float y = 1.2 - yProgress * 2.4;
 
-        // Early discard - check vertical bounds first (performance)
+        // Aggressive early discard - check vertical bounds first
         if (y < -1.3 || y > 1.3) {
             return 0.0;
         }
 
-        // Wind effect (simplified)
+        // Simplified wind effect
         float windOffset = uWindDirection * uWindStrength * yProgress * 0.5;
         x += windOffset;
 
@@ -93,35 +83,38 @@ export function createRainShader(): GlProgram {
             return 0.0;
         }
 
+        // Fast distance check before expensive calculations
         vec2 diff = uv - vec2(x, y);
+        float distSq = dot(diff, diff);
+        
+        // Early discard if too far (major performance boost)
+        if (distSq > 0.01) {  // ~0.1 units distance
+            return 0.0;
+        }
 
-        // Fine realistic streak dimensions - thinner like real rain
-        float dropWidth  = 0.0012 + rnd3 * 0.0008;  // Fine: 0.0012-0.002
-        float dropLength = 0.035  + rnd1 * 0.020;   // Realistic length
+        // Only calculate expensive operations if we're close
+        float dropWidth = 0.0012 + rnd0 * 0.0008;
+        float dropLength = 0.035 + rnd1 * 0.020;
 
-        // Optimized rotation
+        // Simplified rotation (only if needed)
         float rotX = diff.x * cosA - diff.y * sinA;
         float rotY = diff.x * sinA + diff.y * cosA;
 
-        // Fast distance calculation for elongated streak
+        // Fast distance calculation
         float distX = abs(rotX) / dropWidth;
         float distY = abs(rotY) / dropLength;
-        
-        // Single distance check
         float dist = max(distX, distY * 0.6);
 
-        // Early discard if too far (major performance optimization)
+        // Final early discard
         if (dist > 1.2) {
             return 0.0;
         }
 
-        // Single smoothstep for intensity
+        // Simplified intensity calculation
         float intensity = 1.0 - smoothstep(0.0, 1.0, dist);
-        
-        // Variation for realism
         intensity *= 0.7 + 0.5 * rnd0;
 
-        // Fade at top & bottom
+        // Simplified vertical fade
         float verticalFade = smoothstep(-1.2, -0.8, y) * smoothstep(1.2, 0.8, y);
         intensity *= verticalFade;
 
@@ -135,20 +128,30 @@ export function createRainShader(): GlProgram {
 
         float rain = 0.0;
 
-        // Clamp number of drops - increased max for better coverage
-        float maxDrops = clamp(uMaxDrops, 10.0, 300.0);
+        // Clamp number of drops - reduced max for better performance
+        float maxDrops = clamp(uMaxDrops, 10.0, 150.0);
 
         // Pre-calculate wind angle & trig once per fragment
         float windAngle = uWindDirection * uWindStrength * 0.2;
         float cosA = cos(windAngle);
         float sinA = sin(windAngle);
 
-        // Optimized loop with better seed distribution to avoid clustering
-        for (float i = 0.0; i < 300.0; i++) {
-            if (i >= maxDrops) break;
+        // Performance optimization: reduce loop iterations based on resolution
+        float pixelCount = uResolution.x * uResolution.y;
+        float resolutionFactor = clamp(pixelCount / 500000.0, 0.5, 1.0);  // LOD based on resolution
+        float effectiveMaxDrops = maxDrops * resolutionFactor;
+        float loopMax = min(effectiveMaxDrops, 150.0);
+
+        // Optimized loop with early exit optimization
+        for (float i = 0.0; i < 150.0; i++) {
+            if (i >= loopMax) break;
             // Use larger prime number spacing for better seed distribution
-            float seed = i * 23.47;  // Better seed spacing to avoid patterns
-            rain += rainDrop(uv, uTime, seed, i, maxDrops, cosA, sinA);
+            float seed = i * 23.47;
+            float dropValue = rainDrop(uv, uTime, seed, i, maxDrops, cosA, sinA);
+            rain += dropValue;
+            
+            // Early exit if we've accumulated enough intensity (performance optimization)
+            if (rain > 2.0) break;
         }
 
         // Scale based on density (optimized calculation)
