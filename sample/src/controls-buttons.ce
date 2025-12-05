@@ -1,0 +1,190 @@
+<Canvas backgroundColor="#2c3e50">
+  <Container>
+    <!-- Rectangle with controls -->
+    <Rect 
+      color="#3498db" 
+      width={60} 
+      height={60} 
+      borderRadius={8}
+      controls 
+      x 
+      y 
+    />
+    
+    <!-- Buttons container below the canvas -->
+    <DOMContainer y={400}>
+      <div style={{
+        display: 'flex',
+        gap: '10px',
+        justifyContent: 'center',
+        padding: '20px'
+      }}>
+        <button 
+          click={handleLeftClick}
+          style={{
+            padding: '10px 20px',
+            fontSize: '16px',
+            backgroundColor: '#3498db',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          Left
+        </button>
+        <button 
+          click={handleRightClick}
+          style={{
+            padding: '10px 20px',
+            fontSize: '16px',
+            backgroundColor: '#3498db',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          Right
+        </button>
+      </div>
+    </DOMContainer>
+    
+    <!-- Instructions -->
+    <Text 
+      text="Click the buttons below to move the rectangle, or use arrow keys"
+      x={10}
+      y={10}
+      color="#ecf0f1"
+      size="14"
+      fontFamily="Arial"
+    />
+  </Container>
+</Canvas>
+
+<script>
+  import { signal, mount } from "canvasengine";
+
+  // Rectangle position
+  const x = signal(200);
+  const y = signal(200);
+  
+  // Movement speed
+  const speed = signal(10);
+
+  // Controls configuration
+  const controls = signal({
+    left: {
+      repeat: true,
+      bind: "left",
+      keyDown() {
+        x.update((x) => Math.max(0, x - speed()));
+      },
+    },
+    right: {
+      repeat: true,
+      bind: "right",
+      keyDown() {
+        x.update((x) => x + speed());
+      },
+    },
+  });
+
+  // Store the controls directive instance
+  let controlsInstance = null;
+
+  /**
+   * Recursively search for an element with controls directive in the component tree
+   * 
+   * This function traverses the element tree starting from the given element,
+   * checking each element and its children for a controls directive. It returns
+   * the first element found that has a controls directive attached.
+   * 
+   * @param {Element} element - The root element to start searching from
+   * @returns {Element | null} - The element with controls directive or null if not found
+   * @example
+   * ```ts
+   * const rectElement = findElementWithControls(containerElement);
+   * if (rectElement) {
+   *   const controls = rectElement.directives.controls;
+   *   controls.applyControl('right');
+   * }
+   * ```
+   */
+  function findElementWithControls(element) {
+    // Check if this element has controls directive
+    if (element.directives && element.directives.controls) {
+      return element;
+    }
+    
+    // Search in children recursively
+    if (element.props && element.props.children) {
+      for (const child of element.props.children) {
+        if (child) {
+          const found = findElementWithControls(child);
+          if (found) {
+            return found;
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  // Get the controls directive from the Rect element
+  mount((element) => {
+    const rectElement = findElementWithControls(element);
+    if (rectElement && rectElement.directives.controls) {
+      controlsInstance = rectElement.directives.controls;
+      console.log("Controls directive found:", controlsInstance);
+    } else {
+      console.warn("Rect element with controls not found");
+    }
+  });
+
+  /**
+   * Handles the left button click event
+   * 
+   * This function programmatically applies the 'left' control to the Rect element,
+   * causing it to move left by triggering the control's keyDown handler.
+   * 
+   * @example
+   * ```ts
+   * // Called when the left button is clicked
+   * handleLeftClick();
+   * // The rectangle will move left by the speed amount
+   * ```
+   */
+  const handleLeftClick = () => {
+    if (controlsInstance) {
+      controlsInstance.applyControl('left');
+      console.log("Applied left control");
+    } else {
+      console.warn("Controls instance not found");
+    }
+  };
+
+  /**
+   * Handles the right button click event
+   * 
+   * This function programmatically applies the 'right' control to the Rect element,
+   * causing it to move right by triggering the control's keyDown handler.
+   * 
+   * @example
+   * ```ts
+   * // Called when the right button is clicked
+   * handleRightClick();
+   * // The rectangle will move right by the speed amount
+   * ```
+   */
+  const handleRightClick = () => {
+    if (controlsInstance) {
+      controlsInstance.applyControl('right');
+      console.log("Applied right control");
+    } else {
+      console.warn("Controls instance not found");
+    }
+  };
+</script>
+
