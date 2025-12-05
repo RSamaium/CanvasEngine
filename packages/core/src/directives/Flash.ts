@@ -120,10 +120,20 @@ export class Flash extends Directive {
             return;
         }
 
-        // Store original values
-        this.originalAlpha = flashProps.originalAlpha ?? instance.alpha ?? 1;
+        // Store original values once at mount time
+        // Only set if not already stored (to preserve values from first mount)
+        if (this.originalAlpha === 1 && !flashProps.originalAlpha) {
+            this.originalAlpha = instance.alpha ?? 1;
+        } else if (flashProps.originalAlpha !== undefined) {
+            this.originalAlpha = flashProps.originalAlpha;
+        }
+        
         const currentTint = (instance as any).tint;
-        this.originalTint = flashProps.originalTint ?? (isSignal(currentTint) ? currentTint() : currentTint) ?? 0xffffff;
+        if (this.originalTint === 0xffffff && !flashProps.originalTint) {
+            this.originalTint = (isSignal(currentTint) ? currentTint() : currentTint) ?? 0xffffff;
+        } else if (flashProps.originalTint !== undefined) {
+            this.originalTint = flashProps.originalTint;
+        }
 
         // Listen to trigger activation
         this.flashSubscription = on(flashProps.trigger, async (data) => {
@@ -157,18 +167,20 @@ export class Flash extends Directive {
         const flashProps = this.flashProps;
         
         // Use data from trigger to override defaults if provided
-        const type = data?.type ?? flashProps.type();
-        const duration = data?.duration ?? flashProps.duration();
-        const cycles = data?.cycles ?? flashProps.cycles();
-        const flashAlpha = data?.alpha ?? flashProps.alpha();
-        const flashTint = data?.tint ?? flashProps.tint();
+        const type = data?.type ?? (typeof flashProps.type === 'function' ? flashProps.type() : flashProps.type);
+        const duration = data?.duration ?? (typeof flashProps.duration === 'function' ? flashProps.duration() : flashProps.duration);
+        const cycles = data?.cycles ?? (typeof flashProps.cycles === 'function' ? flashProps.cycles() : flashProps.cycles);
+        const flashAlpha = data?.alpha ?? (typeof flashProps.alpha === 'function' ? flashProps.alpha() : flashProps.alpha);
+        const flashTint = data?.tint ?? (typeof flashProps.tint === 'function' ? flashProps.tint() : flashProps.tint);
 
-        // Store original values if not already stored
-        this.originalAlpha = flashProps.originalAlpha ?? instance.alpha ?? 1;
-        const currentTint = (instance as any).tint;
-        this.originalTint = flashProps.originalTint ?? (isSignal(currentTint) ? currentTint() : currentTint) ?? 0xffffff;
+        // Stop any existing animation first
+        if (this.progressSignal) {
+            // Stop the animation immediately
+            this.progressSignal.set(0, { duration: 0 });
+        }
 
-        // Stop any existing animation and clean up
+        // Clean up effects BEFORE restoring values
+        // This prevents effects from continuing to update values after we restore
         if (this.alphaEffect) {
             this.alphaEffect.unsubscribe();
             this.alphaEffect = null;
@@ -178,12 +190,20 @@ export class Flash extends Directive {
             this.tintEffect = null;
         }
 
-        // Restore original values before starting new flash
+        // Always restore to original values immediately after stopping effects
+        // This ensures that if a new flash starts before the previous one completes,
+        // we restore to the true original values, not the intermediate animation values
         instance.alpha = this.originalAlpha;
-        if ((instance as any).tint !== undefined) {
+        const currentTint = (instance as any).tint;
+        if (currentTint !== undefined) {
             // Ensure originalTint is a primitive value, not a signal
             const tintValue = typeof this.originalTint === 'number' ? this.originalTint : 0xffffff;
-            (instance as any).tint = tintValue;
+            // Handle both signal and primitive tint
+            if (isSignal(currentTint)) {
+                currentTint.set(tintValue);
+            } else {
+                (instance as any).tint = tintValue;
+            }
         }
 
         // Call onStart callback
@@ -199,17 +219,17 @@ export class Flash extends Directive {
         };
 
         // Create or recreate progress signal for flash animation
-        if (this.progressSignal) {
-            // Reset to 0 immediately without animation
-            this.progressSignal.set(0, { duration: 0 });
-            // Wait a bit to ensure the reset is complete
-            await new Promise(resolve => setTimeout(resolve, 0));
-        } else {
+        // Note: We already stopped the previous animation above, so we can reuse the signal
+        if (!this.progressSignal) {
             this.progressSignal = animatedSignal(0, {
                 duration: duration,
                 ease: (t) => t, // Linear ease
             });
         }
+        // Reset to 0 immediately without animation to start fresh
+        this.progressSignal.set(0, { duration: 0 });
+        // Wait a bit to ensure the reset is complete before starting new animation
+        await new Promise(resolve => setTimeout(resolve, 0));
 
         // Create effect to update alpha based on progress
         if (type === 'alpha' || type === 'both') {
@@ -239,8 +259,14 @@ export class Flash extends Directive {
         if (type === 'tint' || type === 'both') {
             this.tintEffect = effect(() => {
                 if (!instance || !this.progressSignal || !this.currentFlashConfig) return;
-                if ((instance as any).tint === undefined) return;
-
+                
+                // Get current tint value - handle both signal and primitive
+                const currentTint = (instance as any).tint;
+                if (currentTint === undefined) return;
+                
+                // Check if tint is a signal
+                const tintIsSignal = isSignal(currentTint);
+                
                 const progress = this.progressSignal();
                 const config = this.currentFlashConfig;
                 
@@ -266,7 +292,14 @@ export class Flash extends Directive {
                 const g = Math.round(g1 + (g2 - g1) * flashPhase);
                 const b = Math.round(b1 + (b2 - b1) * flashPhase);
                 
-                (instance as any).tint = (r << 16) | (g << 8) | b;
+                const newTintValue = (r << 16) | (g << 8) | b;
+                
+                // Handle both signal and primitive tint
+                if (tintIsSignal) {
+                    currentTint.set(newTintValue);
+                } else {
+                    (instance as any).tint = newTintValue;
+                }
             }).subscription;
         }
 
@@ -279,10 +312,16 @@ export class Flash extends Directive {
         // Restore original values
         if (instance) {
             instance.alpha = this.originalAlpha;
-            if ((instance as any).tint !== undefined) {
+            const currentTint = (instance as any).tint;
+            if (currentTint !== undefined) {
                 // Ensure originalTint is a primitive value, not a signal
                 const tintValue = typeof this.originalTint === 'number' ? this.originalTint : 0xffffff;
-                (instance as any).tint = tintValue;
+                // Handle both signal and primitive tint
+                if (isSignal(currentTint)) {
+                    currentTint.set(tintValue);
+                } else {
+                    (instance as any).tint = tintValue;
+                }
             }
         }
         
@@ -344,10 +383,16 @@ export class Flash extends Directive {
         if (this.elementRef?.componentInstance) {
             const instance = this.elementRef.componentInstance;
             instance.alpha = this.originalAlpha;
-            if ((instance as any).tint !== undefined) {
+            const currentTint = (instance as any).tint;
+            if (currentTint !== undefined) {
                 // Ensure originalTint is a primitive value, not a signal
                 const tintValue = typeof this.originalTint === 'number' ? this.originalTint : 0xffffff;
-                (instance as any).tint = tintValue;
+                // Handle both signal and primitive tint
+                if (isSignal(currentTint)) {
+                    currentTint.set(tintValue);
+                } else {
+                    (instance as any).tint = tintValue;
+                }
             }
         }
 

@@ -8,10 +8,10 @@
     <!-- Basic shake example -->
     <Container x={100} y={100}>
         <Text text="Basic Shake" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
-        <Rect 
-            color="#e74c3c" 
-            width={80} 
-            height={80} 
+        <Sprite 
+            image="exp.png"
+            width={200}
+            height={200}
             borderRadius={8} 
             shake={shakeConfig}
             click={() => shakeTrigger.start()}

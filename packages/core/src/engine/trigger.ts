@@ -1,6 +1,6 @@
 import { effect, signal } from "@signe/reactive";
 
-interface Listen<T = any> {
+export interface Listen<T = any> {
   config: T | undefined;
   seed: {
     config: T | undefined;
@@ -9,7 +9,7 @@ interface Listen<T = any> {
   };
 }
 
-interface Trigger<T = any> {
+export interface Trigger<T = any> {
   start: () => Promise<void>;
   listen: () => Listen<T> | undefined;
 }

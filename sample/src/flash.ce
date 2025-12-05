@@ -76,8 +76,8 @@
         <Text text="Sprite Flash" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
         <Sprite 
             image="exp.png"
-            width={80}
-            height={80}
+            width={800}
+            height={800}
             flash={spriteFlashConfig}
             click={() => spriteFlashTrigger.start()}
         />
@@ -180,7 +180,7 @@
     const spriteFlashConfig = {
         trigger: spriteFlashTrigger,
         type: 'tint',
-        tint: 0xffff00,  // Yellow flash
+        tint: 0xff0000,  // Yellow flash
         duration: 250
     };
 
