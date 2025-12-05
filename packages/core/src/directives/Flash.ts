@@ -1,7 +1,7 @@
 import { Container } from 'pixi.js';
 import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
-import { effect } from '@signe/reactive';
+import { effect, isSignal } from '@signe/reactive';
 import { on, isTrigger, Trigger } from '../engine/trigger';
 import { useProps } from '../hooks/useProps';
 import { SignalOrPrimitive } from '../components/types';
@@ -122,7 +122,8 @@ export class Flash extends Directive {
 
         // Store original values
         this.originalAlpha = flashProps.originalAlpha ?? instance.alpha ?? 1;
-        this.originalTint = flashProps.originalTint ?? (instance as any).tint ?? 0xffffff;
+        const currentTint = (instance as any).tint;
+        this.originalTint = flashProps.originalTint ?? (isSignal(currentTint) ? currentTint() : currentTint) ?? 0xffffff;
 
         // Listen to trigger activation
         this.flashSubscription = on(flashProps.trigger, async (data) => {
@@ -164,7 +165,8 @@ export class Flash extends Directive {
 
         // Store original values if not already stored
         this.originalAlpha = flashProps.originalAlpha ?? instance.alpha ?? 1;
-        this.originalTint = flashProps.originalTint ?? (instance as any).tint ?? 0xffffff;
+        const currentTint = (instance as any).tint;
+        this.originalTint = flashProps.originalTint ?? (isSignal(currentTint) ? currentTint() : currentTint) ?? 0xffffff;
 
         // Stop any existing animation and clean up
         if (this.alphaEffect) {
@@ -179,7 +181,9 @@ export class Flash extends Directive {
         // Restore original values before starting new flash
         instance.alpha = this.originalAlpha;
         if ((instance as any).tint !== undefined) {
-            (instance as any).tint = this.originalTint;
+            // Ensure originalTint is a primitive value, not a signal
+            const tintValue = typeof this.originalTint === 'number' ? this.originalTint : 0xffffff;
+            (instance as any).tint = tintValue;
         }
 
         // Call onStart callback
@@ -276,7 +280,9 @@ export class Flash extends Directive {
         if (instance) {
             instance.alpha = this.originalAlpha;
             if ((instance as any).tint !== undefined) {
-                (instance as any).tint = this.originalTint;
+                // Ensure originalTint is a primitive value, not a signal
+                const tintValue = typeof this.originalTint === 'number' ? this.originalTint : 0xffffff;
+                (instance as any).tint = tintValue;
             }
         }
         
@@ -339,7 +345,9 @@ export class Flash extends Directive {
             const instance = this.elementRef.componentInstance;
             instance.alpha = this.originalAlpha;
             if ((instance as any).tint !== undefined) {
-                (instance as any).tint = this.originalTint;
+                // Ensure originalTint is a primitive value, not a signal
+                const tintValue = typeof this.originalTint === 'number' ? this.originalTint : 0xffffff;
+                (instance as any).tint = tintValue;
             }
         }
 

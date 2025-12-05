@@ -153,6 +153,14 @@ const guideMenu = [
       {
         text: "Weather",
         link: "/presets/weather",
+      },
+      {
+        text: "Flash",
+        link: "/presets/flash",
+      },
+      {
+        text: "Shake",
+        link: "/presets/shake",
       }
     ],
   },
