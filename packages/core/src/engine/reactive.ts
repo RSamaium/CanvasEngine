@@ -101,7 +101,15 @@ function destroyElement(element: Element | Element[]) {
     element.componentInstance.onDestroy(element.parent as any, () => {
       element.propSubscriptions?.forEach((sub) => sub.unsubscribe());
       element.effectSubscriptions?.forEach((sub) => sub.unsubscribe());
-      element.effectUnmounts?.forEach((fn) => fn?.());
+      element.effectUnmounts?.forEach((fn) => {
+        if (isPromise(fn)) {
+          (fn as unknown as Promise<any>).then((retFn) => {
+            retFn?.();
+          });
+        } else {
+          fn?.();
+        }
+      });
     });
   } else {
     // If componentInstance is undefined or doesn't have onDestroy, still clean up subscriptions
