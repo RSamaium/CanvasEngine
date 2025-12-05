@@ -1,0 +1,41 @@
+<Canvas>
+    <Container>
+        <!-- Instructions -->
+        <Text text="Click the rectangles to shake them!" x={10} y={10} color="#ecf0f1" size="18" fontFamily="Arial" />
+        <Text text="Different shake configurations are demonstrated below" x={10} y={35} color="#95a5a6" size="14" fontFamily="Arial" />
+    </Container>
+
+    <!-- Basic shake example -->
+    <Container x={100} y={100}>
+        <Text text="Basic Shake" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
+        <Rect 
+            color="#e74c3c" 
+            width={80} 
+            height={80} 
+            borderRadius={8} 
+            shake={shakeConfig}
+            click={() => shakeTrigger.start()}
+        />
+    </Container>
+</Canvas>
+
+<script>
+    import { trigger, signal, on } from 'canvasengine';
+
+    const shakeTrigger = trigger();
+
+    const shakeConfig = {
+  trigger: shakeTrigger,
+  intensity: 15,        // Shake intensity in pixels
+  duration: 5000,        // Duration in milliseconds
+  frequency: 10,        // Number of oscillations
+  direction: 'both',    // 'x', 'y', or 'both'
+  onStart() {
+    console.log("Shake started");
+  },
+  onComplete() {
+    console.log("Shake completed");
+  }
+};
+</script>
+

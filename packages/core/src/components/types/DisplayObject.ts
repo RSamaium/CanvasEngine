@@ -2,6 +2,7 @@ import * as PIXI from "pixi.js";
 import { SignalOrPrimitive } from ".";
 import { DragProps } from "../../directives/Drag";
 import { ViewportFollowProps } from "../../directives/ViewportFollow";
+import { ShakeProps } from "../../directives/Shake";
 
 export type FlexDirection = 'row' | 'column' | 'row-reverse' | 'column-reverse';
 export type JustifyContent = 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around';
@@ -64,6 +65,7 @@ export interface DisplayObjectProps {
     // Directives
     drag?: DragProps;
     viewportFollow?: ViewportFollowProps;
+    shake?: ShakeProps;
 
     // Events
     click?: PIXI.FederatedEventHandler;
