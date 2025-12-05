@@ -1,0 +1,190 @@
+<Canvas>
+    <Container>
+        <!-- Instructions -->
+        <Text text="Click the rectangles to flash them!" x={10} y={10} color="#ecf0f1" size="18" fontFamily="Arial" />
+        <Text text="Different flash configurations are demonstrated below" x={10} y={35} color="#95a5a6" size="14" fontFamily="Arial" />
+    </Container>
+
+    <!-- Basic alpha flash example -->
+    <Container x={100} y={100}>
+        <Text text="Alpha Flash" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
+        <Rect 
+            color="#e74c3c" 
+            width={80} 
+            height={80} 
+            borderRadius={8} 
+            flash={alphaFlashConfig}
+            click={() => alphaFlashTrigger.start()}
+        />
+    </Container>
+
+    <!-- Tint flash example -->
+    <Container x={250} y={100}>
+        <Text text="Tint Flash" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
+        <Rect 
+            color="#3498db" 
+            width={80} 
+            height={80} 
+            borderRadius={8} 
+            flash={tintFlashConfig}
+            click={() => tintFlashTrigger.start()}
+        />
+    </Container>
+
+    <!-- Both flash example -->
+    <Container x={400} y={100}>
+        <Text text="Both Flash" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
+        <Rect 
+            color="#2ecc71" 
+            width={80} 
+            height={80} 
+            borderRadius={8} 
+            flash={bothFlashConfig}
+            click={() => bothFlashTrigger.start()}
+        />
+    </Container>
+
+    <!-- Multiple cycles flash -->
+    <Container x={550} y={100}>
+        <Text text="Multi Cycle" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
+        <Rect 
+            color="#f39c12" 
+            width={80} 
+            height={80} 
+            borderRadius={8} 
+            flash={multiCycleFlashConfig}
+            click={() => multiCycleFlashTrigger.start()}
+        />
+    </Container>
+
+    <!-- Flash with callbacks -->
+    <Container x={100} y={250}>
+        <Text text="With Callbacks" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
+        <Rect 
+            color="#9b59b6" 
+            width={80} 
+            height={80} 
+            borderRadius={8} 
+            flash={callbackFlashConfig}
+            click={() => callbackFlashTrigger.start()}
+        />
+        <Text text={statusText} x={0} y={100} color="#2ecc71" size="12" fontFamily="Arial" />
+    </Container>
+
+    <!-- Flash sprite example -->
+    <Container x={300} y={250}>
+        <Text text="Sprite Flash" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
+        <Sprite 
+            image="exp.png"
+            width={80}
+            height={80}
+            flash={spriteFlashConfig}
+            click={() => spriteFlashTrigger.start()}
+        />
+    </Container>
+
+    <!-- Multiple elements flash together -->
+    <Container x={500} y={250}>
+        <Text text="Group Flash" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
+        <Rect 
+            color="#e67e22" 
+            width={60} 
+            height={60} 
+            borderRadius={8} 
+            x={0}
+            y={0}
+            flash={{ trigger: groupFlashTrigger }}
+            click={() => groupFlashTrigger.start()}
+        />
+        <Rect 
+            color="#e67e22" 
+            width={60} 
+            height={60} 
+            borderRadius={8} 
+            x={70}
+            y={0}
+            flash={{ trigger: groupFlashTrigger }}
+        />
+        <Rect 
+            color="#e67e22" 
+            width={60} 
+            height={60} 
+            borderRadius={8} 
+            x={35}
+            y={70}
+            flash={{ trigger: groupFlashTrigger }}
+        />
+    </Container>
+</Canvas>
+
+<script>
+    import { trigger, signal, on } from 'canvasengine';
+
+    // Alpha flash trigger
+    const alphaFlashTrigger = trigger();
+    const alphaFlashConfig = {
+        trigger: alphaFlashTrigger,
+        type: 'alpha',
+        alpha: 0.2,
+        duration: 300
+    };
+
+    // Tint flash trigger
+    const tintFlashTrigger = trigger();
+    const tintFlashConfig = {
+        trigger: tintFlashTrigger,
+        type: 'tint',
+        tint: 0xff0000,  // Red flash
+        duration: 300
+    };
+
+    // Both flash trigger
+    const bothFlashTrigger = trigger();
+    const bothFlashConfig = {
+        trigger: bothFlashTrigger,
+        type: 'both',
+        alpha: 0.5,
+        tint: 0x00ff00,  // Green flash
+        duration: 400
+    };
+
+    // Multi-cycle flash trigger
+    const multiCycleFlashTrigger = trigger();
+    const multiCycleFlashConfig = {
+        trigger: multiCycleFlashTrigger,
+        type: 'alpha',
+        cycles: 3,
+        duration: 600
+    };
+
+    // Callback flash trigger
+    const callbackFlashTrigger = trigger();
+    const statusText = signal('Click to flash');
+    const callbackFlashConfig = {
+        trigger: callbackFlashTrigger,
+        type: 'alpha',
+        alpha: 0.3,
+        duration: 300,
+        onStart() {
+            console.log('Flash started!');
+            statusText.set('Flash started!');
+        },
+        onComplete() {
+            console.log('Flash completed!');
+            statusText.set('Flash completed!');
+        }
+    };
+
+    // Sprite flash trigger
+    const spriteFlashTrigger = trigger();
+    const spriteFlashConfig = {
+        trigger: spriteFlashTrigger,
+        type: 'tint',
+        tint: 0xffff00,  // Yellow flash
+        duration: 250
+    };
+
+    // Group flash trigger (multiple elements flash together)
+    const groupFlashTrigger = trigger();
+</script>
+

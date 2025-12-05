@@ -1,6 +1,6 @@
 import '@pixi/layout/devtools';
 import { bootstrapCanvas } from 'canvasengine';
-import App from './shake.ce'
+import App from './flash.ce'
 // Uncomment to test shake directive examples:
 // import App from './shake.ce'
 
