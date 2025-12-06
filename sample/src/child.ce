@@ -1,9 +1,13 @@
 <Container>
-    @for (child of children) {
-        <child />
-    }
+    <Text text="Child component" color="white" />
 </Container>
 
 <script>
+    import { mount } from 'canvasengine';
+
     const { children } = defineProps();
+
+    mount((element) => {
+        console.log(element)
+    });
 </script>

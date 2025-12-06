@@ -14,6 +14,7 @@ import {
   bufferTime,
   filter,
   throttleTime,
+  combineLatest,
 } from "rxjs";
 import { ComponentInstance } from "../components/DisplayObject";
 import { Directive, applyDirective } from "./directive";
@@ -181,8 +182,8 @@ export function createComponent(tag: string, props?: Props): Element {
               instance.onUpdate?.(
                 path == ""
                   ? {
-                      [key]: value,
-                    }
+                    [key]: value,
+                  }
                   : set({}, path + "." + key, value)
               );
             })
@@ -217,9 +218,79 @@ export function createComponent(tag: string, props?: Props): Element {
     }
   }
 
-  function onMount(parent: Element, element: Element, index?: number) {
-    element.props.context = parent.props.context;
-    element.parent = parent;
+  /**
+   * Checks if all dependencies are ready (not undefined).
+   * Handles signals synchronously and promises asynchronously.
+   * For reactive signals, sets up subscriptions to mount when all become ready.
+   * 
+   * @param deps - Array of signals, promises, or direct values
+   * @returns Promise<boolean> - true if all dependencies are ready
+   */
+  async function checkDependencies(
+    deps: any[]
+  ): Promise<boolean> {
+    const values = await Promise.all(
+      deps.map(async (dep) => {
+        if (isSignal(dep)) {
+          return dep(); // Read current signal value
+        } else if (isPromise(dep)) {
+          return await dep; // Await promise resolution
+        }
+        return dep; // Direct value
+      })
+    );
+    return values.every((v) => v !== undefined);
+  }
+
+  /**
+   * Sets up subscriptions to reactive signal dependencies.
+   * When all signals become defined, mounts the component.
+   */
+  function setupDependencySubscriptions(
+    parent: Element,
+    element: Element,
+    deps: any[],
+    index?: number
+  ) {
+    const signalDeps = deps.filter((dep) => isSignal(dep));
+    const promiseDeps = deps.filter((dep) => isPromise(dep));
+
+    if (signalDeps.length === 0) {
+      // No reactive signals, nothing to subscribe to
+      return;
+    }
+
+    // Create observables from signals
+    const signalObservables = signalDeps.map((sig) => sig.observable);
+
+    // Combine all signal observables
+    const subscription = combineLatest(signalObservables).subscribe(
+      async () => {
+        // Check if all dependencies are now ready
+        const allReady = await checkDependencies(deps);
+        if (allReady) {
+          // Unsubscribe - we only need to mount once
+          subscription.unsubscribe();
+          // Remove from subscriptions
+          const idx = element.propSubscriptions.indexOf(subscription);
+          if (idx > -1) {
+            element.propSubscriptions.splice(idx, 1);
+          }
+          // Now mount the component
+          performMount(parent, element, index);
+          propagateContext(element);
+        }
+      }
+    );
+
+    // Store subscription for cleanup
+    element.propSubscriptions.push(subscription);
+  }
+
+  /**
+   * Performs the actual mounting of the component.
+   */
+  function performMount(parent: Element, element: Element, index?: number) {
     element.componentInstance.onMount?.(element, index);
     for (let name in element.directives) {
       element.directives[name].onMount?.(element);
@@ -227,6 +298,24 @@ export function createComponent(tag: string, props?: Props): Element {
     element.effectMounts.forEach((fn: any) => {
       element.effectUnmounts.push(fn(element));
     });
+  }
+
+  async function onMount(parent: Element, element: Element, index?: number) {
+    element.props.context = parent.props.context;
+    element.parent = parent;
+
+    // Check dependencies before mounting
+    if (element.props.dependencies && Array.isArray(element.props.dependencies)) {
+      const deps = element.props.dependencies;
+      const ready = await checkDependencies(deps);
+      if (!ready) {
+        // Set up subscriptions for reactive signals to trigger mount later
+        setupDependencySubscriptions(parent, element, deps, index);
+        return;
+      }
+    }
+
+    performMount(parent, element, index);
   };
 
   async function propagateContext(element) {
@@ -237,19 +326,19 @@ export function createComponent(tag: string, props?: Props): Element {
       }
       else {
         await new Promise((resolve) => {
-            let lastElement = null
-            element.propSubscriptions.push(element.propObservables.attach.observable.subscribe(async (args) => {
-                const value = args?.value ?? args
-                if (!value) {
-                  throw new Error(`attach in ${element.tag} is undefined or null, add a component`)
-                }
-                if (lastElement) {
-                  destroyElement(lastElement)
-                }
-                lastElement = value
-                await createElement(element, value)
-                resolve(undefined)
-            }))
+          let lastElement = null
+          element.propSubscriptions.push(element.propObservables.attach.observable.subscribe(async (args) => {
+            const value = args?.value ?? args
+            if (!value) {
+              throw new Error(`attach in ${element.tag} is undefined or null, add a component`)
+            }
+            if (lastElement) {
+              destroyElement(lastElement)
+            }
+            lastElement = value
+            await createElement(element, value)
+            resolve(undefined)
+          }))
         })
       }
     }
@@ -262,39 +351,39 @@ export function createComponent(tag: string, props?: Props): Element {
     }
   };
 
-     /**
-    * Creates and mounts a child element to a parent element.
-    * Handles different types of children: Elements, Promises resolving to Elements, and Observables.
-    * 
-    * @description This function is designed to handle reactive child components that can be:
-    * - Direct Element instances
-    * - Promises that resolve to Elements (for async components)
-    * - Observables that emit Elements, arrays of Elements, or FlowObservable results
-    * - Nested observables within arrays or FlowObservable results (handled recursively)
-    * 
-    * For Observables, it subscribes to the stream and automatically mounts/unmounts elements
-    * as they are emitted. The function handles nested observables recursively, ensuring that
-    * observables within arrays or FlowObservable results are also properly subscribed to.
-    * All subscriptions are stored in the parent's effectSubscriptions for automatic cleanup.
-    * 
-    * @param {Element} parent - The parent element to mount the child to
-    * @param {Element | Observable<any> | Promise<Element>} child - The child to create and mount
-    * 
-    * @example
-    * ```typescript
-    * // Direct element
-    * await createElement(parent, childElement);
-    * 
-    * // Observable of elements (from cond, loop, etc.)
-    * await createElement(parent, cond(signal(visible), () => h(Container)));
-    * 
-    * // Observable that emits arrays containing other observables
-    * await createElement(parent, observableOfObservables);
-    * 
-    * // Promise resolving to element
-    * await createElement(parent, import('./MyComponent').then(mod => h(mod.default)));
-    * ```
-    */
+  /**
+ * Creates and mounts a child element to a parent element.
+ * Handles different types of children: Elements, Promises resolving to Elements, and Observables.
+ * 
+ * @description This function is designed to handle reactive child components that can be:
+ * - Direct Element instances
+ * - Promises that resolve to Elements (for async components)
+ * - Observables that emit Elements, arrays of Elements, or FlowObservable results
+ * - Nested observables within arrays or FlowObservable results (handled recursively)
+ * 
+ * For Observables, it subscribes to the stream and automatically mounts/unmounts elements
+ * as they are emitted. The function handles nested observables recursively, ensuring that
+ * observables within arrays or FlowObservable results are also properly subscribed to.
+ * All subscriptions are stored in the parent's effectSubscriptions for automatic cleanup.
+ * 
+ * @param {Element} parent - The parent element to mount the child to
+ * @param {Element | Observable<any> | Promise<Element>} child - The child to create and mount
+ * 
+ * @example
+ * ```typescript
+ * // Direct element
+ * await createElement(parent, childElement);
+ * 
+ * // Observable of elements (from cond, loop, etc.)
+ * await createElement(parent, cond(signal(visible), () => h(Container)));
+ * 
+ * // Observable that emits arrays containing other observables
+ * await createElement(parent, observableOfObservables);
+ * 
+ * // Promise resolving to element
+ * await createElement(parent, import('./MyComponent').then(mod => h(mod.default)));
+ * ```
+ */
   async function createElement(parent: Element, child: Element | Observable<any> | Promise<Element>) {
     if (isPromise(child)) {
       child = await child;
@@ -313,62 +402,62 @@ export function createComponent(tag: string, props?: Props): Element {
               elements: Element[];
               prev?: Element;
             } = value;
-            
+
             const components = comp.filter((c) => c !== null);
-                         if (prev) {
-               components.forEach(async (c) => {
-                 const index = parent.props.children.indexOf(prev.props.key);
-                 if (c instanceof Observable) {
-                   // Handle observable component recursively
-                   await createElement(parent, c);
-                 } else if (isElement(c)) {
-                   onMount(parent, c, index + 1);
-                   propagateContext(c);
-                 }
-               });
-               return;
-             }
-                         components.forEach(async (component) => {
-               if (!Array.isArray(component)) {
-                 if (component instanceof Observable) {
-                   // Handle observable component recursively
-                   await createElement(parent, component);
-                 } else if (isElement(component)) {
-                   onMount(parent, component);
-                   propagateContext(component);
-                 }
-               } else {
-                 component.forEach(async (comp) => {
-                   if (comp instanceof Observable) {
-                     // Handle observable component recursively
-                     await createElement(parent, comp);
-                   } else if (isElement(comp)) {
-                     onMount(parent, comp);
-                     propagateContext(comp);
-                   }
-                 });
-               }
-             });
+            if (prev) {
+              components.forEach(async (c) => {
+                const index = parent.props.children.indexOf(prev.props.key);
+                if (c instanceof Observable) {
+                  // Handle observable component recursively
+                  await createElement(parent, c);
+                } else if (isElement(c)) {
+                  onMount(parent, c, index + 1);
+                  propagateContext(c);
+                }
+              });
+              return;
+            }
+            components.forEach(async (component) => {
+              if (!Array.isArray(component)) {
+                if (component instanceof Observable) {
+                  // Handle observable component recursively
+                  await createElement(parent, component);
+                } else if (isElement(component)) {
+                  onMount(parent, component);
+                  propagateContext(component);
+                }
+              } else {
+                component.forEach(async (comp) => {
+                  if (comp instanceof Observable) {
+                    // Handle observable component recursively
+                    await createElement(parent, comp);
+                  } else if (isElement(comp)) {
+                    onMount(parent, comp);
+                    propagateContext(comp);
+                  }
+                });
+              }
+            });
           } else if (isElement(value)) {
             // Handle direct Element emission
             onMount(parent, value);
             propagateContext(value);
-                     } else if (Array.isArray(value)) {
-             // Handle array of elements (which can also be observables)
-             value.forEach(async (element) => {
-               if (element instanceof Observable) {
-                 // Handle observable element recursively
-                 await createElement(parent, element);
-               } else if (isElement(element)) {
-                 onMount(parent, element);
-                 propagateContext(element);
-               }
-             });
-           }
+          } else if (Array.isArray(value)) {
+            // Handle array of elements (which can also be observables)
+            value.forEach(async (element) => {
+              if (element instanceof Observable) {
+                // Handle observable element recursively
+                await createElement(parent, element);
+              } else if (isElement(element)) {
+                onMount(parent, element);
+                propagateContext(element);
+              }
+            });
+          }
           elementsListen.next(undefined);
         }
       );
-      
+
       // Store subscription for cleanup
       parent.effectSubscriptions.push(subscription);
     } else if (isElement(child)) {
@@ -405,170 +494,170 @@ export function loop<T>(
     let elementMap = new Map<string | number, Element>();
     let isFirstSubscription = true;
 
-    const isArraySignal = (signal: any): signal is WritableArraySignal<T[]> => 
+    const isArraySignal = (signal: any): signal is WritableArraySignal<T[]> =>
       Array.isArray(signal());
 
     return new Observable<FlowResult>(subscriber => {
       const subscription = isArraySignal(itemsSubject)
         ? itemsSubject.observable.subscribe(change => {
-            if (isFirstSubscription) {
-              isFirstSubscription = false;
-              elements.forEach(el => el.destroy());
-              elements = [];
-              elementMap.clear();
+          if (isFirstSubscription) {
+            isFirstSubscription = false;
+            elements.forEach(el => el.destroy());
+            elements = [];
+            elementMap.clear();
 
-              const items = itemsSubject();
-              if (items) {
-                items.forEach((item, index) => {
-                  const element = createElementFn(item, index);
-                  if (element) {
-                    elements.push(element);
-                    elementMap.set(index, element);
-                  }
-                });
-              }
-              subscriber.next({
-                elements: [...elements]
-              });
-              return;
-            }
-
-            if (change.type === 'init' || change.type === 'reset') {
-              elements.forEach(el => destroyElement(el));
-              elements = [];
-              elementMap.clear();
-
-              const items = itemsSubject();
-              if (items) {
-                items.forEach((item, index) => {
-                  const element = createElementFn(item, index);
-                  if (element) {
-                    elements.push(element);
-                    elementMap.set(index, element);
-                  }
-                });
-              }
-            } else if (change.type === 'add' && change.index !== undefined) {
-              const newElements = change.items.map((item, i) => {
-                const element = createElementFn(item as T, change.index! + i);
+            const items = itemsSubject();
+            if (items) {
+              items.forEach((item, index) => {
+                const element = createElementFn(item, index);
                 if (element) {
-                  elementMap.set(change.index! + i, element);
+                  elements.push(element);
+                  elementMap.set(index, element);
                 }
-                return element;
-              }).filter((el): el is Element => el !== null);
-              
-              elements.splice(change.index, 0, ...newElements);
-            } else if (change.type === 'remove' && change.index !== undefined) {
-              const removed = elements.splice(change.index, 1);
-              removed.forEach(el => {
-                destroyElement(el)
-                elementMap.delete(change.index!);
               });
-            } else if (change.type === 'update' && change.index !== undefined && change.items.length === 1) {
-              const index = change.index;
-              const newItem = change.items[0];
-
-              // Check if the previous item at this index was effectively undefined or non-existent
-              if (index >= elements.length || elements[index] === undefined || !elementMap.has(index)) {
-                // Treat as add operation
-                const newElement = createElementFn(newItem as T, index);
-                if (newElement) {
-                  elements.splice(index, 0, newElement); // Insert at the correct index
-                  elementMap.set(index, newElement);
-                  // Adjust indices in elementMap for subsequent elements might be needed if map relied on exact indices
-                  // This simple implementation assumes keys are stable or createElementFn handles context correctly
-                } else {
-                     console.warn(`Element creation returned null for index ${index} during add-like update.`);
-                }
-              } else {
-                // Treat as a standard update operation
-                const oldElement = elements[index];
-                destroyElement(oldElement)
-                const newElement = createElementFn(newItem as T, index);
-                if (newElement) {
-                  elements[index] = newElement;
-                  elementMap.set(index, newElement);
-                } else {
-                  // Handle case where new element creation returns null
-                  elements.splice(index, 1);
-                  elementMap.delete(index);
-                }
-              }
             }
-
             subscriber.next({
-              elements: [...elements] // Create a new array to ensure change detection
+              elements: [...elements]
             });
-          })
-        : (itemsSubject as WritableObjectSignal<T>).observable.subscribe(change => {
-            const key = change.key as string | number
-            if (isFirstSubscription) {
-              isFirstSubscription = false;
-              elements.forEach(el => destroyElement(el));
-              elements = [];
-              elementMap.clear();
+            return;
+          }
 
-              const items = (itemsSubject as WritableObjectSignal<T>)();
-              if (items) {
-                Object.entries(items).forEach(([key, value]) => {
-                  const element = createElementFn(value, key);
-                  if (element) {
-                    elements.push(element);
-                    elementMap.set(key, element);
-                  }
-                });
-              }
-              subscriber.next({
-                elements: [...elements]
+          if (change.type === 'init' || change.type === 'reset') {
+            elements.forEach(el => destroyElement(el));
+            elements = [];
+            elementMap.clear();
+
+            const items = itemsSubject();
+            if (items) {
+              items.forEach((item, index) => {
+                const element = createElementFn(item, index);
+                if (element) {
+                  elements.push(element);
+                  elementMap.set(index, element);
+                }
               });
-              return;
             }
-
-            if (change.type === 'init' || change.type === 'reset') {
-              elements.forEach(el => destroyElement(el));
-              elements = [];
-              elementMap.clear();
-
-              const items = (itemsSubject as WritableObjectSignal<T>)();
-              if (items) {
-                Object.entries(items).forEach(([key, value]) => {
-                  const element = createElementFn(value, key);
-                  if (element) {
-                    elements.push(element);
-                    elementMap.set(key, element);
-                  }
-                });
-              }
-            } else if (change.type === 'add' && change.key && change.value !== undefined) {
-              const element = createElementFn(change.value as T, key);
+          } else if (change.type === 'add' && change.index !== undefined) {
+            const newElements = change.items.map((item, i) => {
+              const element = createElementFn(item as T, change.index! + i);
               if (element) {
-                elements.push(element);
-                elementMap.set(key, element);
+                elementMap.set(change.index! + i, element);
               }
-            } else if (change.type === 'remove' && change.key) {
-              const index = elements.findIndex(el => elementMap.get(key) === el);
-              if (index !== -1) {
-                const [removed] = elements.splice(index, 1);
-                destroyElement(removed)
-                elementMap.delete(key);
+              return element;
+            }).filter((el): el is Element => el !== null);
+
+            elements.splice(change.index, 0, ...newElements);
+          } else if (change.type === 'remove' && change.index !== undefined) {
+            const removed = elements.splice(change.index, 1);
+            removed.forEach(el => {
+              destroyElement(el)
+              elementMap.delete(change.index!);
+            });
+          } else if (change.type === 'update' && change.index !== undefined && change.items.length === 1) {
+            const index = change.index;
+            const newItem = change.items[0];
+
+            // Check if the previous item at this index was effectively undefined or non-existent
+            if (index >= elements.length || elements[index] === undefined || !elementMap.has(index)) {
+              // Treat as add operation
+              const newElement = createElementFn(newItem as T, index);
+              if (newElement) {
+                elements.splice(index, 0, newElement); // Insert at the correct index
+                elementMap.set(index, newElement);
+                // Adjust indices in elementMap for subsequent elements might be needed if map relied on exact indices
+                // This simple implementation assumes keys are stable or createElementFn handles context correctly
+              } else {
+                console.warn(`Element creation returned null for index ${index} during add-like update.`);
               }
-            } else if (change.type === 'update' && change.key && change.value !== undefined) {
-              const index = elements.findIndex(el => elementMap.get(key) === el);
-              if (index !== -1) {
-                const oldElement = elements[index];
-                destroyElement(oldElement)
-                const newElement = createElementFn(change.value as T, key);
-                if (newElement) {
-                  elements[index] = newElement;
-                  elementMap.set(key, newElement);
-                }
+            } else {
+              // Treat as a standard update operation
+              const oldElement = elements[index];
+              destroyElement(oldElement)
+              const newElement = createElementFn(newItem as T, index);
+              if (newElement) {
+                elements[index] = newElement;
+                elementMap.set(index, newElement);
+              } else {
+                // Handle case where new element creation returns null
+                elements.splice(index, 1);
+                elementMap.delete(index);
               }
             }
+          }
 
-            subscriber.next({
-              elements: [...elements] // Create a new array to ensure change detection
-            });
+          subscriber.next({
+            elements: [...elements] // Create a new array to ensure change detection
           });
+        })
+        : (itemsSubject as WritableObjectSignal<T>).observable.subscribe(change => {
+          const key = change.key as string | number
+          if (isFirstSubscription) {
+            isFirstSubscription = false;
+            elements.forEach(el => destroyElement(el));
+            elements = [];
+            elementMap.clear();
+
+            const items = (itemsSubject as WritableObjectSignal<T>)();
+            if (items) {
+              Object.entries(items).forEach(([key, value]) => {
+                const element = createElementFn(value, key);
+                if (element) {
+                  elements.push(element);
+                  elementMap.set(key, element);
+                }
+              });
+            }
+            subscriber.next({
+              elements: [...elements]
+            });
+            return;
+          }
+
+          if (change.type === 'init' || change.type === 'reset') {
+            elements.forEach(el => destroyElement(el));
+            elements = [];
+            elementMap.clear();
+
+            const items = (itemsSubject as WritableObjectSignal<T>)();
+            if (items) {
+              Object.entries(items).forEach(([key, value]) => {
+                const element = createElementFn(value, key);
+                if (element) {
+                  elements.push(element);
+                  elementMap.set(key, element);
+                }
+              });
+            }
+          } else if (change.type === 'add' && change.key && change.value !== undefined) {
+            const element = createElementFn(change.value as T, key);
+            if (element) {
+              elements.push(element);
+              elementMap.set(key, element);
+            }
+          } else if (change.type === 'remove' && change.key) {
+            const index = elements.findIndex(el => elementMap.get(key) === el);
+            if (index !== -1) {
+              const [removed] = elements.splice(index, 1);
+              destroyElement(removed)
+              elementMap.delete(key);
+            }
+          } else if (change.type === 'update' && change.key && change.value !== undefined) {
+            const index = elements.findIndex(el => elementMap.get(key) === el);
+            if (index !== -1) {
+              const oldElement = elements[index];
+              destroyElement(oldElement)
+              const newElement = createElementFn(change.value as T, key);
+              if (newElement) {
+                elements[index] = newElement;
+                elementMap.set(key, newElement);
+              }
+            }
+          }
+
+          subscriber.next({
+            elements: [...elements] // Create a new array to ensure change detection
+          });
+        });
 
       return subscription;
     });
@@ -660,7 +749,7 @@ export function cond(
   ];
 
   // All conditions are now signals, so we always use the reactive path
-  return new Observable<{elements: Element[], type?: "init" | "remove"}>(subscriber => {
+  return new Observable<{ elements: Element[], type?: "init" | "remove" }>(subscriber => {
     const subscriptions: Subscription[] = [];
 
     const evaluateConditions = () => {
@@ -669,7 +758,7 @@ export function cond(
       for (let i = 0; i < allConditions.length; i++) {
         const condition = allConditions[i].condition;
         const conditionValue = condition();
-        
+
         if (conditionValue) {
           matchingIndex = i;
           break;

@@ -41,6 +41,10 @@ const guideMenu = [
         link: "/concepts/lifecycle",
       },
       {
+        text: "Dependencies",
+        link: "/concepts/dependencies",
+      },
+      {
         text: "Slot",
         link: "/concepts/slot",
       },
@@ -127,6 +131,14 @@ const guideMenu = [
       {
         text: "Sound",
         link: "/directives/sound",
+      },
+      {
+        text: "Flash",
+        link: "/directives/flash",
+      },
+      {
+        text: "Shake",
+        link: "/directives/shake",
       }
     ],
   },
@@ -153,14 +165,6 @@ const guideMenu = [
       {
         text: "Weather",
         link: "/presets/weather",
-      },
-      {
-        text: "Flash",
-        link: "/presets/flash",
-      },
-      {
-        text: "Shake",
-        link: "/presets/shake",
       }
     ],
   },

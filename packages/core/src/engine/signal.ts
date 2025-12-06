@@ -1,6 +1,6 @@
 import {
   Observable,
-    Subscription
+  Subscription
 } from "rxjs";
 import type { Element } from "./reactive";
 import { Tick } from "../directives/Scheduler";
@@ -55,7 +55,7 @@ export function tick(fn: (tickValue: Tick, element: Element) => void) {
     let subscription: Subscription | undefined
     if (context.tick) {
       subscription = context.tick.observable.subscribe(({ value }) => {
-          fn(value, el)
+        fn(value, el)
       })
     }
     return () => {
@@ -141,6 +141,12 @@ export function h<C extends ComponentFunction<any>>(
     ...Array.from(allMounts),
     ...((component as any).effectMounts ?? [])
   ];
+
+  // Copy dependencies prop to the returned element so it can be used for delayed mounting
+  if (props?.dependencies) {
+    component.props = component.props || {};
+    component.props.dependencies = props.dependencies;
+  }
 
   // call mount hook for root component
   if (component instanceof Promise) {
