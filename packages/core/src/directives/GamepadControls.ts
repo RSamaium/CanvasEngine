@@ -129,13 +129,6 @@ export class GamepadControls extends ControlsBase {
             clearInterval(this.gamepadMoveInterval);
             this.gamepadMoveInterval = null;
         }
-        
-        if (this.joypad) {
-            this.joypad.off('connect');
-            this.joypad.off('disconnect');
-            this.joypad.off('button_press');
-            this.joypad.off('axis_move');
-        }
     }
 
     /**

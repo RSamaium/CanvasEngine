@@ -104,7 +104,7 @@
               </svg>
             </div>
             <h3>Input Controls</h3>
-            <p>Support for keyboard, gamepad, and virtual joystick controls out of the box.</p>
+            <p>Support for keyboard, gamepad (ready when connected), and virtual joystick controls out of the box.</p>
           </div>
           
           <div class="feature-card">

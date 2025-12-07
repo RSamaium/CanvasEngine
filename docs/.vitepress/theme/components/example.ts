@@ -464,6 +464,219 @@ const onChange = (event) => {
         `,
     },
 },
+{
+    title: 'Flash Effect',
+    description: 'Example of using flash effects in CanvasEngine. Click the rectangles to see different flash types.',
+    files: {
+        "app.ce": `
+<Canvas backgroundColor="#2c3e50">
+    <Container flexDirection="column" alignItems="center" justifyContent="center" width="100%" height="100%" gap={30}>
+        <Text text="Click the rectangles to flash them!" color="white" size={24} />
+        
+        <Container flexDirection="row" gap={30}>
+            <Container flexDirection="column" alignItems="center" gap={10}>
+                <Text text="Alpha Flash" color="#ecf0f1" size={14} />
+                <Rect 
+                    color="#e74c3c" 
+                    width={80} 
+                    height={80} 
+                    borderRadius={8} 
+                    flash={alphaFlashConfig}
+                    click={() => alphaFlashTrigger.start()}
+                />
+            </Container>
+            
+            <Container flexDirection="column" alignItems="center" gap={10}>
+                <Text text="Tint Flash" color="#ecf0f1" size={14} />
+                <Rect 
+                    color="#3498db" 
+                    width={80} 
+                    height={80} 
+                    borderRadius={8} 
+                    flash={tintFlashConfig}
+                    click={() => tintFlashTrigger.start()}
+                />
+            </Container>
+            
+            <Container flexDirection="column" alignItems="center" gap={10}>
+                <Text text="Both Flash" color="#ecf0f1" size={14} />
+                <Rect 
+                    color="#2ecc71" 
+                    width={80} 
+                    height={80} 
+                    borderRadius={8} 
+                    flash={bothFlashConfig}
+                    click={() => bothFlashTrigger.start()}
+                />
+            </Container>
+            
+            <Container flexDirection="column" alignItems="center" gap={10}>
+                <Text text="Multi Cycle" color="#ecf0f1" size={14} />
+                <Rect 
+                    color="#f39c12" 
+                    width={80} 
+                    height={80} 
+                    borderRadius={8} 
+                    flash={multiCycleFlashConfig}
+                    click={() => multiCycleFlashTrigger.start()}
+                />
+            </Container>
+        </Container>
+    </Container>
+</Canvas>
+
+<script>
+import { trigger } from 'canvasengine';
+
+// Alpha flash - changes opacity
+const alphaFlashTrigger = trigger();
+const alphaFlashConfig = {
+    trigger: alphaFlashTrigger,
+    type: 'alpha',
+    alpha: 0.2,
+    duration: 300
+};
+
+// Tint flash - changes color
+const tintFlashTrigger = trigger();
+const tintFlashConfig = {
+    trigger: tintFlashTrigger,
+    type: 'tint',
+    tint: 0xff0000,  // Red flash
+    duration: 300
+};
+
+// Both flash - changes opacity and color
+const bothFlashTrigger = trigger();
+const bothFlashConfig = {
+    trigger: bothFlashTrigger,
+    type: 'both',
+    alpha: 0.5,
+    tint: 0x00ff00,  // Green flash
+    duration: 400
+};
+
+// Multi-cycle flash - flashes multiple times
+const multiCycleFlashTrigger = trigger();
+const multiCycleFlashConfig = {
+    trigger: multiCycleFlashTrigger,
+    type: 'alpha',
+    cycles: 3,
+    duration: 600
+};
+</script>
+
+        `,
+    },
+},
+{
+    title: 'Shake Effect',
+    description: 'Example of using shake effects in CanvasEngine. Click the rectangles to see different shake configurations.',
+    files: {
+        "app.ce": `
+<Canvas backgroundColor="#2c3e50">
+    <Container flexDirection="column" alignItems="center" justifyContent="center" width="100%" height="100%" gap={30}>
+        <Text text="Click the rectangles to shake them!" color="white" size={24} />
+        
+        <Container flexDirection="row" gap={30}>
+            <Container flexDirection="column" alignItems="center" gap={10}>
+                <Text text="Basic Shake" color="#ecf0f1" size={14} />
+                <Rect 
+                    color="#e74c3c" 
+                    width={100} 
+                    height={100} 
+                    borderRadius={8} 
+                    shake={basicShakeConfig}
+                    click={() => basicShakeTrigger.start()}
+                />
+            </Container>
+            
+            <Container flexDirection="column" alignItems="center" gap={10}>
+                <Text text="Horizontal" color="#ecf0f1" size={14} />
+                <Rect 
+                    color="#3498db" 
+                    width={100} 
+                    height={100} 
+                    borderRadius={8} 
+                    shake={horizontalShakeConfig}
+                    click={() => horizontalShakeTrigger.start()}
+                />
+            </Container>
+            
+            <Container flexDirection="column" alignItems="center" gap={10}>
+                <Text text="Vertical" color="#ecf0f1" size={14} />
+                <Rect 
+                    color="#2ecc71" 
+                    width={100} 
+                    height={100} 
+                    borderRadius={8} 
+                    shake={verticalShakeConfig}
+                    click={() => verticalShakeTrigger.start()}
+                />
+            </Container>
+            
+            <Container flexDirection="column" alignItems="center" gap={10}>
+                <Text text="Intense Shake" color="#ecf0f1" size={14} />
+                <Rect 
+                    color="#f39c12" 
+                    width={100} 
+                    height={100} 
+                    borderRadius={8} 
+                    shake={intenseShakeConfig}
+                    click={() => intenseShakeTrigger.start()}
+                />
+            </Container>
+        </Container>
+    </Container>
+</Canvas>
+
+<script>
+import { trigger } from 'canvasengine';
+
+// Basic shake - shakes in both directions
+const basicShakeTrigger = trigger();
+const basicShakeConfig = {
+    trigger: basicShakeTrigger,
+    intensity: 15,
+    duration: 500,
+    frequency: 10,
+    direction: 'both'
+};
+
+// Horizontal shake - only shakes on X axis
+const horizontalShakeTrigger = trigger();
+const horizontalShakeConfig = {
+    trigger: horizontalShakeTrigger,
+    intensity: 15,
+    duration: 500,
+    frequency: 10,
+    direction: 'x'
+};
+
+// Vertical shake - only shakes on Y axis
+const verticalShakeTrigger = trigger();
+const verticalShakeConfig = {
+    trigger: verticalShakeTrigger,
+    intensity: 15,
+    duration: 500,
+    frequency: 10,
+    direction: 'y'
+};
+
+// Intense shake - higher intensity and frequency
+const intenseShakeTrigger = trigger();
+const intenseShakeConfig = {
+    trigger: intenseShakeTrigger,
+    intensity: 25,
+    duration: 400,
+    frequency: 15,
+    direction: 'both'
+};
+</script>
+
+        `,
+    },
+},
 ];
 
 export default examples;
