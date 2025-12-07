@@ -1,13 +1,17 @@
-<Container>
-    <Text text="Child component" color="white" />
-</Container>
+<Sprite image x y />
 
 <script>
-    import { mount } from 'canvasengine';
+import { mount } from "canvasengine"
 
-    const { children } = defineProps();
+const {
+    image,
+    x,
+    y
+} = defineProps()
 
-    mount((element) => {
-        console.log(element)
-    });
+console.log(image(), x(), y())
+
+mount((element) => {
+    console.log(element)
+})
 </script>

@@ -522,7 +522,11 @@ export function loop<T>(
             return;
           }
 
-          if (change.type === 'init' || change.type === 'reset') {
+          // Handle computed signals that emit array values directly (not ArrayChange objects)
+          // When a computed emits, `change` is the array itself, not an object with `type`
+          const isDirectArrayChange = Array.isArray(change) || (change && typeof change === 'object' && !('type' in change));
+
+          if (change.type === 'init' || change.type === 'reset' || isDirectArrayChange) {
             elements.forEach(el => destroyElement(el));
             elements = [];
             elementMap.clear();

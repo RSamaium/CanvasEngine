@@ -103,7 +103,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     if (!imagePath || typeof imagePath !== 'string' || imagePath.trim() === '') {
       throw new Error(`Invalid image path provided to detectImageDimensions: ${imagePath}`);
     }
-    
+
     const texture = await Assets.load(imagePath);
     return {
       width: texture.width,
@@ -145,14 +145,14 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     options: Required<TextureOptionsMerging>
   ): Promise<Texture[][]> {
     let { width, height, framesHeight, framesWidth, image, offset } = options;
-    
+
     if (!image || typeof image !== 'string' || image.trim() === '') {
       console.warn('Invalid image path provided to createTextures:', image);
       return [];
     }
-    
+
     const texture = await Assets.load(image);
-    
+
     // Auto-detect width and height from the image if not provided
     if (!width || width <= 0) {
       width = texture.width;
@@ -162,7 +162,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       height = texture.height;
       options.height = height;
     }
-    
+
     const spriteWidth = options.spriteWidth;
     const spriteHeight = options.spriteHeight;
     const frames: Texture[][] = [];
@@ -228,11 +228,11 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         framesHeight = 1,
         image,
       } = optionsTextures;
-      
+
       // Auto-detect width and height from the image if not provided
       let width = widthOption;
       let height = heightOption;
-      
+
       if (image && ((!width || width <= 0) || (!height || height <= 0))) {
         const dimensions = await this.detectImageDimensions(image);
         if (!width || width <= 0) {
@@ -244,7 +244,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
           optionsTextures.height = height;
         }
       }
-      
+
       optionsTextures.spriteWidth = rectWidth ? rectWidth : width / framesWidth;
       optionsTextures.spriteHeight = rectHeight
         ? rectHeight
@@ -320,7 +320,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         this.sheetCurrentAnimation = StandardAnimation.Stand;
       }
 
-      if (this.spritesheet) this.play(this.sheetCurrentAnimation, [this.sheetParams]);
+      if (this.spritesheet && this.has(this.sheetCurrentAnimation)) this.play(this.sheetCurrentAnimation, [this.sheetParams]);
     });
     super.onMount(params);
   }
@@ -334,7 +334,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         console.warn('Invalid image path provided to setTexture:', image);
         return null;
       }
-      
+
       const onProgress = this.fullProps.loader?.onProgress;
       const texture = await Assets.load(image, (progress) => {
         if (onProgress) onProgress(progress);
@@ -379,7 +379,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       if (isElement(props.texture)) {
         const textureInstance = props.texture.componentInstance;
         textureInstance.subjectInit
-        .subscribe()
+          .subscribe()
         this.texture = this.renderer?.generateTexture(props.texture.componentInstance);
       } else {
         this.texture = props.texture;
@@ -500,16 +500,16 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   async resetAnimations(): Promise<void> {
     // Stop current animation
     this.stop();
-    
+
     // Clear all animations and textures
     this.animations.clear();
-    
+
     // Reset animation state
     this.currentAnimation = null;
     this.currentAnimationContainer = null;
     this.time = 0;
     this.frameIndex = 0;
-    
+
     // Clear children
     this.removeChildren();
 
