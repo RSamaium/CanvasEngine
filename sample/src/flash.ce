@@ -76,8 +76,10 @@
         <Text text="Sprite Flash" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
         <Sprite 
             image="exp.png"
-            width={800}
-            height={800}
+            sheet={{
+                definition,
+                playing: "default"
+            }}
             flash={spriteFlashConfig}
             click={() => spriteFlashTrigger.start()}
         />
@@ -186,5 +188,38 @@
 
     // Group flash trigger (multiple elements flash together)
     const groupFlashTrigger = trigger();
+
+    const definition = {
+    id: "explosion",
+    image: "./exp.png",
+    width: 1024,
+    height: 1024,
+    framesWidth: 4,
+    framesHeight: 4,
+    textures: {
+        default: {
+             animations: () => [
+                [ 
+                    { time: 0, frameX: 0, frameY: 0 },
+                    { time: 10, frameX: 1, frameY: 0 },
+                    { time: 20, frameX: 2, frameY: 0 },
+                    { time: 30, frameX: 3, frameY: 0 },
+                    { time: 40, frameX: 0, frameY: 1 },
+                    { time: 50, frameX: 1, frameY: 1 },
+                    { time: 60, frameX: 2, frameY: 1 },     
+                    { time: 70, frameX: 3, frameY: 1 },
+                    { time: 80, frameX: 0, frameY: 2 },
+                    { time: 90, frameX: 1, frameY: 2 },
+                    { time: 100, frameX: 2, frameY: 2 },
+                    { time: 110, frameX: 3, frameY: 2 },
+                    { time: 120, frameX: 0, frameY: 3 },
+                    { time: 130, frameX: 1, frameY: 3 },
+                    { time: 140, frameX: 2, frameY: 3 },
+                    { time: 150, frameX: 3, frameY: 3 },
+                ]
+             ]
+        }
+    }
+}
 </script>
 
