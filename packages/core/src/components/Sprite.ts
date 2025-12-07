@@ -28,6 +28,7 @@ import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { AnimatedSignal, isAnimatedSignal } from "../engine/animation";
 import { Layout } from '@pixi/layout';
+import { GlobalAssetLoader } from "../utils/GlobalAssetLoader";
 
 const log = console.log;
 
@@ -79,6 +80,8 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   private sheetCurrentAnimation: string = StandardAnimation.Stand;
   private app: Application | null = null;
   onFinish: () => void;
+  private globalLoader: GlobalAssetLoader | null = null;
+  private trackedAssetIds: Set<string> = new Set();
 
   get renderer() {
     return this.app?.renderer;
@@ -104,7 +107,24 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       throw new Error(`Invalid image path provided to detectImageDimensions: ${imagePath}`);
     }
 
-    const texture = await Assets.load(imagePath);
+    // Register asset in global loader if available
+    let assetId: string | null = null;
+    if (this.globalLoader) {
+      assetId = this.globalLoader.registerAsset(imagePath);
+      this.trackedAssetIds.add(assetId);
+    }
+
+    const texture = await Assets.load(imagePath, (progress) => {
+      if (this.globalLoader && assetId) {
+        this.globalLoader.updateProgress(assetId, progress);
+      }
+    });
+
+    // Mark as complete
+    if (this.globalLoader && assetId) {
+      this.globalLoader.completeAsset(assetId);
+    }
+
     return {
       width: texture.width,
       height: texture.height,
@@ -151,7 +171,23 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       return [];
     }
 
-    const texture = await Assets.load(image);
+    // Register asset in global loader if available
+    let assetId: string | null = null;
+    if (this.globalLoader) {
+      assetId = this.globalLoader.registerAsset(image);
+      this.trackedAssetIds.add(assetId);
+    }
+
+    const texture = await Assets.load(image, (progress) => {
+      if (this.globalLoader && assetId) {
+        this.globalLoader.updateProgress(assetId, progress);
+      }
+    });
+
+    // Mark as complete
+    if (this.globalLoader && assetId) {
+      this.globalLoader.completeAsset(assetId);
+    }
 
     // Auto-detect width and height from the image if not provided
     if (!width || width <= 0) {
@@ -268,6 +304,8 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     const sheet = props.sheet ?? {};
     const definition = props.sheet?.definition ?? {};
     this.app = props.context.app();
+    // Get global loader from context if available
+    this.globalLoader = props.context?.globalLoader || null;
     if (sheet?.onFinish) {
       this.onFinish = sheet.onFinish;
     }
@@ -329,16 +367,37 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     if (this.destroyed) return
     super.onUpdate(props);
 
+    // Initialize globalLoader from context if not already set
+    if (!this.globalLoader && props.context?.globalLoader) {
+      this.globalLoader = props.context.globalLoader;
+    }
+
     const setTexture = async (image: string) => {
       if (!image || typeof image !== 'string' || image.trim() === '') {
         console.warn('Invalid image path provided to setTexture:', image);
         return null;
       }
 
+      // Register asset in global loader if available
+      let assetId: string | null = null;
+      if (this.globalLoader) {
+        assetId = this.globalLoader.registerAsset(image);
+        this.trackedAssetIds.add(assetId);
+      }
+
       const onProgress = this.fullProps.loader?.onProgress;
       const texture = await Assets.load(image, (progress) => {
+        // Update global loader progress
+        if (this.globalLoader && assetId) {
+          this.globalLoader.updateProgress(assetId, progress);
+        }
+        // Call local loader callback if provided
         if (onProgress) onProgress(progress);
         if (progress == 1) {
+          // Mark as complete in global loader
+          if (this.globalLoader && assetId) {
+            this.globalLoader.completeAsset(assetId);
+          }
           const onComplete = this.fullProps.loader?.onComplete;
           if (onComplete) {
             // hack to memoize the texture
@@ -399,6 +458,13 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
   async onDestroy(parent: Element, afterDestroy: () => void): Promise<void> {
     const _afterDestroy = async () => {
+      // Clean up tracked assets from global loader
+      if (this.globalLoader) {
+        this.trackedAssetIds.forEach((assetId) => {
+          this.globalLoader!.removeAsset(assetId);
+        });
+        this.trackedAssetIds.clear();
+      }
       this.subscriptionSheet.forEach((sub) => sub.unsubscribe());
       this.subscriptionTick.unsubscribe();
       if (this.currentAnimationContainer && this.parent instanceof Container) {

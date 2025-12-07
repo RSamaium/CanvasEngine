@@ -153,6 +153,98 @@ Each frame in an animation can have these properties:
 | `pivot` | [number, number] | (Optional) Frame-specific pivot point |
 | `sound` | string | (Optional) Sound to play when this frame is reached |
 
+## Global Asset Loader
+
+When a component contains multiple sprites with images, you can track the loading progress of all assets using the global asset loader available in the component context. This is useful for displaying a loading screen or progress bar before all assets are ready.
+
+### Basic Usage
+
+The global loader is automatically available in the component context. Access it using the `mount` function:
+
+```html
+<Canvas>
+  <Sprite image="hero.png" />
+  <Sprite image="enemy.png" />
+  <Sprite sheet={{ definition: spritesheetDef }} />
+</Canvas>
+
+<script>
+import { mount } from 'canvasengine'
+
+mount((element) => {
+  const loader = element.props.context?.globalLoader
+  
+  if (loader) {
+    // Track overall progress
+    loader.onProgress((progress) => {
+      console.log(`Loading: ${(progress * 100).toFixed(0)}%`)
+      // Update your progress bar here
+    })
+    
+    // Know when all assets are loaded
+    loader.onComplete(() => {
+      console.log('All assets loaded!')
+      // Hide your loader here
+    })
+  }
+})
+</script>
+```
+
+### Progress Tracking
+
+The global loader automatically tracks:
+- Simple images loaded via the `image` prop
+- Spritesheet images from `sheet.definition.image`
+- All animation textures in spritesheets
+
+The progress value ranges from 0 to 1, where:
+- `0` = No assets loaded
+- `1` = All assets loaded
+
+### Example: Loading Screen
+
+```html
+<Canvas>
+  <Sprite image="background.png" />
+  <Sprite image="player.png" />
+  <Sprite sheet={{ definition: enemySpritesheet }} />
+</Canvas>
+
+<script>
+import { mount, signal } from 'canvasengine'
+
+const isLoading = signal(true)
+const loadingProgress = signal(0)
+
+mount((element) => {
+  const loader = element.props.context?.globalLoader
+  
+  if (loader) {
+    loader.onProgress((progress) => {
+      loadingProgress.set(progress)
+    })
+    
+    loader.onComplete(() => {
+      isLoading.set(false)
+    })
+  }
+})
+</script>
+```
+
+### API Reference
+
+The global loader provides the following methods:
+
+| Method | Description |
+|--------|-------------|
+| `onProgress(callback)` | Register a callback for progress updates. Returns an unsubscribe function. |
+| `onComplete(callback)` | Register a callback when all assets are loaded. Returns an unsubscribe function. |
+| `getGlobalProgress()` | Get the current global progress (0-1) |
+| `getAssetCount()` | Get the number of assets being tracked |
+| `getCompletedCount()` | Get the number of completed assets |
+
 ## Sprite Props
 
 | Prop | Type | Description |
@@ -164,10 +256,14 @@ Each frame in an animation can have these properties:
 | `sheet.playing` | string | Name of the animation to play |
 | `sheet.params` | object | Parameters passed to the animation function |
 | `sheet.onFinish` | function | Callback when animation completes |
-| `loader` | object | Loading configuration |
-| `loader.onProgress` | function | Progress callback for loading |
-| `loader.onComplete` | function | Completion callback for loading |
+| `loader` | object | Loading configuration (per-sprite) |
+| `loader.onProgress` | function | Progress callback for loading (per-sprite) |
+| `loader.onComplete` | function | Completion callback for loading (per-sprite) |
 | `scaleMode` | number | PIXI.js scale mode for the texture |
 | `hitbox` | `{ w: number, h: number }` | (Optional) Collision box dimensions. Automatically calculates anchor positioning based on `rectHeight` and `spriteRealSize` to properly align the sprite with its hitbox |
+
+::: tip
+The `loader` prop on individual sprites tracks that specific sprite's loading progress, while `context.globalLoader` tracks all sprites in the component tree. Use the global loader for overall progress, and individual loaders for sprite-specific handling.
+:::
 
 <!-- @include: ./_display-object.md -->

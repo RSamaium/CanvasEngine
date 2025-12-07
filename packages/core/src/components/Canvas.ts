@@ -12,6 +12,7 @@ import { ComponentFunction } from "../engine/signal";
 import { SignalOrPrimitive } from "./types";
 import { Size } from "./types/DisplayObject";
 import { Scheduler, Tick } from "../directives/Scheduler";
+import { GlobalAssetLoader } from "../utils/GlobalAssetLoader";
 
 interface CanvasElement extends Element<ComponentInstance> {
   render: (rootElement: HTMLElement, app?: Application) => void;
@@ -49,11 +50,13 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
   });
 
   props.isRoot = true;
+  const globalLoader = new GlobalAssetLoader();
   const options: CanvasProps = {
     ...props,
     context: {
       canvasSize,
       app: signal(null),
+      globalLoader,
     },
     width: width?.(),
     height: height?.(),

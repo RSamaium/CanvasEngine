@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { Sprite, signal } from 'canvasengine'
+import { Sprite, signal, Canvas, mount } from 'canvasengine'
 import { TestBed } from '../../packages/core/testing'
+import { GlobalAssetLoader } from '../../packages/core/src/utils/GlobalAssetLoader'
 
 describe('Sprite Component', () => {
     test('creates sprite component with basic properties', async () => {
@@ -141,5 +142,37 @@ describe('Sprite Component', () => {
         expect(typeof instance.has).toBe('function')
         expect(typeof instance.get).toBe('function')
         expect(typeof instance.isPlaying).toBe('function')
+    })
+
+    describe('Global Asset Loader Integration', () => {
+        test('globalLoader is available in context', async () => {
+            const canvasElement = await TestBed.createComponent(Sprite, {
+                width: 32,
+                height: 32
+            })
+
+            // Access the canvas element's context
+            const canvasParent = canvasElement.parent
+            expect(canvasParent).toBeDefined()
+            
+            const globalLoader = canvasParent?.props?.context?.globalLoader
+            expect(globalLoader).toBeDefined()
+            expect(globalLoader).toBeInstanceOf(GlobalAssetLoader)
+        })
+
+        test('sprite can access globalLoader from context', async () => {
+            const spriteElement = await TestBed.createComponent(Sprite, {
+                width: 32,
+                height: 32
+            })
+
+            const instance = spriteElement.componentInstance as any
+            expect(instance).toBeDefined()
+            
+            // The globalLoader should be accessible from the sprite's context
+            const canvasParent = spriteElement.parent
+            const globalLoader = canvasParent?.props?.context?.globalLoader
+            expect(globalLoader).toBeDefined()
+        })
     })
 }) 

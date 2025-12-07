@@ -1,0 +1,115 @@
+<Canvas backgroundColor="#1a1a1a">
+    <Container>
+        @for (sprite of sprites) {
+            <Child ...sprite />
+        }
+        
+        <!-- Spritesheet example -->
+        <Sprite 
+            sheet={{
+                definition: spritesheetDef,
+                playing: "default"
+            }}
+            x={500}
+            y={100}
+        />
+        
+        <Text 
+            text="All assets loaded! 🎉"
+            x={250}
+            y={500}
+            color="#00ff00"
+            size={32}
+        />
+    </Container>
+</Canvas>
+
+<script>
+import { mount, signal, computed } from 'canvasengine'
+import Child from './child.ce'
+
+const isLoading = signal(true)
+const loadingProgress = signal(0)
+const totalCount = signal(0)
+const completedCount = signal(0)
+
+// Sprites data - will be loaded via Child components
+const spritesData = signal()
+
+const sprites = computed(() => {
+    return spritesData() || []
+})
+
+// Spritesheet definition
+const spritesheetDef = {
+    id: "explosion",
+    image: "https://pixijs.com/assets/flowerTop.png",
+    width: 256,
+    height: 256,
+    framesWidth: 4,
+    framesHeight: 4,
+    textures: {
+        default: {
+            animations: () => [
+                [ 
+                    { time: 0, frameX: 0, frameY: 0 },
+                    { time: 10, frameX: 1, frameY: 0 },
+                    { time: 20, frameX: 2, frameY: 0 },
+                    { time: 30, frameX: 3, frameY: 0 }
+                ]
+            ]
+        }
+    }
+}
+
+setTimeout(() => {
+    spritesData.set([
+    {
+        image: 'https://pixijs.com/assets/flowerTop.png',
+        x: 100,
+        y: 100,
+    },
+    {
+        image: 'https://pixijs.com/assets/bunny.png',
+        x: 300,
+        y: 100,
+    },
+    {
+        image: 'https://pixijs.com/assets/flowerTop.png',
+        x: 100,
+        y: 300,
+    },
+    {
+        image: 'https://pixijs.com/assets/bunny.png',
+        x: 300,
+        y: 300,
+    },
+    {
+        image: 'https://pixijs.com/assets/flowerTop.png',
+        x: 500,
+        y: 300,
+    }
+])
+}, 1000)
+
+mount((element) => {
+    const loader = element.props.context?.globalLoader
+
+    if (loader) {
+        // Track overall loading progress
+        loader.onProgress((progress) => {
+            loadingProgress.set(progress)
+            totalCount.set(loader.getAssetCount())
+            completedCount.set(loader.getCompletedCount())
+            console.log(`Loading progress: ${(progress * 100).toFixed(0)}% (${completedCount()} / ${totalCount()} assets)`)
+        })
+        
+        // Hide loader when all assets are loaded
+        loader.onComplete(() => {
+            console.log('All assets loaded!')
+            isLoading.set(false)
+        })
+    }
+})
+</script>
+
