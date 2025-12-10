@@ -1,5 +1,5 @@
 <Sprite image x y />
-@for (item of array) {
+@if (true) {
     <Rect width={100} height={100} color="red" x={x} y={y} />
 }
 

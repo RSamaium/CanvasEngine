@@ -687,7 +687,10 @@ export function loop<T>(
           });
         });
 
-      return subscription;
+      return () => {
+        subscription.unsubscribe();
+        elements.forEach(el => destroyElement(el));
+      };
     });
   });
 }
