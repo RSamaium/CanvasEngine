@@ -48,8 +48,9 @@ const controls = signal({
     right: {
       repeat: true,
       bind: "right",
-      keyDown() {
-        x.update((x) => x + speed());
+      keyDown(_, payload) {
+        const power = payload?.power ?? 1;
+        x.update((x) => x + speed() * power);
         direction.set(Direction.Right);
       },
     },
@@ -115,7 +116,7 @@ The `ControlsDirective` instance provides the following methods:
 
 - `getControl(inputName: string)` - Get a specific control by input name
 - `getControls()` - Get all bound controls
-- `applyControl(controlName: string, isDown?: boolean)` - Programmatically trigger a control
+- `applyControl(controlName: string, isDown?: boolean, payload?: any)` - Programmatically trigger a control (payload can carry extra data, e.g. joystick power)
 - `stopInputs()` - Stop listening to inputs (both keyboard and gamepad)
 - `listenInputs()` - Resume listening to inputs (both keyboard and gamepad)
 - `options` - Access the controls configuration object

@@ -138,23 +138,11 @@ export class JoystickControls extends ControlsBase {
 
     /**
      * Process joystick inputs each step
-     * Handles timeout for stopping movements after joystick inactivity
+     * Continuous actions are handled by the interval; no inactivity timeout here.
      */
     protected preStep(): void {
         if (this.stop) return;
-
-        // Stop movements if no joystick input for 100ms
-        const now = Date.now();
-        if (now - this.joystickLastUpdate > 100 && this.joystickMoving) {
-            const allDirections = Object.keys(this.joystickDirections);
-            for (const dir of allDirections) {
-                this.joystickDirections = {};
-                this.joystickMoving = false;
-                this.applyControl(dir, false).catch(() => {
-                    // Ignore errors
-                });
-            }
-        }
+        // No-op: continuous movement is driven by processJoystickMovement interval
     }
 
     /**
@@ -191,6 +179,7 @@ export class JoystickControls extends ControlsBase {
         const controlNames = Array.isArray(mappedControls) ? mappedControls : [mappedControls];
 
         // Determine which directions to activate and deactivate
+        const previousDirections = this.joystickDirections;
         const newDirections: { [dir: string]: boolean } = {};
         controlNames.forEach(controlName => {
             newDirections[controlName] = true;
@@ -219,20 +208,19 @@ export class JoystickControls extends ControlsBase {
         this.joystickMoving = true;
 
         // Activate new directions
-        for (const controlName of controlNames) {
-            this.applyControl(controlName, true).catch(() => {
+        const directionsToActivate = controlNames.filter((name) => !previousDirections[name]);
+        for (const controlName of directionsToActivate) {
+            this.applyControl(controlName, true, { power: event.power }).catch(() => {
                 // Ignore errors
             });
         }
 
-        // Start or restart movement interval
-        if (this.joystickMoveInterval) {
-            clearInterval(this.joystickMoveInterval);
+        // Start movement interval if not already running
+        if (!this.joystickMoveInterval) {
+            this.joystickMoveInterval = setInterval(() => {
+                this.processJoystickMovement();
+            }, this.joystickConfig.moveInterval || 50);
         }
-
-        this.joystickMoveInterval = setInterval(() => {
-            this.processJoystickMovement();
-        }, this.joystickConfig.moveInterval || 50);
     }
 
     /**
@@ -285,7 +273,7 @@ export class JoystickControls extends ControlsBase {
 
         for (const direction in this.joystickDirections) {
             if (this.joystickDirections[direction]) {
-                this.applyControl(direction, true).catch(() => {
+                this.applyControl(direction, true, { power: this.currentPower }).catch(() => {
                     // Ignore errors
                 });
             }
@@ -335,7 +323,7 @@ export class JoystickControls extends ControlsBase {
      * @param isDown - Whether the control is pressed (true) or released (false)
      * @returns Promise that resolves when the action is complete
      */
-    async applyControl(controlName: string | number, isDown?: boolean): Promise<void> {
+    async applyControl(controlName: string | number, isDown?: boolean, payload?: any): Promise<void> {
         const control = this._controlsOptions[controlName];
         if (!control) return;
 
@@ -348,40 +336,40 @@ export class JoystickControls extends ControlsBase {
                 if (isDown === undefined) {
                     // Press and release (simulate button press)
                     if (boundKey.options.keyDown) {
-                        let parameters = boundKey.parameters;
+                        let parameters = payload ?? boundKey.parameters;
                         if (typeof parameters === "function") {
                             parameters = parameters();
                         }
-                        boundKey.options.keyDown(boundKey);
+                        boundKey.options.keyDown(boundKey, parameters);
                     }
                     // Release after a short delay (similar to keyboard)
                     return new Promise((resolve) => {
                         setTimeout(() => {
                             if (boundKey.options.keyUp) {
-                                let parameters = boundKey.parameters;
+                                let parameters = payload ?? boundKey.parameters;
                                 if (typeof parameters === "function") {
                                     parameters = parameters();
                                 }
-                                boundKey.options.keyUp(boundKey);
+                                boundKey.options.keyUp(boundKey, parameters);
                             }
                             resolve();
                         }, 200);
                     });
                 } else if (isDown) {
                     if (boundKey.options.keyDown) {
-                        let parameters = boundKey.parameters;
+                        let parameters = payload ?? boundKey.parameters;
                         if (typeof parameters === "function") {
                             parameters = parameters();
                         }
-                        boundKey.options.keyDown(boundKey);
+                        boundKey.options.keyDown(boundKey, parameters);
                     }
                 } else {
                     if (boundKey.options.keyUp) {
-                        let parameters = boundKey.parameters;
+                        let parameters = payload ?? boundKey.parameters;
                         if (typeof parameters === "function") {
                             parameters = parameters();
                         }
-                        boundKey.options.keyUp(boundKey);
+                        boundKey.options.keyUp(boundKey, parameters);
                     }
                 }
                 break;

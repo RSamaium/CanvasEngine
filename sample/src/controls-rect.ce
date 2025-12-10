@@ -59,7 +59,7 @@
     up: {
       repeat: true,
       bind: "up",
-      keyDown() {
+      keyDown(_, payload) {
         y.update((y) => Math.max(0, y - speed()));
       },
     },
