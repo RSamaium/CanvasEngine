@@ -5,7 +5,7 @@
  */
 
 import * as PIXI from "pixi.js";
-import { Circle, Container, Graphics, Rect, Sprite, h, signal, isSignal } from "canvasengine";
+import { Container, Graphics, Sprite, h, signal, isSignal } from "../";
 
 export interface JoystickChangeEvent {
   angle: number;
