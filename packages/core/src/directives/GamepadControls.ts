@@ -112,6 +112,7 @@ export class GamepadControls extends ControlsBase {
     private joypad: any = null;
     private connectCallbacks: Array<() => void> = [];
     private disconnectCallbacks: Array<() => void> = [];
+    private currentPower: number = 0;
 
     /**
      * Setup gamepad event listeners
@@ -191,6 +192,7 @@ export class GamepadControls extends ControlsBase {
         this.gamepadMoving = false;
         this.gamepadDirections = {};
         this.gamepadAxisDate = 0;
+        this.currentPower = 0;
 
         // Update gamepadConnected signal if provided
         if (this.gamepadConfig.gamepadConnected) {
@@ -243,6 +245,21 @@ export class GamepadControls extends ControlsBase {
         else if (direction === 'left') direction = axisMapping['left'] || 'left';
         else if (direction === 'right') direction = axisMapping['right'] || 'right';
 
+        // Calculate power/intensity from axis values
+        // Get the first connected gamepad instance
+        if (this.joypad && this.joypad.instances) {
+            const gamepadInstances = Object.values(this.joypad.instances) as any[];
+            if (gamepadInstances.length > 0) {
+                const gamepad = gamepadInstances[0];
+                // Get axes values (axes 0-1 for left stick, 2-3 for right stick)
+                // We'll use the left stick by default (axes 0 and 1)
+                const axisX = gamepad.axes?.[0] || 0;
+                const axisY = gamepad.axes?.[1] || 0;
+                // Calculate power as magnitude of the vector
+                this.currentPower = Math.min(1, Math.sqrt(axisX * axisX + axisY * axisY));
+            }
+        }
+
         // Update active directions
         this.gamepadDirections = {
             [direction]: true
@@ -258,7 +275,7 @@ export class GamepadControls extends ControlsBase {
             }
         }
 
-        // Trigger movement
+        // Trigger movement with power
         this.processGamepadMovement();
     }
 
@@ -270,9 +287,20 @@ export class GamepadControls extends ControlsBase {
         if (!this.gamepadMoving) return;
         if (this.stop) return;
 
+        // Update current power from gamepad axes if available
+        if (this.joypad && this.joypad.instances) {
+            const gamepadInstances = Object.values(this.joypad.instances) as any[];
+            if (gamepadInstances.length > 0) {
+                const gamepad = gamepadInstances[0];
+                const axisX = gamepad.axes?.[0] || 0;
+                const axisY = gamepad.axes?.[1] || 0;
+                this.currentPower = Math.min(1, Math.sqrt(axisX * axisX + axisY * axisY));
+            }
+        }
+
         for (const direction in this.gamepadDirections) {
             if (this.gamepadDirections[direction]) {
-                this.applyControl(direction, true).catch(() => {
+                this.applyControl(direction, true, { power: this.currentPower }).catch(() => {
                     // Ignore errors
                 });
             }
@@ -363,9 +391,10 @@ export class GamepadControls extends ControlsBase {
      * 
      * @param controlName - Name of the control
      * @param isDown - Whether the control is pressed (true) or released (false)
+     * @param payload - Optional payload to pass to keyDown/keyUp callbacks (e.g., { power: 0.8 })
      * @returns Promise that resolves when the action is complete
      */
-    async applyControl(controlName: string | number, isDown?: boolean): Promise<void> {
+    async applyControl(controlName: string | number, isDown?: boolean, payload?: any): Promise<void> {
         const control = this._controlsOptions[controlName];
         if (!control) return;
 
@@ -378,40 +407,40 @@ export class GamepadControls extends ControlsBase {
                 if (isDown === undefined) {
                     // Press and release (simulate button press)
                     if (boundKey.options.keyDown) {
-                        let parameters = boundKey.parameters;
+                        let parameters = payload ?? boundKey.parameters;
                         if (typeof parameters === "function") {
                             parameters = parameters();
                         }
-                        boundKey.options.keyDown(boundKey);
+                        boundKey.options.keyDown(boundKey, parameters);
                     }
                     // Release after a short delay (similar to keyboard)
                     return new Promise((resolve) => {
                         setTimeout(() => {
                             if (boundKey.options.keyUp) {
-                                let parameters = boundKey.parameters;
+                                let parameters = payload ?? boundKey.parameters;
                                 if (typeof parameters === "function") {
                                     parameters = parameters();
                                 }
-                                boundKey.options.keyUp(boundKey);
+                                boundKey.options.keyUp(boundKey, parameters);
                             }
                             resolve();
                         }, 200);
                     });
                 } else if (isDown) {
                     if (boundKey.options.keyDown) {
-                        let parameters = boundKey.parameters;
+                        let parameters = payload ?? boundKey.parameters;
                         if (typeof parameters === "function") {
                             parameters = parameters();
                         }
-                        boundKey.options.keyDown(boundKey);
+                        boundKey.options.keyDown(boundKey, parameters);
                     }
                 } else {
                     if (boundKey.options.keyUp) {
-                        let parameters = boundKey.parameters;
+                        let parameters = payload ?? boundKey.parameters;
                         if (typeof parameters === "function") {
                             parameters = parameters();
                         }
-                        boundKey.options.keyUp(boundKey);
+                        boundKey.options.keyUp(boundKey, parameters);
                     }
                 }
                 break;

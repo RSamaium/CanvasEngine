@@ -128,14 +128,18 @@ export class ControlsDirective extends Directive {
      * 
      * @param controlName - Name of the control
      * @param isDown - Whether the control is pressed (true) or released (false)
+     * @param payload - Optional payload to pass to keyDown/keyUp callbacks (e.g., { power: 0.8 })
      * @returns Promise that resolves when the action is complete
      */
-    async applyControl(controlName: string | number, isDown?: boolean): Promise<void> {
+    async applyControl(controlName: string | number, isDown?: boolean, payload?: any): Promise<void> {
         if (this.keyboardControls) {
             await this.keyboardControls.applyControl(controlName, isDown);
         }
         if (this.gamepadControls) {
-            await this.gamepadControls.applyControl(controlName, isDown);
+            await this.gamepadControls.applyControl(controlName, isDown, payload);
+        }
+        if (this.joystickControls) {
+            await this.joystickControls.applyControl(controlName, isDown, payload);
         }
     }
 

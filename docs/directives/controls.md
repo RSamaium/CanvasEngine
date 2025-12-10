@@ -193,6 +193,57 @@ Analog stick movements are mapped to direction controls:
 - `left` → `left`
 - `right` → `right`
 
+### Using Joystick Power/Intensity
+
+Gamepad controls automatically pass the joystick intensity (power) to the `keyDown` callback via the `payload` parameter. The power value ranges from 0.0 to 1.0, representing how far the joystick is pushed.
+
+```html
+<script>
+import { signal } from "canvasengine";
+
+const x = signal(0);
+const y = signal(0);
+const speed = signal(10);
+
+const controls = signal({
+  up: {
+    repeat: true,
+    bind: "up",
+    keyDown(_, payload) {
+      const power = payload?.power ?? 1;
+      y.update((y) => y - speed() * power);
+    }
+  },
+  down: {
+    repeat: true,
+    bind: "down",
+    keyDown(_, payload) {
+      const power = payload?.power ?? 1;
+      y.update((y) => y + speed() * power);
+    }
+  },
+  left: {
+    repeat: true,
+    bind: "left",
+    keyDown(_, payload) {
+      const power = payload?.power ?? 1;
+      x.update((x) => x - speed() * power);
+    }
+  },
+  right: {
+    repeat: true,
+    bind: "right",
+    keyDown(_, payload) {
+      const power = payload?.power ?? 1;
+      x.update((x) => x + speed() * power);
+    }
+  }
+});
+</script>
+```
+
+The power value allows for variable-speed movement based on how far the joystick is pushed, providing more precise control similar to analog input.
+
 ### Gamepad Connection Tracking
 
 You can track gamepad connection status using a signal:
