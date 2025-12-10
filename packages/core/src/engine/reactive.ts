@@ -301,8 +301,13 @@ export function createComponent(tag: string, props?: Props): Element {
   }
 
   async function onMount(parent: Element, element: Element, index?: number) {
-    element.props.context = parent.props.context;
-    element.parent = parent;
+    let actualParent = parent;
+    while (actualParent?.tag === 'fragment') {
+      actualParent = actualParent.parent;
+    }
+
+    element.props.context = actualParent.props.context;
+    element.parent = actualParent;
 
     // Check dependencies before mounting
     if (element.props.dependencies && Array.isArray(element.props.dependencies)) {
@@ -310,12 +315,12 @@ export function createComponent(tag: string, props?: Props): Element {
       const ready = await checkDependencies(deps);
       if (!ready) {
         // Set up subscriptions for reactive signals to trigger mount later
-        setupDependencySubscriptions(parent, element, deps, index);
+        setupDependencySubscriptions(actualParent, element, deps, index);
         return;
       }
     }
 
-    performMount(parent, element, index);
+    performMount(actualParent, element, index);
   };
 
   async function propagateContext(element) {
@@ -494,6 +499,25 @@ export function loop<T>(
     let elementMap = new Map<string | number, Element>();
     let isFirstSubscription = true;
 
+    const ensureElement = (itemResult: any): Element | null => {
+      if (!itemResult) return null;
+      if (isElement(itemResult)) return itemResult;
+      return {
+        tag: 'fragment',
+        props: { children: Array.isArray(itemResult) ? itemResult : [itemResult] },
+        componentInstance: {} as any,
+        propSubscriptions: [],
+        effectSubscriptions: [],
+        effectMounts: [],
+        effectUnmounts: [],
+        propObservables: {},
+        parent: null,
+        directives: {},
+        destroy() { destroyElement(this) },
+        allElements: new Subject()
+      };
+    }
+
     const isArraySignal = (signal: any): signal is WritableArraySignal<T[]> =>
       Array.isArray(signal());
 
@@ -509,7 +533,7 @@ export function loop<T>(
             const items = itemsSubject();
             if (items) {
               items.forEach((item, index) => {
-                const element = createElementFn(item, index);
+                const element = ensureElement(createElementFn(item, index));
                 if (element) {
                   elements.push(element);
                   elementMap.set(index, element);
@@ -534,7 +558,7 @@ export function loop<T>(
             const items = itemsSubject();
             if (items) {
               items.forEach((item, index) => {
-                const element = createElementFn(item, index);
+                const element = ensureElement(createElementFn(item, index));
                 if (element) {
                   elements.push(element);
                   elementMap.set(index, element);
@@ -543,7 +567,7 @@ export function loop<T>(
             }
           } else if (change.type === 'add' && change.index !== undefined) {
             const newElements = change.items.map((item, i) => {
-              const element = createElementFn(item as T, change.index! + i);
+              const element = ensureElement(createElementFn(item as T, change.index! + i));
               if (element) {
                 elementMap.set(change.index! + i, element);
               }
@@ -564,7 +588,7 @@ export function loop<T>(
             // Check if the previous item at this index was effectively undefined or non-existent
             if (index >= elements.length || elements[index] === undefined || !elementMap.has(index)) {
               // Treat as add operation
-              const newElement = createElementFn(newItem as T, index);
+              const newElement = ensureElement(createElementFn(newItem as T, index));
               if (newElement) {
                 elements.splice(index, 0, newElement); // Insert at the correct index
                 elementMap.set(index, newElement);
@@ -577,7 +601,7 @@ export function loop<T>(
               // Treat as a standard update operation
               const oldElement = elements[index];
               destroyElement(oldElement)
-              const newElement = createElementFn(newItem as T, index);
+              const newElement = ensureElement(createElementFn(newItem as T, index));
               if (newElement) {
                 elements[index] = newElement;
                 elementMap.set(index, newElement);
@@ -604,7 +628,7 @@ export function loop<T>(
             const items = (itemsSubject as WritableObjectSignal<T>)();
             if (items) {
               Object.entries(items).forEach(([key, value]) => {
-                const element = createElementFn(value, key);
+                const element = ensureElement(createElementFn(value, key));
                 if (element) {
                   elements.push(element);
                   elementMap.set(key, element);
@@ -625,7 +649,7 @@ export function loop<T>(
             const items = (itemsSubject as WritableObjectSignal<T>)();
             if (items) {
               Object.entries(items).forEach(([key, value]) => {
-                const element = createElementFn(value, key);
+                const element = ensureElement(createElementFn(value, key));
                 if (element) {
                   elements.push(element);
                   elementMap.set(key, element);
@@ -633,7 +657,7 @@ export function loop<T>(
               });
             }
           } else if (change.type === 'add' && change.key && change.value !== undefined) {
-            const element = createElementFn(change.value as T, key);
+            const element = ensureElement(createElementFn(change.value as T, key));
             if (element) {
               elements.push(element);
               elementMap.set(key, element);
@@ -650,7 +674,7 @@ export function loop<T>(
             if (index !== -1) {
               const oldElement = elements[index];
               destroyElement(oldElement)
-              const newElement = createElementFn(change.value as T, key);
+              const newElement = ensureElement(createElementFn(change.value as T, key));
               if (newElement) {
                 elements[index] = newElement;
                 elementMap.set(key, newElement);
