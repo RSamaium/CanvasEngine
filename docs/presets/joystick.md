@@ -4,6 +4,8 @@
 
 ## Usage
 
+### Basic Usage
+
 ```html
 <Canvas>
     <Joystick />
@@ -11,6 +13,81 @@
 
 <script>
     import { Joystick } from '@canvasengine/presets'
+</script>
+```
+
+### With Controls Integration
+
+The Joystick can be automatically integrated with the controls system, similar to gamepad controls:
+
+```html
+<Canvas>
+    <Rect controls={controlsConfig} x={x} y={y} />
+    
+    <Joystick 
+        controls={element.directives.controls}
+        outerColor="#34495e"
+        innerColor="#3498db"
+    />
+</Canvas>
+
+<script>
+    import { signal, mount } from "canvasengine";
+    import { Joystick } from "@canvasengine/presets";
+
+    const x = signal(200);
+    const y = signal(200);
+    const speed = 10;
+
+    const controls = signal({
+        up: {
+            repeat: true,
+            bind: "up",
+            keyDown() {
+                y.update((y) => Math.max(0, y - speed));
+            },
+        },
+        down: {
+            repeat: true,
+            bind: "down",
+            keyDown() {
+                y.update((y) => y + speed);
+            },
+        },
+        left: {
+            repeat: true,
+            bind: "left",
+            keyDown() {
+                x.update((x) => Math.max(0, x - speed));
+            },
+        },
+        right: {
+            repeat: true,
+            bind: "right",
+            keyDown() {
+                x.update((x) => x + speed);
+            },
+        },
+        joystick: {
+            enabled: true,
+            directionMapping: {
+                'top': 'up',
+                'bottom': 'down',
+                'left': 'left',
+                'right': 'right',
+                'top_left': ['up', 'left'],
+                'top_right': ['up', 'right'],
+                'bottom_left': ['down', 'left'],
+                'bottom_right': ['down', 'right']
+            },
+            moveInterval: 50,
+            threshold: 0.1
+        }
+    });
+
+    mount((element) => {
+        // The joystick will automatically use the controls from the Rect element
+    });
 </script>
 ```
 
@@ -27,6 +104,7 @@
 | onChange | (data: JoystickChangeEvent) => void | - | Callback function triggered when joystick position changes |
 | onStart | () => void | - | Callback function triggered when joystick interaction starts |
 | onEnd | () => void | - | Callback function triggered when joystick interaction ends |
+| controls | ControlsDirective \| JoystickControls | - | Controls instance to automatically apply joystick events to. Can be accessed via `element.directives.controls` |
 
 And use all the properties of the `Container` component.
 
@@ -36,7 +114,34 @@ The `onChange` callback receives a `JoystickChangeEvent` object with the followi
 
 | Property | Type | Description |
 |----------|------|-------------|
-| x | number | X-axis position (-1 to 1) |
-| y | number | Y-axis position (-1 to 1) |
 | angle | number | Angle in degrees (0-360) |
-| distance | number | Distance from center (0-1) |
+| direction | Direction | Direction enum value (LEFT, RIGHT, TOP, BOTTOM, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT) |
+| power | number | Power/distance from center (0-1) |
+
+### Joystick Configuration
+
+When using the joystick with the controls system, you can configure it in the controls configuration:
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| enabled | boolean | true | Whether joystick controls are enabled |
+| directionMapping | object | See below | Mapping of joystick directions to control names |
+| moveInterval | number | 50 | Interval in milliseconds for repeating movement actions |
+| threshold | number | 0.1 | Minimum power value (0-1) required to trigger movement |
+
+#### Default Direction Mapping
+
+```typescript
+{
+    'top': 'up',
+    'bottom': 'down',
+    'left': 'left',
+    'right': 'right',
+    'top_left': ['up', 'left'],
+    'top_right': ['up', 'right'],
+    'bottom_left': ['down', 'left'],
+    'bottom_right': ['down', 'right']
+}
+```
+
+You can override this mapping in your controls configuration. Diagonal directions can map to multiple controls (array) or a single control (string).

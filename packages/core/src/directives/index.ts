@@ -1,6 +1,7 @@
 export * from './ControlsBase'
 export * from './KeyboardControls'
 export * from './GamepadControls'
+export * from './JoystickControls'
 export * from './Controls'
 export * from './Scheduler'
 export * from './ViewportFollow'

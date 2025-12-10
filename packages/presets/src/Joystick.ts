@@ -5,7 +5,7 @@
  */
 
 import * as PIXI from "pixi.js";
-import { Circle, Container, Graphics, Rect, Sprite, h, signal } from "canvasengine";
+import { Circle, Container, Graphics, Rect, Sprite, h, signal, isSignal } from "canvasengine";
 
 export interface JoystickChangeEvent {
   angle: number;
@@ -34,6 +34,8 @@ export interface JoystickSettings {
   onChange?: (data: JoystickChangeEvent) => void;
   onStart?: () => void;
   onEnd?: () => void;
+  /** Controls instance to automatically apply joystick events to (e.g., JoystickControls or ControlsDirective) */
+  controls?: any;
 }
 
 export function Joystick(opts: JoystickSettings = {}) {
@@ -46,6 +48,14 @@ export function Joystick(opts: JoystickSettings = {}) {
     },
     opts
   );
+
+  // Unwrap controls if it's a signal
+  const getControls = () => {
+    if (isSignal(settings.controls)) {
+      return settings.controls();
+    }
+    return settings.controls;
+  };
 
   let outerRadius = 70;
   let innerRadius = 10;
@@ -94,6 +104,19 @@ export function Joystick(opts: JoystickSettings = {}) {
     dragging = true;
     innerAlpha.set(1);
     settings.onStart?.();
+    
+    // Notify controls if provided
+    const controls = getControls();
+    if (controls) {
+      // Check if it's JoystickControls instance
+      if (controls.handleJoystickStart) {
+        controls.handleJoystickStart();
+      }
+      // Check if it's ControlsDirective with joystick getter
+      else if (controls.joystick && controls.joystick.handleJoystickStart) {
+        controls.joystick.handleJoystickStart();
+      }
+    }
   }
 
   function handleDragEnd() {
@@ -103,6 +126,19 @@ export function Joystick(opts: JoystickSettings = {}) {
     dragging = false;
     innerAlpha.set(innerAlphaStandby);
     settings.onEnd?.();
+    
+    // Notify controls if provided
+    const controls = getControls();
+    if (controls) {
+      // Check if it's JoystickControls instance
+      if (controls.handleJoystickEnd) {
+        controls.handleJoystickEnd();
+      }
+      // Check if it's ControlsDirective with joystick getter
+      else if (controls.joystick && controls.joystick.handleJoystickEnd) {
+        controls.joystick.handleJoystickEnd();
+      }
+    }
   }
 
   function handleDragMove(event: any) {
@@ -144,7 +180,7 @@ export function Joystick(opts: JoystickSettings = {}) {
      */
 
     let direction = Direction.LEFT;
-    
+
     if (sideX == 0) {
       if (sideY > 0) {
         centerPoint.set(0, sideY > outerRadius ? outerRadius : sideY);
@@ -161,7 +197,21 @@ export function Joystick(opts: JoystickSettings = {}) {
       innerPositionX.set(centerPoint.x);
       innerPositionY.set(centerPoint.y);
       power = getPower(centerPoint);
-      settings.onChange?.({ angle, direction, power });
+      const changeEvent = { angle, direction, power };
+      settings.onChange?.(changeEvent);
+      
+      // Notify controls if provided
+      const controls = getControls();
+      if (controls) {
+        // Check if it's JoystickControls instance
+        if (controls.handleJoystickChange) {
+          controls.handleJoystickChange(changeEvent);
+        }
+        // Check if it's ControlsDirective with joystick getter
+        else if (controls.joystick && controls.joystick.handleJoystickChange) {
+          controls.joystick.handleJoystickChange(changeEvent);
+        }
+      }
       return;
     }
 
@@ -172,20 +222,34 @@ export function Joystick(opts: JoystickSettings = {}) {
           0
         );
         angle = 0;
-        direction = Direction.LEFT;
+        direction = Direction.RIGHT;
       } else {
         centerPoint.set(
           -(Math.abs(sideX) > outerRadius ? outerRadius : Math.abs(sideX)),
           0
         );
         angle = 180;
-        direction = Direction.RIGHT;
+        direction = Direction.LEFT;
       }
 
       innerPositionX.set(centerPoint.x);
       innerPositionY.set(centerPoint.y);
       power = getPower(centerPoint);
-      settings.onChange?.({ angle, direction, power });
+      const changeEvent = { angle, direction, power };
+      settings.onChange?.(changeEvent);
+      
+      // Notify controls if provided
+      const controls = getControls();
+      if (controls) {
+        // Check if it's JoystickControls instance
+        if (controls.handleJoystickChange) {
+          controls.handleJoystickChange(changeEvent);
+        }
+        // Check if it's ControlsDirective with joystick getter
+        else if (controls.joystick && controls.joystick.handleJoystickChange) {
+          controls.joystick.handleJoystickChange(changeEvent);
+        }
+      }
       return;
     }
 
@@ -229,7 +293,21 @@ export function Joystick(opts: JoystickSettings = {}) {
     direction = getDirection(centerPoint);
     innerPositionX.set(centerPoint.x);
     innerPositionY.set(centerPoint.y);
-    settings.onChange?.({ angle, direction, power });
+    const changeEvent = { angle, direction, power };
+    settings.onChange?.(changeEvent);
+    
+    // Notify controls if provided
+    const controls = getControls();
+    if (controls) {
+      // Check if it's JoystickControls instance
+      if (controls.handleJoystickChange) {
+        controls.handleJoystickChange(changeEvent);
+      }
+      // Check if it's ControlsDirective with joystick getter
+      else if (controls.joystick && controls.joystick.handleJoystickChange) {
+        controls.joystick.handleJoystickChange(changeEvent);
+      }
+    }
   }
 
   let innerElement;
