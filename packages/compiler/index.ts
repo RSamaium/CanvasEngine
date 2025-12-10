@@ -123,7 +123,8 @@ export default function canvasengine() {
     "Svg",
     "DOMContainer",
     "DOMElement",
-    "Button"
+    "Button",
+    "Joystick"
   ];
 
   return {

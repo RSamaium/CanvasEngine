@@ -20,28 +20,89 @@
       />
     </Container>
     
+    <!-- Gamepad buttons A and B (right side) -->
+    <Container x={600} y={200}>
+      <!-- Button B (top) -->
+      <Button 
+        text="B"
+        shape="circle"
+        width={70}
+        height={70}
+        controls={controlsInstance}
+        controlName="buttonB"
+        style={{
+          backgroundColor: {
+            normal: "#e74c3c",
+            hover: "#c0392b",
+            pressed: "#a93226",
+            disabled: "#7f8c8d"
+          },
+          text: {
+            fontSize: 24,
+            fontFamily: "Arial Bold",
+            color: "#ffffff"
+          }
+        }}
+      />
+      
+      <!-- Button A (bottom) -->
+      <Button 
+        text="A"
+        shape="circle"
+        width={70}
+        height={70}
+        y={90}
+        controls={controlsInstance}
+        controlName="buttonA"
+        style={{
+          backgroundColor: {
+            normal: "#2ecc71",
+            hover: "#27ae60",
+            pressed: "#229954",
+            disabled: "#7f8c8d"
+          },
+          text: {
+            fontSize: 24,
+            fontFamily: "Arial Bold",
+            color: "#ffffff"
+          }
+        }}
+      />
+    </Container>
+    
     <!-- Instructions -->
     <Text 
-      text="Use the joystick below to move the rectangle, or use arrow keys"
+      text="Use the joystick below to move the rectangle, or use arrow keys. Click buttons A/B or press Space/Enter"
       x={10}
       y={10}
       color="#ecf0f1"
       size="14"
       fontFamily="Arial"
     />
+    
+    <!-- Action feedback text -->
+    <Text 
+      text={actionText}
+      x={10}
+      y={30}
+      color="#f39c12"
+      size="16"
+      fontFamily="Arial Bold"
+    />
   </Container>
 </Canvas>
 
 <script>
-  import { signal, mount } from "canvasengine";
-  import { Joystick } from "@canvasengine/presets";
-
+  import { signal, mount } from "canvasengine"
   // Rectangle position
   const x = signal(200);
   const y = signal(200);
   
   // Movement speed
   const speed = signal(10);
+  
+  // Action feedback text
+  const actionText = signal("");
 
   // Controls configuration with joystick integration
   const controls = signal({
@@ -71,6 +132,28 @@
       bind: "down",
       keyDown() {
         y.update((y) => y + speed());
+      },
+    },
+    // Button A action (green button)
+    buttonA: {
+      bind: ["space", "enter"],
+      keyDown() {
+        actionText.set("Button A pressed! (Jump/Action)");
+        // Add your action logic here (e.g., jump, interact)
+        setTimeout(() => {
+          actionText.set("");
+        }, 1000);
+      },
+    },
+    // Button B action (red button)
+    buttonB: {
+      bind: ["shift", "x"],
+      keyDown() {
+        actionText.set("Button B pressed! (Cancel/Secondary)");
+        // Add your action logic here (e.g., cancel, secondary action)
+        setTimeout(() => {
+          actionText.set("");
+        }, 1000);
       },
     },
     // Joystick configuration - automatically handles joystick events

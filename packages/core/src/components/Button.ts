@@ -1,10 +1,13 @@
-import { effect, signal, computed } from "@signe/reactive";
+import { effect, signal, computed, isSignal } from "@signe/reactive";
 import { FederatedPointerEvent } from "pixi.js";
 import { h } from "../engine/signal";
 import { useDefineProps } from "../hooks/useProps";
 import { Container } from "./Container";
-import { Rect } from "./Graphic";
+import { Rect, Circle, Ellipse } from "./Graphic";
 import { Text } from "./Text";
+import { ControlsDirective } from "../directives/Controls";
+import { JoystickControls } from "../directives/JoystickControls";
+import { Element } from "../engine/reactive";
 
 /**
  * Button states for visual feedback
@@ -82,6 +85,16 @@ export interface ButtonProps {
   visible?: boolean;
   /** Button cursor */
   cursor?: string;
+  /** Controls instance to automatically apply button events to (e.g., ControlsDirective or JoystickControls) */
+  controls?: ControlsDirective | JoystickControls | any;
+  /** Name of the control to trigger with applyControl when button is clicked */
+  controlName?: string;
+  /** Shape of the button background: 'rect', 'circle', or 'ellipse' */
+  shape?: 'rect' | 'circle' | 'ellipse';
+  /** Custom background component or element (replaces default background if provided) */
+  background?: Element | any;
+  /** Custom children components for button content (takes priority over text if provided) */
+  children?: Element[];
 }
 
 /**
@@ -94,16 +107,50 @@ export interface ButtonProps {
  * The button is built using a Container with background and text elements,
  * providing reactive state management and event handling.
  * 
- * @param props - Button configuration including text, styling, and event handlers
+ * ## Features
+ * 
+ * - **Controls Integration**: Automatically trigger controls via `applyControl` when clicked
+ * - **Multiple Shapes**: Support for rect, circle, and ellipse shapes
+ * - **Custom Content**: Use children components for custom button content
+ * - **Custom Background**: Provide a custom background component
+ * 
+ * @param props - Button configuration including text, styling, controls, shape, and event handlers
  * @returns A reactive Button component
  * @example
  * ```typescript
  * // Simple button with text and click handler
  * const simpleButton = Button({
  *   text: "Click Me",
- *   onClick: () => console.log("Button clicked!"),
+ *   click: () => console.log("Button clicked!"),
  *   width: 150,
  *   height: 50
+ * });
+ * 
+ * // Button with controls integration
+ * const jumpButton = Button({
+ *   text: "Jump",
+ *   controls: controlsInstance,
+ *   controlName: "jump",
+ *   width: 120,
+ *   height: 40
+ * });
+ * 
+ * // Circular button
+ * const circleButton = Button({
+ *   text: "Action",
+ *   shape: "circle",
+ *   width: 100,
+ *   height: 100
+ * });
+ * 
+ * // Button with custom content (children)
+ * const customButton = Button({
+ *   shape: "circle",
+ *   width: 80,
+ *   height: 80,
+ *   children: [
+ *     h(Sprite, { image: "icon.png", width: 50, height: 50 })
+ *   ]
  * });
  * 
  * // Styled button with custom colors
@@ -149,7 +196,7 @@ export function Button(props: ButtonProps) {
 
   // Define reactive props with defaults
   const defineProps = useDefineProps(props);
-  const { text, disabled, width, height, style } = defineProps({
+  const { text, disabled, width, height, style, shape, controlName } = defineProps({
     text: {
       type: String,
       default: ""
@@ -169,8 +216,25 @@ export function Button(props: ButtonProps) {
     style: {
       type: Object,
       default: () => ({})
+    },
+    shape: {
+      type: String,
+      default: "rect"
+    },
+    controlName: {
+      type: String,
+      default: undefined
     }
   });
+
+  // Helper function to get controls instance (handles signals like Joystick)
+  const getControls = () => {
+    if (!props.controls) return null;
+    if (isSignal(props.controls)) {
+      return props.controls();
+    }
+    return props.controls;
+  };
 
   // Update button state based on disabled and interaction states
   effect(() => {
@@ -202,23 +266,117 @@ export function Button(props: ButtonProps) {
       isPressed.set(false);
       props.hoverLeave?.(event);
     },
-    pointerdown: (event: FederatedPointerEvent) => {
+    pointerdown: async (event: FederatedPointerEvent) => {
       if (!disabled()) {
         isPressed.set(true);
         props.pressDown?.(event);
+        
+        // Apply control if controls and controlName are provided
+        const controls = getControls();
+        const name = controlName();
+        if (controls && name && controls.applyControl) {
+          await controls.applyControl(name, true);
+        }
       }
     },
-    pointerup: (event: FederatedPointerEvent) => {
+    pointerup: async (event: FederatedPointerEvent) => {
       if (!disabled() && isPressed()) {
         isPressed.set(false);
         props.pressUp?.(event);
+        
+        // Apply control release if controls and controlName are provided
+        const controls = getControls();
+        const name = controlName();
+        if (controls && name && controls.applyControl) {
+          await controls.applyControl(name, false);
+        }
       }
     },
-    pointertap: (event: FederatedPointerEvent) => {
+    pointertap: async (event: FederatedPointerEvent) => {
       if (!disabled()) {
         props.click?.(event);
+        
+        // Apply control if controls and controlName are provided (press and release)
+        const controls = getControls();
+        const name = controlName();
+        if (controls && name && controls.applyControl) {
+          await controls.applyControl(name);
+        }
       }
     }
+  };
+
+  // Generate background element
+  const getBackgroundElement = () => {
+    // If custom background is provided, use it
+    if (props.background) {
+      return props.background;
+    }
+
+    // Otherwise, use shape-based background
+    const currentShape = shape();
+    const bgColor = computed(() => {
+      const currentStyle = style();
+      const backgroundColor = currentStyle.backgroundColor || {
+        [ButtonState.Normal]: "#007bff",
+        [ButtonState.Hover]: "#0056b3",
+        [ButtonState.Pressed]: "#004085",
+        [ButtonState.Disabled]: "#6c757d"
+      };
+      const state = currentState();
+      return backgroundColor[state] || backgroundColor[ButtonState.Normal];
+    });
+
+    if (currentShape === 'circle') {
+      // For circle, use the smaller dimension as radius
+      const radius = computed(() => Math.min(width(), height()) / 2);
+      return h(Circle, {
+        radius: radius,
+        x: computed(() => width() / 2),
+        y: computed(() => height() / 2),
+        color: bgColor
+      });
+    } else if (currentShape === 'ellipse') {
+      return h(Ellipse, {
+        width: width,
+        height: height,
+        color: bgColor
+      });
+    } else {
+      // Default: rect
+      return h(Rect, {
+        width: width,
+        height: height,
+        color: bgColor
+      });
+    }
+  };
+
+  // Generate content element(s)
+  const getContentElements = () => {
+    // If children are provided, use them (priority over text)
+    if (props.children && props.children.length > 0) {
+      return props.children;
+    }
+
+    // Otherwise, use text
+    return [
+      h(Text, {
+        text: text,
+        x: computed(() => width() / 2),
+        y: computed(() => height() / 2),
+        anchor: { x: 0.5, y: 0.5 },
+        style: computed(() => {
+          const currentStyle = style();
+          const textStyle = currentStyle.text || {};
+          return {
+            fontSize: textStyle.fontSize || 16,
+            fontFamily: textStyle.fontFamily || "Arial",
+            fill: textStyle.color || "#ffffff"
+          };
+        })()
+      })
+    ];
   };
 
   // Return Container with h() children
@@ -232,38 +390,7 @@ export function Button(props: ButtonProps) {
     cursor: props.cursor || "pointer",
     ...eventHandlers
   }, [
-    // Background element (either sprite or graphics)
-    h(Rect, {
-      width: width,
-      height: height,
-      color: computed(() => {
-        const currentStyle = style();
-        const backgroundColor = currentStyle.backgroundColor || {
-          [ButtonState.Normal]: "#007bff",
-          [ButtonState.Hover]: "#0056b3",
-          [ButtonState.Pressed]: "#004085",
-          [ButtonState.Disabled]: "#6c757d"
-        };
-        const state = currentState();
-        return backgroundColor[state] || backgroundColor[ButtonState.Normal];
-      })
-    }),
-    
-    // Text element
-    h(Text, {
-      text: text,
-      x: computed(() => width() / 2),
-      y: computed(() => height() / 2),
-      anchor: { x: 0.5, y: 0.5 },
-      style: computed(() => {
-        const currentStyle = style();
-        const textStyle = currentStyle.text || {};
-        return {
-          fontSize: textStyle.fontSize || 16,
-          fontFamily: textStyle.fontFamily || "Arial",
-          fill: textStyle.color || "#ffffff"
-        };
-      })()
-    })
+    getBackgroundElement(),
+    ...getContentElements()
   ]);
 }

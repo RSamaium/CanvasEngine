@@ -114,6 +114,10 @@ const guideMenu = [
         text: "DOMContainer",
         link: "/components/dom-container",
       },
+      {
+        text: "Joystick",
+        link: "/components/joystick",
+      }
     ],
   },
   {
@@ -146,10 +150,6 @@ const guideMenu = [
     text: "Presets Components",
     collapsed: false,
     items: [
-      {
-        text: "Joystick",
-        link: "/presets/joystick",
-      },
       {
         text: "Bar",
         link: "/presets/bar",
