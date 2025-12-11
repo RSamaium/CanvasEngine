@@ -10,7 +10,7 @@ The context object contains the following properties:
 |------|------|-------------|
 | `app` | `() => Application \| null` | Function that returns the PixiJS Application instance. Returns `null` until the canvas is rendered. |
 | `canvasSize` | `Signal<{ width: number, height: number }>` | Signal containing the current width and height of the canvas. Updates automatically when the canvas is resized. |
-| `globalLoader` | `GlobalAssetLoader` | Global asset loader instance that tracks loading progress of all assets across the component tree. See [GlobalAssetLoader documentation](../utils/global-asset-loader.md) for more details. |
+| `globalLoader` | `GlobalAssetLoader` | Global asset loader instance that tracks loading progress of all assets across the component tree. See [GlobalAssetLoader documentation](/components/sprite.html#global-asset-loader) for more details. |
 | `tick` | `Signal<Tick>` | Signal containing the ticker information. Updates on each frame with timing and frame data. See [Tick interface](#tick-interface) below. |
 | `rootElement` | `Element` | The root Canvas element. See [Element documentation](./element.md) for more details. |
 
