@@ -177,6 +177,10 @@ const guideMenu = [
         link: "/api/element",
       },
       {
+        text: "Context",
+        link: "/api/context",
+      },
+      {
         text: "Use without Compiler",
         link: "/advanced/without-compiler",
       }

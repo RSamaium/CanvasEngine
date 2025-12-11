@@ -1,20 +1,9 @@
-<Sprite image x y />
-@if (true) {
-    <Rect width={100} height={100} color="red" x={x} y={y} />
-}
+<Rect width={100} height={100} color="red" x={0} y={0} />
 
 <script>
-import { mount } from "canvasengine"
+    import { tick, mount } from 'canvasengine'
 
-const {
-    image,
-    x,
-    y
-} = defineProps()
-
-const array = [1, 2, 3]
-
-mount((element) => {
-    console.log(element)
-})
+    mount((element) => {
+        console.log(element)
+    })
 </script>

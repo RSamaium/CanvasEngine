@@ -1,41 +1,9 @@
 <Canvas>
-    <Container>
-        @for (obj of elementsLow) {
-            <Child ...obj /> 
-        }
-    </Container>
-      
+  <Container>
+    <Child />
+  </Container>
 </Canvas>
 
-
-  <script>
-    import { computed, signal } from 'canvasengine'
-    import Child from './child.ce'
-
-    const data = signal({
-      elementsLow: [
-        {
-          image: 'https://pixijs.com/assets/flowerTop.png',
-          x: 0,
-          y: 0,
-        }
-      ]
-    })
-
-    setTimeout(() => {
-      data.set({
-        elementsLow: [
-
-          {
-            image: 'https://pixijs.com/assets/flowerTop.png',
-            x: 200,
-            y: 200,
-          }
-        ]
-      })
-    }, 1000)
-
-    const elementsLow = computed(() => {
-      return data().elementsLow || []
-    })
-  </script>
+<script>
+  import Child from './child.ce'
+</script>
