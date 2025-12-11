@@ -59,5 +59,7 @@ export interface CanvasContainer extends DisplayObjectProps {}
 registerComponent("Container", CanvasContainer);
 
 export const Container: ComponentFunction<ContainerProps> = (props) => {
+  // Ensure component is registered (useful in tests if module cache differs)
+  registerComponent("Container", CanvasContainer);
   return createComponent("Container", props);
 };

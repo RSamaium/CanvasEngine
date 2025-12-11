@@ -763,5 +763,7 @@ export type SpritePropTypes = SpritePropsWithImage | SpritePropsWithSheet;
 
 // Update the Sprite function to use the props interface
 export const Sprite: ComponentFunction<SpritePropTypes> = (props) => {
+  // Ensure component is registered in test environments where module cache may differ
+  registerComponent("Sprite", CanvasSprite);
   return createComponent("Sprite", props);
 };

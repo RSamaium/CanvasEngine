@@ -82,9 +82,10 @@
            
             click={handleAnimatedSpriteClick}
         />
+        <Child />
     </Container>
 
-    <Child freeze={freezeSignal} />
+    
 </Canvas>
 
 <script>

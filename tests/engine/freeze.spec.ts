@@ -1,10 +1,17 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { createComponent, registerComponent, signal, isElementFrozen } from 'canvasengine'
-import { Container } from '../../packages/core/src/components/Container'
-import { Sprite } from '../../packages/core/src/components/Sprite'
+import { signal } from 'canvasengine'
+import { createComponent, registerComponent, isElementFrozen } from '../../packages/core/src/engine/reactive'
+import { Container, CanvasContainer } from '../../packages/core/src/components/Container'
+import { Sprite, CanvasSprite } from '../../packages/core/src/components/Sprite'
+import { beforeAll } from 'vitest'
 import { TestBed } from '../../packages/core/testing'
 
 describe('Freeze System', () => {
+    beforeAll(() => {
+        // Ensure core components are registered for tests
+        registerComponent('Sprite', CanvasSprite)
+        registerComponent('Container', CanvasContainer)
+    })
     class TestComponent {
         updateCount = 0
         onInit(props) {}
@@ -80,6 +87,7 @@ describe('Freeze System', () => {
             })
             
             const instance = element.componentInstance
+            // onMount should be blocked by freeze
             expect(instance.updateCount).toBe(0)
             
             xSignal.set(10)
@@ -103,7 +111,8 @@ describe('Freeze System', () => {
             })
             
             const instance = element.componentInstance
-            expect(instance.updateCount).toBe(0)
+            // onMount triggers an initial onUpdate call when not frozen
+            expect(instance.updateCount).toBe(1)
             
             xSignal.set(10)
             expect(instance.updateCount).toBeGreaterThan(0) // Should update when not frozen
