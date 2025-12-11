@@ -1,4 +1,4 @@
-import { Element, isElement, Props } from "../engine/reactive";
+import { Element, isElement, Props, isElementFrozen } from "../engine/reactive";
 import { setObservablePoint } from "../engine/utils";
 import type {
   AlignContent,
@@ -120,6 +120,16 @@ export function DisplayObject(extendClass) {
     #registeredEvents: Map<string, Function> = new Map();
     // Store computed layout box dimensions
     #computedLayoutBox: { width?: number; height?: number } | null = null;
+    // Store reference to element for freeze checking
+    #element: Element<DisplayObject> | null = null;
+
+    /**
+     * Get the element reference for freeze checking
+     * @returns The element reference or null
+     */
+    protected getElement(): Element<DisplayObject> | null {
+      return this.#element;
+    }
 
     get deltaRatio() {
       return this.#canvasContext?.scheduler?.tick.value.deltaRatio;
@@ -135,15 +145,24 @@ export function DisplayObject(extendClass) {
       for (let event of EVENTS) {
         if (props[event] && !this.overrideProps.includes(event)) {
           this.eventMode = "static";
-          const eventHandler = props[event];
+          const originalEventHandler = props[event];
           
-          // Store the event handler for cleanup
+          // Wrap event handler to check freeze state
+          const wrappedHandler = (...args: any[]) => {
+            // Check if element is frozen before executing handler
+            if (this.#element && isElementFrozen(this.#element)) {
+              return;
+            }
+            return originalEventHandler(...args);
+          };
+          
+          // Store the wrapped event handler for cleanup
           if (event === 'click') {
-            this.on('pointertap', eventHandler);
-            this.#registeredEvents.set('pointertap', eventHandler);
+            this.on('pointertap', wrappedHandler);
+            this.#registeredEvents.set('pointertap', wrappedHandler);
           } else {
-            this.on(event, eventHandler);
-            this.#registeredEvents.set(event, eventHandler);
+            this.on(event, wrappedHandler);
+            this.#registeredEvents.set(event, wrappedHandler);
           }
         }
       }
@@ -171,11 +190,12 @@ export function DisplayObject(extendClass) {
       this.subjectInit.next(this);
     }
 
-    async onMount({ parent, props }: Element<DisplayObject>, index?: number) {
+    async onMount(element: Element<DisplayObject>, index?: number) {
       if (this.destroyed) return
-      this.#canvasContext = props.context;
-      if (parent) {
-        const instance = parent.componentInstance as DisplayObject;
+      this.#element = element;
+      this.#canvasContext = element.props.context;
+      if (element.parent) {
+        const instance = element.parent.componentInstance as DisplayObject;
         if (instance.isFlex && !this.layout && !this.disableLayout) {
           try {
             this.layout = {};
@@ -189,7 +209,7 @@ export function DisplayObject(extendClass) {
           instance.addChildAt(this, index);
         }
         this.isMounted = true;
-        this.onUpdate(props);
+        this.onUpdate(element.props);
         
         // Listen to layout events to store computed layout dimensions
         const layoutHandler = (event: any) => {
@@ -316,6 +336,7 @@ export function DisplayObject(extendClass) {
         this.off(eventName, eventHandler);
       }
       this.#registeredEvents.clear();
+      this.#element = null;
 
       if (this.onBeforeDestroy) {
         await this.onBeforeDestroy();

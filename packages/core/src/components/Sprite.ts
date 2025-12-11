@@ -14,6 +14,7 @@ import {
   createComponent,
   isElement,
   registerComponent,
+  isElementFrozen,
 } from "../engine/reactive";
 import { arrayEquals, isFunction } from "../engine/utils";
 import { DisplayObject } from "./DisplayObject";
@@ -299,6 +300,10 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   }
 
   async onMount(params: Element<CanvasSprite>) {
+    // Set #element manually for freeze checking before calling super.onMount
+    // We need to set it early so update() can check freeze state
+    (this as any)['#element'] = params;
+    
     const { props, propObservables } = params;
     const tick: Signal = props.context.tick;
     const sheet = props.sheet ?? {};
@@ -421,7 +426,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
     if (sheet?.params) this.sheetParams = sheet?.params;
 
-    if (sheet?.playing && this.isMounted) {
+    if (sheet?.playing && this.isMounted && this.spritesheet && this.animations.size > 0) {
       this.sheetCurrentAnimation = sheet?.playing;
       this.play(this.sheetCurrentAnimation, [this.sheetParams]);
     }
@@ -587,6 +592,12 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   }
 
   update({ deltaRatio }) {
+    // Block animation update if element is frozen
+    const element = this.getElement();
+    if (element && isElementFrozen(element)) {
+      return;
+    }
+    
     if (
       !this.isPlaying() ||
       !this.currentAnimation ||

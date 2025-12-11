@@ -19,6 +19,8 @@ export interface AnimatedSignal<T> extends Omit<WritableSignal<T>, 'set'> {
   set: (newValue: T, options?: AnimateOptions<T>) => Promise<void>;
   animatedState: WritableSignal<AnimatedState<T>>;
   update: (updater: (value: T) => T) => void;
+  pause: () => void;
+  resume: () => void;
 }
 
 export function isAnimatedSignal(signal: WritableSignal<any>): boolean {
@@ -50,6 +52,8 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
     end: initialValue,
   };
   let animation
+  let isPaused = false;
+  let pausedTime = 0;
 
   const publicSignal = signal(initialValue);
   const privateSignal = signal(state);
@@ -80,6 +84,9 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
       animation.stop();
     }
 
+    isPaused = false;
+    pausedTime = 0;
+    
     animation = animatePopmotion({
        // TODO
        duration: 20,
@@ -88,6 +95,7 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
       from: prevState.current,
       to: newValue,
       onUpdate: (value) => {
+        if (isPaused) return;
         privateSignal.update(s => ({ ...s, current: value as T }));
         if (options.onUpdate) {
           options.onUpdate(value as T);
@@ -124,6 +132,24 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
         }
       });
     })
+  }
+  fn.pause = () => {
+    if (animation && !isPaused) {
+      isPaused = true;
+      if (animation.stop) {
+        animation.stop();
+      }
+    }
+  }
+  fn.resume = () => {
+    if (isPaused && animation) {
+      isPaused = false;
+      // Restart animation from current state
+      const currentState = privateSignal();
+      if (currentState.current !== currentState.end) {
+        animatedSignal(currentState.end, options);
+      }
+    }
   }
 
   return fn as any

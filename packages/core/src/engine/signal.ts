@@ -3,6 +3,7 @@ import {
   Subscription
 } from "rxjs";
 import type { Element } from "./reactive";
+import { isElementFrozen } from "./reactive";
 import { Tick } from "../directives/Scheduler";
 import { Container } from "../components";
 
@@ -55,6 +56,10 @@ export function tick(fn: (tickValue: Tick, element: Element) => void) {
     let subscription: Subscription | undefined
     if (context.tick) {
       subscription = context.tick.observable.subscribe(({ value }) => {
+        // Block tick if element is frozen
+        if (isElementFrozen(el)) {
+          return;
+        }
         fn(value, el)
       })
     }

@@ -6,4 +6,8 @@
     mount((element) => {
         console.log(element)
     })
+
+    tick((params) => {
+        console.log('test')
+    })
 </script>

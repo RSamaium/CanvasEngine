@@ -1,0 +1,230 @@
+<Canvas>
+    <Container>
+        <!-- Instructions -->
+        <Text text="Freeze System Demo" x={10} y={10} color="#ecf0f1" size="24" fontFamily="Arial" />
+        <Text text="Click the button to freeze/unfreeze the sprite" x={10} y={40} color="#95a5a6" size="14" fontFamily="Arial" />
+        <Text text="When frozen: no updates, no controls, no events" x={10} y={60} color="#95a5a6" size="14" fontFamily="Arial" />
+    </Container>
+
+    <!-- Freeze button -->
+    <Container x={100} y={100}>
+        <Text text="Toggle Freeze" x={0} y={-30} color="#ecf0f1" size="16" fontFamily="Arial" />
+        <Sprite 
+            image="exp.png"
+            width={150}
+            height={50}
+            borderRadius={8}
+            click={() => {
+                freezeSignal.set(!freezeSignal())
+                console.log('Freeze toggled:', freezeSignal())
+            }}
+        />
+    </Container>
+
+    <!-- Sprite with freeze prop (Signal) -->
+    <Container x={100} y={200}>
+        <Text text="Frozen Sprite (Signal)" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
+        <Text text={freezeSignal ? "FROZEN" : "ACTIVE"} x={0} y={-50} color={freezeSignal ? "#e74c3c" : "#2ecc71"} size="12" fontFamily="Arial" />
+        <Sprite 
+            image="exp.png"
+            width={200}
+            height={200}
+            borderRadius={8}
+            freeze={freezeSignal}
+            x={xSignal}
+            y={ySignal}
+            controls={controlsConfig1}
+            click={handleSpriteClick}
+        />
+    </Container>
+
+    <!-- Sprite with freeze prop (boolean) -->
+    <Container x={400} y={200}>
+        <Text text="Always Frozen Sprite (boolean)" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
+        <Text text={freezeSignal2 ? "FROZEN" : "ACTIVE"} x={0} y={-50} color={freezeSignal2 ? "#e74c3c" : "#2ecc71"} size="12" fontFamily="Arial" />
+        <Sprite 
+            image="exp.png"
+            width={200}
+            height={200}
+            borderRadius={8}
+            freeze={freezeSignal2}
+            x={xSignal2}
+            y={ySignal2}
+            controls={controlsConfig2}
+            click={handleFrozenSpriteClick}
+        />
+    </Container>
+
+    <!-- Animated sprite to show updates are blocked -->
+    <Container x={100} y={450}>
+        <Text text="Animated Sprite (updates blocked when frozen)" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
+        <Sprite 
+            image="exp.png"
+            width={100}
+            height={100}
+            borderRadius={8}
+            freeze={freezeSignal}
+            x={animatedX}
+            y={200}
+            click={handleAnimatedSpriteClick}
+        />
+    </Container>
+
+    <!-- Spritesheet animation example -->
+    <Container x={300} y={450}  freeze={freezeSignal}>
+        <Text text="Spritesheet Animation (blocked when frozen)" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
+        <Sprite 
+            image="exp.png"
+            sheet={{
+                definition: spritesheetDefinition,
+                playing: "default"
+            }}
+           
+            click={handleAnimatedSpriteClick}
+        />
+    </Container>
+
+    <Child freeze={freezeSignal} />
+</Canvas>
+
+<script>
+    import { signal, animatedSignal } from 'canvasengine';
+    import Child from './child.ce';
+
+    // Freeze state signal
+    const freezeSignal = signal(false);
+    const freezeSignal2 = signal(false);
+
+    // Position signals for first sprite
+    const xSignal = signal(0);
+    const ySignal = signal(0);
+
+    // Position signals for second sprite (always frozen)
+    const xSignal2 = signal(0);
+    const ySignal2 = signal(0);
+
+    // Animated position signal
+    const animatedX = animatedSignal(0, { duration: 2000, repeat: true });
+    animatedX.set(300);
+
+    // Controls configuration for first sprite (arrow keys)
+    const controlsConfig1 = {
+        up: {
+            bind: 'up',
+            repeat: true,
+            keyDown: () => {
+                ySignal.set(ySignal() - 10);
+                console.log('Up pressed, y:', ySignal());
+            }
+        },
+        down: {
+            bind: 'down',
+            repeat: true,
+            keyDown: () => {
+                ySignal.set(ySignal() + 10);
+                console.log('Down pressed, y:', ySignal());
+            }
+        },
+        left: {
+            bind: 'left',
+            repeat: true,
+            keyDown: () => {
+                xSignal.set(xSignal() - 10);
+                console.log('Left pressed, x:', xSignal());
+            }
+        },
+        right: {
+            bind: 'right',
+            repeat: true,
+            keyDown: () => {
+                xSignal.set(xSignal() + 10);
+                console.log('Right pressed, x:', xSignal());
+            }
+        }
+    };
+
+    // Controls configuration for second sprite (WASD keys)
+    const controlsConfig2 = {
+        up: {
+            bind: 'up',
+            repeat: true,
+            keyDown: () => {
+                ySignal2.set(ySignal2() - 10);
+                console.log('W pressed, y2:', ySignal2());
+            }
+        },
+        down: {
+            bind: 'down',
+            repeat: true,
+            keyDown: () => {
+                ySignal2.set(ySignal2() + 10);
+                console.log('S pressed, y2:', ySignal2());
+            }
+        },
+        left: {
+            bind: 'left',
+            repeat: true,
+            keyDown: () => {
+                xSignal2.set(xSignal2() - 10);
+                console.log('A pressed, x2:', xSignal2());
+            }
+        },
+        right: {
+            bind: 'right',
+            repeat: true,
+            keyDown: () => {
+                xSignal2.set(xSignal2() + 10);
+                console.log('D pressed, x2:', xSignal2());
+            }
+        }
+    };
+
+    // Event handlers
+    const handleSpriteClick = () => {
+        console.log('Sprite clicked!');
+    };
+
+    const handleFrozenSpriteClick = () => {
+        console.log('Frozen sprite clicked! (should not work)');
+        freezeSignal2.set(!freezeSignal2());
+    };
+
+    const handleAnimatedSpriteClick = () => {
+        console.log('Animated sprite clicked!');
+    };
+
+    // Spritesheet definition for animation
+    const spritesheetDefinition = {
+        id: "explosion",
+        image: "./exp.png",
+        width: 1024,
+        height: 1024,
+        framesWidth: 4,
+        framesHeight: 4,
+        textures: {
+            default: {
+                animations: () => [
+                    [ 
+                        { time: 0, frameX: 0, frameY: 0 },
+                        { time: 10, frameX: 1, frameY: 0 },
+                        { time: 20, frameX: 2, frameY: 0 },
+                        { time: 30, frameX: 3, frameY: 0 },
+                        { time: 40, frameX: 0, frameY: 1 },
+                        { time: 50, frameX: 1, frameY: 1 },
+                        { time: 60, frameX: 2, frameY: 1 },     
+                        { time: 70, frameX: 3, frameY: 1 },
+                        { time: 80, frameX: 0, frameY: 2 },
+                        { time: 90, frameX: 1, frameY: 2 },
+                        { time: 100, frameX: 2, frameY: 2 },
+                        { time: 110, frameX: 3, frameY: 2 },
+                        { time: 120, frameX: 0, frameY: 3 },
+                        { time: 130, frameX: 1, frameY: 3 },
+                        { time: 140, frameX: 2, frameY: 3 },
+                        { time: 150, frameX: 3, frameY: 3 },
+                    ]
+                ]
+            }
+        }
+    };
+    
+</script>

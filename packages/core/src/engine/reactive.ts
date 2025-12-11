@@ -1,4 +1,5 @@
 import { ArrayChange, ObjectChange, Signal, WritableArraySignal, WritableObjectSignal, isComputed, isSignal, signal, computed } from "@signe/reactive";
+import { isAnimatedSignal, AnimatedSignal } from "./animation";
 import {
   Observable,
   Subject,
@@ -46,6 +47,7 @@ export interface Element<T = ComponentInstance> {
   };
   destroy: () => void;
   allElements: Subject<void>;
+  isFrozen: boolean;
 }
 
 type FlowResult = {
@@ -80,6 +82,66 @@ export const isPrimitive = (value) => {
 
 export function registerComponent(name, component) {
   components[name] = component;
+}
+
+/**
+ * Checks if an element is currently frozen.
+ * An element is frozen when the `freeze` prop is set to `true` (either as a boolean or Signal<boolean>),
+ * or when any of its parent elements are frozen (recursive freeze propagation).
+ * 
+ * @param element - The element to check
+ * @returns `true` if the element is frozen, `false` otherwise
+ */
+export function isElementFrozen(element: Element): boolean {
+  if (!element) return false;
+  
+  // Check if this element itself is frozen
+  const freezeProp = element.propObservables?.freeze ?? element.props?.freeze;
+  
+  if (freezeProp !== undefined && freezeProp !== null) {
+    // Handle Signal<boolean>
+    if (isSignal(freezeProp)) {
+      if (freezeProp() === true) {
+        return true;
+      }
+    } else if (freezeProp === true) {
+      // Handle direct boolean
+      return true;
+    }
+  }
+  
+  // Check if any parent is frozen (recursive check)
+  if (element.parent) {
+    return isElementFrozen(element.parent);
+  }
+  
+  return false;
+}
+
+/**
+ * Pauses or resumes all animatedSignals in an element based on freeze state.
+ * 
+ * @param element - The element containing animatedSignals
+ * @param shouldPause - Whether to pause (true) or resume (false) animations
+ */
+function handleAnimatedSignalsFreeze(element: Element, shouldPause: boolean) {
+  if (!element.propObservables) return;
+  
+  const processValue = (value: any) => {
+    if (isSignal(value) && isAnimatedSignal(value as any)) {
+      const animatedSig = value as unknown as AnimatedSignal<any>;
+      if (shouldPause) {
+        animatedSig.pause();
+      } else {
+        animatedSig.resume();
+      }
+    } else if (isObject(value) && !isElement(value)) {
+      // Recursively process nested objects
+      Object.values(value).forEach(processValue);
+    }
+  };
+  
+  Object.values(element.propObservables).forEach(processValue);
 }
 
 function destroyElement(element: Element | Element[]) {
@@ -150,6 +212,7 @@ export function createComponent(tag: string, props?: Props): Element {
       destroyElement(this);
     },
     allElements: new Subject(),
+    isFrozen: false,
   };
 
   // Iterate over each property in the props object
@@ -168,27 +231,78 @@ export function createComponent(tag: string, props?: Props): Element {
           const _value = value as Signal<any>;
           if ("dependencies" in _value && _value.dependencies.size == 0) {
             _set(path, key, _value());
+            // Handle freeze prop initialization
+            if (key === "freeze") {
+              element.isFrozen = _value() === true;
+            }
             return;
           }
+          
+          // Handle freeze prop as signal
+          if (key === "freeze") {
+            element.isFrozen = _value() === true;
+            
+            // Pause/resume animatedSignals based on initial freeze state
+            handleAnimatedSignalsFreeze(element, element.isFrozen);
+            
+            element.propSubscriptions.push(
+              _value.observable.subscribe((freezeValue) => {
+                const wasFrozen = element.isFrozen;
+                element.isFrozen = freezeValue === true;
+                
+                // Handle animatedSignal pause/resume when freeze state changes
+                if (wasFrozen !== element.isFrozen) {
+                  handleAnimatedSignalsFreeze(element, element.isFrozen);
+                }
+              })
+            );
+            return;
+          }
+          
           element.propSubscriptions.push(
             _value.observable.subscribe((value) => {
+              // Block updates if element is frozen
+              if (isElementFrozen(element)) {
+                // Pause animatedSignal if it's an animated signal
+                if (isAnimatedSignal(_value as any)) {
+                  (_value as unknown as AnimatedSignal<any>).pause();
+                }
+                return;
+              }
+              
+              // Resume animatedSignal if it was paused
+              if (isAnimatedSignal(_value as any)) {
+                (_value as unknown as AnimatedSignal<any>).resume();
+              }
+              
               _set(path, key, value);
               if (element.directives[key]) {
                 element.directives[key].onUpdate?.(value, element);
               }
               if (key == "tick") {
+                // Block tick updates if element is frozen
+                if (isElementFrozen(element)) {
+                  return;
+                }
                 return
               }
               instance.onUpdate?.(
                 path == ""
                   ? {
-                    [key]: value,
-                  }
+                      [key]: value,
+                    }
                   : set({}, path + "." + key, value)
               );
             })
           );
         } else {
+          // Handle freeze prop as direct boolean
+          if (key === "freeze") {
+            element.isFrozen = value === true;
+            
+            // Pause/resume animatedSignals based on freeze state
+            handleAnimatedSignalsFreeze(element, element.isFrozen);
+          }
           if (isObject(value) && key != "context" && !isElement(value)) {
             recursiveProps(value, (path ? path + "." : "") + key);
           } else {
@@ -308,6 +422,11 @@ export function createComponent(tag: string, props?: Props): Element {
 
     element.props.context = actualParent.props.context;
     element.parent = actualParent;
+    
+    // Inherit freeze state from parent if element doesn't have its own freeze prop
+    if (!element.propObservables?.freeze && !element.props?.freeze && isElementFrozen(actualParent)) {
+      element.isFrozen = true;
+    }
 
     // Check dependencies before mounting
     if (element.props.dependencies && Array.isArray(element.props.dependencies)) {
@@ -514,7 +633,8 @@ export function loop<T>(
         parent: null,
         directives: {},
         destroy() { destroyElement(this) },
-        allElements: new Subject()
+        allElements: new Subject(),
+        isFrozen: false
       };
     }
 

@@ -1,9 +1,11 @@
 import { Directive, registerDirective } from "../engine/directive";
-import { Element } from "../engine/reactive";
+import { Element, isElementFrozen } from "../engine/reactive";
 import { ControlsBase, Controls } from "./ControlsBase";
 import { KeyboardControls } from "./KeyboardControls";
 import { GamepadControls, GamepadConfig } from "./GamepadControls";
 import { JoystickControls, JoystickConfig } from "./JoystickControls";
+import { Signal, isSignal } from "@signe/reactive";
+import { Subscription } from "rxjs";
 
 /**
  * Controls directive that coordinates keyboard, gamepad, and joystick input systems
@@ -27,12 +29,15 @@ export class ControlsDirective extends Directive {
     private keyboardControls: KeyboardControls | null = null;
     private gamepadControls: GamepadControls | null = null;
     private joystickControls: JoystickControls | null = null;
+    private freezeSubscription: Subscription | null = null;
+    private element: Element | null = null;
 
     /**
      * Initialize the controls directive
      * Sets up keyboard, gamepad, and joystick controls if available
      */
     onInit(element: Element) {
+        this.element = element;
         const value = element.props.controls?.value ?? element.props.controls;
         if (!value) return;
 
@@ -57,6 +62,23 @@ export class ControlsDirective extends Directive {
             this.joystickControls.setInputs(value as Controls & { joystick?: JoystickConfig });
             this.joystickControls.start();
         }
+
+        // Check initial freeze state
+        if (isElementFrozen(element)) {
+            this.stopInputs();
+        }
+
+        // Subscribe to freeze prop if it's a signal
+        const freezeProp = element.propObservables?.freeze ?? element.props?.freeze;
+        if (isSignal(freezeProp)) {
+            this.freezeSubscription = (freezeProp as Signal<boolean>).observable.subscribe((isFrozen) => {
+                if (isFrozen) {
+                    this.stopInputs();
+                } else {
+                    this.listenInputs();
+                }
+            });
+        }
     }
 
     /**
@@ -68,16 +90,25 @@ export class ControlsDirective extends Directive {
      * Update controls configuration
      * Updates both keyboard and gamepad controls
      */
-    onUpdate(props: any) {
+    onUpdate(props: any, element: Element) {
         const value = props.controls?.value ?? props.controls;
-        if (!value) return;
+        if (value) {
+            if (this.keyboardControls) {
+                this.keyboardControls.setInputs(value as Controls);
+            }
 
-        if (this.keyboardControls) {
-            this.keyboardControls.setInputs(value as Controls);
+            if (this.gamepadControls) {
+                this.gamepadControls.setInputs(value as Controls & { gamepad?: GamepadConfig });
+            }
         }
 
-        if (this.gamepadControls) {
-            this.gamepadControls.setInputs(value as Controls & { gamepad?: GamepadConfig });
+        // Handle freeze prop update
+        if (props.freeze !== undefined && this.element) {
+            if (isElementFrozen(this.element)) {
+                this.stopInputs();
+            } else {
+                this.listenInputs();
+            }
         }
     }
 
@@ -85,6 +116,11 @@ export class ControlsDirective extends Directive {
      * Cleanup and destroy all control systems
      */
     onDestroy(element: Element) {
+        if (this.freezeSubscription) {
+            this.freezeSubscription.unsubscribe();
+            this.freezeSubscription = null;
+        }
+
         if (this.keyboardControls) {
             this.keyboardControls.destroy();
             this.keyboardControls = null;
@@ -99,6 +135,8 @@ export class ControlsDirective extends Directive {
             this.joystickControls.destroy();
             this.joystickControls = null;
         }
+
+        this.element = null;
     }
 
     /**
