@@ -89,7 +89,7 @@
 </Canvas>
 
 <script>
-    import { signal, animatedSignal } from 'canvasengine';
+    import { signal, animatedSignal, mount } from 'canvasengine';
     import Child from './child.ce';
 
     // Freeze state signal
@@ -106,7 +106,11 @@
 
     // Animated position signal
     const animatedX = animatedSignal(0, { duration: 2000, repeat: true });
-    animatedX.set(300);
+
+    mount((element) => {
+        animatedX.set(300);
+    })
+    
 
     // Controls configuration for first sprite (arrow keys)
     const controlsConfig1 = {

@@ -69,7 +69,12 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
       frame: 0,
       deltaRatio: 1,
     });
+  } else {
+    options.context!.tick = props.tick;
   }
+
+  // Register the tick signal globally so animatedSignal can use it by default
+  (globalThis as any).__CANVAS_ENGINE_TICK__ = options.context!.tick;
 
   const canvasElement = createComponent("Canvas", options) as CanvasElement;
 

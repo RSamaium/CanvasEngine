@@ -1,11 +1,24 @@
-import { effect, signal, type WritableSignal } from "@signe/reactive";
+import { effect, signal, type WritableSignal, type Signal } from "@signe/reactive";
 import { animate as animatePopmotion } from "popmotion";
+import { Tick } from "../directives/Scheduler";
+import { Subscription } from "rxjs";
+
+/**
+ * Gets the global tick signal from the engine context.
+ * This is automatically set by the Canvas component when it initializes.
+ * 
+ * @returns The global tick signal if available, undefined otherwise
+ */
+function getGlobalTickSignal(): Signal<Tick> | undefined {
+  return (globalThis as any).__CANVAS_ENGINE_TICK__;
+}
 
 export interface AnimateOptions<T> {
   duration?: number;
   ease?: (t: number) => number;
   onUpdate?: (value: T) => void;
   onComplete?: () => void;
+  tick?: Signal<Tick>;
 }
 
 export interface AnimatedState<T> {
@@ -28,22 +41,80 @@ export function isAnimatedSignal(signal: WritableSignal<any>): boolean {
 }
 
 /**
+ * Creates a popmotion driver that uses the engine's tick system.
+ * The driver subscribes to the tick signal and calls the update function with deltaTime on each tick.
+ * 
+ * @param tickSignal - The tick signal from the engine context
+ * @returns A driver function for popmotion
+ * @example
+ * ```ts
+ * const driver = createTickDriver(context.tick);
+ * animate({
+ *   to: 100,
+ *   driver: driver
+ * });
+ * ```
+ */
+function createTickDriver(tickSignal: Signal<Tick>) {
+  return (update: (delta: number) => void) => {
+    let subscription: Subscription | undefined;
+    let lastTimestamp: number | null = null;
+    
+    const start = () => {
+      if (subscription) return;
+
+      subscription = (tickSignal.observable as any).subscribe((result: any) => {
+        const tick = result?.value ?? result;
+        if (!tick) return;
+
+        if (lastTimestamp === null) {
+          lastTimestamp = tick.timestamp;
+          return;
+        }
+
+        const delta = tick.deltaTime;
+        lastTimestamp = tick.timestamp;
+        update(delta);
+      });
+    };
+
+    const stop = () => {
+      subscription?.unsubscribe();
+      subscription = undefined;
+      lastTimestamp = null;
+    };
+
+    return { start, stop };
+  };
+}
+
+/**
  * Creates an animated signal with the given initial value and animation options.
  * It's a writable signal that can be animated using popmotion. Properties of the animated signal are:
  * - current: the current value of the signal.
  * - start: the start value of the animation.
  * - end: the end value of the animation.
  * 
+ * If a tick signal is provided in options, the animation will use the engine's tick system.
+ * Otherwise, it will automatically use the global tick signal from the Canvas context if available.
+ * If no tick signal is available, it will use requestAnimationFrame by default.
+ * 
  * @param initialValue The initial value of the signal.
- * @param options The animation options.
+ * @param options The animation options. Can include a `tick` signal to use a specific tick system.
  * @returns The animated signal.
  * @example
+ * ```ts
+ * // Automatically uses the Canvas tick system if available, otherwise requestAnimationFrame
  * const animatedValue = animatedSignal(0, { duration: 1000 });
  * animatedValue.set(10);
- * animatedValue.update((value) => value + 1);
- * console.log(animatedValue()); // 11
  * 
- * animatedValue.animatedState() // { current: 10, start: 10, end: 11 }
+ * // Explicitly using a specific tick signal
+ * mount((element) => {
+ *   const tickSignal = element.props.context.tick;
+ *   const animatedValue = animatedSignal(0, { duration: 1000, tick: tickSignal });
+ *   animatedValue.set(10);
+ * });
+ * ```
  */
 export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = {}): AnimatedSignal<T> {
   const state: AnimatedState<T> = {
@@ -87,11 +158,13 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
     isPaused = false;
     pausedTime = 0;
     
-    animation = animatePopmotion({
-       // TODO
-       duration: 20,
-      ...options,
-      ...animationConfig,
+    const { tick: tickSignal, ...popmotionOptions } = { ...options, ...animationConfig };
+    
+    // Use tick signal from options, or fallback to global tick signal, or use default requestAnimationFrame
+    const effectiveTickSignal = tickSignal || getGlobalTickSignal();
+    
+    const baseConfig: any = {
+      ...popmotionOptions,
       from: prevState.current,
       to: newValue,
       onUpdate: (value) => {
@@ -100,8 +173,18 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
         if (options.onUpdate) {
           options.onUpdate(value as T);
         }
+        if (animationConfig.onUpdate) {
+          animationConfig.onUpdate(value as T);
+        }
       },
-    });
+    };
+
+    // Use engine's tick system if tick signal is available (from options or global)
+    if (effectiveTickSignal) {
+      baseConfig.driver = createTickDriver(effectiveTickSignal);
+    }
+    
+    animation = animatePopmotion(baseConfig);
   }
 
   const fn = function() {
