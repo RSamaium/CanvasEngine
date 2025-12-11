@@ -112,7 +112,16 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
     return new Promise<void>((resolve) => {
       animatedSignal(newValue, {
         ...animationConfig,
-        onComplete: resolve
+        onComplete: () => {
+          // Call user's onComplete callbacks if provided
+          // animationConfig.onComplete takes precedence over options.onComplete
+          if (animationConfig.onComplete) {
+            animationConfig.onComplete();
+          } else if (options.onComplete) {
+            options.onComplete();
+          }
+          resolve();
+        }
       });
     })
   }
