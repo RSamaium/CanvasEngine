@@ -100,7 +100,8 @@ export function Joystick(opts: JoystickSettings = {}) {
   }
 
   function handleDragStart(event: any) {
-    startPosition = event.getLocalPosition(this);
+    const target = event.currentTarget || event.target;
+    startPosition = event.getLocalPosition(target);
     dragging = true;
     innerAlpha.set(1);
     settings.onStart?.();
@@ -146,7 +147,8 @@ export function Joystick(opts: JoystickSettings = {}) {
       return;
     }
 
-    let newPosition = event.getLocalPosition(this);
+    const target = event.currentTarget || event.target;
+    let newPosition = event.getLocalPosition(target);
 
     let sideX = newPosition.x - (startPosition?.x ?? 0);
     let sideY = newPosition.y - (startPosition?.y ?? 0);
