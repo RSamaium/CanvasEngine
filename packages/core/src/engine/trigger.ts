@@ -84,13 +84,30 @@ export function on(triggerSignal: any, callback: (config: any) => void | Promise
   if (!isTrigger(triggerSignal)) {
     throw new Error("In 'on(arg)' must have a trigger signal type");
   }
+  let lastValue: number | undefined;
+
   effect(() => {
     const result = triggerSignal.listen();
-    if (result?.seed.value) {
+    const seed = result?.seed;
+    if (!seed) return;
+
+    // Only run callback when the trigger value actually changes
+    if (lastValue === undefined) {
+      lastValue = seed.value;
+      return;
+    }
+    if (seed.value === lastValue) return;
+    lastValue = seed.value;
+
+    try {
       const ret = callback(result?.seed.config);
       if (ret && typeof ret.then === 'function') {
-        ret.then(result?.seed.resolve);
+        ret.then((value: any) => seed.resolve(value)).catch(() => seed.resolve(undefined));
+      } else {
+        seed.resolve(ret);
       }
+    } catch (err) {
+      seed.resolve(undefined);
     }
   });
 }

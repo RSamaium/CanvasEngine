@@ -122,9 +122,9 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
     start: initialValue,
     end: initialValue,
   };
-  let animation
+  const DEFAULT_DURATION = 20;
+  let animation: { stop: () => void } | null = null;
   let isPaused = false;
-  let pausedTime = 0;
 
   const publicSignal = signal(initialValue);
   const privateSignal = signal(state);
@@ -151,40 +151,43 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
 
     privateSignal.set(newState);
 
+    // Stop any running animation
     if (animation) {
       animation.stop();
+      animation = null;
     }
 
     isPaused = false;
-    pausedTime = 0;
-    
-    const { tick: tickSignal, ...popmotionOptions } = { ...options, ...animationConfig };
-    
-    // Use tick signal from options, or fallback to global tick signal, or use default requestAnimationFrame
-    const effectiveTickSignal = tickSignal || getGlobalTickSignal();
-    
-    const baseConfig: any = {
-      ...popmotionOptions,
-      from: prevState.current,
-      to: newValue,
-      onUpdate: (value) => {
-        if (isPaused) return;
-        privateSignal.update(s => ({ ...s, current: value as T }));
-        if (options.onUpdate) {
-          options.onUpdate(value as T);
-        }
-        if (animationConfig.onUpdate) {
-          animationConfig.onUpdate(value as T);
-        }
-      },
-    };
+    const mergedConfig = { ...options, ...animationConfig };
+    const duration = mergedConfig.duration ?? DEFAULT_DURATION;
+    const ease = mergedConfig.ease ?? ((t: number) => t);
+    const tickSignal = mergedConfig.tick || getGlobalTickSignal();
 
-    // Use engine's tick system if tick signal is available (from options or global)
-    if (effectiveTickSignal) {
-      baseConfig.driver = createTickDriver(effectiveTickSignal);
-    }
+    const startValue = prevState.current;
+    const endValue = newValue;
+
+    const onCompleteCb = animationConfig.onComplete ?? options.onComplete;
     
-    animation = animatePopmotion(baseConfig);
+
+    animation = animatePopmotion({
+      from: startValue as any,
+      to: endValue as any,
+      duration,
+      ease,
+      
+      onUpdate: (value: any) => {
+        if (isPaused) return;
+        const nextValue = value as T;
+        privateSignal.update(s => ({ ...s, current: nextValue }));
+        mergedConfig.onUpdate?.(nextValue);
+        animationConfig.onUpdate?.(nextValue);
+      },
+      onComplete: () => {
+        privateSignal.update(s => ({ ...s, current: endValue }));
+        onCompleteCb?.();
+      }
+    });
+     
   }
 
   const fn = function() {
@@ -201,37 +204,34 @@ export function animatedSignal<T>(initialValue: T, options: AnimateOptions<T> = 
   }
   fn.set = async (newValue: T, animationConfig: AnimateOptions<T> = {}) => {
     return new Promise<void>((resolve) => {
+      const userOnComplete = animationConfig.onComplete;
       animatedSignal(newValue, {
         ...animationConfig,
         onComplete: () => {
-          // Call user's onComplete callbacks if provided
-          // animationConfig.onComplete takes precedence over options.onComplete
-          if (animationConfig.onComplete) {
-            animationConfig.onComplete();
+          if (userOnComplete) {
+            userOnComplete();
           } else if (options.onComplete) {
             options.onComplete();
           }
           resolve();
         }
       });
-    })
+    });
   }
   fn.pause = () => {
-    if (animation && !isPaused) {
-      isPaused = true;
-      if (animation.stop) {
-        animation.stop();
-      }
+    if (isPaused) return;
+    isPaused = true;
+    if (animation) {
+      animation.stop();
+      animation = null;
     }
   }
   fn.resume = () => {
-    if (isPaused && animation) {
-      isPaused = false;
-      // Restart animation from current state
-      const currentState = privateSignal();
-      if (currentState.current !== currentState.end) {
-        animatedSignal(currentState.end, options);
-      }
+    if (!isPaused) return;
+    isPaused = false;
+    const currentState = privateSignal();
+    if (currentState.current !== currentState.end) {
+      animatedSignal(currentState.end, options);
     }
   }
 
