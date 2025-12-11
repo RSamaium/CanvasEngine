@@ -14,7 +14,7 @@
   "dependencies": {
     "@barvynkoa/particle-emitter": "^0.0.1",
     "@pixi/layout": "^3.0.2",
-    "@signe/reactive": "^2.3.3",
+    "@signe/reactive": "^2.6.0",
     "howler": "^2.2.4",
     "joypad.js": "^2.3.5",
     "pixi-filters": "^6.0.5",

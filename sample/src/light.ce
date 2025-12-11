@@ -1,0 +1,131 @@
+<Canvas>
+    <Container x={100} y={100}>
+        <Graphics draw={drawHalo}  />
+    </Container>
+</Canvas>
+  
+  <script>
+  import { computed, signal, tick, mount, effect } from "canvasengine";
+  import { BlurFilter } from "pixi.js";
+  
+  const { 
+    baseRadius,
+    radiusVariation,
+    baseOpacity,
+    opacityVariation,
+    sizeSpeed,
+    opacitySpeed,
+    lightColor
+  } = defineProps();
+  
+  // ====================
+  // Props with default values
+  // ====================
+  
+  const getBaseRadius = computed(() => baseRadius?.() ?? 30);
+  const getRadiusVariation = computed(() => radiusVariation?.() ?? 10);
+  const getBaseOpacity = computed(() => baseOpacity?.() ?? 0.6);
+  const getOpacityVariation = computed(() => opacityVariation?.() ?? 0.3);
+  const getSizeSpeed = computed(() => sizeSpeed?.() ?? 0.002);
+  const getOpacitySpeed = computed(() => opacitySpeed?.() ?? 0.003);
+  const getLightColor = computed(() => lightColor?.() ?? 0xffffaa);
+  
+  // ====================
+  // Animation state
+  // ====================
+  
+  /** Time counter for animations */
+  const time = signal(0);
+
+  /**
+   * Current radius of the halo with pulsing animation
+   * Uses multiple sine waves for more organic movement
+   */
+  const currentRadius = computed(() => {
+    const t = time();
+    const base = getBaseRadius();
+    const variation = getRadiusVariation();
+    const speed = getSizeSpeed();
+    
+    // Combine two sine waves for less predictable pulsing
+    const pulse1 = Math.sin(t * speed);
+    const pulse2 = Math.sin(t * speed * 1.5) * 0.5;
+    const combinedPulse = (pulse1 + pulse2) / 1.5;
+    
+    return base + (combinedPulse * variation);
+  });
+  
+  /**
+   * Current opacity of the halo with fading animation
+   * Includes a subtle flicker effect
+   */
+  const currentOpacity = computed(() => {
+    const t = time();
+    const base = getBaseOpacity();
+    const variation = getOpacityVariation();
+    const speed = getOpacitySpeed();
+    
+    // Main breathing cycle
+    const fade = Math.sin(t * speed);
+    
+    // Subtle high-frequency flicker (candle-like)
+    const flicker = (Math.random() - 0.5) * 0.1;
+    
+    return Math.max(0, Math.min(1, base + (fade * variation) + flicker));
+  });
+  
+  // ====================
+  // Position calculations
+  // ====================
+
+  const position = computed(() => ({
+    x: 100,
+    y: 100
+  }));
+  
+  // ====================
+  // Drawing function
+  // ====================
+  
+  // Create filters once to avoid recreation on every frame
+  const blurFilter = new BlurFilter({ strength: 20, quality: 3 });
+  
+  /**
+   * Draws the light halo effect with realistic diffusion
+   */
+  const drawHalo = (g) => {
+    const radius = currentRadius();
+    const opacity = currentOpacity();
+    const color = getLightColor();
+
+    if (opacity <= 0 || radius <= 0) return;
+  
+    // Set blend mode to ADD for glowing light effect
+    g.blendMode = 'add';
+    
+    // Apply blur filter for soft light diffusion
+    g.filters = [blurFilter];
+    
+    // Draw main light source
+    // The blur filter will spread this out into a nice gradient
+    g.circle(0, 0, radius);
+    g.fill({ 
+      color: color, 
+      alpha: opacity 
+    });
+    
+    // Draw a smaller, brighter core
+    g.circle(0, 0, radius * 0.4);
+    g.fill({ 
+      color: 0xffffff, 
+      alpha: opacity * 0.5 
+    });
+  };
+  
+  // ====================
+  // Animation loop
+  // ====================
+  tick(() => {
+    time.update(t => t + 1);
+  });
+  </script>
