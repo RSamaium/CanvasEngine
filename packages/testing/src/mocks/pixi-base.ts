@@ -403,6 +403,7 @@ export class MockApplication extends MockEventEmitter {
   stage: MockContainer = new MockContainer();
   screen: MockRectangle = new MockRectangle(800, 600);
   view: HTMLCanvasElement;
+  destroyed: boolean = false;
   renderer: any = {
     width: 800,
     height: 600,
