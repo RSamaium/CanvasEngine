@@ -6,7 +6,7 @@
     </Container>
 
     <!-- Basic shake example -->
-    <Container x={100} y={100}>
+    <Container x={100} y={100} controls>
         <Text text="Basic Shake" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
         <Sprite 
             image="exp.png"
@@ -25,17 +25,16 @@
     const shakeTrigger = trigger();
 
     const shakeConfig = {
-  trigger: shakeTrigger,
-  intensity: 15,        // Shake intensity in pixels
-  duration: 5000,        // Duration in milliseconds
-  frequency: 10,        // Number of oscillations
-  direction: 'both',    // 'x', 'y', or 'both'
-  onStart() {
-    console.log("Shake started");
-  },
-  onComplete() {
-    console.log("Shake completed");
-  }
+  trigger: shakeTrigger
 };
+
+const controls = signal({
+    up: {
+        bind: "up",
+        keyDown() {
+            shakeTrigger.start();
+        }
+    }
+});
 </script>
 

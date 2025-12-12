@@ -47,13 +47,14 @@ export function trigger<T = any>(globalConfig?: T): Trigger<T> {
   return {
     start: (config?: T) => {
       return new Promise((resolve: (value: any) => void) => {
+        const newValue = Math.random();
         _signal.set({
           config: {
             ...globalConfig,
             ...config,
           },
           resolve,
-          value: Math.random(),
+          value: newValue,
         });
       });
     },
@@ -70,14 +71,18 @@ export function trigger<T = any>(globalConfig?: T): Trigger<T> {
  * Subscribes to a trigger and executes a callback when the trigger is activated
  * @param triggerSignal - The trigger to subscribe to
  * @param callback - Function to execute when the trigger is activated
+ * @returns Subscription that can be unsubscribed to stop listening
  * @throws Error if triggerSignal is not a valid trigger
  * @example
  * ```ts
  * const click = trigger()
  * 
- * on(click, () => {
+ * const subscription = on(click, () => {
  *   console.log('Click triggered')
  * })
+ * 
+ * // Later, to stop listening:
+ * subscription.unsubscribe()
  * ```
  */
 export function on(triggerSignal: any, callback: (config: any) => void | Promise<void>) {
@@ -86,9 +91,10 @@ export function on(triggerSignal: any, callback: (config: any) => void | Promise
   }
   let lastValue: number | undefined;
 
-  effect(() => {
+  const effectResult = effect(() => {
     const result = triggerSignal.listen();
     const seed = result?.seed;
+
     if (!seed) return;
 
     // Only run callback when the trigger value actually changes
@@ -96,7 +102,9 @@ export function on(triggerSignal: any, callback: (config: any) => void | Promise
       lastValue = seed.value;
       return;
     }
-    if (seed.value === lastValue) return;
+    if (seed.value === lastValue) {
+      return;
+    }
     lastValue = seed.value;
 
     try {
@@ -110,4 +118,6 @@ export function on(triggerSignal: any, callback: (config: any) => void | Promise
       seed.resolve(undefined);
     }
   });
+
+  return effectResult.subscription;
 }

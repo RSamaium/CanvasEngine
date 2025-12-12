@@ -173,14 +173,8 @@ export class Flash extends Directive {
         const flashAlpha = data?.alpha ?? (typeof flashProps.alpha === 'function' ? flashProps.alpha() : flashProps.alpha);
         const flashTint = data?.tint ?? (typeof flashProps.tint === 'function' ? flashProps.tint() : flashProps.tint);
 
-        // Stop any existing animation first
-        if (this.progressSignal) {
-            // Stop the animation immediately
-            this.progressSignal.set(0, { duration: 0 });
-        }
-
-        // Clean up effects BEFORE restoring values
-        // This prevents effects from continuing to update values after we restore
+        // Clean up effects BEFORE stopping animation
+        // This prevents effects from continuing to update values
         if (this.alphaEffect) {
             this.alphaEffect.unsubscribe();
             this.alphaEffect = null;
@@ -190,33 +184,44 @@ export class Flash extends Directive {
             this.tintEffect = null;
         }
 
+        // DO NOT update original values here if a flash is in progress
+        // Only restore to the already-stored original values to avoid overwriting
+        // with intermediate animation values when multiple flashes trigger quickly
+
         // Always restore to original values immediately after stopping effects
         // This ensures that if a new flash starts before the previous one completes,
         // we restore to the true original values, not the intermediate animation values
         instance.alpha = this.originalAlpha;
-        const currentTint = (instance as any).tint;
-        if (currentTint !== undefined) {
+        const currentInstanceTint = (instance as any).tint;
+        if (currentInstanceTint !== undefined) {
             // Ensure originalTint is a primitive value, not a signal
             const tintValue = typeof this.originalTint === 'number' ? this.originalTint : 0xffffff;
             // Handle both signal and primitive tint
-            if (isSignal(currentTint)) {
-                currentTint.set(tintValue);
+            if (isSignal(currentInstanceTint)) {
+                currentInstanceTint.set(tintValue);
             } else {
                 (instance as any).tint = tintValue;
             }
         }
 
-        // Call onStart callback
+        // Call onStart callback early, before async operations
         flashProps.onStart?.();
 
+        // Stop any existing animation after cleanup and callback
+        if (this.progressSignal) {
+            // Stop the animation immediately and wait for completion
+            await this.progressSignal.set(0, { duration: 0 });
+        }
+
         // Store current flash configuration for use in effect
-        this.currentFlashConfig = {
+        const flashConfig = {
             type,
             duration,
             cycles,
             flashAlpha,
             flashTint,
         };
+        this.currentFlashConfig = flashConfig;
 
         // Create or recreate progress signal for flash animation
         // Note: We already stopped the previous animation above, so we can reuse the signal
@@ -226,10 +231,11 @@ export class Flash extends Directive {
                 ease: (t) => t, // Linear ease
             });
         }
-        // Reset to 0 immediately without animation to start fresh
-        this.progressSignal.set(0, { duration: 0 });
-        // Wait a bit to ensure the reset is complete before starting new animation
-        await new Promise(resolve => setTimeout(resolve, 0));
+        // Signal is already reset to 0 above if it existed, no need to reset again
+
+        // Store references to the effects we're creating to verify they're still active later
+        const expectedAlphaEffect = type === 'alpha' || type === 'both';
+        const expectedTintEffect = type === 'tint' || type === 'both';
 
         // Create effect to update alpha based on progress
         if (type === 'alpha' || type === 'both') {
@@ -309,8 +315,12 @@ export class Flash extends Directive {
         });
 
         // Animation completed - clean up and call callbacks
-        // Restore original values
-        if (instance) {
+        // Only restore and clean up if this flash is still the active one
+        // If currentFlashConfig has changed, it means a new flash has started
+        const isStillActive = this.currentFlashConfig === flashConfig;
+
+        if (isStillActive && instance) {
+            // Restore original values
             instance.alpha = this.originalAlpha;
             const currentTint = (instance as any).tint;
             if (currentTint !== undefined) {
@@ -323,20 +333,20 @@ export class Flash extends Directive {
                     (instance as any).tint = tintValue;
                 }
             }
+            
+            // Clean up effects
+            if (this.alphaEffect) {
+                this.alphaEffect.unsubscribe();
+                this.alphaEffect = null;
+            }
+            if (this.tintEffect) {
+                this.tintEffect.unsubscribe();
+                this.tintEffect = null;
+            }
+            
+            // Clear flash config
+            this.currentFlashConfig = null;
         }
-        
-        // Clean up effects
-        if (this.alphaEffect) {
-            this.alphaEffect.unsubscribe();
-            this.alphaEffect = null;
-        }
-        if (this.tintEffect) {
-            this.tintEffect.unsubscribe();
-            this.tintEffect = null;
-        }
-        
-        // Clear flash config
-        this.currentFlashConfig = null;
         
         // Call onComplete callback
         flashProps.onComplete?.();

@@ -9,6 +9,7 @@
     <Container x={100} y={100}>
         <Text text="Alpha Flash" x={0} y={-30} color="#ecf0f1" size="14" fontFamily="Arial" />
         <Rect 
+        controls
             color="#e74c3c" 
             width={80} 
             height={80} 
@@ -221,5 +222,14 @@
         }
     }
 }
+
+const controls = signal({
+    up: {
+        bind: "up",
+        keyDown() {
+            alphaFlashTrigger.start();
+        }
+    }
+});
 </script>
 

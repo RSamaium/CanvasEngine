@@ -102,6 +102,12 @@ export class Shake extends Directive {
         // Store original position
         this.originalPosition.set(instance.position.x, instance.position.y);
 
+        // Clean up previous subscription if it exists
+        if (this.shakeSubscription) {
+            this.shakeSubscription.unsubscribe();
+            this.shakeSubscription = null;
+        }
+
         // Listen to trigger activation
         this.shakeSubscription = on(shakeProps.trigger, async (data) => {
             await this.performShake(data);
@@ -144,8 +150,16 @@ export class Shake extends Directive {
             this.positionEffect = null;
         }
 
+        // Only update originalPosition if it hasn't been properly initialized (still at 0,0 and no parent was present when saved)
+        // OR if the current position is different from the stored original (element was moved)
+        const isOriginalUninitialized = this.originalPosition.x === 0 && this.originalPosition.y === 0 && instance.parent;
+        const hasPositionChanged = instance.position.x !== this.originalPosition.x || instance.position.y !== this.originalPosition.y;
+        
+        if (isOriginalUninitialized || hasPositionChanged) {
+            this.originalPosition.set(instance.position.x, instance.position.y);
+        }
+        
         // Reset position to original before starting new shake
-        this.originalPosition.set(instance.position.x, instance.position.y);
         instance.position.x = this.originalPosition.x;
         instance.position.y = this.originalPosition.y;
 
@@ -163,10 +177,8 @@ export class Shake extends Directive {
         // Create or recreate progress signal for shake animation
         // We recreate it to ensure a fresh animation state
         if (this.progressSignal) {
-            // Reset to 0 immediately without animation
-            this.progressSignal.set(0, { duration: 0 });
-            // Wait a bit to ensure the reset is complete
-            await new Promise(resolve => setTimeout(resolve, 0));
+            // Reset to 0 immediately without animation and wait for completion
+            await this.progressSignal.set(0, { duration: 0 });
         } else {
             this.progressSignal = animatedSignal(0, {
                 duration: duration,
@@ -271,6 +283,7 @@ export class Shake extends Directive {
 
         // Clean up subscription
         if (this.shakeSubscription) {
+            this.shakeSubscription.unsubscribe();
             this.shakeSubscription = null;
         }
 
