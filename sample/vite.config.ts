@@ -13,7 +13,8 @@ export default defineConfig({
     alias: {
       canvasengine: path.resolve(__dirname, '../packages/core/src/index.ts'),
       '@canvasengine/presets': path.resolve(__dirname, '../packages/presets/src/index.ts'),
-      path: 'path-browserify'
+      path: 'path-browserify',
+      '@canvasengine/testing': path.resolve(__dirname, '../packages/testing/src/index.ts'),
     }
   }
 });

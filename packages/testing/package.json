@@ -1,0 +1,43 @@
+{
+  "name": "@canvasengine/testing",
+  "version": "2.0.0-beta.40",
+  "description": "Testing utilities and mocks for CanvasEngine",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "peerDependencies": {
+    "canvasengine": "workspace:*",
+    "vitest": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "canvas",
+    "pixijs",
+    "testing",
+    "mocks"
+  ],
+  "author": "Samuel Ronce",
+  "license": "MIT",
+  "homepage": "https://canvasengine.net",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RSamaium/CanvasEngine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RSamaium/CanvasEngine/issues"
+  }
+}
