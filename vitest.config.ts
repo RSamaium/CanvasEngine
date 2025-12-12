@@ -14,6 +14,10 @@ export default defineConfig(async () => {
             environment: 'jsdom',
             pool: 'forks',
             setupFiles: ['./tests/setup/canvas.ts'],
+            exclude: [
+                '**/sample/**',
+                '**/node_modules/**'
+            ],
             coverage: {
                 include: [
                     'packages/**'
