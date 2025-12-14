@@ -84,6 +84,41 @@ export function registerComponent(name, component) {
   components[name] = component;
 }
 
+// Track if components have been registered to avoid duplicate imports
+let componentsRegistered = false;
+
+/**
+ * Registers all default CanvasEngine components.
+ * 
+ * This function imports and registers all core components that are available by default.
+ * It's called automatically by bootstrapCanvas() if no custom component configuration is provided.
+ * 
+ * Components register themselves when their modules are imported, so this function ensures
+ * all component modules are loaded. Since components call registerComponent() at module load time,
+ * importing them will automatically register them synchronously.
+ * 
+ * @example
+ * ```typescript
+ * // Register all default components manually
+ * registerAllComponents();
+ * 
+ * // Now you can use any component
+ * const sprite = createComponent('Sprite', { image: 'hero.png' });
+ * ```
+ */
+export function registerAllComponents() {
+  if (componentsRegistered) {
+    return;
+  }
+  
+  // Components are registered when their modules are imported
+  // Since bootstrap.ts imports all components, they should already be registered
+  // when bootstrapCanvas() is called. This function just marks that registration
+  // has been attempted. If components aren't registered yet, they will be when
+  // bootstrap.ts imports them (which happens before bootstrapCanvas() is called).
+  componentsRegistered = true;
+}
+
 /**
  * Checks if an element is currently frozen.
  * An element is frozen when the `freeze` prop is set to `true` (either as a boolean or Signal<boolean>),

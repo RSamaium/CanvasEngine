@@ -317,7 +317,127 @@ import { createMockElement, Element, ComponentInstance } from '@canvasengine/tes
 const element: Element<ComponentInstance> = createMockElement('Container');
 ```
 
+## Using Mocks with bootstrapCanvas
+
+The `bootstrapCanvas` function supports component registration configuration, allowing you to use mocks for testing.
+
+### mockComponents
+
+The `mockComponents` object provides a mapping of all CanvasEngine component names to their corresponding mock classes. You can import it from `@canvasengine/testing`:
+
+```typescript
+import { mockComponents } from '@canvasengine/testing';
+```
+
+### Registering All Mocks
+
+To register all components as mocks:
+
+```typescript
+import { bootstrapCanvas } from 'canvasengine';
+import { mockComponents } from '@canvasengine/testing';
+
+await bootstrapCanvas(rootElement, MyComponent, {
+  components: mockComponents,
+  autoRegister: false // Only register the specified (mocked) components
+});
+```
+
+### Registering Specific Mocks
+
+To register only specific components as mocks while keeping others as real components:
+
+```typescript
+import { bootstrapCanvas } from 'canvasengine';
+import { MockSprite, MockContainer, mockComponents } from '@canvasengine/testing';
+
+await bootstrapCanvas(rootElement, MyComponent, {
+  components: {
+    Sprite: MockSprite,
+    Container: MockContainer,
+    // Other components will be registered normally
+  },
+  autoRegister: true // Register all default components, then override with mocks
+});
+```
+
+### Overriding Specific Components
+
+To register all default components but override specific ones with mocks:
+
+```typescript
+import { bootstrapCanvas } from 'canvasengine';
+import { MockSprite } from '@canvasengine/testing';
+
+await bootstrapCanvas(rootElement, MyComponent, {
+  components: {
+    Sprite: MockSprite // Replace Sprite with mock, keep others as real
+  },
+  autoRegister: true // Register all default components first
+});
+```
+
+### Available Mock Components
+
+The `mockComponents` object includes mappings for:
+
+- `Canvas` → `MockContainer`
+- `Container` → `MockContainer`
+- `Sprite` → `MockSprite`
+- `Text` → `MockText`
+- `Graphics`, `Rect`, `Circle`, `Ellipse`, `Triangle`, `Svg` → `MockGraphics`
+- `Mesh` → `MockMesh`
+- `TilingSprite` → `MockTilingSprite`
+- `NineSliceSprite` → `MockNineSlicePlane`
+- `DOMContainer` → `MockDOMContainer`
+- `DOMElement` → `MockDOMElement`
+- `Viewport` → `MockContainer`
+- `ParticlesEmitter` → `MockContainer`
+
+You can access individual mocks directly:
+
+```typescript
+import {
+  MockContainer,
+  MockSprite,
+  MockText,
+  MockGraphics,
+  MockMesh,
+  MockTilingSprite,
+  MockNineSlicePlane,
+  MockDOMElement,
+  MockDOMContainer,
+  mockComponents
+} from '@canvasengine/testing';
+```
+
 ## API Reference
+
+### mockComponents
+
+```typescript
+const mockComponents: {
+  readonly Canvas: typeof MockContainer;
+  readonly Container: typeof MockContainer;
+  readonly Sprite: typeof MockSprite;
+  readonly Text: typeof MockText;
+  readonly Graphics: typeof MockGraphics;
+  readonly Rect: typeof MockGraphics;
+  readonly Circle: typeof MockGraphics;
+  readonly Ellipse: typeof MockGraphics;
+  readonly Triangle: typeof MockGraphics;
+  readonly Svg: typeof MockGraphics;
+  readonly Mesh: typeof MockMesh;
+  readonly TilingSprite: typeof MockTilingSprite;
+  readonly NineSliceSprite: typeof MockNineSlicePlane;
+  readonly DOMContainer: typeof MockDOMContainer;
+  readonly DOMElement: typeof MockDOMElement;
+  readonly Viewport: typeof MockContainer;
+  readonly ParticlesEmitter: typeof MockContainer;
+}
+```
+
+Mapping of CanvasEngine component names to their corresponding mock classes. Can be used directly with `bootstrapCanvas()`.
 
 ### createMockElement
 
