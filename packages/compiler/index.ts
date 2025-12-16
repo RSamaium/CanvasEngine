@@ -148,8 +148,88 @@ export default function canvasengine() {
         throw new Error(`Error parsing template in file ${id}:\n${errorMsg}`);
       }
 
-      // trick to avoid typescript remove imports in scriptContent
-      scriptContent += FLAG_COMMENT + parsedTemplate
+      // Extract ALL variables declared with defineProps to avoid TypeScript removing them
+      // This handles both simple and destructured declarations
+      const definePropsRegex = /(?:const|let|var)\s+([^=]+?)\s*=\s*defineProps\s*\(/g;
+      const definePropsVars: string[] = [];
+      let match;
+      
+      while ((match = definePropsRegex.exec(scriptContent)) !== null) {
+        const declaration = match[1].trim();
+        
+        if (declaration.startsWith('{') && declaration.endsWith('}')) {
+          // Destructured variables like: const { text, value } = defineProps()
+          const destructuredContent = declaration.slice(1, -1);
+          const destructuredVars = destructuredContent.split(',').map(v => {
+            // Handle both "prop" and "prop: alias" cases
+            const cleanVar = v.trim().split(':')[0].trim();
+            return cleanVar;
+          });
+          definePropsVars.push(...destructuredVars);
+        } else {
+          // Simple variable like: const props = defineProps()
+          definePropsVars.push(declaration);
+        }
+      }
+
+      // Extract ALL imports to avoid TypeScript removing them when they're used in template but not in script
+      // This regex captures all import patterns including mixed imports
+      const importRegex = /import\s+(?:type\s+)?([^;]+?)\s+from\s+['"]([^'"]+)['"];?/g;
+      const importedVars: string[] = [];
+      let importMatch;
+      
+      while ((importMatch = importRegex.exec(scriptContent)) !== null) {
+        const importClause = importMatch[1].trim();
+        
+        // Skip type-only imports as they don't need to be preserved for runtime
+        if (importMatch[0].includes('import type')) {
+          continue;
+        }
+        
+        // Handle different import patterns
+        if (importClause.includes('*')) {
+          // Namespace import: import * as module from 'module'
+          const namespaceMatch = importClause.match(/\*\s+as\s+(\w+)/);
+          if (namespaceMatch) {
+            importedVars.push(namespaceMatch[1]);
+          }
+        } else if (importClause.includes('{')) {
+          // Named imports (possibly with default): import Default, { Named1, Named2 } from 'module'
+          const parts = importClause.split('{');
+          
+                     // Check for default import before the brace
+           const beforeBrace = parts[0].trim();
+           if (beforeBrace) {
+             const defaultImport = beforeBrace.replace(',', '').trim();
+             if (defaultImport) {
+               importedVars.push(defaultImport);
+             }
+           }
+          
+          // Extract named imports
+          const namedPart = parts[1].replace('}', '');
+          const namedImports = namedPart.split(',').map(v => {
+            // Handle both "import" and "import as alias" cases
+            const cleanVar = v.trim().split(' as ')[0].trim();
+            return cleanVar;
+          }).filter(v => v);
+          importedVars.push(...namedImports);
+        } else {
+          // Default import only: import Component from 'module'
+          importedVars.push(importClause);
+        }
+      }
+
+      // trick to avoid typescript remove imports and defineProps variables in scriptContent
+      // We reference all defineProps variables and imported variables so TypeScript doesn't remove them
+      let varRefs = '';
+      if (definePropsVars.length > 0) {
+        varRefs += `;${definePropsVars.join(';')};`;
+      }
+      if (importedVars.length > 0) {
+        varRefs += `;${importedVars.join(';')};`;
+      }
+      scriptContent += FLAG_COMMENT + parsedTemplate + varRefs
 
       let transpiledCode = ts.transpileModule(scriptContent, {
         compilerOptions: {
