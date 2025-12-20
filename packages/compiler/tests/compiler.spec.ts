@@ -10,6 +10,146 @@ beforeAll(() => {
   parser = generate(grammar);
 });
 
+// Helper functions to test scoping logic directly
+function generateHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  // Convert to positive number and map to letters only (a-z)
+  // Use modulo to map to 26 letters, then convert to character
+  const positiveHash = Math.abs(hash);
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    const letterIndex = (positiveHash + i * 31) % 26; // 31 is a prime to spread values
+    result += String.fromCharCode(97 + letterIndex); // 97 is 'a'
+  }
+  return result;
+}
+
+function scopeCSS(css: string, scopeClass: string): string {
+  const scopeSelector = `.${scopeClass}`;
+  
+  // Process CSS by finding rule blocks while skipping @rules
+  let result = '';
+  let i = 0;
+  let depth = 0;
+  let inRule = false;
+  let selectorBuffer = '';
+  
+  while (i < css.length) {
+    const char = css[i];
+    
+    if (char === '@' && !inRule && selectorBuffer === '') {
+      // Found @rule - copy it as-is until matching closing brace
+      const atRuleStart = i;
+      i++; // Skip '@'
+      
+      // Find the opening brace
+      while (i < css.length && css[i] !== '{') {
+        i++;
+      }
+      
+      if (i < css.length) {
+        // Found opening brace, now find matching closing brace
+        depth = 1;
+        i++; // Skip '{'
+        
+        while (i < css.length && depth > 0) {
+          if (css[i] === '{') depth++;
+          else if (css[i] === '}') depth--;
+          i++;
+        }
+        
+        // Copy entire @rule as-is
+        result += css.substring(atRuleStart, i);
+      }
+      continue;
+    }
+    
+    if (char === '{' && !inRule) {
+      // Start of a rule block - scope the selector we just collected
+      const selectorText = selectorBuffer.trim();
+      
+      if (selectorText) {
+        // Split selectors by comma and scope each one
+        const scopedSelectors = selectorText
+          .split(',')
+          .map(sel => {
+            const trimmed = sel.trim();
+            return trimmed ? `${scopeSelector} ${trimmed}` : trimmed;
+          })
+          .join(', ');
+        
+        result += scopedSelectors;
+      }
+      result += ' {';
+      inRule = true;
+      depth = 1;
+      selectorBuffer = '';
+    } else if (char === '{' && inRule) {
+      // Nested brace
+      result += char;
+      depth++;
+    } else if (char === '}' && inRule) {
+      result += char;
+      depth--;
+      if (depth === 0) {
+        inRule = false;
+      }
+    } else if (!inRule) {
+      // Collecting selector
+      selectorBuffer += char;
+    } else {
+      // Inside rule block
+      result += char;
+      if (char === '{') depth++;
+    }
+    
+    i++;
+  }
+  
+  // Add any remaining selector (shouldn't happen in valid CSS, but handle it)
+  if (selectorBuffer.trim()) {
+    const scopedSelectors = selectorBuffer.trim()
+      .split(',')
+      .map(sel => {
+        const trimmed = sel.trim();
+        return trimmed ? `${scopeSelector} ${trimmed}` : trimmed;
+      })
+      .join(', ');
+    result += scopedSelectors;
+  }
+  
+  return result;
+}
+
+function addScopeClassToDOMContainer(parsedTemplate: string, scopeClass: string): string {
+  let result = parsedTemplate;
+  
+  // Pattern: h(DOMContainer, { ... }) or h(DOMContainer) or h(DOMContainer, null, ...)
+  result = result.replace(
+    /h\(DOMContainer\s*,\s*(\{([^}]*)\}|null)\s*(,\s*[^)]*)?\)/g,
+    (match, propsPart, propsContent, childrenPart) => {
+      if (propsPart === 'null') {
+        return `h(DOMContainer, { _scopeClass: '${scopeClass}' }${childrenPart || ''})`;
+      } else {
+        return `h(DOMContainer, { _scopeClass: '${scopeClass}', ${propsContent || ''} }${childrenPart || ''})`;
+      }
+    }
+  );
+  
+  // Also handle h(DOMContainer) without props
+  result = result.replace(
+    /h\(DOMContainer\s*\)(?!\s*\()/g,
+    `h(DOMContainer, { _scopeClass: '${scopeClass}' })`
+  );
+  
+  return result;
+}
+
 describe("Compiler", () => {
   test("should compile comment", () => {
     const input = `
@@ -1155,5 +1295,114 @@ describe('DOM with Control Structures', () => {
     expect(output.replace(/\s+/g, "")).toBe(
       `h(DOMElement, { element: "div", attrs: { class: 'game-wrapper' } }, [h(Canvas, { width: 800, height: 600 }, loop(sprites, sprite => h(Sprite, { x: computed(() => sprite().x()), y: computed(() => sprite().y()) }))), h(DOMElement, { element: "div", attrs: { class: 'ui-overlay' } }, [cond(showScore, () => h(DOMElement, { element: "div", attrs: { class: 'score' }, textContent: computed(() => 'Score: ' + computed(() => score())) })), cond(showMenu, () => h(DOMElement, { element: "div", attrs: { class: 'menu' } }, loop(menuOptions, option => h(DOMElement, { element: "button", attrs: { class: 'menu-btn' }, textContent: computed(() => option().label()) }))))])])`.replace(/\s+/g, "")
     );
+  });
+});
+
+describe('Style scoping', () => {
+  test('should scope CSS selectors correctly', () => {
+    const css = `button {
+  color: red;
+}
+div {
+  padding: 10px;
+}`;
+    
+    const scopeClass = 'abc12345';
+    const scoped = scopeCSS(css, scopeClass);
+    
+    // Should prefix selectors with scope class
+    expect(scoped).toContain(`.${scopeClass} button`);
+    expect(scoped).toContain(`.${scopeClass} div`);
+    expect(scoped).toContain('color: red');
+    expect(scoped).toContain('padding: 10px');
+  });
+
+  test('should preserve @rules in scoped CSS', () => {
+    const css = `@media (max-width: 600px) {
+  button {
+    font-size: 14px;
+  }
+}
+button {
+  color: red;
+}`;
+    
+    const scopeClass = 'abc12345';
+    const scoped = scopeCSS(css, scopeClass);
+    
+    // @media should not be scoped
+    expect(scoped).toContain('@media');
+    // button inside @media should not be scoped
+    expect(scoped).toMatch(/@media[^{]*\{[^}]*button[^}]*\{/);
+    // Regular button should be scoped
+    expect(scoped).toContain(`.${scopeClass} button`);
+  });
+
+  test('should add _scopeClass to DOMContainer in parsed template', () => {
+    const parsedTemplate = 'h(Canvas, null, h(DOMContainer))';
+    const scopeClass = 'abc12345';
+    const result = addScopeClassToDOMContainer(parsedTemplate, scopeClass);
+    
+    expect(result).toContain('_scopeClass');
+    expect(result).toMatch(/h\(DOMContainer,\s*\{\s*_scopeClass:\s*'abc12345'/);
+  });
+
+  test('should add _scopeClass to DOMContainer with existing props', () => {
+    const parsedTemplate = 'h(Canvas, null, h(DOMContainer, { class: "my-class", x: 100 }))';
+    const scopeClass = 'abc12345';
+    const result = addScopeClassToDOMContainer(parsedTemplate, scopeClass);
+    
+    expect(result).toContain('_scopeClass');
+    expect(result).toContain('class: "my-class"');
+    expect(result).toContain('x: 100');
+    // _scopeClass should be first in the props object
+    expect(result).toMatch(/\{\s*_scopeClass:\s*'abc12345',\s*class:/);
+  });
+
+  test('should add _scopeClass to DOMContainer with null props', () => {
+    const parsedTemplate = 'h(Canvas, null, h(DOMContainer, null, h(Text)))';
+    const scopeClass = 'abc12345';
+    const result = addScopeClassToDOMContainer(parsedTemplate, scopeClass);
+    
+    expect(result).toContain('_scopeClass');
+    expect(result).toMatch(/h\(DOMContainer,\s*\{\s*_scopeClass:\s*'abc12345'\s*\},\s*h\(Text\)/);
+  });
+
+  test('should handle multiple DOMContainer with same scope class', () => {
+    const parsedTemplate = 'h(Canvas, null, [h(DOMContainer), h(DOMContainer, { class: "test" })])';
+    const scopeClass = 'abc12345';
+    const result = addScopeClassToDOMContainer(parsedTemplate, scopeClass);
+    
+    // Both should have _scopeClass
+    const matches = result.match(/_scopeClass/g);
+    expect(matches?.length).toBe(2);
+    // Both should have the same scope class value
+    expect(result.match(/_scopeClass:\s*'abc12345'/g)?.length).toBe(2);
+  });
+
+  test('should generate 8-character hash with letters only', () => {
+    const hash1 = generateHash('/test/my-component.ce');
+    const hash2 = generateHash('/test/another-component.ce');
+    
+    // Should be exactly 8 characters
+    expect(hash1.length).toBe(8);
+    expect(hash2.length).toBe(8);
+    
+    // Should be letters only (lowercase a-z)
+    expect(hash1).toMatch(/^[a-z]{8}$/);
+    expect(hash2).toMatch(/^[a-z]{8}$/);
+    
+    // Different files should produce different hashes (most of the time)
+    // Note: hash collisions are possible but unlikely for different paths
+    expect(hash1).not.toBe(hash2);
+  });
+
+  test('should generate consistent hash for same file', () => {
+    const filePath = '/test/my-component.ce';
+    const hash1 = generateHash(filePath);
+    const hash2 = generateHash(filePath);
+    
+    // Same file should produce same hash
+    expect(hash1).toBe(hash2);
   });
 });

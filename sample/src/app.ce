@@ -2,12 +2,29 @@
 <Canvas>
   <Container  x y>
     <Sprite image="https://pixijs.com/assets/flowerTop.png"  />
+   
+  </Container>
+  <DOMContainer>
+    <button click={() => {
+      console.log('button clicked')
+    }}>Click me</button>
+  </DOMContainer>
+
+  <Container>
+    <Child />
   </Container>
 </Canvas>
+
+<style scoped>
+  button {
+    background-color: red;
+  }
+</style>
 
 <script>
   import { TiledMap } from '@canvasengine/presets'
   import { signal } from 'canvasengine'
+  import Child from './child.ce'
   
   let map = signal({})
   

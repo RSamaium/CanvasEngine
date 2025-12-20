@@ -55,6 +55,10 @@ const guideMenu = [
       {
         text: "Primitive Animation",
         link: "/concepts/animation",
+      },
+      {
+        text: "Styling",
+        link: "/concepts/styling",
       }
     ],
   },

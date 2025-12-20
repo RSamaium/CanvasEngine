@@ -11,6 +11,30 @@ const { generate } = pkg;
 const DEV_SRC = "../../src"
 
 /**
+ * Generates a short hash (8 characters, letters only) from a string
+ * 
+ * @param {string} str - The string to hash
+ * @returns {string} - An 8-character hash containing only lowercase letters (a-z)
+ */
+function generateHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  // Convert to positive number and map to letters only (a-z)
+  // Use modulo to map to 26 letters, then convert to character
+  const positiveHash = Math.abs(hash);
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    const letterIndex = (positiveHash + i * 31) % 26; // 31 is a prime to spread values
+    result += String.fromCharCode(97 + letterIndex); // 97 is 'a'
+  }
+  return result;
+}
+
+/**
  * Formats a syntax error message with visual pointer to the error location
  * 
  * @param {string} template - The template content that failed to parse
@@ -37,6 +61,119 @@ function showErrorMessage(template: string, error: any): string {
   
   return `Syntax error at line ${line}, column ${column}: ${error.message}\n\n` +
          `${errorLine}\n${pointer}\n`;
+}
+
+/**
+ * Scopes CSS selectors by prefixing them with a class selector
+ * 
+ * This function prefixes all CSS rule selectors (not @rules) with a class
+ * selector to scope the styles to a specific component instance.
+ * 
+ * @param {string} css - The CSS content to scope
+ * @param {string} scopeClass - The unique scope class to use (without the dot)
+ * @returns {string} - The scoped CSS content
+ * 
+ * @example
+ * ```
+ * const scoped = scopeCSS('.my-class { color: red; }', 'ce-scope-abc123');
+ * // Returns: '.ce-scope-abc123 .my-class { color: red; }'
+ * ```
+ */
+function scopeCSS(css: string, scopeClass: string): string {
+  const scopeSelector = `.${scopeClass}`;
+  
+  // Process CSS by finding rule blocks while skipping @rules
+  let result = '';
+  let i = 0;
+  let depth = 0;
+  let inRule = false;
+  let selectorBuffer = '';
+  
+  while (i < css.length) {
+    const char = css[i];
+    
+    if (char === '@' && !inRule && selectorBuffer === '') {
+      // Found @rule - copy it as-is until matching closing brace
+      const atRuleStart = i;
+      i++; // Skip '@'
+      
+      // Find the opening brace
+      while (i < css.length && css[i] !== '{') {
+        i++;
+      }
+      
+      if (i < css.length) {
+        // Found opening brace, now find matching closing brace
+        depth = 1;
+        i++; // Skip '{'
+        
+        while (i < css.length && depth > 0) {
+          if (css[i] === '{') depth++;
+          else if (css[i] === '}') depth--;
+          i++;
+        }
+        
+        // Copy entire @rule as-is
+        result += css.substring(atRuleStart, i);
+      }
+      continue;
+    }
+    
+    if (char === '{' && !inRule) {
+      // Start of a rule block - scope the selector we just collected
+      const selectorText = selectorBuffer.trim();
+      
+      if (selectorText) {
+        // Split selectors by comma and scope each one
+        const scopedSelectors = selectorText
+          .split(',')
+          .map(sel => {
+            const trimmed = sel.trim();
+            return trimmed ? `${scopeSelector} ${trimmed}` : trimmed;
+          })
+          .join(', ');
+        
+        result += scopedSelectors;
+      }
+      result += ' {';
+      inRule = true;
+      depth = 1;
+      selectorBuffer = '';
+    } else if (char === '{' && inRule) {
+      // Nested brace
+      result += char;
+      depth++;
+    } else if (char === '}' && inRule) {
+      result += char;
+      depth--;
+      if (depth === 0) {
+        inRule = false;
+      }
+    } else if (!inRule) {
+      // Collecting selector
+      selectorBuffer += char;
+    } else {
+      // Inside rule block
+      result += char;
+      if (char === '{') depth++;
+    }
+    
+    i++;
+  }
+  
+  // Add any remaining selector (shouldn't happen in valid CSS, but handle it)
+  if (selectorBuffer.trim()) {
+    const scopedSelectors = selectorBuffer.trim()
+      .split(',')
+      .map(sel => {
+        const trimmed = sel.trim();
+        return trimmed ? `${scopeSelector} ${trimmed}` : trimmed;
+      })
+      .join(', ');
+    result += scopedSelectors;
+  }
+  
+  return result;
 }
 
 /**
@@ -136,8 +273,23 @@ export default function canvasengine() {
       const scriptMatch = code.match(/<script>([\s\S]*?)<\/script>/);
       let scriptContent = scriptMatch ? scriptMatch[1].trim() : "";
       
-      // Transform SVG tags to Svg components
-      let template = code.replace(/<script>[\s\S]*?<\/script>/, "")
+      // Extract the style tag with attributes and content
+      const styleTagMatch = code.match(/<style([^>]*)>([\s\S]*?)<\/style>/);
+      let styleContent = "";
+      let isScoped = false;
+      
+      if (styleTagMatch) {
+        const styleAttributes = styleTagMatch[1].trim();
+        styleContent = styleTagMatch[2].trim();
+        
+        // Check if scoped attribute is present
+        isScoped = /scoped(?:\s|>|$)/.test(styleAttributes);
+      }
+      
+      // Remove script and style tags from template before parsing
+      let template = code
+        .replace(/<script>[\s\S]*?<\/script>/, "")
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/, "")
         .replace(/^\s+|\s+$/g, '');
 
       let parsedTemplate;
@@ -232,11 +384,68 @@ export default function canvasengine() {
         }
       });
 
+      // Process CSS: scope it if scoped attribute is present
+      let processedStyleContent = styleContent;
+      let scopeClass = '';
+      
+      if (isScoped && styleContent) {
+        // Generate short hash (8 characters) based on file path
+        const fileHash = generateHash(id);
+        scopeClass = fileHash;
+        processedStyleContent = scopeCSS(styleContent, scopeClass);
+        
+        // Add _scopeClass prop to all DOMContainer in the template
+        // Pattern: h(DOMContainer, { ... }) or h(DOMContainer) or h(DOMContainer, null, ...)
+        parsedTemplate = parsedTemplate.replace(
+          /h\(DOMContainer\s*,\s*(\{([^}]*)\}|null)\s*(,\s*[^)]*)?\)/g,
+          (match, propsPart, propsContent, childrenPart) => {
+            if (propsPart === 'null') {
+              // h(DOMContainer, null, ...) -> h(DOMContainer, { _scopeClass: '...' }, ...)
+              return `h(DOMContainer, { _scopeClass: '${scopeClass}' }${childrenPart || ''})`;
+            } else {
+              // h(DOMContainer, { ... }, ...) -> h(DOMContainer, { _scopeClass: '...', ... }, ...)
+              // Need to insert _scopeClass at the beginning of the props object
+              return `h(DOMContainer, { _scopeClass: '${scopeClass}', ${propsContent || ''} }${childrenPart || ''})`;
+            }
+          }
+        );
+        
+        // Also handle h(DOMContainer) without props
+        parsedTemplate = parsedTemplate.replace(
+          /h\(DOMContainer\s*\)(?!\s*\()/g,
+          `h(DOMContainer, { _scopeClass: '${scopeClass}' })`
+        );
+      }
+      
+      // Escape style content for safe embedding in JavaScript string (using single quotes)
+      // We need to escape: backslashes, single quotes, and line breaks
+      const escapedStyleContent = processedStyleContent
+        .replace(/\\/g, '\\\\')  // Escape backslashes first
+        .replace(/'/g, "\\'")    // Escape single quotes
+        .replace(/\n/g, '\\n')   // Escape newlines
+        .replace(/\r/g, '\\r');  // Escape carriage returns
+
+      // Generate unique ID for style element based on file path
+      const styleId = `ce-style-${id.replace(/[^a-zA-Z0-9]/g, '-')}`;
+
+      // Generate CSS injection code if style content exists
+      // Use single quotes to avoid escaping issues with backticks
+      const styleInjectionCode = styleContent ? 
+        '// Inject CSS styles into the document head\n' +
+        `if (typeof document !== 'undefined' && !document.getElementById('${styleId}')) {\n` +
+        '  const styleElement = document.createElement(\'style\');\n' +
+        `  styleElement.id = '${styleId}';\n` +
+        `  styleElement.textContent = '${escapedStyleContent}';\n` +
+        '  document.head.appendChild(styleElement);\n' +
+        '}\n'
+        : '';
+      
+
       // Generate the output
       const output = String.raw`
       ${importsCode}
       import { useProps, useDefineProps } from ${isDev ? `'${DEV_SRC}'` : "'canvasengine'"}
-
+      ${styleInjectionCode}
       export default function component($$props) {
         const $props = useProps($$props)
         const defineProps = useDefineProps($$props)

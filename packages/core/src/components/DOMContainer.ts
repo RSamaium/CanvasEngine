@@ -109,7 +109,32 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
   disableLayout = true;
 
   onInit(props: any) {
-    const div = h(DOMElement, { element: "div" }, props.children) as unknown as Element<CanvasDOMElement>;
+    // Handle internal _scopeClass prop for scoped CSS
+    const scopeClass = props._scopeClass;
+    let divProps: any = { element: "div" };
+    
+    if (scopeClass) {
+      // Merge scope class with existing attrs.class
+      divProps.attrs = { ...props.attrs };
+      if (divProps.attrs.class) {
+        // If class exists, merge it with scope class
+        if (typeof divProps.attrs.class === 'string') {
+          divProps.attrs.class = `${scopeClass} ${divProps.attrs.class}`;
+        } else if (Array.isArray(divProps.attrs.class)) {
+          divProps.attrs.class = [scopeClass, ...divProps.attrs.class];
+        } else if (typeof divProps.attrs.class === 'object') {
+          // For object format, add scope class as true
+          divProps.attrs.class = { [scopeClass]: true, ...divProps.attrs.class };
+        }
+      } else {
+        // No existing class, just add scope class
+        divProps.attrs.class = scopeClass;
+      }
+    } else if (props.attrs) {
+      divProps.attrs = props.attrs;
+    }
+    
+    const div = h(DOMElement, divProps, props.children) as unknown as Element<CanvasDOMElement>;
     this.element = div.componentInstance.element;
   }
 }
