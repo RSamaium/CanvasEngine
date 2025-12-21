@@ -357,11 +357,11 @@ export class KeyboardControls extends ControlsBase {
         left: boolean,
         right: boolean
     } = {
-        up: false,
-        down: false,
-        left: false,
-        right: false
-    };
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
 
     /**
      * Setup keyboard event listeners
@@ -391,7 +391,7 @@ export class KeyboardControls extends ControlsBase {
             const directionControl = this.boundKeys[direction];
             if (directionControl) {
                 const { keyDown } = directionControl.options;
-                if (keyDown ) {
+                if (keyDown) {
                     this.applyInput(direction);
                 }
             }
@@ -410,11 +410,15 @@ export class KeyboardControls extends ControlsBase {
      */
     protected applyInput(keyName: string) {
         const keyState = this.keyState[keyName];
-        if (!keyState) return;
+        if (!keyState) {
+            return;
+        }
         const { isDown, count } = keyState;
         if (isDown) {
             const boundKey = this.boundKeys[keyName];
-            if (!boundKey) return;
+            if (!boundKey) {
+                return;
+            }
             const { repeat, keyDown } = boundKey.options;
             if ((repeat || count == 0)) {
                 let parameters = boundKey.parameters;

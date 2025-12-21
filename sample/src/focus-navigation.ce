@@ -1,0 +1,113 @@
+<Canvas backgroundColor="#2c3e50">
+  <Container x={400} y={300}>
+    <Text 
+      text="Focus Navigation Example" 
+      x={0} 
+      y={-250} 
+      style={{ fontSize: 32, fill: "#ecf0f1" }}
+    />
+    
+    <Text 
+      text="Use Up/Down arrows or gamepad to navigate" 
+      x={0} 
+      y={-200} 
+      style={{ fontSize: 16, fill: "#bdc3c7" }}
+    />
+    
+    <Text 
+      text="Press Space/Enter to select" 
+      x={0} 
+      y={-170} 
+      style={{ fontSize: 16, fill: "#bdc3c7" }}
+    />
+
+    <FocusContainer 
+      tabindex={0} 
+      controls={controls}
+      onFocusChange={onFocusChange}
+    >
+      <Container y={-100}>
+        @for (item of items) {
+          <Container y={@item.@id * 80}>
+            <Rect
+              tabindex={@item.@id}
+              width={300}
+              height={60}
+              x={0}
+              y={0}
+              color={@item.@color}
+              alpha={0.5}
+            />
+            <Text
+              text={@item.@label}
+              x={0}
+              y={0}
+              style={{ fontSize: 24, fill: "#ffffff" }}
+            />
+            @if (selectedIndex == @item.@id) {
+                <Rect
+                  width={320}
+                  height={80}
+                  x={0}
+                  y={0}
+                  color="#ffffff"
+                  alpha={0.2}
+                />
+              }
+          </Container>
+        }
+      </Container>
+    </FocusContainer>
+
+    <Text 
+      text="test"
+      x={0} 
+      y={250} 
+      style={{ fontSize: 20, fill: "#ecf0f1" }}
+    />
+  </Container>
+</Canvas>
+
+<script>
+    import { signal, computed, useFocusChange, mount } from "canvasengine";
+
+    const onFocusChange = (index, element) => {
+        if (index !== null) {
+          selectedIndex.set(index);
+          //console.log('Focus changed to index:', index);
+        }
+      }
+
+  
+    const selectedIndex = signal(0);
+    const items = signal([
+      { id: 0, label: "Item 1", color: "#ff6b6b" },
+      { id: 1, label: "Item 2", color: "#4ecdc4" },
+      { id: 2, label: "Item 3", color: "#45b7d1" },
+      { id: 3, label: "Item 4", color: "#f9ca24" },
+      { id: 4, label: "Item 5", color: "#6c5ce7" },
+    ]);
+  
+    const controls = signal({
+      up: {
+        repeat: true,
+        bind: "up",
+        keyDown() {
+          console.log("Up pressed");
+        }
+      },
+      down: {
+        repeat: true,
+        bind: "down",
+        keyDown() {
+          console.log("Down pressed");
+        }
+      },
+      action: {
+        bind: ["space", "enter"],
+        keyDown() {
+          console.log("Action pressed on item", selectedIndex());
+        }
+      }
+    });
+  </script>

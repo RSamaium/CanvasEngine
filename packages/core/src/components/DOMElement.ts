@@ -314,7 +314,15 @@ export class CanvasDOMElement {
   onUpdate(props: DOMContainerProps) {
     if (!this.element) return;
     for (const [key, value] of Object.entries(props.attrs || {})) {
-      if (key === "class") {
+      if (key === "tabindex") {
+        // Handle tabindex attribute
+        const tabindexValue = isSignal(value) ? value() : value;
+        if (tabindexValue !== undefined && tabindexValue !== null) {
+          this.element.setAttribute('tabindex', String(tabindexValue));
+        } else {
+          this.element.removeAttribute('tabindex');
+        }
+      } else if (key === "class") {
         const classList = value.items || value.value || value;
 
         // Clear existing classes first

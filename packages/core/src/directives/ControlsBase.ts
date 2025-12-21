@@ -118,7 +118,7 @@ export abstract class ControlsBase {
     protected applyInput(keyName: string) {
         const boundKey = this.boundKeys[keyName];
         if (!boundKey) return;
-        
+
         const { repeat, keyDown } = boundKey.options;
         // Default implementation - subclasses may override for state tracking
         if (keyDown) {

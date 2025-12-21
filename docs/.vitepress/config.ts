@@ -119,6 +119,10 @@ const guideMenu = [
         link: "/components/dom-container",
       },
       {
+        text: "FocusContainer",
+        link: "/components/focus-container",
+      },
+      {
         text: "Joystick",
         link: "/components/joystick",
       }

@@ -426,6 +426,89 @@ describe("Compiler", () => {
     const output = parser.parse(input);
     expect(output).toBe(`cond(sprite.visible, () => h(Sprite), [sprite.loading, () => h(Text, { text: 'Loading...' })], () => h(Text, { text: 'Not available' }))`);
   });
+
+  test("should compile condition with function call and @ literal argument", () => {
+    const input = `
+            @if (isSelected(@item.@id)) {
+                <Sprite />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(isSelected(item.id), () => h(Sprite))`);
+  });
+
+  test("should compile condition with function call and @ literal in dot notation", () => {
+    const input = `
+            @if (isSelected(@item.@id)) {
+                <Sprite />
+            }
+            @else {
+                <Text text="Not selected" />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(isSelected(item.id), () => h(Sprite), () => h(Text, { text: 'Not selected' }))`);
+  });
+
+  test("should compile condition with function call and mixed @ literal and signal", () => {
+    const input = `
+            @if (isSelected(@item.id)) {
+                <Sprite />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(isSelected(item.id()), () => h(Sprite))`);
+  });
+
+  test("should compile condition with function call and @ literal property", () => {
+    const input = `
+            @if (check(@value)) {
+                <Text text="Checked" />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(check(value), () => h(Text, { text: 'Checked' }))`);
+  });
+
+  test("should compile condition with function call and multiple @ literal arguments", () => {
+    const input = `
+            @if (compare(@item.@id, @other.@id)) {
+                <Sprite />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(compare(item.id, other.id), () => h(Sprite))`);
+  });
+
+  test("should compile condition with comparison and @ literal dot notation", () => {
+    const input = `
+            @if (isSelected == @item.@id) {
+                <Sprite />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(computed(() => isSelected() == item.id), () => h(Sprite))`);
+  });
+
+  test("should compile condition with comparison and mixed @ literal and signal", () => {
+    const input = `
+            @if (isSelected == @item.id) {
+                <Sprite />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(computed(() => isSelected() == item().id()), () => h(Sprite))`);
+  });
+
+  test("should compile condition with comparison and signal and @ literal", () => {
+    const input = `
+            @if (isSelected == item.@id) {
+                <Sprite />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(computed(() => isSelected() == item().id), () => h(Sprite))`);
+  });
   
   test("should compile component with templating string", () => {
     const input = `<Canvas width={\`direction: \${direction}\`} />`;
