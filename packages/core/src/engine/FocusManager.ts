@@ -73,6 +73,19 @@ export class FocusManager {
   }
 
   /**
+   * Update a focus container's data
+   * 
+   * @param id - Container identifier
+   * @param data - Partial container data to update
+   */
+  updateContainer(id: string, data: Partial<Omit<FocusContainerData, 'id'>>): void {
+    const container = this.containers.get(id);
+    if (container) {
+      this.containers.set(id, { ...container, ...data });
+    }
+  }
+
+  /**
    * Unregister a focus container
    * 
    * @param id - Container identifier to remove

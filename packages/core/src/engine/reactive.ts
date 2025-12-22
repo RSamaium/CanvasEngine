@@ -9,6 +9,7 @@ import {
   map,
   of,
   share,
+  shareReplay,
   switchMap,
   debounceTime,
   distinctUntilChanged,
@@ -847,7 +848,7 @@ export function loop<T>(
         elements.forEach(el => destroyElement(el));
       };
     });
-  }).pipe(share());
+  }).pipe(shareReplay({ bufferSize: 1, refCount: true }));
 }
 
 /**

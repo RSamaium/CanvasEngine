@@ -158,13 +158,12 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
 
     // Update viewport if changed
     const viewport = props.viewport || (props.context?.viewport as CanvasViewport | undefined);
-    const container = focusManager['containers'].get(this.containerId);
-    if (container) {
-      container.viewport = viewport;
-      container.autoScroll = props.autoScroll;
-      container.onFocusChange = props.onFocusChange;
-      container.throttle = props.throttle ?? 150;
-    }
+    focusManager.updateContainer(this.containerId, {
+      viewport,
+      autoScroll: props.autoScroll,
+      onFocusChange: props.onFocusChange,
+      throttle: props.throttle ?? 150
+    });
   }
 
   /**
