@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 import { createComponent, registerComponent, Element, Props } from '../engine/reactive';
 import { DisplayObject, ComponentInstance } from './DisplayObject';
 import { effect, Signal } from '@signe/reactive';
+import { Graphics, Container } from 'pixi.js';
 
 const EVENTS = [
     'bounce-x-end',
@@ -43,27 +44,43 @@ export interface ViewportProps extends Props {
     [key: string]: any;
 }
 
-export class CanvasViewport extends DisplayObject(PixiViewport) {
+export class CanvasViewport extends DisplayObject(Container) {
     private tickSubscription: Subscription
     overrideProps = ['wheel']
+    #mask: Graphics
+    public viewport: PixiViewport
 
     constructor() {
+        super()
         const defaultOptions = {
             noTicker: true,
             events: {
                 domElement: {
-                    addEventListener: () => {}
+                    addEventListener: () => { }
                 }
             },
         }
         // @ts-ignore
-        super(defaultOptions) 
+        this.viewport = new PixiViewport(defaultOptions)
+        super.addChild(this.viewport)
+
+        this.#mask = new Graphics()
+        super.addChild(this.#mask)
+        this.mask = this.#mask
+    }
+
+    addChild<U extends any[]>(...children: U): U[0] {
+        return this.viewport.addChild(...children)
+    }
+
+    addChildAt<U extends any>(child: U, index: number): U {
+        return this.viewport.addChildAt(child, index)
     }
 
     onInit(props) {
         super.onInit(props)
         for (let event of EVENTS) {
-            if (props[event]) this.on(event, props[event])
+            if (props[event]) this.viewport.on(event, props[event])
         }
     }
 
@@ -74,14 +91,19 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
      * @param {number} [index] - The index of the component among its siblings.
      */
     async onMount(element: Element<CanvasViewport>, index?: number): Promise<void> {
+        element.props.context.viewport = this.viewport
         await super.onMount(element, index);
         const { props } = element;
         const { tick, app, canvasSize } = props.context;
-        let isDragging = false
-        
+
         effect(() => {
-            this.screenWidth = canvasSize().width
-            this.screenHeight = canvasSize().height
+            if (props.screenWidth === undefined) {
+                this.viewport.screenWidth = canvasSize().width
+            }
+            if (props.screenHeight === undefined) {
+                this.viewport.screenHeight = canvasSize().height
+            }
+            this.updateMask()
         })
 
         effect(() => {
@@ -89,20 +111,19 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
             if (!_app) return
 
             const renderer = _app.renderer
-            
+
             renderer.events.domElement.addEventListener(
                 'wheel',
-                this.input.wheelFunction
+                this.viewport.input.wheelFunction
             );
 
-            this.options.events = renderer.events
-        })
- 
-        this.tickSubscription = tick.observable.subscribe(({ value }) => {
-            this.update(value.timestamp)
+            this.viewport.options.events = renderer.events
         })
 
-        element.props.context.viewport = this
+        this.tickSubscription = tick.observable.subscribe(({ value }) => {
+            this.viewport.update(value.deltaTime)
+        })
+
         this.updateViewportSettings(props)
     }
 
@@ -113,44 +134,53 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
 
     private updateViewportSettings(props) {
         if (props.screenWidth !== undefined) {
-            this.screenWidth = props.screenWidth
+            this.viewport.screenWidth = props.screenWidth
         }
         if (props.screenHeight !== undefined) {
-            this.screenHeight = props.screenHeight
+            this.viewport.screenHeight = props.screenHeight
         }
+        this.updateMask()
         if (props.worldWidth !== undefined) {
-            this.worldWidth = props.worldWidth
+            this.viewport.worldWidth = props.worldWidth
         }
         if (props.worldHeight !== undefined) {
-            this.worldHeight = props.worldHeight
+            this.viewport.worldHeight = props.worldHeight
         }
         if (props.drag) {
-            this.drag(props.drag)
+            this.viewport.drag(props.drag)
         }
         if (props.clamp) {
-            this.clamp(props.clamp.value ?? props.clamp)
+            this.viewport.clamp(props.clamp.value ?? props.clamp)
         }
         if (props.wheel) {
             if (props.wheel === true) {
-                this.wheel()
+                this.viewport.wheel()
             } else {
-                this.wheel(props.wheel)
+                this.viewport.wheel(props.wheel)
             }
         }
         if (props.decelerate) {
             if (props.decelerate === true) {
-                this.decelerate()
+                this.viewport.decelerate()
             } else {
-                this.decelerate(props.decelerate)
+                this.viewport.decelerate(props.decelerate)
             }
         }
         if (props.pinch) {
             if (props.pinch === true) {
-                this.pinch()
+                this.viewport.pinch()
             } else {
-                this.pinch(props.pinch)
+                this.viewport.pinch(props.pinch)
             }
         }
+    }
+
+    private updateMask() {
+        if (!this.#mask) return
+        this.#mask.clear()
+        this.#mask.beginFill(0xffffff)
+        this.#mask.drawRect(0, 0, this.viewport.screenWidth, this.viewport.screenHeight)
+        this.#mask.endFill()
     }
 
     /**
@@ -165,6 +195,15 @@ export class CanvasViewport extends DisplayObject(PixiViewport) {
             afterDestroy()
         }
         await super.onDestroy(parent, _afterDestroy);
+    }
+
+    // Proxy methods for viewport plugins
+    follow(...args: any[]) {
+        return (this.viewport.follow as any)(...args)
+    }
+
+    get plugins() {
+        return this.viewport.plugins
     }
 }
 

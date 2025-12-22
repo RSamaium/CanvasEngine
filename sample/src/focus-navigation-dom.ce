@@ -1,0 +1,86 @@
+<Canvas backgroundColor="#2c3e50">
+  <Container x={400} y={300}>
+    <Text 
+      text="Focus Navigation DOM Example" 
+      x={0} 
+      y={-250} 
+      style={{ fontSize: 32, fill: "#ecf0f1" }}
+    />
+    
+    <FocusContainer 
+      tabindex={0} 
+      controls={controls}
+      onFocusChange={onFocusChange}
+    >
+      <DOMContainer>
+        <div class="button-container">
+         <div>
+            <div>
+                @for (item of items) {
+                    <button tabindex={@item.@id}>Hello</button>
+                  }
+            </div>
+         </div>
+        </div>
+      </DOMContainer>
+    </FocusContainer>
+  </Container>
+</Canvas>
+
+<style scoped>
+  .button-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    height: 300px;
+  }
+  button {
+    padding: 10px 20px;
+    font-size: 18px;
+    cursor: pointer;
+    background: #34495e;
+    color: white;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  button:focus {
+    background: #3498db;
+    border-color: white;
+    outline: none;
+    transform: scale(1.05);
+  }
+</style>
+
+<script>
+  import { signal } from "canvasengine";
+
+  const onFocusChange = (index, element) => {
+    console.log('Focus changed to index:', index, element);
+  }
+
+  const items100 = new Array(20).fill(0).map((_, index) => ({ id: index }));
+  const items = signal(items100);
+
+  const controls = signal({
+    up: {
+      repeat: true,
+      bind: "up"
+    },
+    down: {
+      repeat: true,
+      bind: "down"
+    },
+    action: {
+      bind: ["space", "enter"]
+    },
+    gamepad: {
+      enabled: true
+    }
+  });
+</script>
+  

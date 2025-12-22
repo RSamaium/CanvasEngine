@@ -28,6 +28,8 @@ interface FocusContainerData {
   onFocusChange?: (index: number, element: Element | null) => void;
   autoScroll?: boolean | ScrollOptions;
   viewport?: CanvasViewport;
+  throttle?: number;
+  lastNavigateTime?: number;
 }
 
 /**
@@ -120,9 +122,19 @@ export class FocusManager {
       return;
     }
 
+    // Handle throttling
+    if (container.throttle) {
+      const now = Date.now();
+      const lastTime = container.lastNavigateTime || 0;
+      if (now - lastTime < container.throttle) {
+        return;
+      }
+      container.lastNavigateTime = now;
+    }
+
     const currentIndex = container.currentIndex();
     const focusableIndices = Array.from(container.focusables.keys()).sort((a, b) => a - b);
-    
+
     if (focusableIndices.length === 0) return;
 
     let newIndex: number | null = null;
@@ -172,18 +184,33 @@ export class FocusManager {
 
     container.currentIndex.set(index);
     container.focusedElement.set(element);
-    
+
     // Trigger callback
     if (container.onFocusChange) {
       container.onFocusChange(index, element);
+    }
+    // Handle DOM focus and scrolling
+    const instance = element.componentInstance as any;
+    if (instance && instance.element && typeof instance.element.focus === 'function') {
+      const domElement = instance.element as HTMLElement;
+      // Focus the native DOM element so :focus styles apply
+      domElement.focus();
+
+      // Scroll the element into view, centering it in the scrollable parent
+      if (typeof domElement.scrollIntoView === 'function') {
+        domElement.scrollIntoView({
+          block: 'center',
+          behavior: 'smooth'
+        });
+      }
     }
 
     // Handle auto-scroll if enabled
     if (container.autoScroll) {
       const viewport = container.viewport;
       if (viewport) {
-        const options: ScrollOptions = typeof container.autoScroll === 'boolean' 
-          ? { center: true } 
+        const options: ScrollOptions = typeof container.autoScroll === 'boolean'
+          ? { center: true }
           : container.autoScroll;
         this.scrollToElement(containerId, index, viewport, options);
       }
@@ -260,10 +287,10 @@ export class FocusManager {
 
     // Get local bounds
     const localBounds = instance.getLocalBounds();
-    
+
     // Get global position
     const globalPos = instance.getGlobalPosition();
-    
+
     return {
       x: globalPos.x,
       y: globalPos.y,
@@ -308,7 +335,7 @@ export class FocusManager {
       if (center) {
         const centerX = bounds.x + bounds.width / 2;
         const centerY = bounds.y + bounds.height / 2;
-        
+
         if (smooth) {
           this.animateScroll(containerId, targetViewport, centerX, centerY, duration);
         } else {
@@ -322,7 +349,7 @@ export class FocusManager {
     if (center) {
       const centerX = bounds.x + bounds.width / 2;
       const centerY = bounds.y + bounds.height / 2;
-      
+
       if (smooth) {
         this.animateScroll(containerId, targetViewport, centerX, centerY, duration);
       } else {

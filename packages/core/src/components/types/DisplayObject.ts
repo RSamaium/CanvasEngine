@@ -100,4 +100,5 @@ export interface DisplayObjectProps {
     touchmove?: PIXI.FederatedEventHandler;
     touchstart?: PIXI.FederatedEventHandler;
     wheel?: PIXI.FederatedEventHandler<PIXI.FederatedWheelEvent>;
+    tabindex?: SignalOrPrimitive<number>;
 }

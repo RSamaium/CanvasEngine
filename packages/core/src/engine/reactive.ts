@@ -110,7 +110,7 @@ export function registerAllComponents() {
   if (componentsRegistered) {
     return;
   }
-  
+
   // Components are registered when their modules are imported
   // Since bootstrap.ts imports all components, they should already be registered
   // when bootstrapCanvas() is called. This function just marks that registration
@@ -129,10 +129,10 @@ export function registerAllComponents() {
  */
 export function isElementFrozen(element: Element): boolean {
   if (!element) return false;
-  
+
   // Check if this element itself is frozen
   const freezeProp = element.propObservables?.freeze ?? element.props?.freeze;
-  
+
   if (freezeProp !== undefined && freezeProp !== null) {
     // Handle Signal<boolean>
     if (isSignal(freezeProp)) {
@@ -144,12 +144,12 @@ export function isElementFrozen(element: Element): boolean {
       return true;
     }
   }
-  
+
   // Check if any parent is frozen (recursive check)
   if (element.parent) {
     return isElementFrozen(element.parent);
   }
-  
+
   return false;
 }
 
@@ -161,7 +161,7 @@ export function isElementFrozen(element: Element): boolean {
  */
 function handleAnimatedSignalsFreeze(element: Element, shouldPause: boolean) {
   if (!element.propObservables) return;
-  
+
   const processValue = (value: any) => {
     if (isSignal(value) && isAnimatedSignal(value as any)) {
       const animatedSig = value as unknown as AnimatedSignal<any>;
@@ -175,7 +175,7 @@ function handleAnimatedSignalsFreeze(element: Element, shouldPause: boolean) {
       Object.values(value).forEach(processValue);
     }
   };
-  
+
   Object.values(element.propObservables).forEach(processValue);
 }
 
@@ -272,19 +272,19 @@ export function createComponent(tag: string, props?: Props): Element {
             }
             return;
           }
-          
+
           // Handle freeze prop as signal
           if (key === "freeze") {
             element.isFrozen = _value() === true;
-            
+
             // Pause/resume animatedSignals based on initial freeze state
             handleAnimatedSignalsFreeze(element, element.isFrozen);
-            
+
             element.propSubscriptions.push(
               _value.observable.subscribe((freezeValue) => {
                 const wasFrozen = element.isFrozen;
                 element.isFrozen = freezeValue === true;
-                
+
                 // Handle animatedSignal pause/resume when freeze state changes
                 if (wasFrozen !== element.isFrozen) {
                   handleAnimatedSignalsFreeze(element, element.isFrozen);
@@ -293,7 +293,7 @@ export function createComponent(tag: string, props?: Props): Element {
             );
             return;
           }
-          
+
           element.propSubscriptions.push(
             _value.observable.subscribe((value) => {
               // Block updates if element is frozen
@@ -304,12 +304,12 @@ export function createComponent(tag: string, props?: Props): Element {
                 }
                 return;
               }
-              
+
               // Resume animatedSignal if it was paused
               if (isAnimatedSignal(_value as any)) {
                 (_value as unknown as AnimatedSignal<any>).resume();
               }
-              
+
               _set(path, key, value);
               if (element.directives[key]) {
                 element.directives[key].onUpdate?.(value, element);
@@ -324,8 +324,8 @@ export function createComponent(tag: string, props?: Props): Element {
               instance.onUpdate?.(
                 path == ""
                   ? {
-                      [key]: value,
-                    }
+                    [key]: value,
+                  }
                   : set({}, path + "." + key, value)
               );
             })
@@ -334,7 +334,7 @@ export function createComponent(tag: string, props?: Props): Element {
           // Handle freeze prop as direct boolean
           if (key === "freeze") {
             element.isFrozen = value === true;
-            
+
             // Pause/resume animatedSignals based on freeze state
             handleAnimatedSignalsFreeze(element, element.isFrozen);
           }
@@ -457,7 +457,7 @@ export function createComponent(tag: string, props?: Props): Element {
 
     element.props.context = actualParent.props.context;
     element.parent = actualParent;
-    
+
     // Inherit freeze state from parent if element doesn't have its own freeze prop
     if (!element.propObservables?.freeze && !element.props?.freeze && isElementFrozen(actualParent)) {
       element.isFrozen = true;
@@ -847,7 +847,7 @@ export function loop<T>(
         elements.forEach(el => destroyElement(el));
       };
     });
-  });
+  }).pipe(share());
 }
 
 /**

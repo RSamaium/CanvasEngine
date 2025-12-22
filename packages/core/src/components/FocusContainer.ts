@@ -27,6 +27,7 @@ export interface FocusContainerProps extends DisplayObjectProps {
   onFocusChange?: (index: number, element: Element | null) => void;
   autoScroll?: boolean | ScrollOptions;
   viewport?: CanvasViewport;
+  throttle?: number;
 }
 
 /**
@@ -79,20 +80,20 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
    */
   onInit(props: FocusContainerProps) {
     super.onInit(props);
-    
+
     // Generate unique container ID
     this.containerId = `focus-container-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Create signals for current index and focused element
     const currentIndex = signal<number | null>(null);
     const focusedElement = signal<Element | null>(null);
-    
+
     this.currentIndexSignal = currentIndex;
     this.focusedElementSignal = focusedElement;
 
     // Get viewport from context or props
     const viewport = props.viewport || (props.context?.viewport as CanvasViewport | undefined);
-    
+
     // Register container with FocusManager
     focusManager.registerContainer(this.containerId, {
       focusables: new Map(),
@@ -100,7 +101,8 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
       focusedElement,
       onFocusChange: props.onFocusChange,
       autoScroll: props.autoScroll,
-      viewport
+      viewport,
+      throttle: props.throttle ?? 150
     });
   }
 
@@ -111,7 +113,7 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
    */
   async onMount(element: Element<CanvasFocusContainer>): Promise<void> {
     await super.onMount(element, undefined);
-    
+
     // Apply focusNavigation directive if controls are provided
     if (element.props.controls) {
       const focusNavDirective = applyDirective(element, 'focusNavigation');
@@ -125,7 +127,7 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
         focusNavDirective.onMount(element);
       }
     }
-    
+
     // Subscribe to allElements to detect when children are mounted
     if (element.allElements) {
       const subscription = element.allElements.subscribe(() => {
@@ -138,7 +140,7 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
       }
       element.effectSubscriptions.push(subscription);
     }
-    
+
     // Register all focusable children initially
     // Use setTimeout to ensure children are mounted
     setTimeout(() => {
@@ -153,7 +155,7 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
    */
   onUpdate(props: FocusContainerProps) {
     super.onUpdate(props);
-    
+
     // Update viewport if changed
     const viewport = props.viewport || (props.context?.viewport as CanvasViewport | undefined);
     const container = focusManager['containers'].get(this.containerId);
@@ -161,6 +163,7 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
       container.viewport = viewport;
       container.autoScroll = props.autoScroll;
       container.onFocusChange = props.onFocusChange;
+      container.throttle = props.throttle ?? 150;
     }
   }
 
@@ -190,7 +193,7 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
    */
   private registerChildren(element: Element<CanvasFocusContainer>) {
     if (!element.props.children) return;
-    
+
 
     let registeredCount = 0;
     const processChildren = (children: any[]) => {
@@ -339,7 +342,7 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
   }
 }
 
-export interface CanvasFocusContainer extends DisplayObjectProps {}
+export interface CanvasFocusContainer extends DisplayObjectProps { }
 
 registerComponent("FocusContainer", CanvasFocusContainer);
 

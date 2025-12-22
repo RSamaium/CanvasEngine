@@ -21,16 +21,26 @@
       style={{ fontSize: 16, fill: "#bdc3c7" }}
     />
 
-    <FocusContainer 
+    <Viewport screenHeight={300} worldWidth={2000} worldHeight={8000} clamp={ {direction: 'all'} }>
+      <FocusContainer 
       tabindex={0} 
       controls={controls}
       onFocusChange={onFocusChange}
     >
-      <Container y={-100}>
+      <Container>
+        <Rect
+        width={320}
+        height={80}
+        x={0}
+        y={selectedIndex * 80}
+        color="#ffffff"
+        alpha={0.2}
+        viewportFollow={true}
+      />
         @for (item of items) {
-          <Container y={@item.@id * 80}>
+          <Container y={@item.@id * 80}  tabindex={@item.@id}>
             <Rect
-              tabindex={@item.@id}
+             
               width={300}
               height={60}
               x={0}
@@ -44,27 +54,14 @@
               y={0}
               style={{ fontSize: 24, fill: "#ffffff" }}
             />
-            @if (selectedIndex == @item.@id) {
-                <Rect
-                  width={320}
-                  height={80}
-                  x={0}
-                  y={0}
-                  color="#ffffff"
-                  alpha={0.2}
-                />
-              }
+          
+               
+              
           </Container>
         }
       </Container>
     </FocusContainer>
-
-    <Text 
-      text="test"
-      x={0} 
-      y={250} 
-      style={{ fontSize: 20, fill: "#ecf0f1" }}
-    />
+    </Viewport>
   </Container>
 </Canvas>
 
@@ -74,19 +71,17 @@
     const onFocusChange = (index, element) => {
         if (index !== null) {
           selectedIndex.set(index);
+          console.log(element)
           //console.log('Focus changed to index:', index);
         }
       }
 
   
     const selectedIndex = signal(0);
-    const items = signal([
-      { id: 0, label: "Item 1", color: "#ff6b6b" },
-      { id: 1, label: "Item 2", color: "#4ecdc4" },
-      { id: 2, label: "Item 3", color: "#45b7d1" },
-      { id: 3, label: "Item 4", color: "#f9ca24" },
-      { id: 4, label: "Item 5", color: "#6c5ce7" },
-    ]);
+
+    const items100 = new Array(20).fill(0).map((_, index) => ({ id: index, label: `Item ${index + 1}` }));
+
+    const items = signal(items100);
   
     const controls = signal({
       up: {
@@ -108,6 +103,9 @@
         keyDown() {
           console.log("Action pressed on item", selectedIndex());
         }
+      },
+      gamepad: {
+        enabled: true
       }
     });
   </script>

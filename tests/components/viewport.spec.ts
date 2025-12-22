@@ -31,7 +31,7 @@ describe('Viewport', () => {
         });
         const viewportInstance = viewportElement.componentInstance as any;
 
-        expect(viewportInstance.drag).toHaveBeenCalledWith(dragOptions);
+        expect(viewportInstance.viewport.drag).toHaveBeenCalledWith(dragOptions);
     });
 
     test('should set wheel options when boolean', async () => {
@@ -40,7 +40,7 @@ describe('Viewport', () => {
         });
         const viewportInstance = viewportElement.componentInstance as any;
 
-        expect(viewportInstance.wheel).toHaveBeenCalled();
+        expect(viewportInstance.viewport.wheel).toHaveBeenCalled();
     });
 
     test('should set wheel options with config', async () => {
@@ -50,7 +50,7 @@ describe('Viewport', () => {
         });
         const viewportInstance = viewportElement.componentInstance as any;
 
-        expect(viewportInstance.wheel).toHaveBeenCalledWith(wheelOptions);
+        expect(viewportInstance.viewport.wheel).toHaveBeenCalledWith(wheelOptions);
     });
 
     test('should set clamp options when boolean', async () => {
@@ -58,9 +58,9 @@ describe('Viewport', () => {
             clamp: true
         });
         const viewportInstance = viewportElement.componentInstance as any;
-        
+
         // Check if the correct argument is passed based on CanvasViewport logic
-        expect(viewportInstance.clamp).toHaveBeenCalledWith(true); // Assuming boolean true maps to clamp(true)
+        expect(viewportInstance.viewport.clamp).toHaveBeenCalledWith(true); // Assuming boolean true maps to clamp(true)
     });
 
     test('should set clamp options with config', async () => {
@@ -70,7 +70,7 @@ describe('Viewport', () => {
         });
         const viewportInstance = viewportElement.componentInstance as any;
 
-        expect(viewportInstance.clamp).toHaveBeenCalledWith(clampOptions);
+        expect(viewportInstance.viewport.clamp).toHaveBeenCalledWith(clampOptions);
     });
 
     test('should set decelerate options when boolean', async () => {
@@ -79,7 +79,7 @@ describe('Viewport', () => {
         });
         const viewportInstance = viewportElement.componentInstance as any;
 
-        expect(viewportInstance.decelerate).toHaveBeenCalled();
+        expect(viewportInstance.viewport.decelerate).toHaveBeenCalled();
     });
 
     test('should set decelerate options with config', async () => {
@@ -89,7 +89,7 @@ describe('Viewport', () => {
         });
         const viewportInstance = viewportElement.componentInstance as any;
 
-        expect(viewportInstance.decelerate).toHaveBeenCalledWith(decelerateOptions);
+        expect(viewportInstance.viewport.decelerate).toHaveBeenCalledWith(decelerateOptions);
     });
 
     test('should set pinch options when boolean', async () => {
@@ -98,7 +98,7 @@ describe('Viewport', () => {
         });
         const viewportInstance = viewportElement.componentInstance as any;
 
-        expect(viewportInstance.pinch).toHaveBeenCalled();
+        expect(viewportInstance.viewport.pinch).toHaveBeenCalled();
     });
 
     test('should set pinch options with config', async () => {
@@ -108,7 +108,7 @@ describe('Viewport', () => {
         });
         const viewportInstance = viewportElement.componentInstance as any;
 
-        expect(viewportInstance.pinch).toHaveBeenCalledWith(pinchOptions);
+        expect(viewportInstance.viewport.pinch).toHaveBeenCalledWith(pinchOptions);
     });
 
     test('should register event listeners', async () => {
@@ -120,8 +120,8 @@ describe('Viewport', () => {
         });
         const viewportInstance = viewportElement.componentInstance as any;
 
-        expect(viewportInstance.on).toHaveBeenCalledWith('drag-start', onDragStart);
-        expect(viewportInstance.on).toHaveBeenCalledWith('drag-end', onDragEnd);
+        expect(viewportInstance.viewport.on).toHaveBeenCalledWith('drag-start', onDragStart);
+        expect(viewportInstance.viewport.on).toHaveBeenCalledWith('drag-end', onDragEnd);
     });
 
     test('should update screen size based on context', async () => {
@@ -137,15 +137,15 @@ describe('Viewport', () => {
         // Create component with mocked context
         const viewportElement = await TestBed.createComponent(Viewport, { context });
         const viewportInstance = viewportElement.componentInstance as any;
-        
+
         // Check initial screen size set during mount
-        expect(viewportInstance.screenWidth).toBe(800);
-        expect(viewportInstance.screenHeight).toBe(600);
-        
+        expect(viewportInstance.viewport.screenWidth).toBe(800);
+        expect(viewportInstance.viewport.screenHeight).toBe(600);
+
         // Update signal and trigger effect (difficult to test effect directly)
         width.set(1024);
         height.set(768);
-        
+
         // Re-render or manually trigger update if possible/needed to test effect
         // In this setup, testing the effect directly is complex.
         // We mostly verified that the initial values from context are used.
@@ -164,30 +164,30 @@ describe('Viewport', () => {
         const viewportInstance = viewportElement.componentInstance as any;
 
         // Check initial settings
-        expect(viewportInstance.worldWidth).toBe(1000);
-        expect(viewportInstance.worldHeight).toBe(800);
-        expect(viewportInstance.clamp).toHaveBeenCalledWith({ left: 0, right: 1000 });
-        
+        expect(viewportInstance.viewport.worldWidth).toBe(1000);
+        expect(viewportInstance.viewport.worldHeight).toBe(800);
+        expect(viewportInstance.viewport.clamp).toHaveBeenCalledWith({ left: 0, right: 1000 });
+
         // Update signals to trigger onUpdate
         worldWidth.set(1200);
         worldHeight.set(900);
         clampOptions.set({ left: 10, right: 1190 });
 
-        expect(viewportInstance.worldWidth).toBe(1200);
-        expect(viewportInstance.worldHeight).toBe(900);
-        expect(viewportInstance.clamp).toHaveBeenCalledWith({ left: 10, right: 1190 });
+        expect(viewportInstance.viewport.worldWidth).toBe(1200);
+        expect(viewportInstance.viewport.worldHeight).toBe(900);
+        expect(viewportInstance.viewport.clamp).toHaveBeenCalledWith({ left: 10, right: 1190 });
 
         // Re-check if mocks were called again during update (this part is hard without explicit update trigger)
         // expect(viewportInstance.clamp).toHaveBeenCalledWith({ left: 10, right: 1190 });
     });
-    
+
     test('should handle clamp prop with value property', async () => {
         const clampConfig = { value: { left: 10, right: 90 } };
-        const viewportElement = await TestBed.createComponent(Viewport, { 
+        const viewportElement = await TestBed.createComponent(Viewport, {
             clamp: clampConfig
         });
         const viewportInstance = viewportElement.componentInstance as any;
-        
-        expect(viewportInstance.clamp).toHaveBeenCalledWith({ left: 10, right: 90 });
+
+        expect(viewportInstance.viewport.clamp).toHaveBeenCalledWith({ left: 10, right: 90 });
     });
 });

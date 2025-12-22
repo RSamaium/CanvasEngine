@@ -18,12 +18,15 @@ export class ViewportFollow extends Directive {
 
     }
     onMount(element: Element) {
-       this.onUpdate(element.props.viewportFollow, element)
+        this.onUpdate(element.props.viewportFollow, element)
     }
     onUpdate(viewportFollow: any, element: Element) {
-        const { viewport } = element.props.context
+        const viewport = element.props.context?.viewport
         if (!viewport) {
-            throw error('ViewportFollow directive requires a Viewport component to be mounted in the same context')
+            if (viewportFollow) {
+                throw error('ViewportFollow directive requires a Viewport component to be mounted in the same context')
+            }
+            return
         }
         if (viewportFollow) {
             if (viewportFollow === true) {
@@ -46,8 +49,8 @@ export class ViewportFollow extends Directive {
     }
     onDestroy(element: Element) {
         const { viewportFollow } = element.props
-        const { viewport } = element.props.context
-        if (viewportFollow) viewport.plugins.remove('follow')
+        const viewport = element.props.context?.viewport
+        if (viewportFollow && viewport) viewport.plugins.remove('follow')
     }
 }
 

@@ -112,7 +112,7 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
     // Handle internal _scopeClass prop for scoped CSS
     const scopeClass = props._scopeClass;
     let divProps: any = { element: "div" };
-    
+
     if (scopeClass) {
       // Merge scope class with existing attrs.class
       divProps.attrs = { ...props.attrs };
@@ -133,13 +133,13 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
     } else if (props.attrs) {
       divProps.attrs = props.attrs;
     }
-    
+
     const div = h(DOMElement, divProps, props.children) as unknown as Element<CanvasDOMElement>;
     this.element = div.componentInstance.element;
   }
 }
 
-export interface CanvasDOMContainer extends DisplayObjectProps {}
+export interface CanvasDOMContainer extends DisplayObjectProps { }
 
 registerComponent("DOMContainer", CanvasDOMContainer);
 

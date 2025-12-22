@@ -1,4 +1,4 @@
-import { effect, signal, computed, isSignal } from "@signe/reactive";
+import { effect, signal, computed, isSignal, Signal } from "@signe/reactive";
 import { FederatedPointerEvent } from "pixi.js";
 import { h } from "../engine/signal";
 import { useDefineProps } from "../hooks/useProps";
@@ -95,6 +95,8 @@ export interface ButtonProps {
   background?: Element | any;
   /** Custom children components for button content (takes priority over text if provided) */
   children?: Element[];
+  /** Focus index for the button */
+  tabindex?: number | Signal<number>;
 }
 
 /**
@@ -270,7 +272,7 @@ export function Button(props: ButtonProps) {
       if (!disabled()) {
         isPressed.set(true);
         props.pressDown?.(event);
-        
+
         // Apply control if controls and controlName are provided
         const controls = getControls();
         const name = controlName();
@@ -283,7 +285,7 @@ export function Button(props: ButtonProps) {
       if (!disabled() && isPressed()) {
         isPressed.set(false);
         props.pressUp?.(event);
-        
+
         // Apply control release if controls and controlName are provided
         const controls = getControls();
         const name = controlName();
@@ -295,7 +297,7 @@ export function Button(props: ButtonProps) {
     pointertap: async (event: FederatedPointerEvent) => {
       if (!disabled()) {
         props.click?.(event);
-        
+
         // Apply control if controls and controlName are provided (press and release)
         const controls = getControls();
         const name = controlName();
@@ -388,6 +390,7 @@ export function Button(props: ButtonProps) {
     alpha: props.alpha,
     visible: props.visible,
     cursor: props.cursor || "pointer",
+    tabindex: props.tabindex,
     ...eventHandlers
   }, [
     getBackgroundElement(),

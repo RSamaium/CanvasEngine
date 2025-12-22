@@ -24,7 +24,7 @@ interface CanvasElement extends Element<ComponentInstance> {
   };
 }
 
-registerComponent("Canvas", class Canvas extends DisplayObject(Container) {});
+registerComponent("Canvas", class Canvas extends DisplayObject(Container) { });
 
 export interface CanvasProps extends Props {
   cursorStyles?: () => any;

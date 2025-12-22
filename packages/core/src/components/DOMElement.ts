@@ -12,22 +12,22 @@ import { isSignal } from "@signe/reactive";
 
 interface DOMContainerProps extends DisplayObjectProps {
   element:
-    | string
-    | {
-        value: HTMLElement;
-      };
+  | string
+  | {
+    value: HTMLElement;
+  };
   textContent?: string;
   attrs?: Record<string, any> & {
     class?:
-      | string
-      | string[]
-      | Record<string, boolean>
-      | { items?: string[] }
-      | { value?: string | string[] | Record<string, boolean> };
+    | string
+    | string[]
+    | Record<string, boolean>
+    | { items?: string[] }
+    | { value?: string | string[] | Record<string, boolean> };
     style?:
-      | string
-      | Record<string, string | number>
-      | { value?: string | Record<string, string | number> };
+    | string
+    | Record<string, string | number>
+    | { value?: string | Record<string, string | number> };
   };
   onBeforeDestroy?: OnHook;
 }
@@ -234,11 +234,11 @@ export class CanvasDOMElement {
           // Special handling for form submit events
           if (event === "submit" && this.element.tagName.toLowerCase() === "form") {
             e.preventDefault(); // Stop form submission propagation
-            
+
             // Collect all form data
             const formData = new FormData(this.element as HTMLFormElement);
             const formObject: Record<string, any> = {};
-            
+
             // Convert FormData to plain object
             formData.forEach((value, key) => {
               if (formObject[key]) {
@@ -252,7 +252,7 @@ export class CanvasDOMElement {
                 formObject[key] = value;
               }
             });
-            
+
             // Call the event handler with event and form data
             props.attrs[event]?.(e, formObject);
           } else {
@@ -292,9 +292,9 @@ export class CanvasDOMElement {
       // Set initial value from signal
       (
         this.element as
-          | HTMLInputElement
-          | HTMLTextAreaElement
-          | HTMLSelectElement
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | HTMLSelectElement
       ).value = this.valueSignal();
 
       // Listen for input events and update the signal
@@ -363,26 +363,26 @@ export class CanvasDOMElement {
           // Update the DOM element value if the signal value changed
           const currentValue = (
             this.element as
-              | HTMLInputElement
-              | HTMLTextAreaElement
-              | HTMLSelectElement
+            | HTMLInputElement
+            | HTMLTextAreaElement
+            | HTMLSelectElement
           ).value;
           const signalValue = value();
           if (currentValue !== signalValue) {
             (
               this.element as
-                | HTMLInputElement
-                | HTMLTextAreaElement
-                | HTMLSelectElement
+              | HTMLInputElement
+              | HTMLTextAreaElement
+              | HTMLSelectElement
             ).value = signalValue;
           }
         } else {
           // If it's not a signal, set the value directly
           (
             this.element as
-              | HTMLInputElement
-              | HTMLTextAreaElement
-              | HTMLSelectElement
+            | HTMLInputElement
+            | HTMLTextAreaElement
+            | HTMLSelectElement
           ).value = value;
         }
       } else if (!EVENTS.includes(key)) {
@@ -420,7 +420,7 @@ export class CanvasDOMElement {
   }
 }
 
-export interface CanvasDOMElement extends DisplayObjectProps {}
+export interface CanvasDOMElement extends DisplayObjectProps { }
 
 registerComponent("DOMElement", CanvasDOMElement);
 
