@@ -69,9 +69,10 @@ export class FocusNavigationDirective extends Directive {
       console.warn('FocusNavigation: Controls directive not found, cannot set up navigation');
       return;
     }
+    controls = (controls.value ?? controls) as Controls;
     // Create navigation controls by wrapping existing ones
     const navigationControls: Controls = {
-      ...(controls.value ?? controls),
+      ...controls,
       // Override or add navigation controls
       up: {
         ...controls.up,

@@ -1,6 +1,7 @@
-import { signal, Signal } from "@signe/reactive";
+import { isSignal, signal, Signal } from "@signe/reactive";
 import { Element } from "./reactive";
 import { CanvasViewport } from "../components/Viewport";
+import { SignalOrPrimitive } from "../components/types";
 
 /**
  * Options for scroll behavior when navigating to focused elements
@@ -30,6 +31,8 @@ interface FocusContainerData {
   viewport?: CanvasViewport;
   throttle?: number;
   lastNavigateTime?: number;
+  tabindex?: SignalOrPrimitive<number>;
+  tabindexSubscription?: any;
 }
 
 /**
@@ -85,6 +88,26 @@ export class FocusManager {
     }
   }
 
+  setTabindex(id: string, tabindex: SignalOrPrimitive<number>): void {
+    const container = this.containers.get(id);
+    if (!container) return;
+
+    // Cleanup previous subscription
+    if (container.tabindexSubscription) {
+      container.tabindexSubscription.unsubscribe();
+    }
+
+    container.tabindex = tabindex;
+
+    if (isSignal(tabindex)) {
+      container.tabindexSubscription = (tabindex as Signal<number>).observable.subscribe((value: any) => {
+        if (value !== null && value !== container.currentIndex()) {
+          this.setIndex(id, value);
+        }
+      });
+    }
+  }
+
   /**
    * Unregister a focus container
    * 
@@ -109,6 +132,12 @@ export class FocusManager {
       return;
     }
     container.focusables.set(index, element);
+
+    // If this is the index we are supposed to be at, set it now
+    const currentTabindex = isSignal(container.tabindex) ? (container.tabindex as Signal<number>)() : container.tabindex;
+    if (currentTabindex === index && container.currentIndex() === null) {
+      this.setIndex(containerId, index);
+    }
   }
 
   /**
@@ -175,7 +204,12 @@ export class FocusManager {
     }
 
     if (newIndex !== null) {
-      this.setIndex(containerId, newIndex);
+      const tabindex = container.tabindex;
+      if (isSignal(tabindex)) {
+        (tabindex as any).set(newIndex);
+      } else {
+        this.setIndex(containerId, newIndex);
+      }
     }
   }
 
@@ -197,6 +231,12 @@ export class FocusManager {
 
     container.currentIndex.set(index);
     container.focusedElement.set(element);
+
+    // Sync back to tabindex signal if it exists
+    const tabindex = container.tabindex;
+    if (isSignal(tabindex) && (tabindex as any)() !== index) {
+      (tabindex as any).set(index);
+    }
 
     // Trigger callback
     if (container.onFocusChange) {

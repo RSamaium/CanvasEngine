@@ -8,16 +8,15 @@
     />
     
     <FocusContainer 
-      tabindex={0} 
+      tabindex={tabindex} 
       controls={controls}
-      onFocusChange={onFocusChange}
     >
       <DOMContainer>
         <div class="button-container">
          <div>
             <div>
                 @for (item of items) {
-                    <button tabindex={@item.@id}>Hello</button>
+                    <button tabindex={@item.@id}>test</button>
                   }
             </div>
          </div>
@@ -57,11 +56,13 @@
 </style>
 
 <script>
-  import { signal } from "canvasengine";
+  import { signal, effect } from "canvasengine";
 
-  const onFocusChange = (index, element) => {
-    console.log('Focus changed to index:', index, element);
-  }
+  const tabindex = signal(0);
+
+  effect(() => {
+    console.log("Selected index:", tabindex());
+  });
 
   const items100 = new Array(20).fill(0).map((_, index) => ({ id: index }));
   const items = signal(items100);

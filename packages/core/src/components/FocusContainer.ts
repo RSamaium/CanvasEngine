@@ -141,6 +141,18 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
       element.effectSubscriptions.push(subscription);
     }
 
+    // if (element.propObservables.tabindex) {
+    //   const subscription = element.propObservables.tabindex.observable.subscribe((value: any) => {
+    //     console.log("tabindex changed", value);
+    //     if (value !== null) {
+    //     //  focusManager.setIndex(this.containerId, value);
+    //     }
+    //   });
+    //   element.effectSubscriptions.push(subscription);
+    // }
+
+    focusManager.setTabindex(this.containerId, element.propObservables.tabindex);
+
     // Register all focusable children initially
     // Use setTimeout to ensure children are mounted
     setTimeout(() => {

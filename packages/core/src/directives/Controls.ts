@@ -84,7 +84,7 @@ export class ControlsDirective extends Directive {
     /**
      * Mount hook (no specific action needed)
      */
-    onMount(element: Element) {}
+    onMount(element: Element) { }
 
     /**
      * Update controls configuration

@@ -23,7 +23,7 @@
 
     <Viewport screenHeight={300} worldWidth={2000} worldHeight={8000} clamp={ {direction: 'all'} }>
       <FocusContainer 
-      tabindex={0} 
+      tabindex={selectedIndex} 
       controls={controls}
       onFocusChange={onFocusChange}
     >
@@ -66,18 +66,13 @@
 </Canvas>
 
 <script>
-    import { signal, computed, useFocusChange, mount } from "canvasengine";
+    import { signal, computed, useFocusChange, mount, effect } from "canvasengine";
+
+    const selectedIndex = signal(0);
 
     const onFocusChange = (index, element) => {
-        if (index !== null) {
-          selectedIndex.set(index);
-          console.log(element)
-          //console.log('Focus changed to index:', index);
-        }
-      }
-
-  
-    const selectedIndex = signal(0);
+      console.log('Focus changed to index:', index, element);
+    }
 
     const items100 = new Array(20).fill(0).map((_, index) => ({ id: index, label: `Item ${index + 1}` }));
 
