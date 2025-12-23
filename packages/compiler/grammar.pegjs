@@ -291,14 +291,14 @@ simpleDynamicPart "simple dynamic part"
     }
   / "{" _ expr:attributeValue _ "}" {
       // Handle single brace expressions like {item.name} or {@text}
-      if (expr.trim().match(/^@?[a-zA-Z_][a-zA-Z0-9_.]*$/)) {
+      if (expr.trim().match(/^(@?[a-zA-Z_][a-zA-Z0-9_]*)(\.@?[a-zA-Z_][a-zA-Z0-9_]*)*$/)) {
         let foundSignal = false;
-        const computedValue = expr.replace(/@?[a-zA-Z_][a-zA-Z0-9_]*(?!:)/g, (match) => {
+        const computedValue = expr.replace(/@?([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*:)/g, (match, p1) => {
           if (match.startsWith('@')) {
-            return match.substring(1);
+            return p1;
           }
           foundSignal = true;
-          return `${match}()`;
+          return `${p1}()`;
         });
         if (foundSignal) {
           return `computed(() => ${computedValue})`;

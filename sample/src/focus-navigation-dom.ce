@@ -16,7 +16,7 @@
          <div>
             <div>
                 @for (item of items) {
-                    <button tabindex={@item.@id}>test</button>
+                    <button tabindex={@item.@id}>{@item.@label}</button>
                   }
             </div>
          </div>
@@ -64,7 +64,7 @@
     console.log("Selected index:", tabindex());
   });
 
-  const items100 = new Array(20).fill(0).map((_, index) => ({ id: index }));
+  const items100 = new Array(20).fill(0).map((_, index) => ({ id: index, label: `Item ${index + 1}` }));
   const items = signal(items100);
 
   const controls = signal({
