@@ -760,9 +760,8 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
             overflow-y: auto;
         }
         .loading { text-align: center; padding: 20px; color: #666; }
-        /* Scoped styles from playground */
-        ${scopedStyle}
     </style>
+    <style id="playground-scoped-style">${scopedStyle}</style>
 </head>
 <body>
     <div id="root"></div>
@@ -1009,8 +1008,13 @@ const processImports = async (scriptContent: string): Promise<{transformedConten
       const ceScriptMatch = targetFile.content.match(/<script>([\s\S]*?)<\/script>/)
       const ceScriptContent = ceScriptMatch ? ceScriptMatch[1].trim() : ""
 
-      const ceStyleMatch = targetFile.content.match(/<style\s+scoped>([\s\S]*?)<\/style>/) || targetFile.content.match(/<style>([\s\S]*?)<\/style>/)
-      const ceStyle = ceStyleMatch ? ceStyleMatch[1].trim() : ""
+      // Extract all style tags
+      const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/g
+      let ceStyle = ""
+      let styleMatch
+      while ((styleMatch = styleRegex.exec(targetFile.content)) !== null) {
+        ceStyle += styleMatch[1].trim() + "\n"
+      }
 
       // Recursively process imports in the .ce file
       const processedCeScript = await processImports(ceScriptContent)
@@ -1019,7 +1023,7 @@ const processImports = async (scriptContent: string): Promise<{transformedConten
       processedCeScript.dependencies.forEach(dep => dependencies.add(dep))
 
       const ceTemplate = targetFile.content.replace(/<script>[\s\S]*?<\/script>/, "")
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/, "")
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/g, "")
         .replace(/^\s+|\s+$/g, '')
 
       let parsedCeTemplate
@@ -1036,7 +1040,7 @@ const processImports = async (scriptContent: string): Promise<{transformedConten
           const $props = useProps($$props);
           const defineProps = useDefineProps($$props);
           ${processedCeScript.transformedContent}
-          const __style = \`${ceStyle}\`;
+          const __style = ${JSON.stringify(ceStyle)};
           if (__style) {
             const styleEl = document.createElement('style');
             styleEl.textContent = __style;
@@ -1190,9 +1194,13 @@ const runCode = async () => {
     const scriptMatch = mainFile.content.match(/<script>([\s\S]*?)<\/script>/)
     let scriptContent = scriptMatch ? scriptMatch[1].trim() : ""
 
-    // Extract scoped style content
-    const styleMatch = mainFile.content.match(/<style\s+scoped>([\s\S]*?)<\/style>/) || mainFile.content.match(/<style>([\s\S]*?)<\/style>/)
-    let scopedStyle = styleMatch ? styleMatch[1].trim() : ""
+    // Extract all style tags
+    const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/g
+    let scopedStyle = ""
+    let styleMatch
+    while ((styleMatch = styleRegex.exec(mainFile.content)) !== null) {
+      scopedStyle += styleMatch[1].trim() + "\n"
+    }
 
     // Process all imports and resolve local files
     const importResult = await processImports(scriptContent)
@@ -1207,8 +1215,9 @@ const runCode = async () => {
       }
     })
  
-    // Extract template (everything except script)
+    // Extract template (everything except script and style)
     const template = mainFile.content.replace(/<script>[\s\S]*?<\/script>/, "")
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/g, "")
       .replace(/^\s+|\s+$/g, '')
     
     let parsedTemplate

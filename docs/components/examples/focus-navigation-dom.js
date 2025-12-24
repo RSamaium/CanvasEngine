@@ -5,7 +5,7 @@ export default {
   files: {
     "app.ce": `
     <Canvas>
-    <Container x={400} y={300}>
+    <Container>
   <Text
     text="Focus Navigation DOM Example"
     x={0}
