@@ -443,8 +443,7 @@ const click = () => {
 </Canvas>
 
 <script>
-import { signal, computed } from 'canvasengine'
-import { Joystick } from '@canvasengine/presets'
+import { signal, computed, Joystick } from 'canvasengine'
 
 const angle = signal(0)
 const direction = signal("up")
@@ -580,7 +579,7 @@ const multiCycleFlashConfig = {
         
         <Container flexDirection="row" gap={30}>
             <Container flexDirection="column" alignItems="center" gap={10}>
-                <Text text="Basic Shake" color="#ecf0f1" size={14} />
+               
                 <Rect 
                     color="#e74c3c" 
                     width={100} 
@@ -592,7 +591,7 @@ const multiCycleFlashConfig = {
             </Container>
             
             <Container flexDirection="column" alignItems="center" gap={10}>
-                <Text text="Horizontal" color="#ecf0f1" size={14} />
+               
                 <Rect 
                     color="#3498db" 
                     width={100} 
@@ -604,7 +603,7 @@ const multiCycleFlashConfig = {
             </Container>
             
             <Container flexDirection="column" alignItems="center" gap={10}>
-                <Text text="Vertical" color="#ecf0f1" size={14} />
+               
                 <Rect 
                     color="#2ecc71" 
                     width={100} 
@@ -616,7 +615,7 @@ const multiCycleFlashConfig = {
             </Container>
             
             <Container flexDirection="column" alignItems="center" gap={10}>
-                <Text text="Intense Shake" color="#ecf0f1" size={14} />
+              
                 <Rect 
                     color="#f39c12" 
                     width={100} 

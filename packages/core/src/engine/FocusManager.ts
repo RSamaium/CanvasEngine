@@ -1,5 +1,5 @@
 import { isSignal, signal, Signal } from "@signe/reactive";
-import { Element } from "./reactive";
+import { Element, isElementFrozen } from "./reactive";
 import { CanvasViewport } from "../components/Viewport";
 import { SignalOrPrimitive } from "../components/types";
 
@@ -23,6 +23,7 @@ export interface ScrollOptions {
  */
 interface FocusContainerData {
   id: string;
+  element?: Element;
   focusables: Map<number, Element>;
   currentIndex: Signal<number | null>;
   focusedElement: Signal<Element | null>;
@@ -161,6 +162,11 @@ export class FocusManager {
   navigate(containerId: string, direction: 'next' | 'previous'): void {
     const container = this.containers.get(containerId);
     if (!container) {
+      return;
+    }
+
+    // Check if container is frozen (including parent containers)
+    if (container.element && isElementFrozen(container.element)) {
       return;
     }
 

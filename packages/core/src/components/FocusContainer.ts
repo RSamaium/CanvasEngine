@@ -114,6 +114,9 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
   async onMount(element: Element<CanvasFocusContainer>): Promise<void> {
     await super.onMount(element, undefined);
 
+    // Update container with element reference for freeze checking
+    focusManager.updateContainer(this.containerId, { element });
+
     // Apply focusNavigation directive if controls are provided
     if (element.props.controls) {
       const focusNavDirective = applyDirective(element, 'focusNavigation');

@@ -43,7 +43,9 @@ export const dependencyConfig = {
     "Svg",
     "DOMContainer",
     "DOMElement",
-    "Button"
+    "Button",
+    "Joystick",
+    "FocusContainer"
   ]
   
   /**

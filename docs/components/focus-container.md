@@ -1,5 +1,9 @@
 # FocusContainer Component
 
+<script setup>
+import focusNavigationDomExample from './examples/focus-navigation-dom.js'
+</script>
+
 The `FocusContainer` component provides a flexible and primitive focus navigation system for CanvasEngine. It allows you to manage focus navigation between focusable child elements using keyboard, gamepad, or programmatic control.
 
 This component is especially useful for creating menu systems, lists, and any interface that requires keyboard/gamepad navigation.
@@ -55,6 +59,21 @@ For DOM elements (inside DOMContainer), use `attrs.tabindex`:
   </DOMContainer>
 </FocusContainer>
 ```
+
+## DOM Navigation with Scoped Styles
+
+Here's a complete example demonstrating focus navigation within a `DOMContainer` with scoped CSS styling. This example shows how keyboard controls can be used to navigate through DOM buttons, with visual feedback through focus states.
+
+<Playground v-bind="focusNavigationDomExample" />
+
+### Key Features
+
+- **Keyboard Navigation**: Use arrow keys (up/down) to navigate through the button list
+- **Gamepad Support**: Automatically works with gamepad directional buttons
+- **Action Trigger**: Press Space or Enter to trigger button action
+- **Scoped Styles**: CSS is scoped to the playground instance and properly injected
+- **Smooth Transitions**: Visual feedback with hover and focus states via CSS
+- **Auto-Scroll**: Container has overflow handling for scrollable content
 
 ## Navigation with Controls
 
@@ -160,6 +179,37 @@ const handleFocusChange = (index, element) => {
   <Button tabindex={1} text="Item 2" />
   <Button tabindex={2} text="Item 3" />
 </FocusContainer>
+```
+
+### Two-way Synchronization with Signals
+
+You can pass a signal directly to the `tabindex` property of the `FocusContainer`. This enables two-way synchronization:
+1. When the focus changes (via keyboard, gamepad, or `FocusManager`), the signal is automatically updated.
+2. When you update the signal manually, the focus automatically moves to the new index.
+
+> [!IMPORTANT]
+> When using a signal for `tabindex`, you **should not** update the same signal inside `onFocusChange` or `handleFocusChange`, as this is handled automatically and could lead to unnecessary updates.
+
+```html
+<script>
+import { signal } from 'canvasengine'
+
+const selectedIndex = signal(0)
+
+// You can change the focus at any time by updating the signal
+const goToSecondItem = () => {
+  selectedIndex.set(1)
+}
+</script>
+
+<!-- The signal is automatically synced with the focus state -->
+<FocusContainer tabindex={selectedIndex}>
+  <Button tabindex={0} text="Item 1" />
+  <Button tabindex={1} text="Item 2" />
+  <Button tabindex={2} text="Item 3" />
+</FocusContainer>
+
+<Button text="Go to Item 2" click={goToSecondItem} />
 ```
 
 ### Using Hooks

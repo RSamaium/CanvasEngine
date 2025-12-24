@@ -685,7 +685,7 @@ const clearPreview = () => {
  * Generate HTML content for the iframe sandbox
  * Creates a complete HTML page with CanvasEngine imports and bootstrap code
  */
-const generateIframeContent = (componentFunction: string, dependencies: Set<string> = new Set()): string => {
+const generateIframeContent = (componentFunction: string, dependencies: Set<string> = new Set(), scopedStyle: string = ''): string => {
 
   // Generate script tags for dependencies
   const dependencyScripts = Array.from(dependencies)
@@ -760,6 +760,8 @@ const generateIframeContent = (componentFunction: string, dependencies: Set<stri
             overflow-y: auto;
         }
         .loading { text-align: center; padding: 20px; color: #666; }
+        /* Scoped styles from playground */
+        ${scopedStyle}
     </style>
 </head>
 <body>
@@ -1006,16 +1008,20 @@ const processImports = async (scriptContent: string): Promise<{transformedConten
       // Parse .ce file like a component
       const ceScriptMatch = targetFile.content.match(/<script>([\s\S]*?)<\/script>/)
       const ceScriptContent = ceScriptMatch ? ceScriptMatch[1].trim() : ""
-      
+
+      const ceStyleMatch = targetFile.content.match(/<style\s+scoped>([\s\S]*?)<\/style>/) || targetFile.content.match(/<style>([\s\S]*?)<\/style>/)
+      const ceStyle = ceStyleMatch ? ceStyleMatch[1].trim() : ""
+
       // Recursively process imports in the .ce file
       const processedCeScript = await processImports(ceScriptContent)
-      
+
       // Merge dependencies from nested imports
       processedCeScript.dependencies.forEach(dep => dependencies.add(dep))
 
       const ceTemplate = targetFile.content.replace(/<script>[\s\S]*?<\/script>/, "")
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/, "")
         .replace(/^\s+|\s+$/g, '')
-      
+
       let parsedCeTemplate
       try {
         parsedCeTemplate = parser.parse(ceTemplate)
@@ -1023,13 +1029,19 @@ const processImports = async (scriptContent: string): Promise<{transformedConten
         const errorMsg = showErrorMessage(ceTemplate, parseError)
         throw new Error(`Error parsing template in ${normalizedPath}:\n${errorMsg}`)
       }
-      
-      // Generate component function for .ce file
+
+      // Generate component function for .ce file with style
       processedContent = `
         function ${getModuleName(normalizedPath)}($$props = {}) {
           const $props = useProps($$props);
           const defineProps = useDefineProps($$props);
           ${processedCeScript.transformedContent}
+          const __style = \`${ceStyle}\`;
+          if (__style) {
+            const styleEl = document.createElement('style');
+            styleEl.textContent = __style;
+            document.head.appendChild(styleEl);
+          }
           return ${parsedCeTemplate};
         }
       `
@@ -1174,10 +1186,14 @@ const runCode = async () => {
       throw new Error('app.ce file is required')
     }
     
-    // Extract the script content and template like in the compiler
+    // Extract the script, style, and template content like in the compiler
     const scriptMatch = mainFile.content.match(/<script>([\s\S]*?)<\/script>/)
     let scriptContent = scriptMatch ? scriptMatch[1].trim() : ""
-    
+
+    // Extract scoped style content
+    const styleMatch = mainFile.content.match(/<style\s+scoped>([\s\S]*?)<\/style>/) || mainFile.content.match(/<style>([\s\S]*?)<\/style>/)
+    let scopedStyle = styleMatch ? styleMatch[1].trim() : ""
+
     // Process all imports and resolve local files
     const importResult = await processImports(scriptContent)
     scriptContent = importResult.transformedContent
@@ -1226,7 +1242,7 @@ const runCode = async () => {
       `
       
       // Generate the complete HTML for the iframe
-      const iframeContent = generateIframeContent(componentFunction, orderedDependencies)
+      const iframeContent = generateIframeContent(componentFunction, orderedDependencies, scopedStyle)
 
       // Set up message listener for iframe communication
       messageListener = (event: MessageEvent) => {

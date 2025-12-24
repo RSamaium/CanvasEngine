@@ -1,28 +1,36 @@
-<Container x={400} y={300}>
-  <Text 
-    text="Focus Navigation DOM Example" 
-    x={0} 
-    y={-250} 
+export default {
+  title: "Focus Navigation with DOM",
+  description: "Navigate through a scrollable list of DOM buttons using keyboard controls (arrow keys or gamepad)",
+  defaultViewMode: "both",
+  files: {
+    "app.ce": `
+    <Canvas>
+    <Container x={400} y={300}>
+  <Text
+    text="Focus Navigation DOM Example"
+    x={0}
+    y={-250}
     style={{ fontSize: 32, fill: "#ecf0f1" }}
   />
-  
-  <FocusContainer 
-    tabindex={tabindex} 
+
+  <FocusContainer
+    tabindex={tabindex}
     controls={controls}
   >
     <DOMContainer>
       <div class="button-container">
-       <div>
+        <div>
           <div>
-              @for (item of items) {
-                  <button tabindex={@item.@id}>{@item.@label}</button>
-                }
+            @for (item of items) {
+              <button tabindex={@item.@id}>{@item.@label}</button>
+            }
           </div>
-       </div>
+        </div>
       </div>
     </DOMContainer>
   </FocusContainer>
 </Container>
+</Canvas>
 
 <style scoped>
   .button-container {
@@ -57,13 +65,12 @@
   import { signal, effect } from "canvasengine";
 
   const tabindex = signal(0);
-  
 
   effect(() => {
     console.log("Selected index:", tabindex());
   });
 
-  const items100 = new Array(20).fill(0).map((_, index) => ({ id: index, label: `Item ${index + 1}` }));
+  const items100 = new Array(20).fill(0).map((_, index) => ({ id: index, label: \`Item \${index + 1}\` }));
   const items = signal(items100);
 
   const controls = signal({
@@ -82,5 +89,6 @@
       enabled: true
     }
   });
-</script>
-  
+</script>`
+  }
+};
