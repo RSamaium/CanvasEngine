@@ -15,6 +15,8 @@ export type ObjectPosition = string;
 export type TransformOrigin = string;
 export type PositionType = 'relative' | 'absolute' | 'static';
 
+export type ObservablePointSignal = [number, number] | SignalOrPrimitive<[number, number]> | { x: number, y: number } | SignalOrPrimitive<{ x: number, y: number }>;
+
 export interface DisplayObjectProps {
     attach?: any;
     ref?: string;
@@ -48,9 +50,9 @@ export interface DisplayObjectProps {
     padding?: EdgeSize;
     border?: EdgeSize;
     absolute?: SignalOrPrimitive<boolean>;
-    scale?: SignalOrPrimitive<{ x: number, y: number } | number>;
-    anchor?: SignalOrPrimitive<{ x: number, y: number }>;
-    skew?: SignalOrPrimitive<{ x: number, y: number }>;
+    scale?: ObservablePointSignal | number;
+    anchor?: ObservablePointSignal;
+    skew?: ObservablePointSignal;
     tint?: SignalOrPrimitive<number>;
     rotation?: SignalOrPrimitive<number>;
     angle?: SignalOrPrimitive<number>;
@@ -58,7 +60,7 @@ export interface DisplayObjectProps {
     roundPixels?: SignalOrPrimitive<boolean>;
     cursor?: SignalOrPrimitive<string>;
     visible?: SignalOrPrimitive<boolean>;
-    pivot?: SignalOrPrimitive<{ x: number, y: number }>;
+    pivot?: ObservablePointSignal;
     filters?: any[];
     blendMode?: SignalOrPrimitive<PIXI.BLEND_MODES>;
     blur?: SignalOrPrimitive<number>;

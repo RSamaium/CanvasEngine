@@ -1,14 +1,15 @@
 import { Effect, effect, isSignal, signal, Signal, WritableSignal } from "@signe/reactive";
-import { Assets, Graphics as PixiGraphics } from "pixi.js";
+import { Assets, ObservablePoint, Graphics as PixiGraphics } from "pixi.js";
 import { createComponent, Element, registerComponent } from "../engine/reactive";
 import { ComponentInstance, DisplayObject } from "./DisplayObject";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { useProps } from "../hooks/useProps";
 import { SignalOrPrimitive } from "./types";
 import { isPercent } from "../utils/functions";
+import { setObservablePoint } from "../engine/utils";
 
 interface GraphicsProps extends DisplayObjectProps {
-  draw?: (graphics: PixiGraphics, width: number, height: number) => void;
+  draw?: (graphics: PixiGraphics, width: number, height: number, anchor?: [number, number]) => void;
 }
 
 interface RectProps extends DisplayObjectProps {
@@ -42,6 +43,8 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
   clearEffect: Effect;
   _width: WritableSignal<number>;
   _height: WritableSignal<number>;
+
+  isCustomAnchor = true;
   
   /**
    * Initializes the graphics component with reactive width and height handling.
@@ -74,6 +77,7 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
    */
   async onInit(props) {
     await super.onInit(props);
+    this.setObjectFit('none');
   }
 
   /**
@@ -89,6 +93,7 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
     // Use original signals from propObservables if available, otherwise create new ones
     const width = (isSignal(propObservables?.width) ? propObservables.width : signal(props.width || 0)) as WritableSignal<number>;
     const height = (isSignal(propObservables?.height) ? propObservables.height : signal(props.height || 0)) as WritableSignal<number>;
+    const anchor = (isSignal(propObservables?.anchor) ? propObservables.anchor : signal(props.anchor || [0, 0])) as WritableSignal<[number, number]>;
 
     // Store as class properties for access in other methods
     this._width = width;
@@ -102,11 +107,12 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
       this.clearEffect = effect(() => {
         const w = width();
         const h = height();
+        const a = anchor();
         if (typeof w == 'string' || typeof h == 'string') {
           return
         }
         this.clear();
-        props.draw?.(this, w, h);
+        props.draw?.(this, w, h, a);
         this.subjectInit.next(this)
       });
     }
@@ -169,6 +175,15 @@ export function Graphics(props: GraphicsProps) {
   return createComponent("Graphics", props);
 }
 
+const graphicsAnchor = (anchor, width, height) => {
+  const observableAnchor = new ObservablePoint({ _onUpdate: () => {} }, 0, 0);
+  setObservablePoint(observableAnchor, anchor);
+  const ax = observableAnchor.x;
+  const ay = observableAnchor.y;
+
+  return { x: -ax * width, y: -ay * height };
+}
+
 export function Rect(props: RectProps) {
   const { color, borderRadius, border } = useProps(props, {
     borderRadius: null,
@@ -176,11 +191,12 @@ export function Rect(props: RectProps) {
   })
 
   return Graphics({
-    draw: (g, width, height) => {
+    draw: (g, width, height, anchor) => {
+      const { x, y } = graphicsAnchor(anchor, width, height);
       if (borderRadius()) {
-        g.roundRect(0, 0, width, height, borderRadius());
+        g.roundRect(x, y, width, height, borderRadius());
       } else {
-        g.rect(0, 0, width, height);
+        g.rect(x, y, width, height);
       }
       if (border) {
         g.stroke(border);
@@ -191,45 +207,19 @@ export function Rect(props: RectProps) {
   })
 }
 
-function drawShape(g: PixiGraphics, shape: 'circle' | 'ellipse', props: {
-  radius: Signal<number>;
-  color: Signal<string>;
-  border: Signal<number>;
-} | {
-  width: Signal<number>;
-  height: Signal<number>;
-  color: Signal<string>;
-  border: Signal<number>;
-}) {
-  const { color, border } = props;
-  if ('radius' in props) {
-    g.circle(0, 0, props.radius());
-  } else {
-    g.ellipse(0, 0, props.width() / 2, props.height() / 2);
-  }
-  if (border()) {
-    g.stroke(border());
-  }
-  g.fill(color());
-}
-
 export function Circle(props: CircleProps) {  
-  const { radius, color, border } = useProps(props, {
-    border: null
+  const { color, border, radius } = useProps(props, {
+    border: null,
+    radius: null
   })
   return Graphics({
-    draw: (g) => drawShape(g, 'circle', { radius, color, border }),
-    ...props
-  })
-}
-
-export function Ellipse(props: EllipseProps) {
-  const { width, height, color, border } = useProps(props, {
-    border: null
-  })
-  return Graphics({
-    draw: (g, gWidth, gHeight) => {
-      g.ellipse(0, 0, gWidth / 2, gHeight / 2);
+    draw: (g, width, height, anchor) => {
+      const { x, y } = graphicsAnchor(anchor, width, height);
+      if (width == height || height == 0) {
+        g.circle(x, y, radius() || width);
+      } else {
+        g.ellipse(x, y, width, height);
+      }
       if (border()) {
         g.stroke(border());
       }
@@ -239,17 +229,22 @@ export function Ellipse(props: EllipseProps) {
   })
 }
 
+export function Ellipse(props: EllipseProps) {
+  return Circle(props as CircleProps);
+}
+
 export function Triangle(props: TriangleProps) {
-  const { width, height, color, border } = useProps(props, {
+  const { color, border } = useProps(props, {
     border: null,
     color: '#000'
   })
   return Graphics({
-    draw: (g, gWidth, gHeight) => {
-      g.moveTo(0, gHeight);
-      g.lineTo(gWidth / 2, 0);
-      g.lineTo(gWidth, gHeight);
-      g.lineTo(0, gHeight);
+    draw: (g, gWidth, gHeight, anchor) => {
+      const { x, y } = graphicsAnchor(anchor, gWidth, gHeight);
+      g.moveTo(x, y + gHeight);
+      g.lineTo(x + gWidth / 2, y);
+      g.lineTo(x + gWidth, y + gHeight);
+      g.lineTo(x, y + gHeight);
       g.fill(color());
       if (border) {
         g.stroke(border);
