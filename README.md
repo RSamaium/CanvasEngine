@@ -35,8 +35,8 @@ https://canvasengine.net
         anchor={0.5}
         rotation
         scale
-        @pointerenter={onEnter} 
-        @pointerleave={onLeave}
+        pointerenter={onEnter} 
+        pointerleave={onLeave}
     />
     <Text text size={70} fontFamily="Helvetica" x={90} y={-30} />
 </Container>

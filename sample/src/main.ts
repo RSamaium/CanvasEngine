@@ -6,7 +6,7 @@ import { bootstrapCanvas } from 'canvasengine';
 // Uncomment to test global asset loader (simple):
 // import App from './loader.ce'
 // Uncomment to test global asset loader (with spritesheets):
-import App from './spritesheet.ce'
+import App from './controls-buttons.ce'
 
 bootstrapCanvas(document.getElementById("root"), App).then(() => {
     console.log("CanvasEngine initialized");

@@ -443,7 +443,7 @@ const click = () => {
 </Canvas>
 
 <script>
-import { signal, computed, Joystick } from 'canvasengine'
+import { signal, computed } from 'canvasengine'
 
 const angle = signal(0)
 const direction = signal("up")

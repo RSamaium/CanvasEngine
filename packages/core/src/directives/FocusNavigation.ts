@@ -1,5 +1,5 @@
-import { Directive, registerDirective } from "../engine/directive";
-import { Element } from "../engine/reactive";
+import { Directive, registerDirective, applyDirective } from "../engine/directive";
+import { type Element } from "../engine/reactive";
 import { focusManager } from "../engine/FocusManager";
 import { ControlsDirective } from "./Controls";
 import { Controls } from "./ControlsBase";
@@ -181,7 +181,6 @@ export class FocusNavigationDirective extends Directive {
 
     // If Controls directive doesn't exist, create it
     if (!this.controlsDirective) {
-      const { applyDirective } = require("../engine/reactive");
       const controlsDirective = applyDirective(element, 'controls');
       if (controlsDirective) {
         if (!element.directives) {

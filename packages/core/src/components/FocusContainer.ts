@@ -1,5 +1,5 @@
 import { Container as PixiContainer } from "pixi.js";
-import { createComponent, registerComponent, Element } from "../engine/reactive";
+import { createComponent, registerComponent, type Element } from "../engine/reactive";
 import { applyDirective } from "../engine/directive";
 import { ComponentInstance, DisplayObject } from "./DisplayObject";
 import { ComponentFunction, h } from "../engine/signal";
