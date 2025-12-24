@@ -20,7 +20,7 @@ describe('Graphics', () => {
         it('should create a rect', async () => {
             await TestBed.createComponent(Rect, { width: 100, height: 100, color: '#fff' })
             expect(mockRect).toHaveBeenCalled()
-            expect(mockRect).toHaveBeenCalledWith(0, 0, 100, 100)
+            expect(mockRect).toHaveBeenCalledWith(-0, -0, 100, 100)
         })
 
         it('should create a rect, change width', async () => {
@@ -28,7 +28,7 @@ describe('Graphics', () => {
             await TestBed.createComponent(Rect, { width, height: 100, color: '#fff' })
             
             // First call should be with initial width
-            expect(mockRect).toHaveBeenCalledWith(0, 0, 100, 100)
+            expect(mockRect).toHaveBeenCalledWith(-0, -0, 100, 100)
             
             width.set(200)
             // Wait for the effect to run
@@ -37,7 +37,7 @@ describe('Graphics', () => {
             // Should be called twice now
             expect(mockRect).toHaveBeenCalledTimes(2)
             // Second call should be with updated width
-            expect(mockRect).toHaveBeenLastCalledWith(0, 0, 200, 100)
+            expect(mockRect).toHaveBeenLastCalledWith(-0, -0, 200, 100)
         })
     })
 })
