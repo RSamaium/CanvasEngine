@@ -1,17 +1,23 @@
 
 <Canvas>
     <Container>
-        <Sprite 
-            sheet={{
-                definition,
-                playing: "default"
-            }}
-        />
+        @for (item of items) {
+            <Sprite 
+                sheet={{
+                    definition: item.definition,
+                    playing: "default"
+                }}
+            />
+        }
     </Container>
 </Canvas>
 
 <script>
-const definition = {
+import { signal } from 'canvasengine';
+
+const definition =  async () => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return {
     id: "explosion",
     image: "./exp.png",
     framesWidth: 4,
@@ -37,11 +43,23 @@ const definition = {
                     { time: 140, frameX: 2, frameY: 3 },
                     { time: 150, frameX: 3, frameY: 3 },
                 ]
-             ]
+                ]
+            }
         }
     }
 }
 
+const items =  signal([
+    
+])
+
+setTimeout(() => {
+    items.set([
+        {
+            definition: definition()
+        }
+    ])
+}, 2000)
 </script>
 
         

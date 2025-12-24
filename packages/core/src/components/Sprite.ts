@@ -319,7 +319,8 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       this.update(value);
     });
     if (definition) {
-      this.spritesheet = definition.value ?? definition;
+      const resolvedDefinition = definition instanceof Promise ? await definition : definition;
+      this.spritesheet = resolvedDefinition.value ?? resolvedDefinition;
       await this.createAnimations();
     }
     if (sheet.params) {
@@ -420,7 +421,8 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     const definition = props.sheet?.definition ?? {};
 
     if (definition?.type === 'reset') {
-      this.spritesheet = definition.value ?? definition;
+      const resolvedValue = definition.value instanceof Promise ? await definition.value : definition.value;
+      this.spritesheet = resolvedValue ?? definition;
       await this.resetAnimations();
     }
 
