@@ -5,9 +5,11 @@ import { TestBed } from "../../packages/core/testing";
 describe('Dependencies Prop', () => {
     test('component mounts immediately with defined signal dependency', async () => {
         const mockMount = vi.fn();
+        const mockCreate = vi.fn();
         const dep = signal('defined value');
 
         function MyComponent() {
+            mockCreate();
             mount((element) => {
                 mockMount(element);
             });
@@ -17,13 +19,16 @@ describe('Dependencies Prop', () => {
         await TestBed.createComponent(MyComponent, { dependencies: [dep] });
 
         expect(mockMount).toHaveBeenCalledTimes(1);
+        expect(mockCreate).toHaveBeenCalledTimes(1);
     });
 
     test('component does not mount with undefined signal dependency', async () => {
         const mockMount = vi.fn();
+        const mockCreate = vi.fn();
         const dep = signal<string | undefined>(undefined);
 
         function MyComponent() {
+            mockCreate();
             mount((element) => {
                 mockMount(element);
             });
@@ -34,6 +39,7 @@ describe('Dependencies Prop', () => {
 
         // Should not have mounted because dependency is undefined
         expect(mockMount).toHaveBeenCalledTimes(0);
+        expect(mockCreate).toHaveBeenCalledTimes(0);
     });
 
     test('component mounts when signal dependency becomes defined', async () => {
@@ -101,6 +107,7 @@ describe('Dependencies Prop', () => {
         const promiseDep = Promise.resolve('promise value');
 
         function MyComponent() {
+
             mount((element) => {
                 mockMount(element);
             });

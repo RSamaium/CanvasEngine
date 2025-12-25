@@ -1,9 +1,12 @@
 <Canvas>
   <Container>
-    <Child />
+    <Child dependencies={[test]} />
   </Container>
 </Canvas>
 
 <script>
+  import { signal } from 'canvasengine'
   import Child from './child.ce'
+
+  const test = signal(undefined)
 </script>

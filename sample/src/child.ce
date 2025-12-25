@@ -17,7 +17,5 @@
         console.log(element)
     })
 
-    tick((params) => {
-        console.log('test')
-    })
+    console.log('child')
 </script>

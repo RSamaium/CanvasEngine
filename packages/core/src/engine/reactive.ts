@@ -121,6 +121,54 @@ export function registerAllComponents() {
 }
 
 /**
+ * Checks if all dependencies are ready (not undefined).
+ * Handles signals synchronously and promises asynchronously.
+ * For reactive signals, sets up subscriptions to mount when all become ready.
+ * 
+ * @param deps - Array of signals, promises, or direct values
+ * @returns Promise<boolean> - true if all dependencies are ready
+ */
+export async function checkDependencies(
+  deps: any[]
+): Promise<boolean> {
+  const values = await Promise.all(
+    deps.map(async (dep) => {
+      if (isSignal(dep)) {
+        return dep(); // Read current signal value
+      } else if (isPromise(dep)) {
+        return await dep; // Await promise resolution
+      }
+      return dep; // Direct value
+    })
+  );
+  return values.every((v) => v !== undefined);
+}
+
+export function waitForDependencies(deps: any[]): Promise<void> {
+  return new Promise(async (resolve) => {
+    const ready = await checkDependencies(deps);
+    if (ready) {
+      resolve();
+      return;
+    }
+
+    const signalDeps = deps.filter((dep) => isSignal(dep));
+    if (signalDeps.length === 0) {
+      return;
+    }
+
+    const signalObservables = signalDeps.map((sig) => sig.observable);
+    const subscription = combineLatest(signalObservables).subscribe(async () => {
+      const allReady = await checkDependencies(deps);
+      if (allReady) {
+        subscription.unsubscribe();
+        resolve();
+      }
+    });
+  });
+}
+
+/**
  * Checks if an element is currently frozen.
  * An element is frozen when the `freeze` prop is set to `true` (either as a boolean or Signal<boolean>),
  * or when any of its parent elements are frozen (recursive freeze propagation).
@@ -376,22 +424,12 @@ export function createComponent(tag: string, props?: Props): Element {
    * @param deps - Array of signals, promises, or direct values
    * @returns Promise<boolean> - true if all dependencies are ready
    */
-  async function checkDependencies(
-    deps: any[]
-  ): Promise<boolean> {
-    const values = await Promise.all(
-      deps.map(async (dep) => {
-        if (isSignal(dep)) {
-          return dep(); // Read current signal value
-        } else if (isPromise(dep)) {
-          return await dep; // Await promise resolution
-        }
-        return dep; // Direct value
-      })
-    );
-    return values.every((v) => v !== undefined);
-  }
 
+
+  /**
+   * Sets up subscriptions to reactive signal dependencies.
+   * When all signals become defined, mounts the component.
+   */
   /**
    * Sets up subscriptions to reactive signal dependencies.
    * When all signals become defined, mounts the component.

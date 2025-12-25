@@ -2,8 +2,10 @@ import {
   Observable,
   Subscription
 } from "rxjs";
+import { isSignal } from "@signe/reactive";
 import type { Element } from "./reactive";
-import { isElementFrozen } from "./reactive";
+import { isElementFrozen, waitForDependencies } from "./reactive";
+import { isPromise } from "./utils";
 import { Tick } from "../directives/Scheduler";
 import { Container } from "../components";
 
@@ -22,16 +24,16 @@ export let mountTracker: MountFunction | null = null;
  * @param {(element: Element) => void} fn - The function to be called on mount.
  * @example
  * ```ts
- * mount((el) => {
- *   console.log('mounted', el);
+  * mount((el) => {
+ * console.log('mounted', el);
  * });
  * ```
  * Unmount the component by returning a function:
  * ```ts
- * mount((el) => {
- *   console.log('mounted', el);
+  * mount((el) => {
+ * console.log('mounted', el);
  *   return () => {
- *     console.log('unmounted', el);
+ * console.log('unmounted', el);
  *   }
  * });
  * ```
@@ -45,8 +47,8 @@ export function mount(fn: (element: Element) => void) {
  * @param {(tickValue: Tick, element: Element) => void} fn - The function to be called on each tick.
  * @example
  * ```ts
- * tick((tickValue, el) => {
- *   console.log('tick', tickValue, el);
+  * tick((tickValue, el) => {
+ * console.log('tick', tickValue, el);
  * });
  * ```
  */
@@ -78,29 +80,29 @@ export function tick(fn: (tickValue: Tick, element: Element) => void) {
  * @returns {ReturnType<C>}
  * @example
  * ```ts
- * const el = h(MyComponent, {
- *   x: 100,
- *   y: 100,
- * });
+  * const el = h(MyComponent, {
+    *   x: 100,
+    *   y: 100,
+    * });
  * ```
  * 
  * with children:
  * ```ts
- * const el = h(MyComponent, {
- *   x: 100,
- *   y: 100,
- * }, 
- *   h(MyChildComponent, {
- *     x: 50,
- *     y: 50,
- *   }),
+  * const el = h(MyComponent, {
+    *   x: 100,
+    *   y: 100,
+    * }, 
+ * h(MyChildComponent, {
+      *     x: 50,
+      *     y: 50,
+      *   }),
  * );
  * ```
  */
-export function h<C extends ComponentFunction<any>>(
+function _h<C extends ComponentFunction<any>>(
   componentFunction: C | Element,
   props: Parameters<C>[0] = {} as Parameters<C>[0],
-  ...children: any[]
+  children: any[]
 ): ReturnType<C> {
   const allSubscriptions = new Set<Subscription>();
   const allMounts = new Set<MountFunction>();
@@ -124,7 +126,7 @@ export function h<C extends ComponentFunction<any>>(
       component = componentFunction[0]
     }
     else {
-      component = h(Container, {}, ...componentFunction) as Element
+      component = _h(Container, {}, componentFunction) as Element
     }
   }
   else if ('tag' in componentFunction) {
@@ -166,4 +168,59 @@ export function h<C extends ComponentFunction<any>>(
   mountTracker = null;
 
   return component as ReturnType<C>;
+}
+
+/**
+ * Add tracking for subscriptions and mounts, then create an element from a component function.
+ * @template C
+ * @param {C} componentFunction - The component function to create an element from.
+ * @param {Parameters<C>[0]} [props={}] - The props to pass to the component function.
+ * @param {...any[]} children - The children elements of the component.
+ * @returns {ReturnType<C>}
+ * @example
+ * ```ts
+  * const el = h(MyComponent, {
+    *   x: 100,
+    *   y: 100,
+    * });
+ * ```
+ * 
+ * with children:
+ * ```ts
+  * const el = h(MyComponent, {
+    *   x: 100,
+    *   y: 100,
+    * }, 
+ * h(MyChildComponent, {
+      *     x: 50,
+      *     y: 50,
+      *   }),
+ * );
+ * ```
+ */
+export function h<C extends ComponentFunction<any>>(
+  componentFunction: C | Element,
+  props: Parameters<C>[0] = {} as Parameters<C>[0],
+  ...children: any[]
+): ReturnType<C> {
+  if (props?.dependencies) {
+    const hasPromise = props.dependencies.some(isPromise);
+    if (!hasPromise) {
+      const allReady = props.dependencies.every(dep => {
+        if (isSignal(dep)) return dep() !== undefined;
+        return dep !== undefined;
+      });
+      if (allReady) {
+        return _h(componentFunction, props, children);
+      }
+    }
+
+    return new Observable(subscriber => {
+      waitForDependencies(props.dependencies).then(() => {
+        const el = _h(componentFunction, props, children);
+        subscriber.next(el);
+      });
+    }) as any;
+  }
+  return _h(componentFunction, props, children);
 }
