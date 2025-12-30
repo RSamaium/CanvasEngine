@@ -195,7 +195,24 @@ export function DisplayObject(extendClass) {
       this.#element = element;
       this.#canvasContext = element.props.context;
       if (element.parent) {
-        const instance = element.parent.componentInstance as DisplayObject;
+        let parentElement = element.parent;
+        let instance = parentElement.componentInstance as DisplayObject;
+        if (typeof (instance as any)?.addChild !== "function") {
+          let search = parentElement.parent;
+          while (search && typeof (search.componentInstance as any)?.addChild !== "function") {
+            search = search.parent;
+          }
+          if (search && typeof (search.componentInstance as any)?.addChild === "function") {
+            parentElement = search;
+            instance = parentElement.componentInstance as DisplayObject;
+          } else {
+            console.warn("DisplayObject mount skipped: parent has no addChild", {
+              child: element.tag,
+              parent: element.parent?.tag,
+            });
+            return;
+          }
+        }
         if (instance.isFlex && !this.layout && !this.disableLayout) {
           try {
             this.layout = {};
@@ -203,7 +220,7 @@ export function DisplayObject(extendClass) {
             console.warn('Failed to set layout:', error);
           }
         }
-        if (index === undefined) {
+        if (index === undefined || parentElement !== element.parent || typeof (instance as any)?.addChildAt !== "function") {
           instance.addChild(this);
         } else {
           instance.addChildAt(this, index);

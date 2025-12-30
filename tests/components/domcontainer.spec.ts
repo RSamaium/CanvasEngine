@@ -84,6 +84,33 @@ describe('DOMContainer and DOMElement Components', () => {
             expect((containerElement.componentInstance as any).alpha).toBe(0.8)
             expect((containerElement.componentInstance as any).visible).toBe(true)
         })
+
+        test('supports nested DOMContainer inside DOMElement', async () => {
+            const containerElement = await TestBed.createComponent(DOMContainer, {}, [
+                DOMElement({
+                    element: 'div',
+                    attrs: { class: 'outer' },
+                    children: [
+                        DOMContainer({
+                            children: [
+                                DOMElement({
+                                    element: 'button',
+                                    textContent: 'test'
+                                })
+                            ]
+                        })
+                    ]
+                })
+            ])
+
+            expect(containerElement).toBeDefined()
+            const wrapperDiv = (containerElement.componentInstance as any).element
+            const outerDiv = wrapperDiv.querySelector('.outer')
+            expect(outerDiv).toBeDefined()
+            expect(outerDiv.children.length).toBe(1)
+            expect(outerDiv.children[0].tagName.toLowerCase()).toBe('div')
+            expect(outerDiv.children[0].querySelector('button')?.textContent).toBe('test')
+        })
     })
 
     describe('DOMElement Component', () => {
