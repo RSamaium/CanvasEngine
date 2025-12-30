@@ -1,4 +1,5 @@
 import { DOMContainer as PixiDOMContainer } from "pixi.js";
+import { effect } from "@signe/reactive";
 import {
   createComponent,
   Element,
@@ -8,6 +9,7 @@ import { ComponentInstance, DisplayObject } from "./DisplayObject";
 import { ComponentFunction, h } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { CanvasDOMElement, DOMElement } from "./DOMElement";
+import { isPercent } from "../utils/functions";
 
 
 /**
@@ -107,6 +109,99 @@ const EVENTS = [
 
 export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
   disableLayout = true;
+  private canvasSizeEffect: any = null;
+
+  private hasDomContainerAncestor(): boolean {
+    const element = this.getElement();
+    let parent = element?.parent;
+    while (parent) {
+      if (parent.tag === "DOMContainer") return true;
+      parent = parent.parent;
+    }
+    return false;
+  }
+
+  private getPercentRatio(value: string): number | null {
+    const parsed = parseFloat(value);
+    if (Number.isNaN(parsed)) return null;
+    return parsed / 100;
+  }
+
+  private getCanvasSize() {
+    const canvasSize = this.fullProps?.context?.canvasSize;
+    return typeof canvasSize === "function" ? canvasSize() : canvasSize;
+  }
+
+  private shouldUseCanvasPercent(): boolean {
+    const widthProp = this.fullProps?.width;
+    const heightProp = this.fullProps?.height;
+    if (!isPercent(widthProp) && !isPercent(heightProp)) return false;
+    return !this.hasDomContainerAncestor();
+  }
+
+  private syncCanvasSizeEffect() {
+    const shouldTrack = this.shouldUseCanvasPercent();
+    if (shouldTrack && !this.canvasSizeEffect) {
+      const canvasSize = this.fullProps?.context?.canvasSize;
+      if (typeof canvasSize === "function") {
+        this.canvasSizeEffect = effect(() => {
+          canvasSize();
+          this.applyElementSize();
+        });
+      }
+    } else if (!shouldTrack && this.canvasSizeEffect) {
+      this.canvasSizeEffect.subscription?.unsubscribe();
+      this.canvasSizeEffect = null;
+    }
+  }
+
+  private applyElementSize() {
+    if (!this.element) return;
+    const widthProp = this.fullProps?.width;
+    const heightProp = this.fullProps?.height;
+    const useCanvasSize = this.shouldUseCanvasPercent();
+    const canvasSize = useCanvasSize ? this.getCanvasSize() : null;
+
+    if (widthProp !== undefined) {
+      if (isPercent(widthProp)) {
+        if (useCanvasSize) {
+          const ratio = this.getPercentRatio(widthProp);
+          if (ratio !== null) {
+            const baseWidth = (canvasSize?.width !== undefined)
+              ? canvasSize.width
+              : this.getWidth();
+            this.element.style.width = `${baseWidth * ratio}px`;
+          }
+        } else {
+          this.element.style.width = widthProp;
+        }
+      } else if (typeof widthProp === "number") {
+        this.element.style.width = `${widthProp}px`;
+      } else if (typeof widthProp === "string") {
+        this.element.style.width = widthProp;
+      }
+    }
+
+    if (heightProp !== undefined) {
+      if (isPercent(heightProp)) {
+        if (useCanvasSize) {
+          const ratio = this.getPercentRatio(heightProp);
+          if (ratio !== null) {
+            const baseHeight = (canvasSize?.height !== undefined)
+              ? canvasSize.height
+              : this.getHeight();
+            this.element.style.height = `${baseHeight * ratio}px`;
+          }
+        } else {
+          this.element.style.height = heightProp;
+        }
+      } else if (typeof heightProp === "number") {
+        this.element.style.height = `${heightProp}px`;
+      } else if (typeof heightProp === "string") {
+        this.element.style.height = heightProp;
+      }
+    }
+  }
 
   onInit(props: any) {
     // Handle internal _scopeClass prop for scoped CSS
@@ -136,6 +231,33 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
 
     const div = h(DOMElement, divProps, props.children) as unknown as Element<CanvasDOMElement>;
     this.element = div.componentInstance.element;
+  }
+
+  async onMount(element: Element<DisplayObject>, index?: number) {
+    await super.onMount(element, index);
+    this.syncCanvasSizeEffect();
+    this.applyElementSize();
+  }
+
+  onUpdate(props: any) {
+    super.onUpdate(props);
+    this.syncCanvasSizeEffect();
+    this.applyElementSize();
+  }
+
+  protected onLayoutComputed() {
+    this.applyElementSize();
+  }
+
+  async onDestroy(parent: Element<DisplayObject>, afterDestroy?: () => void) {
+    const _afterDestroy = () => {
+      if (this.canvasSizeEffect) {
+        this.canvasSizeEffect.subscription?.unsubscribe();
+        this.canvasSizeEffect = null;
+      }
+      if (afterDestroy) afterDestroy();
+    };
+    await super.onDestroy(parent, _afterDestroy);
   }
 }
 

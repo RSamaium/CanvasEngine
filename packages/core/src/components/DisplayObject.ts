@@ -131,6 +131,8 @@ export function DisplayObject(extendClass) {
       return this.#element;
     }
 
+    protected onLayoutComputed(_event: any) {}
+
     get deltaRatio() {
       return this.#canvasContext?.scheduler?.tick.value.deltaRatio;
     }
@@ -236,6 +238,7 @@ export function DisplayObject(extendClass) {
               height: event.computedLayout.height,
             };
           }
+          this.onLayoutComputed(event);
         };
         this.on('layout', layoutHandler);
         this.#registeredEvents.set('layout', layoutHandler);
