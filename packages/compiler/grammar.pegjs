@@ -91,34 +91,7 @@
       return `h(DOMElement, { element: "${tagName}" })`;
     }
 
-    // Separate DisplayObject attributes from DOM attributes
-    const domAttrs = [];
-    const displayObjectAttrs = [];
-
-    attributes.forEach(attr => {
-      // Handle spread attributes
-      if (attr.startsWith('...')) {
-        displayObjectAttrs.push(attr);
-        return;
-      }
-
-      // Extract attribute name
-      let attrName;
-      if (attr.includes(':')) {
-        // Format: "name: value" or "'name': value"
-        attrName = attr.split(':')[0].trim().replace(/['"]/g, '');
-      } else {
-        // Standalone attribute
-        attrName = attr.replace(/['"]/g, '');
-      }
-
-      // Check if it's a DisplayObject attribute
-      if (displayObjectAttributes.has(attrName)) {
-        displayObjectAttrs.push(attr);
-      } else {
-        domAttrs.push(attr);
-      }
-    });
+    const { domAttrs, displayObjectAttrs } = splitAttributes(attributes);
 
     // Build the result
     const parts = [`element: "${tagName}"`];
@@ -132,6 +105,62 @@
     }
 
     return `h(DOMElement, { ${parts.join(', ')} })`;
+  }
+
+  function splitAttributes(attributes) {
+    const domAttrs = [];
+    const displayObjectAttrs = [];
+    const classValues = [];
+    let classInsertIndex = null;
+
+    attributes.forEach(attr => {
+      // Handle spread attributes
+      if (attr.startsWith('...')) {
+        displayObjectAttrs.push(attr);
+        return;
+      }
+
+      // Extract attribute name and value (if present)
+      let attrName;
+      let attrValue;
+      if (attr.includes(':')) {
+        const colonIndex = attr.indexOf(':');
+        attrName = attr.slice(0, colonIndex).trim().replace(/['"]/g, '');
+        attrValue = attr.slice(colonIndex + 1).trim();
+      } else {
+        // Standalone attribute
+        attrName = attr.replace(/['"]/g, '');
+      }
+
+      // Check if it's a DisplayObject attribute
+      if (displayObjectAttributes.has(attrName)) {
+        displayObjectAttrs.push(attr);
+        return;
+      }
+
+      if (attrName === 'class' && attrValue !== undefined) {
+        classValues.push(attrValue);
+        if (classInsertIndex === null) {
+          classInsertIndex = domAttrs.length;
+        }
+        return;
+      }
+
+      domAttrs.push(attr);
+    });
+
+    if (classValues.length > 0) {
+      const mergedClass = classValues.length === 1
+        ? `class: ${classValues[0]}`
+        : `class: [${classValues.join(', ')}]`;
+      if (classInsertIndex === null) {
+        domAttrs.push(mergedClass);
+      } else {
+        domAttrs.splice(classInsertIndex, 0, mergedClass);
+      }
+    }
+
+    return { domAttrs, displayObjectAttrs };
   }
 }
 
@@ -178,34 +207,7 @@ domElementWithText "DOM element with text content"
           return `h(DOMElement, { element: "${tagName}", textContent: ${text} })`;
         }
 
-        // Separate DisplayObject attributes from DOM attributes
-        const domAttrs = [];
-        const displayObjectAttrs = [];
-
-        attributes.forEach(attr => {
-          // Handle spread attributes
-          if (attr.startsWith('...')) {
-            displayObjectAttrs.push(attr);
-            return;
-          }
-
-          // Extract attribute name
-          let attrName;
-          if (attr.includes(':')) {
-            // Format: "name: value" or "'name': value"
-            attrName = attr.split(':')[0].trim().replace(/['"]/g, '');
-          } else {
-            // Standalone attribute
-            attrName = attr.replace(/['"]/g, '');
-          }
-
-          // Check if it's a DisplayObject attribute
-          if (displayObjectAttributes.has(attrName)) {
-            displayObjectAttrs.push(attr);
-          } else {
-            domAttrs.push(attr);
-          }
-        });
+        const { domAttrs, displayObjectAttrs } = splitAttributes(attributes);
 
         // Build the result
         const parts = [`element: "${tagName}"`];
@@ -329,34 +331,7 @@ openCloseElement "component with content"
           }
         }
 
-        // Separate DisplayObject attributes from DOM attributes
-        const domAttrs = [];
-        const displayObjectAttrs = [];
-
-        attributes.forEach(attr => {
-          // Handle spread attributes
-          if (attr.startsWith('...')) {
-            displayObjectAttrs.push(attr);
-            return;
-          }
-
-          // Extract attribute name
-          let attrName;
-          if (attr.includes(':')) {
-            // Format: "name: value" or "'name': value"
-            attrName = attr.split(':')[0].trim().replace(/['"]/g, '');
-          } else {
-            // Standalone attribute
-            attrName = attr.replace(/['"]/g, '');
-          }
-
-          // Check if it's a DisplayObject attribute
-          if (displayObjectAttributes.has(attrName)) {
-            displayObjectAttrs.push(attr);
-          } else {
-            domAttrs.push(attr);
-          }
-        });
+        const { domAttrs, displayObjectAttrs } = splitAttributes(attributes);
 
         // Build the result
         const parts = [`element: "${tagName}"`];

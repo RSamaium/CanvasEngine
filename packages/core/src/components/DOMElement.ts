@@ -204,6 +204,7 @@ export class CanvasDOMElement {
   private onBeforeDestroy: OnHook | null = null;
   private valueSignal: any = null;
   private isFormElementType: boolean = false;
+  private classSubscriptions: Array<{ unsubscribe: () => void }> = [];
 
   /**
    * Checks if the element is a form element that supports the value attribute
@@ -213,6 +214,83 @@ export class CanvasDOMElement {
   private isFormElement(elementType: string): boolean {
     const formElements = ["input", "textarea", "select"];
     return formElements.includes(elementType.toLowerCase());
+  }
+
+  private collectClassTokens(value: any, tokens: string[]) {
+    if (!value) return;
+    if (isSignal(value)) {
+      this.collectClassTokens(value(), tokens);
+      return;
+    }
+    if (typeof value === "string") {
+      value.split(/\s+/).filter(Boolean).forEach((token) => tokens.push(token));
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item) => this.collectClassTokens(item, tokens));
+      return;
+    }
+    if (typeof value === "object") {
+      for (const [className, shouldAdd] of Object.entries(value)) {
+        const resolved = isSignal(shouldAdd) ? shouldAdd() : shouldAdd;
+        if (resolved) {
+          tokens.push(className);
+        }
+      }
+    }
+  }
+
+  private collectClassSignals(value: any, signals: Set<any>) {
+    if (!value) return;
+    if (isSignal(value)) {
+      signals.add(value);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item) => this.collectClassSignals(item, signals));
+      return;
+    }
+    if (typeof value === "object") {
+      Object.values(value).forEach((item) =>
+        this.collectClassSignals(item, signals)
+      );
+    }
+  }
+
+  private applyClassList(classList: any) {
+    // Clear existing classes first
+    this.element.className = "";
+
+    if (typeof classList === "string") {
+      // String: space-separated class names
+      this.element.className = classList;
+      return;
+    }
+
+    const tokens: string[] = [];
+    this.collectClassTokens(classList, tokens);
+    if (tokens.length > 0) {
+      this.element.classList.add(...tokens);
+    }
+  }
+
+  private syncClassSubscriptions(classList: any) {
+    for (const sub of this.classSubscriptions) {
+      sub.unsubscribe();
+    }
+    this.classSubscriptions = [];
+
+    const signals = new Set<any>();
+    this.collectClassSignals(classList, signals);
+    if (signals.size === 0) return;
+
+    signals.forEach((signal) => {
+      if (!signal?.observable?.subscribe) return;
+      const sub = signal.observable.subscribe(() => {
+        this.applyClassList(classList);
+      });
+      this.classSubscriptions.push(sub);
+    });
   }
 
   onInit(props: DOMContainerProps) {
@@ -323,25 +401,10 @@ export class CanvasDOMElement {
           this.element.removeAttribute('tabindex');
         }
       } else if (key === "class") {
-        const classList = value.items || value.value || value;
-
-        // Clear existing classes first
-        this.element.className = "";
-
-        if (typeof classList === "string") {
-          // String: space-separated class names
-          this.element.className = classList;
-        } else if (Array.isArray(classList)) {
-          // Array: array of class names
-          this.element.classList.add(...classList);
-        } else if (typeof classList === "object" && classList !== null) {
-          // Object: { className: boolean }
-          for (const [className, shouldAdd] of Object.entries(classList)) {
-            if (shouldAdd) {
-              this.element.classList.add(className);
-            }
-          }
-        }
+        const rawClassList = value.items || value.value || value;
+        const classList = isSignal(rawClassList) ? rawClassList() : rawClassList;
+        this.applyClassList(classList);
+        this.syncClassSubscriptions(classList);
       } else if (key === "style") {
         const styleValue = value.items || value.value || value;
 
@@ -410,6 +473,10 @@ export class CanvasDOMElement {
       }
 
       this.eventListeners.clear();
+      for (const sub of this.classSubscriptions) {
+        sub.unsubscribe();
+      }
+      this.classSubscriptions = [];
 
       this.element.remove();
 

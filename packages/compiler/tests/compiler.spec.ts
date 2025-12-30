@@ -1121,6 +1121,18 @@ describe('DOM', () => {
     expect(output).toBe('h(DOMElement, { element: "div", attrs: { class: \'container\' } })');
   });
 
+  test('should merge static and dynamic class attributes', () => {
+    const input = `<div class="container" class={className} />`;
+    const output = parser.parse(input);
+    expect(output).toBe('h(DOMElement, { element: "div", attrs: { class: [\'container\', className] } })');
+  });
+
+  test('should merge static and object class attributes', () => {
+    const input = `<div class="container" class={{ active: true }} />`;
+    const output = parser.parse(input);
+    expect(output).toBe('h(DOMElement, { element: "div", attrs: { class: [\'container\', { active: true }] } })');
+  });
+
   test('should compile button DOM', () => {
     const input = `<button type="submit" />`;
     const output = parser.parse(input);

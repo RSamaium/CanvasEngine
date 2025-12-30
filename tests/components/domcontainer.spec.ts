@@ -483,6 +483,32 @@ describe('DOMContainer and DOMElement Components', () => {
             expect(divElement.classList.contains('theme-dark')).toBe(false)
         })
 
+        test('updates class list when signal inside class array changes', async () => {
+            const isActive = signal(false)
+
+            const containerElement = await TestBed.createComponent(DOMContainer, {}, [
+                DOMElement({
+                    element: 'div',
+                    attrs: {
+                        class: ['base', { active: isActive }]
+                    }
+                })
+            ])
+
+            const wrapperDiv = (containerElement.componentInstance as any).element
+            const divElement = wrapperDiv.children[0]
+            expect(divElement.classList.contains('base')).toBe(true)
+            expect(divElement.classList.contains('active')).toBe(false)
+
+            isActive.set(true)
+            await Promise.resolve()
+            expect(divElement.classList.contains('active')).toBe(true)
+
+            isActive.set(false)
+            await Promise.resolve()
+            expect(divElement.classList.contains('active')).toBe(false)
+        })
+
         test('handles onBeforeDestroy hook', async () => {
             const onBeforeDestroy = vi.fn()
 

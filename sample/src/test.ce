@@ -2,7 +2,7 @@
    <DOMContainer width="80%" height="100%">
     <div class="red">
       <DOMContainer width="100%" height="100%">
-        <div class="blue">
+        <div class="blue" class={ {selected: selected } }>
         </div>
       </DOMContainer>
     </div>
@@ -20,6 +20,10 @@
     height: 100%;
   }
 
+  .fontWeight {
+    font-weight: bold;
+  }
+
   .blue {
     background-color: blue;
     position: absolute;
@@ -35,4 +39,5 @@
   import Child from './child.ce'
 
   const test = signal(undefined)
+  const selected = signal(false)
 </script>

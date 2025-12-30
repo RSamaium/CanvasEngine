@@ -71,9 +71,19 @@ You can apply CSS classes using different formats:
   <div class="container primary-theme">Content</div>
 </DOMContainer>
 
+<!-- You can also declare multiple class attributes; they are merged -->
+<DOMContainer>
+  <div class="container" class={['primary-theme', { active: isActive } ]}>Content</div>
+</DOMContainer>
+
 <!-- Array format: array of class names -->
 <DOMContainer>
   <div class={['container', 'primary-theme', 'active']}>Content</div>
+</DOMContainer>
+
+<!-- Mixed array format: combine static and reactive classes -->
+<DOMContainer>
+  <div class={['container', { active: isActive } ]}>Content</div>
 </DOMContainer>
 
 <!-- Object format: conditional classes -->
