@@ -212,6 +212,26 @@ const goToSecondItem = () => {
 <Button text="Go to Item 2" click={goToSecondItem} />
 ```
 
+### Tabindex Boundary Helper
+
+When you update `tabindex` yourself (for example, from Controls), you may want to
+handle bounds (wrap or clamp). Use `createTabindexNavigator` to keep that logic in one place:
+
+```html
+<script>
+import { signal, createTabindexNavigator } from 'canvasengine'
+
+const selectedIndex = signal(0)
+const items = signal([0, 1, 2])
+
+const nav = createTabindexNavigator(
+  selectedIndex,
+  { count: () => items().length },
+  'wrap'
+)
+</script>
+```
+
 ### Using Hooks
 
 You can use reactive hooks to track focus state:
@@ -509,4 +529,3 @@ useFocusChange('my-container', (index, element) => {
 - Elements with `tabindex < 0` are not registered as focusable
 
 <!-- @include: ./_display-object.md -->
-

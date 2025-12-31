@@ -58,7 +58,7 @@
 </style>
 
 <script>
-  import { signal, effect } from "canvasengine";
+  import { signal, effect, createTabindexNavigator } from "canvasengine";
 
   const tabindex = signal(0);
   
@@ -70,13 +70,20 @@
   const items100 = new Array(20).fill(0).map((_, index) => ({ id: index, label: `Item ${index + 1}` }));
   const items = signal(items100);
 
+  const nav = createTabindexNavigator(
+    tabindex,
+    { count: () => items().length },
+    "wrap"
+  );
+  
+
   const controls = signal({
     up: {
       repeat: true,
       bind: "up",
       throttle: 150,
       keyDown() {
-        tabindex.update((value) => Math.max(0, value - 1));
+        nav.next(-1);
       }
     },
     down: {
@@ -84,7 +91,7 @@
       bind: "down",
       throttle: 150,
       keyDown() {
-        tabindex.update((value) => value + 1);
+        nav.next(1);
       }
     },
     action: {
