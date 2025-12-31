@@ -10,18 +10,25 @@
    
       <DOMContainer>
         <div class="button-container">
-            <FocusContainer 
+        <FocusContainer 
             tabindex={tabindex} 
             controls={controls}
           >
-          <div>
               <div>
-                  @for (item of items) {
-                      <button tabindex={@item.@id}>{@item.@label}</button>
-                    }
+                <FocusContainer tabindex={tabindex2} controls={controls2}>
+                  <div>
+                    <button tabindex={0}>Button 1</button>
+                    <button tabindex={1}>Button 2</button>
+                    <button tabindex={2}>Button 3</button>
+                  </div>
+                </FocusContainer>
+                  <div>
+                      @for (item of items) {
+                          <button tabindex={@item.@id}>{@item.@label}</button>
+                        }
+                  </div>
               </div>
-          </div>
-        </FocusContainer>
+            </FocusContainer>
         </div>
       </DOMContainer>
    
@@ -61,7 +68,30 @@
   import { signal, effect, createTabindexNavigator } from "canvasengine";
 
   const tabindex = signal(0);
-  
+  const tabindex2 = signal(0);
+  const nav2 = createTabindexNavigator(
+    tabindex2,
+    { count: () => 3 },
+    "wrap"
+  );
+  const controls2 = signal({
+    right: {
+      repeat: true,
+      bind: "right",
+      throttle: 150,
+      keyDown() {
+        nav2.next(-1);
+      }
+    },
+    left: {
+      repeat: true,
+      bind: "left",
+      throttle: 150,
+      keyDown() {
+        nav2.next(1);
+      }
+    }
+  });
 
   effect(() => {
     console.log("Selected index:", tabindex());

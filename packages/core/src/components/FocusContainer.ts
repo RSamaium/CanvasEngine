@@ -237,6 +237,9 @@ export class CanvasFocusContainer {
 
     const processChild = (child: Element) => {
       if (!child || !child.componentInstance) return;
+      if (child.tag === "FocusContainer" && child !== (element as any)) {
+        return;
+      }
 
       // Check for tabindex in props
       let tabindex: number | undefined = undefined;
@@ -261,7 +264,7 @@ export class CanvasFocusContainer {
         }
       }
 
-      // Recursively process children
+      // Recursively process children unless we hit another FocusContainer
       if (child.props && child.props.children) {
         if (Array.isArray(child.props.children)) {
           processChildren(child.props.children);

@@ -48,6 +48,29 @@ describe('FocusContainer Component', () => {
         expect(element1).toBeDefined()
     })
 
+    test('does not register focusables from nested FocusContainer', async () => {
+        const button1 = Button({ tabindex: 0, text: 'Button 1' })
+        const nestedButton = Button({ tabindex: 1, text: 'Nested Button' })
+
+        const nestedContainer = FocusContainer({
+            tabindex: 0,
+            children: [nestedButton]
+        })
+
+        const containerElement = await TestBed.createComponent(FocusContainer, {
+            tabindex: 0
+        }, [button1, nestedContainer], { enableLayout: false })
+
+        await new Promise(resolve => setTimeout(resolve, 10))
+
+        const parentId = containerElement.componentInstance.getContainerId()
+        const parentElement0 = focusManager.getElement(parentId, 0)
+        const parentElement1 = focusManager.getElement(parentId, 1)
+
+        expect(parentElement0).toBeDefined()
+        expect(parentElement1).toBeNull()
+    })
+
     test('updates focus when tabindex signal changes', async () => {
         const tabindex = signal(0)
         const button1 = Button({ tabindex: 0, text: 'Button 1' })
@@ -93,13 +116,16 @@ describe('FocusContainer Component', () => {
 
         // Set to last element
         tabindex.set(1)
+        await new Promise(resolve => setTimeout(resolve, 10))
 
         // External wrap to first
         tabindex.set((tabindex() + 1) % 2)
+        await new Promise(resolve => setTimeout(resolve, 10))
         expect(focusManager.getCurrentIndexSignal(containerId)?.()).toBe(0)
 
         // External wrap to last
         tabindex.set((tabindex() - 1 + 2) % 2)
+        await new Promise(resolve => setTimeout(resolve, 10))
         expect(focusManager.getCurrentIndexSignal(containerId)?.()).toBe(1)
     })
 
