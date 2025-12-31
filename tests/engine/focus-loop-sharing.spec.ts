@@ -10,8 +10,7 @@ describe("focus navigation with loop", () => {
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
             tabindex: 0,
-            onFocusChange,
-            throttle: 0
+            onFocusChange
         }, [
             loop(items, (item) => Button({ tabindex: item.id, text: `Button ${item.id}` }))
         ]);

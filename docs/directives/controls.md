@@ -24,6 +24,7 @@ const controls = signal({
     down: {
       repeat: true,
       bind: ["down", 'bottom_right', 'bottom_left'],
+      throttle: 150,
       keyDown() {
         y.update((y) => y + speed());
         direction.set(Direction.Down);
@@ -32,6 +33,7 @@ const controls = signal({
     up: {
       repeat: true,
       bind: ['up', 'top_left', 'top_right'],
+      throttle: 150,
       keyDown() {
         y.update((y) => y - speed());
         direction.set(Direction.Up);
@@ -105,6 +107,38 @@ mount((element) => {
     
     // Access the controls options
     const options = controlsInstance.options;
+  }
+});
+</script>
+```
+
+## Throttle per Control
+
+You can throttle a specific control by adding `throttle` (milliseconds) to its options.
+This is useful for focus navigation or any action you want to rate-limit.
+
+```html
+<script>
+import { signal } from "canvasengine";
+
+const tabindex = signal(0);
+
+const controls = signal({
+  up: {
+    repeat: true,
+    bind: "up",
+    throttle: 150,
+    keyDown() {
+      tabindex.update((value) => Math.max(0, value - 1));
+    }
+  },
+  down: {
+    repeat: true,
+    bind: "down",
+    throttle: 150,
+    keyDown() {
+      tabindex.update((value) => value + 1);
+    }
   }
 });
 </script>

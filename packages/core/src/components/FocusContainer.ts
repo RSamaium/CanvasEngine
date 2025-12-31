@@ -24,7 +24,6 @@ export interface FocusContainerProps extends DisplayObjectProps {
   onFocusChange?: (index: number, element: Element | null) => void;
   autoScroll?: boolean | ScrollOptions;
   viewport?: CanvasViewport;
-  throttle?: number;
 }
 
 /**
@@ -96,8 +95,7 @@ export class CanvasFocusContainer {
       focusedElement,
       onFocusChange: props.onFocusChange,
       autoScroll: props.autoScroll,
-      viewport,
-      throttle: props.throttle ?? 150
+      viewport
     });
   }
 
@@ -167,8 +165,7 @@ export class CanvasFocusContainer {
     focusManager.updateContainer(this.containerId, {
       viewport,
       autoScroll: props.autoScroll,
-      onFocusChange: props.onFocusChange,
-      throttle: props.throttle ?? 150
+      onFocusChange: props.onFocusChange
     });
   }
 

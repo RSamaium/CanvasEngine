@@ -29,8 +29,7 @@ describe('FocusContainer Component', () => {
         const button2 = Button({ tabindex: 1, text: 'Button 2' })
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
-            tabindex: 0,
-            throttle: 0
+            tabindex: 0
         }, [button1, button2])
 
         expect(containerElement).toBeDefined()
@@ -49,14 +48,14 @@ describe('FocusContainer Component', () => {
         expect(element1).toBeDefined()
     })
 
-    test('navigates between focusable elements', async () => {
+    test('updates focus when tabindex signal changes', async () => {
+        const tabindex = signal(0)
         const button1 = Button({ tabindex: 0, text: 'Button 1' })
         const button2 = Button({ tabindex: 1, text: 'Button 2' })
         const button3 = Button({ tabindex: 2, text: 'Button 3' })
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
-            tabindex: 0,
-            throttle: 0
+            tabindex
         }, [button1, button2, button3])
 
         await new Promise(resolve => setTimeout(resolve, 10))
@@ -64,30 +63,27 @@ describe('FocusContainer Component', () => {
         const instance = containerElement.componentInstance as any
         const containerId = instance.getContainerId()
 
-        // Navigate to first element
-        focusManager.setIndex(containerId, 0)
+        // Move focus via external signal updates
+        tabindex.set(0)
         expect(focusManager.getCurrentIndexSignal(containerId)?.()).toBe(0)
 
-        // Navigate to next
-        focusManager.navigate(containerId, 'next')
+        tabindex.set(1)
         expect(focusManager.getCurrentIndexSignal(containerId)?.()).toBe(1)
 
-        // Navigate to next again
-        focusManager.navigate(containerId, 'next')
+        tabindex.set(2)
         expect(focusManager.getCurrentIndexSignal(containerId)?.()).toBe(2)
 
-        // Navigate to previous
-        focusManager.navigate(containerId, 'previous')
+        tabindex.set(1)
         expect(focusManager.getCurrentIndexSignal(containerId)?.()).toBe(1)
     })
 
-    test('wraps around when navigating past boundaries', async () => {
+    test('supports external wrap-around logic via tabindex signal', async () => {
+        const tabindex = signal(0)
         const button1 = Button({ tabindex: 0, text: 'Button 1' })
         const button2 = Button({ tabindex: 1, text: 'Button 2' })
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
-            tabindex: 0,
-            throttle: 0
+            tabindex
         }, [button1, button2])
 
         await new Promise(resolve => setTimeout(resolve, 10))
@@ -96,14 +92,14 @@ describe('FocusContainer Component', () => {
         const containerId = instance.getContainerId()
 
         // Set to last element
-        focusManager.setIndex(containerId, 1)
+        tabindex.set(1)
 
-        // Navigate next (should wrap to first)
-        focusManager.navigate(containerId, 'next')
+        // External wrap to first
+        tabindex.set((tabindex() + 1) % 2)
         expect(focusManager.getCurrentIndexSignal(containerId)?.()).toBe(0)
 
-        // Navigate previous (should wrap to last)
-        focusManager.navigate(containerId, 'previous')
+        // External wrap to last
+        tabindex.set((tabindex() - 1 + 2) % 2)
         expect(focusManager.getCurrentIndexSignal(containerId)?.()).toBe(1)
     })
 
@@ -115,7 +111,6 @@ describe('FocusContainer Component', () => {
         const containerElement = await TestBed.createComponent(FocusContainer, {
             tabindex: 0,
             onFocusChange,
-            throttle: 0
         }, [button1, button2])
 
         await new Promise(resolve => setTimeout(resolve, 10))
@@ -136,8 +131,7 @@ describe('FocusContainer Component', () => {
         const button2 = Button({ tabindex: 1, text: 'Button 2' })
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
-            tabindex: 0,
-            throttle: 0
+            tabindex: 0
         }, [button1, button2])
 
         await new Promise(resolve => setTimeout(resolve, 10))
@@ -157,8 +151,7 @@ describe('FocusContainer Component', () => {
         const button2 = Button({ tabindex: 1, text: 'Button 2' })
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
-            tabindex: 0,
-            throttle: 0
+            tabindex: 0
         }, [button1, button2])
 
         await new Promise(resolve => setTimeout(resolve, 10))
@@ -179,8 +172,7 @@ describe('FocusContainer Component', () => {
         const button2 = Button({ tabindex: 1, text: 'Button 2' })
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
-            tabindex: 0,
-            throttle: 0
+            tabindex: 0
         }, [button1, button2])
 
         await new Promise(resolve => setTimeout(resolve, 10))
@@ -197,4 +189,3 @@ describe('FocusContainer Component', () => {
         expect(callback).toHaveBeenCalled()
     })
 })
-

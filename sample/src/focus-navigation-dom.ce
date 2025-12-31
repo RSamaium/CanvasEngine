@@ -73,11 +73,19 @@
   const controls = signal({
     up: {
       repeat: true,
-      bind: "up"
+      bind: "up",
+      throttle: 150,
+      keyDown() {
+        tabindex.update((value) => Math.max(0, value - 1));
+      }
     },
     down: {
       repeat: true,
-      bind: "down"
+      bind: "down",
+      throttle: 150,
+      keyDown() {
+        tabindex.update((value) => value + 1);
+      }
     },
     action: {
       bind: ["space", "enter"]

@@ -5,6 +5,7 @@ export interface ControlOptions {
     bind: string | string[];
     keyUp?: Function;
     keyDown?: Function;
+    throttle?: number;
     delay?: number | {
         duration: number;
         otherControls?: (string)[];

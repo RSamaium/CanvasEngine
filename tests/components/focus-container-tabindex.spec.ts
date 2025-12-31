@@ -9,8 +9,7 @@ describe("FocusContainer tabindex synchronization", () => {
         const button2 = Button({ tabindex: 1, text: 'Button 2' });
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
-            tabindex: 1,
-            throttle: 0
+            tabindex: 1
         }, [button1, button2]);
 
         // Wait for children registration and initial focus application
@@ -26,8 +25,7 @@ describe("FocusContainer tabindex synchronization", () => {
         const button2 = Button({ tabindex: 1, text: 'Button 2' });
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
-            tabindex,
-            throttle: 0
+            tabindex
         }, [button1, button2]);
 
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -47,8 +45,7 @@ describe("FocusContainer tabindex synchronization", () => {
         const button2 = Button({ tabindex: 1, text: 'Button 2' });
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
-            tabindex,
-            throttle: 0
+            tabindex
         }, [button1, button2]);
 
         await new Promise(resolve => setTimeout(resolve, 50));

@@ -30,8 +30,6 @@ interface FocusContainerData {
   onFocusChange?: (index: number, element: Element | null) => void;
   autoScroll?: boolean | ScrollOptions;
   viewport?: CanvasViewport;
-  throttle?: number;
-  lastNavigateTime?: number;
   tabindex?: SignalOrPrimitive<number>;
   tabindexSubscription?: any;
 }
@@ -168,16 +166,6 @@ export class FocusManager {
     // Check if container is frozen (including parent containers)
     if (container.element && isElementFrozen(container.element)) {
       return;
-    }
-
-    // Handle throttling
-    if (container.throttle) {
-      const now = Date.now();
-      const lastTime = container.lastNavigateTime || 0;
-      if (now - lastTime < container.throttle) {
-        return;
-      }
-      container.lastNavigateTime = now;
     }
 
     const currentIndex = container.currentIndex();
@@ -492,4 +480,3 @@ export class FocusManager {
 
 // Export singleton instance
 export const focusManager = FocusManager.getInstance();
-

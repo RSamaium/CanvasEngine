@@ -351,6 +351,7 @@ export class KeyboardControls extends ControlsBase {
         } | null
     } = {}
     private lastKeyPressed: number | null = null
+    private lastActionTimes: Record<string, number> = {}
     private directionState: {
         up: boolean,
         down: boolean,
@@ -419,8 +420,16 @@ export class KeyboardControls extends ControlsBase {
             if (!boundKey) {
                 return;
             }
-            const { repeat, keyDown } = boundKey.options;
+            const { repeat, keyDown, throttle } = boundKey.options;
             if ((repeat || count == 0)) {
+                if (typeof throttle === "number") {
+                    const now = Date.now();
+                    const lastTime = this.lastActionTimes[boundKey.actionName] ?? 0;
+                    if (now - lastTime < throttle) {
+                        return;
+                    }
+                    this.lastActionTimes[boundKey.actionName] = now;
+                }
                 let parameters = boundKey.parameters;
                 if (typeof parameters === "function") {
                     parameters = parameters();

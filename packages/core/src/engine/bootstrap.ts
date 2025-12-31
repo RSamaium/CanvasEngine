@@ -1,4 +1,3 @@
-import '@pixi/layout';
 import { Application, ApplicationOptions } from "pixi.js";
 import { ComponentFunction, h } from "./signal";
 import { useProps } from '../hooks/useProps';
@@ -31,6 +30,7 @@ export interface BootstrapOptions extends ApplicationOptions {
     [name: string]: any; // ComponentClass
   };
   autoRegister?: boolean; // true by default if components is not provided
+  enableLayout?: boolean; // true by default
 }
 
 /**
@@ -63,7 +63,10 @@ export interface BootstrapOptions extends ApplicationOptions {
  */
 export const bootstrapCanvas = async (rootElement: HTMLElement | null, canvas: ComponentFunction<any>, options?: BootstrapOptions) => {
   // Extract component registration options
-  const { components, autoRegister, ...appOptions } = options ?? {};
+  const { components, autoRegister, enableLayout, ...appOptions } = options ?? {};
+  if (enableLayout !== false) {
+    await import('@pixi/layout');
+  }
   
   // Handle component registration
   if (components) {
