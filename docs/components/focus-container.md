@@ -23,7 +23,7 @@ This component is especially useful for creating menu systems, lists, and any in
 | Property | Type | Description |
 |----------|------|-------------|
 | `tabindex` | `number` | Focus index for the container (default: 0 if present) |
-| `controls` | `Controls \| Signal<Controls>` | Controls configuration for automatic navigation |
+| `controls` | `Controls \| Signal<Controls>` | Controls configuration (you drive `tabindex` updates in your handlers) |
 | `onFocusChange` | `(index: number, element: Element \| null) => void` | Callback when focus changes |
 | `autoScroll` | `boolean \| ScrollOptions` | Enable automatic scrolling to focused element (default: false) |
 | `viewport` | `Viewport` | Viewport instance to use for scrolling (optional, uses context viewport by default) |
@@ -77,47 +77,46 @@ Here's a complete example demonstrating focus navigation within a `DOMContainer`
 
 ## Navigation with Controls
 
-The `FocusContainer` can automatically handle navigation when you provide a `controls` configuration:
+The `FocusContainer` wires the Controls directive, but you drive navigation by updating
+the `tabindex` signal in your handlers (see `sample/src/focus-navigation-dom.ce`).
 
 ```html
 <script>
-import { signal } from 'canvasengine'
+import { signal, createTabindexNavigator } from 'canvasengine'
+
+const tabindex = signal(0)
+const items = signal([0, 1, 2])
+const nav = createTabindexNavigator(tabindex, { count: () => items().length }, 'wrap')
 
 const controls = signal({
   up: {
     repeat: true,
     bind: 'up',
+    throttle: 150,
     keyDown() {
-      console.log('Up pressed')
+      nav.next(-1)
     }
   },
   down: {
     repeat: true,
     bind: 'down',
+    throttle: 150,
     keyDown() {
-      console.log('Down pressed')
+      nav.next(1)
     }
   },
   action: {
-    bind: ['space', 'enter'],
-    keyDown() {
-      console.log('Action pressed')
-    }
+    bind: ['space', 'enter']
   }
 })
 </script>
 
-<FocusContainer tabindex={0} controls={controls}>
+<FocusContainer tabindex={tabindex} controls={controls}>
   <Button tabindex={0} text="Item 1" />
   <Button tabindex={1} text="Item 2" />
   <Button tabindex={2} text="Item 3" />
 </FocusContainer>
 ```
-
-The navigation controls automatically:
-- **Up/Down arrows**: Navigate to previous/next focusable element
-- **Left/Right arrows**: Navigate to previous/next (useful for horizontal lists)
-- **Space/Enter**: Trigger action on focused element (emits `pointertap` event)
 
 ## Automatic Scrolling with Viewport
 
@@ -282,6 +281,11 @@ mount((element) => {
 </script>
 ```
 
+## Nested FocusContainers
+
+Nested `FocusContainer` instances are scoped: the parent only registers focusables
+in its own subtree and ignores children managed by nested containers.
+
 ## Programmatic Navigation
 
 You can control focus programmatically using the `FocusManager`:
@@ -299,9 +303,11 @@ mount((element) => {
     // Set focus to specific index
     focusManager.setIndex(containerId, 2)
     
-    // Navigate to next/previous
-    focusManager.navigate(containerId, 'next')
-    focusManager.navigate(containerId, 'previous')
+    // Navigate by updating the signal
+    const indexSignal = focusManager.getCurrentIndexSignal(containerId)
+    if (indexSignal) {
+      indexSignal.set(1)
+    }
     
     // Get element at index
     const element = focusManager.getElement(containerId, 1)
