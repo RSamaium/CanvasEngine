@@ -1,10 +1,7 @@
-import { Container as PixiContainer } from "pixi.js";
 import { createComponent, registerComponent, type Element } from "../engine/reactive";
 import { applyDirective } from "../engine/directive";
-import { ComponentInstance, DisplayObject } from "./DisplayObject";
-import { ComponentFunction, h } from "../engine/signal";
+import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
-import { Container } from "./Container";
 import { focusManager, ScrollOptions } from "../engine/FocusManager";
 import { signal, Signal, isSignal } from "@signe/reactive";
 import { CanvasViewport } from "./Viewport";
@@ -67,7 +64,7 @@ export interface FocusContainerProps extends DisplayObjectProps {
  * </Viewport>
  * ```
  */
-export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
+export class CanvasFocusContainer {
   private containerId: string = '';
   private currentIndexSignal: Signal<number | null> | null = null;
   private focusedElementSignal: Signal<Element | null> | null = null;
@@ -79,8 +76,6 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
    * @param props - Component properties
    */
   onInit(props: FocusContainerProps) {
-    super.onInit(props);
-
     // Generate unique container ID
     this.containerId = `focus-container-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -112,8 +107,6 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
    * @param element - The element being mounted
    */
   async onMount(element: Element<CanvasFocusContainer>): Promise<void> {
-    await super.onMount(element, undefined);
-
     // Update container with element reference for freeze checking
     focusManager.updateContainer(this.containerId, { element });
 
@@ -169,8 +162,6 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
    * @param props - Updated properties
    */
   onUpdate(props: FocusContainerProps) {
-    super.onUpdate(props);
-
     // Update viewport if changed
     const viewport = props.viewport || (props.context?.viewport as CanvasViewport | undefined);
     focusManager.updateContainer(this.containerId, {
@@ -196,8 +187,9 @@ export class CanvasFocusContainer extends DisplayObject(PixiContainer) {
 
     // Unregister container
     focusManager.unregisterContainer(this.containerId);
-
-    await super.onDestroy(parent, afterDestroy);
+    if (afterDestroy) {
+      afterDestroy();
+    }
   }
 
   /**
@@ -369,4 +361,3 @@ registerComponent("FocusContainer", CanvasFocusContainer);
 export const FocusContainer: ComponentFunction<FocusContainerProps> = (props) => {
   return createComponent("FocusContainer", props);
 };
-

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { signal } from 'canvasengine'
 import { DOMContainer } from '../../packages/core/src/components/DOMContainer'
 import { DOMElement } from '../../packages/core/src/components/DOMElement'
+import { FocusContainer } from '../../packages/core/src/components/FocusContainer'
 import { TestBed } from '../../packages/core/testing'
 
 describe('DOMContainer and DOMElement Components', () => {
@@ -507,6 +508,30 @@ describe('DOMContainer and DOMElement Components', () => {
             isActive.set(false)
             await Promise.resolve()
             expect(divElement.classList.contains('active')).toBe(false)
+        })
+
+        test('renders FocusContainer children inside DOMElement', async () => {
+            const containerElement = await TestBed.createComponent(DOMContainer, {}, [
+                DOMElement({
+                    element: 'div',
+                    attrs: { class: 'outer' },
+                    children: [
+                        FocusContainer({
+                            children: [
+                                DOMElement({
+                                    element: 'button',
+                                    textContent: 'Focus Item'
+                                })
+                            ]
+                        })
+                    ]
+                })
+            ])
+
+            const wrapperDiv = (containerElement.componentInstance as any).element
+            const outerDiv = wrapperDiv.querySelector('.outer')
+            const button = outerDiv?.querySelector('button')
+            expect(button?.textContent).toBe('Focus Item')
         })
 
         test('handles onBeforeDestroy hook', async () => {

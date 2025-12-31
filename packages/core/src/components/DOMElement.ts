@@ -293,6 +293,40 @@ export class CanvasDOMElement {
     });
   }
 
+  private appendChildElement(child: any) {
+    if (!child) return;
+
+    if (isObservable(child)) {
+      child.subscribe((value: any) => {
+        if (value && typeof value === "object" && "elements" in value) {
+          const elements = value.elements || [];
+          elements.forEach((element: any) => this.appendChildElement(element));
+        } else if (Array.isArray(value)) {
+          value.forEach((element) => this.appendChildElement(element));
+        } else {
+          this.appendChildElement(value);
+        }
+      });
+      return;
+    }
+
+    if (Array.isArray(child)) {
+      child.forEach((item) => this.appendChildElement(item));
+      return;
+    }
+
+    const childElement = child?.componentInstance?.element;
+    if (childElement) {
+      this.element.appendChild(childElement);
+      return;
+    }
+
+    const nestedChildren = child?.props?.children;
+    if (nestedChildren) {
+      this.appendChildElement(nestedChildren);
+    }
+  }
+
   onInit(props: DOMContainerProps) {
     if (typeof props.element === "string") {
       this.element = document.createElement(props.element);
@@ -342,17 +376,7 @@ export class CanvasDOMElement {
       }
     }
     if (props.children) {
-      for (const child of props.children) {
-        if (isObservable(child)) {
-          child.subscribe(({ elements }) => {
-            for (const element of elements) {
-              this.element.appendChild(element.componentInstance.element);
-            }
-          });
-        } else {
-          this.element.appendChild(child.componentInstance.element);
-        }
-      }
+      this.appendChildElement(props.children);
     }
     this.onUpdate(props);
   }

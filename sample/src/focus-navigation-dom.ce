@@ -1,28 +1,32 @@
-<Container x={400} y={300}>
-  <Text 
-    text="Focus Navigation DOM Example" 
-    x={0} 
-    y={-250} 
-    style={{ fontSize: 32, fill: "#ecf0f1" }}
-  />
-  
-  <FocusContainer 
-    tabindex={tabindex} 
-    controls={controls}
-  >
-    <DOMContainer>
-      <div class="button-container">
-       <div>
+<Canvas backgroundColor="#2c3e50">
+  <Container x={400} y={300}>
+    <Text 
+      text="Focus Navigation DOM Example" 
+      x={0} 
+      y={-250} 
+      style={{ fontSize: 32, fill: "#ecf0f1" }}
+    />
+    
+   
+      <DOMContainer>
+        <div class="button-container">
+            <FocusContainer 
+            tabindex={tabindex} 
+            controls={controls}
+          >
           <div>
-              @for (item of items) {
-                  <button tabindex={@item.@id}>{@item.@label}</button>
-                }
+              <div>
+                  @for (item of items) {
+                      <button tabindex={@item.@id}>{@item.@label}</button>
+                    }
+              </div>
           </div>
-       </div>
-      </div>
-    </DOMContainer>
-  </FocusContainer>
-</Container>
+        </FocusContainer>
+        </div>
+      </DOMContainer>
+   
+  </Container>
+</Canvas>
 
 <style scoped>
   .button-container {
