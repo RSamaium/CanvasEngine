@@ -32,6 +32,7 @@ interface FocusContainerData {
   viewport?: CanvasViewport;
   tabindex?: SignalOrPrimitive<number>;
   tabindexSubscription?: any;
+  pendingIndex?: number;
 }
 
 /**
@@ -98,6 +99,11 @@ export class FocusManager {
 
     container.tabindex = tabindex;
 
+    const currentTabindex = isSignal(tabindex) ? (tabindex as Signal<number>)() : tabindex;
+    if (currentTabindex !== null && currentTabindex !== undefined) {
+      this.setIndex(id, currentTabindex);
+    }
+
     if (isSignal(tabindex)) {
       container.tabindexSubscription = (tabindex as Signal<number>).observable.subscribe((value: any) => {
         if (value !== null && value !== container.currentIndex()) {
@@ -134,8 +140,9 @@ export class FocusManager {
 
     // If this is the index we are supposed to be at, set it now
     const currentTabindex = isSignal(container.tabindex) ? (container.tabindex as Signal<number>)() : container.tabindex;
-    if (currentTabindex === index && container.currentIndex() === null) {
-      this.setIndex(containerId, index);
+    if (container.pendingIndex === index || (currentTabindex === index && container.currentIndex() === null)) {
+      container.pendingIndex = undefined;
+      this.applyFocus(container, containerId, index, element);
     }
   }
 
@@ -219,10 +226,18 @@ export class FocusManager {
 
     const element = container.focusables.get(index);
     if (!element) {
-      console.warn(`No focusable element at index ${index} in container "${containerId}"`);
+      container.pendingIndex = index;
       return;
     }
+    this.applyFocus(container, containerId, index, element);
+  }
 
+  private applyFocus(
+    container: FocusContainerData,
+    containerId: string,
+    index: number,
+    element: Element
+  ): void {
     container.currentIndex.set(index);
     container.focusedElement.set(element);
 
