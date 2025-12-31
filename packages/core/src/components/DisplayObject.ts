@@ -143,6 +143,10 @@ export function DisplayObject(extendClass) {
     }
 
     onInit(props: Props) {
+      // Ensure layout setter from @pixi/layout is used when available.
+      if (Object.prototype.hasOwnProperty.call(this, "layout")) {
+        delete (this as any).layout;
+      }
       this._id = props.id;
       for (let event of EVENTS) {
         if (props[event] && !this.overrideProps.includes(event)) {

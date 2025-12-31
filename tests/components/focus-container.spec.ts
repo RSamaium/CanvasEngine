@@ -16,7 +16,7 @@ describe('FocusContainer Component', () => {
     test('creates FocusContainer with basic properties', async () => {
         const containerElement = await TestBed.createComponent(FocusContainer, {
             tabindex: 0
-        })
+        }, [], { enableLayout: false })
 
         expect(containerElement).toBeDefined()
         expect(typeof containerElement).toBe('object')
@@ -30,7 +30,7 @@ describe('FocusContainer Component', () => {
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
             tabindex: 0
-        }, [button1, button2])
+        }, [button1, button2], { enableLayout: false })
 
         expect(containerElement).toBeDefined()
 
@@ -56,7 +56,7 @@ describe('FocusContainer Component', () => {
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
             tabindex
-        }, [button1, button2, button3])
+        }, [button1, button2, button3], { enableLayout: false })
 
         await new Promise(resolve => setTimeout(resolve, 10))
 
@@ -84,7 +84,7 @@ describe('FocusContainer Component', () => {
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
             tabindex
-        }, [button1, button2])
+        }, [button1, button2], { enableLayout: false })
 
         await new Promise(resolve => setTimeout(resolve, 10))
 
@@ -111,7 +111,7 @@ describe('FocusContainer Component', () => {
         const containerElement = await TestBed.createComponent(FocusContainer, {
             tabindex: 0,
             onFocusChange,
-        }, [button1, button2])
+        }, [button1, button2], { enableLayout: false })
 
         await new Promise(resolve => setTimeout(resolve, 10))
 
@@ -132,7 +132,7 @@ describe('FocusContainer Component', () => {
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
             tabindex: 0
-        }, [button1, button2])
+        }, [button1, button2], { enableLayout: false })
 
         await new Promise(resolve => setTimeout(resolve, 10))
 
@@ -152,7 +152,7 @@ describe('FocusContainer Component', () => {
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
             tabindex: 0
-        }, [button1, button2])
+        }, [button1, button2], { enableLayout: false })
 
         await new Promise(resolve => setTimeout(resolve, 10))
 
@@ -173,7 +173,7 @@ describe('FocusContainer Component', () => {
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
             tabindex: 0
-        }, [button1, button2])
+        }, [button1, button2], { enableLayout: false })
 
         await new Promise(resolve => setTimeout(resolve, 10))
 

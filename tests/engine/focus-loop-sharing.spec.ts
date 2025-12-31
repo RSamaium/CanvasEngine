@@ -13,7 +13,7 @@ describe("focus navigation with loop", () => {
             onFocusChange
         }, [
             loop(items, (item) => Button({ tabindex: item.id, text: `Button ${item.id}` }))
-        ]);
+        ], { enableLayout: false });
 
         // Wait for children to be registered
         await new Promise(resolve => setTimeout(resolve, 50));

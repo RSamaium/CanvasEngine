@@ -10,7 +10,7 @@ describe("FocusContainer tabindex synchronization", () => {
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
             tabindex: 1
-        }, [button1, button2]);
+        }, [button1, button2], { enableLayout: false });
 
         // Wait for children registration and initial focus application
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -26,7 +26,7 @@ describe("FocusContainer tabindex synchronization", () => {
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
             tabindex
-        }, [button1, button2]);
+        }, [button1, button2], { enableLayout: false });
 
         await new Promise(resolve => setTimeout(resolve, 50));
         expect(containerElement.componentInstance.getCurrentIndexSignal()()).toBe(0);
@@ -46,7 +46,7 @@ describe("FocusContainer tabindex synchronization", () => {
 
         const containerElement = await TestBed.createComponent(FocusContainer, {
             tabindex
-        }, [button1, button2]);
+        }, [button1, button2], { enableLayout: false });
 
         await new Promise(resolve => setTimeout(resolve, 50));
         const containerId = containerElement.componentInstance.getContainerId();
