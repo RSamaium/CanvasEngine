@@ -3,7 +3,7 @@ import { Subscription } from 'rxjs';
 import { createComponent, registerComponent, Element, Props } from '../engine/reactive';
 import { DisplayObject, ComponentInstance } from './DisplayObject';
 import { effect, Signal } from '@signe/reactive';
-import { Graphics, Container } from 'pixi.js';
+import { Graphics, Container, ContainerChild, IRenderLayer } from 'pixi.js';
 
 const EVENTS = [
     'bounce-x-end',
@@ -73,8 +73,8 @@ export class CanvasViewport extends DisplayObject(Container) {
         return this.viewport.addChild(...children)
     }
 
-    addChildAt<U extends any>(child: U, index: number): U {
-        return this.viewport.addChildAt(child, index)
+    addChildAt<T extends ContainerChild | IRenderLayer>(child: T, index: number): T {
+        return this.viewport.addChildAt(child, index) as T
     }
 
     onInit(props) {
@@ -90,7 +90,7 @@ export class CanvasViewport extends DisplayObject(Container) {
      * @param {Element<CanvasViewport>} element - The element being mounted. Its `props` property (of type ViewportProps) contains component properties and context.
      * @param {number} [index] - The index of the component among its siblings.
      */
-    async onMount(element: Element<CanvasViewport>, index?: number): Promise<void> {
+    async onMount(element: Element<any>, index?: number): Promise<void> {
         element.props.context.viewport = this.viewport
         await super.onMount(element, index);
         const { props } = element;

@@ -5,7 +5,8 @@
     "declaration": true,
     "emitDeclarationOnly": false,
     "declarationMap": true,
-    "rootDir": "src"
+    "rootDir": "src",
+    "module": "ESNext"
   },
   "include": [
     "src/**/*"

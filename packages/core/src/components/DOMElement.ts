@@ -10,8 +10,8 @@ import { DisplayObjectProps } from "./types/DisplayObject";
 import { isObservable } from "../engine/utils";
 import { isSignal } from "@signe/reactive";
 
-interface DOMContainerProps extends DisplayObjectProps {
-  element:
+export interface DOMElementProps extends DisplayObjectProps {
+  element?:
   | string
   | {
     value: HTMLElement;
@@ -30,6 +30,14 @@ interface DOMContainerProps extends DisplayObjectProps {
     | { value?: string | Record<string, string | number> };
   };
   onBeforeDestroy?: OnHook;
+}
+
+export interface DOMContainerProps extends DOMElementProps {
+  element:
+  | string
+  | {
+    value: HTMLElement;
+  };
 }
 
 /**
@@ -233,7 +241,7 @@ export class CanvasDOMElement {
     }
     if (typeof value === "object") {
       for (const [className, shouldAdd] of Object.entries(value)) {
-        const resolved = isSignal(shouldAdd) ? shouldAdd() : shouldAdd;
+        const resolved = isSignal(shouldAdd as any) ? (shouldAdd as any)() : shouldAdd;
         if (resolved) {
           tokens.push(className);
         }
@@ -347,12 +355,15 @@ export class CanvasDOMElement {
     }
   }
 
-  onInit(props: DOMContainerProps) {
+  onInit(props: DOMElementProps) {
     if (typeof props.element === "string") {
       this.element = document.createElement(props.element);
       this.isFormElementType = this.isFormElement(props.element);
     } else {
-      this.element = props.element.value;
+      this.element = props.element?.value;
+      if (!this.element) {
+        throw new Error("DOMElement requires a valid element.");
+      }
       this.isFormElementType = this.isFormElement(this.element.tagName);
     }
     if (props.onBeforeDestroy || props["on-before-destroy"]) {
@@ -433,7 +444,7 @@ export class CanvasDOMElement {
     }
   }
 
-  onUpdate(props: DOMContainerProps) {
+  onUpdate(props: DOMElementProps) {
     if (!this.element) return;
     for (const [key, value] of Object.entries(props.attrs || {})) {
       if (key === "tabindex") {

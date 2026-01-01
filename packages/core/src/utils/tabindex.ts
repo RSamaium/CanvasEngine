@@ -1,4 +1,4 @@
-import { Signal } from "@signe/reactive";
+import { WritableSignal } from "@signe/reactive";
 
 export type TabindexBoundaryMode = "wrap" | "clamp" | "none";
 
@@ -49,7 +49,7 @@ function normalizeValue(
 }
 
 export function createTabindexNavigator(
-  tabindex: Signal<number>,
+  tabindex: WritableSignal<number>,
   bounds: TabindexBounds,
   mode: TabindexBoundaryMode = "wrap"
 ): TabindexNavigator {

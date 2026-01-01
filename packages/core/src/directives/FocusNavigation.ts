@@ -69,7 +69,7 @@ export class FocusNavigationDirective extends Directive {
 
     // Handle controls prop updates if it's a signal
     if (isSignal(controlsProp)) {
-      this.controlsSubscription = (controlsProp as Signal<Controls>).observable.subscribe((controls) => {
+      this.controlsSubscription = ((controlsProp as Signal<Controls>).observable as any).subscribe((controls) => {
         if (controls) {
           this.controlsDirective?.onUpdate({ controls }, element);
         }

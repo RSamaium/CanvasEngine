@@ -13,7 +13,7 @@ export function registerDirective(name: string, directive: any) {
     directives[name] = directive
 }
 
-export function applyDirective(element: Element, directiveName: string) {
+export function applyDirective(element: Element<any>, directiveName: string) {
     if (!directives[directiveName]) {
         return null
     }

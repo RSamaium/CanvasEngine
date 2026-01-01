@@ -1,4 +1,4 @@
-import { isSignal, signal, Signal } from "@signe/reactive";
+import { isSignal, signal, Signal, WritableSignal, WritableObjectSignal } from "@signe/reactive";
 import { Element, isElementFrozen } from "./reactive";
 import { CanvasViewport } from "../components/Viewport";
 import { SignalOrPrimitive } from "../components/types";
@@ -21,16 +21,18 @@ export interface ScrollOptions {
 /**
  * Data structure for a focus container
  */
+type WritableElementSignal = WritableSignal<Element | null> | WritableObjectSignal<Element | null>;
+
 interface FocusContainerData {
   id: string;
-  element?: Element;
-  focusables: Map<number, Element>;
-  currentIndex: Signal<number | null>;
-  focusedElement: Signal<Element | null>;
+  element?: Element<any>;
+  focusables: Map<number, Element<any>>;
+  currentIndex: WritableSignal<number | null>;
+  focusedElement: WritableElementSignal;
   onFocusChange?: (index: number, element: Element | null) => void;
   autoScroll?: boolean | ScrollOptions;
   viewport?: CanvasViewport;
-  tabindex?: SignalOrPrimitive<number>;
+  tabindex?: SignalOrPrimitive<number> | null;
   tabindexSubscription?: any;
   pendingIndex?: number;
 }
@@ -88,7 +90,7 @@ export class FocusManager {
     }
   }
 
-  setTabindex(id: string, tabindex: SignalOrPrimitive<number>): void {
+  setTabindex(id: string, tabindex?: SignalOrPrimitive<number> | null): void {
     const container = this.containers.get(id);
     if (!container) return;
 
@@ -97,15 +99,20 @@ export class FocusManager {
       container.tabindexSubscription.unsubscribe();
     }
 
+    if (tabindex === undefined || tabindex === null) {
+      container.tabindex = undefined;
+      return;
+    }
+
     container.tabindex = tabindex;
 
     const currentTabindex = isSignal(tabindex) ? (tabindex as Signal<number>)() : tabindex;
-    if (currentTabindex !== null && currentTabindex !== undefined) {
+    if (typeof currentTabindex === "number") {
       this.setIndex(id, currentTabindex);
     }
 
     if (isSignal(tabindex)) {
-      container.tabindexSubscription = (tabindex as Signal<number>).observable.subscribe((value: any) => {
+      container.tabindexSubscription = ((tabindex as Signal<number>).observable as any).subscribe((value: any) => {
         if (value !== null && value !== container.currentIndex()) {
           this.setIndex(id, value);
         }
@@ -206,7 +213,7 @@ export class FocusManager {
 
     if (newIndex !== null) {
       const tabindex = container.tabindex;
-      if (isSignal(tabindex)) {
+      if (isSignal(tabindex) && typeof (tabindex as any).set === "function") {
         (tabindex as any).set(newIndex);
       } else {
         this.setIndex(containerId, newIndex);
@@ -243,7 +250,7 @@ export class FocusManager {
 
     // Sync back to tabindex signal if it exists
     const tabindex = container.tabindex;
-    if (isSignal(tabindex) && (tabindex as any)() !== index) {
+    if (isSignal(tabindex) && (tabindex as any)() !== index && typeof (tabindex as any).set === "function") {
       (tabindex as any).set(index);
     }
 
@@ -311,7 +318,7 @@ export class FocusManager {
    */
   getFocusedElementSignal(containerId: string): Signal<Element | null> | null {
     const container = this.containers.get(containerId);
-    return container ? container.focusedElement : null;
+    return container ? (container.focusedElement as unknown as Signal<Element | null>) : null;
   }
 
   /**
@@ -348,10 +355,16 @@ export class FocusManager {
     }
 
     // Get local bounds
-    const localBounds = instance.getLocalBounds();
+    const localBounds = instance.getLocalBounds?.();
+    if (!localBounds) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
 
     // Get global position
-    const globalPos = instance.getGlobalPosition();
+    const globalPos = instance.getGlobalPosition?.();
+    if (!globalPos) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
 
     return {
       x: globalPos.x,

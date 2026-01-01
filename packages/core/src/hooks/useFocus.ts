@@ -78,7 +78,7 @@ export function useFocusChange(
   }
 
   // Set up reactive effect
-  const subscription = effect(() => {
+  const effectResult = effect(() => {
     const index = indexSignal();
     const element = elementSignal();
     callback(index, element);
@@ -86,9 +86,6 @@ export function useFocusChange(
 
   // Return cleanup function
   return () => {
-    if (subscription && typeof subscription.unsubscribe === 'function') {
-      subscription.unsubscribe();
-    }
+    effectResult.subscription?.unsubscribe();
   };
 }
-

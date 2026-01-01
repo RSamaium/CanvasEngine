@@ -4,7 +4,7 @@ import { createComponent, Element, registerComponent } from "../engine/reactive"
 import { ComponentFunction } from "../engine/signal";
 import { arrayEquals, fps2ms, isBrowser, isFunction, preciseNow } from "../engine/utils";
 import { DisplayObjectProps } from "./types/DisplayObject";
-import { CanvasDOMElement } from "./DOMElement";
+import { CanvasDOMElement, DOMElementProps } from "./DOMElement";
 import { OnHook } from "./DisplayObject";
 import { Tick } from "../directives/Scheduler";
 import {
@@ -21,7 +21,7 @@ export interface DOMSpriteFrame {
   height: number;
 }
 
-export interface DOMSpriteProps extends DisplayObjectProps {
+export interface DOMSpriteProps extends DOMElementProps {
   image?: string;
   rectangle?: DOMSpriteFrame | { value?: DOMSpriteFrame };
   frames?: DOMSpriteFrame[];
@@ -149,9 +149,10 @@ export class CanvasDOMSprite extends CanvasDOMElement {
   private playingSubscription?: Subscription;
   private playingSignal?: Signal<boolean>;
 
-  onInit(props: DOMSpriteProps) {
-    this.elementType = props.element ?? "div";
-    const nextProps = this.mergeEventAttrs({ ...props, element: this.elementType });
+  onInit(props: DOMElementProps) {
+    const spriteProps = props as DOMSpriteProps;
+    this.elementType = spriteProps.element ?? "div";
+    const nextProps = this.mergeEventAttrs({ ...spriteProps, element: this.elementType });
     this.tickSignal = nextProps.context?.tick;
     this.applyProps(nextProps);
     super.onInit(nextProps as any);
@@ -167,8 +168,8 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     this.updateAnimationLoop();
   }
 
-  onUpdate(props: DOMSpriteProps) {
-    const nextProps = this.mergeEventAttrs(props);
+  onUpdate(props: DOMElementProps) {
+    const nextProps = this.mergeEventAttrs(props as DOMSpriteProps);
     super.onUpdate(nextProps as any);
     this.applyProps(nextProps);
     this.render();
@@ -195,7 +196,9 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     rectangle?: DOMSpriteFrame | { value?: DOMSpriteFrame } | Signal<DOMSpriteFrame | undefined>
   ): DOMSpriteFrame | undefined {
     if (!rectangle) return undefined;
-    const signalResolved = isSignal(rectangle) ? rectangle() : rectangle;
+    const signalResolved = isSignal(rectangle as any)
+      ? (rectangle as Signal<DOMSpriteFrame | undefined>)()
+      : rectangle;
     if (!signalResolved) return undefined;
     const resolved = (signalResolved as any).value ?? signalResolved;
     if (!resolved) return undefined;
@@ -211,7 +214,7 @@ export class CanvasDOMSprite extends CanvasDOMElement {
   ): DOMSpriteSheetDefinition | Promise<DOMSpriteSheetDefinition | undefined> | undefined {
     if (!definition) return undefined;
     const signalResolved = isSignal(definition as any)
-      ? (definition as any)()
+      ? (definition as Signal<DOMSpriteSheetDefinition | undefined>)()
       : definition;
     if (!signalResolved) return undefined;
     return (signalResolved as any).value ?? signalResolved;
@@ -251,10 +254,12 @@ export class CanvasDOMSprite extends CanvasDOMElement {
         (prev, val) => ({ ...prev, [val]: (definition as any)[val] }),
         {}
       );
-      const optionsTextures = {
+      const optionsTextures: DOMSpriteTextureOptionsMerging = {
         ...baseOptions,
         ...textures[animationName],
-      } as DOMSpriteTextureOptionsMerging;
+        spriteWidth: 0,
+        spriteHeight: 0,
+      };
       optionsTextures.image =
         (textures[animationName] as any).image ?? definition.image;
 
@@ -536,7 +541,8 @@ export class CanvasDOMSprite extends CanvasDOMElement {
   }
 
   private bindSheetParams(context: Element<CanvasDOMElement>) {
-    const params = context.propObservables?.sheet?.params as any;
+    const sheetProps = context.propObservables?.sheet as any;
+    const params = sheetProps?.params as any;
     if (!params || typeof params !== "object") return;
     for (const key in params) {
       const value = params[key];
@@ -645,7 +651,7 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     this.lastTickTimestamp = undefined;
 
     if (this.tickSignal?.observable) {
-      this.tickSubscription = this.tickSignal.observable.subscribe((result: any) => {
+      this.tickSubscription = (this.tickSignal.observable as any).subscribe((result: any) => {
         const tick = result?.value ?? result;
         if (!tick) return;
         if (this.sheetCurrentAnimation) {

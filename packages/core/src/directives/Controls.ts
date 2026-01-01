@@ -36,7 +36,7 @@ export class ControlsDirective extends Directive {
      * Initialize the controls directive
      * Sets up keyboard, gamepad, and joystick controls if available
      */
-    onInit(element: Element) {
+    onInit(element: Element<any>) {
         this.element = element;
         const value = element.props.controls?.value ?? element.props.controls;
         if (!value) return;
@@ -71,7 +71,7 @@ export class ControlsDirective extends Directive {
         // Subscribe to freeze prop if it's a signal
         const freezeProp = element.propObservables?.freeze ?? element.props?.freeze;
         if (isSignal(freezeProp)) {
-            this.freezeSubscription = (freezeProp as Signal<boolean>).observable.subscribe((isFrozen) => {
+            this.freezeSubscription = ((freezeProp as Signal<boolean>).observable as any).subscribe((isFrozen) => {
                 if (isFrozen) {
                     this.stopInputs();
                 } else {
@@ -84,13 +84,13 @@ export class ControlsDirective extends Directive {
     /**
      * Mount hook (no specific action needed)
      */
-    onMount(element: Element) { }
+    onMount(element: Element<any>) { }
 
     /**
      * Update controls configuration
      * Updates both keyboard and gamepad controls
      */
-    onUpdate(props: any, element: Element) {
+    onUpdate(props: any, element: Element<any>) {
         const value = props.controls?.value ?? props.controls;
         if (value) {
             if (this.keyboardControls) {
@@ -115,7 +115,7 @@ export class ControlsDirective extends Directive {
     /**
      * Cleanup and destroy all control systems
      */
-    onDestroy(element: Element) {
+    onDestroy(element: Element<any>) {
         if (this.freezeSubscription) {
             this.freezeSubscription.unsubscribe();
             this.freezeSubscription = null;

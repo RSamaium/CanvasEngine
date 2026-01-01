@@ -1,7 +1,7 @@
 import { Container, Point } from 'pixi.js';
 import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
-import { effect } from '@signe/reactive';
+import { effect, isSignal } from '@signe/reactive';
 import { on, isTrigger, Trigger } from '../engine/trigger';
 import { useProps } from '../hooks/useProps';
 import { SignalOrPrimitive } from '../components/types';
@@ -128,6 +128,10 @@ export class Shake extends Directive {
         });
     }
 
+    private resolveSignalValue<T>(value: SignalOrPrimitive<T>): T {
+        return (isSignal(value as any) ? (value as any)() : value) as T;
+    }
+
     /**
      * Performs the shake animation using animatedSignal
      * @param data - Optional data passed from the trigger that can override default options
@@ -139,10 +143,10 @@ export class Shake extends Directive {
         const shakeProps = this.shakeProps;
         
         // Use data from trigger to override defaults if provided
-        const intensity = data?.intensity ?? shakeProps.intensity();
-        const duration = data?.duration ?? shakeProps.duration();
-        const frequency = data?.frequency ?? shakeProps.frequency();
-        const direction = data?.direction ?? shakeProps.direction();
+        const intensity = data?.intensity ?? this.resolveSignalValue(shakeProps.intensity);
+        const duration = data?.duration ?? this.resolveSignalValue(shakeProps.duration);
+        const frequency = data?.frequency ?? this.resolveSignalValue(shakeProps.frequency);
+        const direction = data?.direction ?? this.resolveSignalValue(shakeProps.direction);
 
         // Stop any existing animation and clean up
         if (this.positionEffect) {
@@ -292,4 +296,3 @@ export class Shake extends Directive {
 }
 
 registerDirective('shake', Shake);
-

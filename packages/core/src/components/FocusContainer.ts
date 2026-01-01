@@ -3,7 +3,7 @@ import { applyDirective } from "../engine/directive";
 import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { focusManager, ScrollOptions } from "../engine/FocusManager";
-import { signal, Signal, isSignal } from "@signe/reactive";
+import { signal, Signal, WritableSignal, WritableObjectSignal, isSignal } from "@signe/reactive";
 import { CanvasViewport } from "./Viewport";
 import { Controls } from "../directives/ControlsBase";
 // Import FocusNavigation directive to ensure it's registered
@@ -24,6 +24,9 @@ export interface FocusContainerProps extends DisplayObjectProps {
   onFocusChange?: (index: number, element: Element | null) => void;
   autoScroll?: boolean | ScrollOptions;
   viewport?: CanvasViewport;
+  context?: {
+    viewport?: CanvasViewport;
+  };
 }
 
 /**
@@ -65,8 +68,8 @@ export interface FocusContainerProps extends DisplayObjectProps {
  */
 export class CanvasFocusContainer {
   private containerId: string = '';
-  private currentIndexSignal: Signal<number | null> | null = null;
-  private focusedElementSignal: Signal<Element | null> | null = null;
+  private currentIndexSignal: WritableSignal<number | null> | null = null;
+  private focusedElementSignal: WritableSignal<Element | null> | WritableObjectSignal<Element | null> | null = null;
   private registeredFocusables: Set<number> = new Set();
 
   /**
@@ -80,7 +83,7 @@ export class CanvasFocusContainer {
 
     // Create signals for current index and focused element
     const currentIndex = signal<number | null>(null);
-    const focusedElement = signal<Element | null>(null);
+    const focusedElement = signal<Element | null>(null) as WritableSignal<Element | null> | WritableObjectSignal<Element | null>;
 
     this.currentIndexSignal = currentIndex;
     this.focusedElementSignal = focusedElement;
@@ -145,7 +148,7 @@ export class CanvasFocusContainer {
     //   element.effectSubscriptions.push(subscription);
     // }
 
-    focusManager.setTabindex(this.containerId, element.propObservables.tabindex);
+    focusManager.setTabindex(this.containerId, element.propObservables?.tabindex as any);
 
     // Register all focusable children initially
     // Use setTimeout to ensure children are mounted

@@ -9,7 +9,7 @@ import type {
   TransformOrigin,
 } from "./types/DisplayObject";
 import { signal } from "@signe/reactive";
-import { BlurFilter, ObservablePoint } from "pixi.js";
+import { BlurFilter, ObservablePoint, type Point, type Rectangle } from "pixi.js";
 import * as FILTERS from "pixi-filters";
 import { isPercent } from "../utils/functions";
 import { BehaviorSubject, filter, Subject } from "rxjs";
@@ -20,9 +20,11 @@ export interface ComponentInstance extends PixiMixins.ContainerOptions {
   onInit?(props: Props): void;
   onUpdate?(props: Props): void;
   onDestroy?(parent: Element, afterDestroy: () => void): void;
-  onMount?(context: Element, index?: number): void;
+  onMount?(context: Element<any>, index?: number): void;
   setWidth(width: number): void;
   setHeight(height: number): void;
+  getLocalBounds?(): Rectangle;
+  getGlobalPosition?(): Point;
 }
 
 export const EVENTS = [
@@ -121,17 +123,17 @@ export function DisplayObject(extendClass) {
     // Store computed layout box dimensions
     #computedLayoutBox: { width?: number; height?: number } | null = null;
     // Store reference to element for freeze checking
-    #element: Element<DisplayObject> | null = null;
+    #element: Element<any> | null = null;
 
     /**
      * Get the element reference for freeze checking
      * @returns The element reference or null
      */
-    protected getElement(): Element<DisplayObject> | null {
+    getElement(): Element<any> | null {
       return this.#element;
     }
 
-    protected onLayoutComputed(_event: any) {}
+    onLayoutComputed(_event: any) {}
 
     get deltaRatio() {
       return this.#canvasContext?.scheduler?.tick.value.deltaRatio;
@@ -196,7 +198,7 @@ export function DisplayObject(extendClass) {
       this.subjectInit.next(this);
     }
 
-    async onMount(element: Element<DisplayObject>, index?: number) {
+    async onMount(element: Element<any>, index?: number) {
       if (this.destroyed) return
       this.#element = element;
       this.#canvasContext = element.props.context;

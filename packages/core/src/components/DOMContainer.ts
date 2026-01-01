@@ -296,7 +296,7 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
     this.element = div.componentInstance.element;
   }
 
-  async onMount(element: Element<DisplayObject>, index?: number) {
+  async onMount(element: Element<any>, index?: number) {
     await super.onMount(element, index);
     this.syncCanvasSizeEffect();
     this.applyElementSize();
@@ -308,11 +308,11 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
     this.applyElementSize();
   }
 
-  protected onLayoutComputed() {
+  onLayoutComputed() {
     this.applyElementSize();
   }
 
-  async onDestroy(parent: Element<DisplayObject>, afterDestroy?: () => void) {
+  async onDestroy(parent: Element<any>, afterDestroy?: () => void) {
     const _afterDestroy = () => {
       if (this.canvasSizeEffect) {
         this.canvasSizeEffect.subscription?.unsubscribe();

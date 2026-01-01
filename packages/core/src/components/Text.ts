@@ -48,7 +48,7 @@ class CanvasText extends DisplayObject(PixiText) {
    * @param {Element<CanvasText>} element - The element being mounted with parent and props.
    * @param {number} [index] - The index of the component among its siblings.
    */
-  async onMount(element: Element<CanvasText>, index?: number): Promise<void> {
+  async onMount(element: Element<any>, index?: number): Promise<void> {
     const { props } = element;
     await super.onMount(element, index);
     const tick: Signal = props.context.tick;

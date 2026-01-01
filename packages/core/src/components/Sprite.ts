@@ -299,7 +299,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     }
   }
 
-  async onMount(params: Element<CanvasSprite>) {
+  async onMount(params: Element<any>) {
     // Set #element manually for freeze checking before calling super.onMount
     // We need to set it early so update() can check freeze state
     (this as any)['#element'] = params;
