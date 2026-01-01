@@ -1,6 +1,6 @@
 <Canvas>
-   <DOMContainer width="80%" height="100%">
-      <DOMSprite
+   <Container width="80%" height="100%">
+      <Sprite
         sheet={{
           definition,
           playing: "explode",
@@ -12,7 +12,7 @@
         click
       />
     
-   </DOMContainer>
+   </Container>
 </Canvas>
 
 <style>

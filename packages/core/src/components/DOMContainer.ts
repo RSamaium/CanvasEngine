@@ -3,6 +3,7 @@ import { effect } from "@signe/reactive";
 import {
   createComponent,
   Element,
+  isElement,
   registerComponent,
 } from "../engine/reactive";
 import { ComponentInstance, DisplayObject } from "./DisplayObject";
@@ -110,6 +111,36 @@ const EVENTS = [
 export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
   disableLayout = true;
   private canvasSizeEffect: any = null;
+  private static readonly DOM_ROUTING_MAP: Record<string, string> = {
+    Sprite: "DOMSprite",
+  };
+  private static readonly DOM_ALLOWED_TAGS = new Set([
+    "DOMContainer",
+    "DOMElement",
+    "DOMSprite",
+  ]);
+  private static readonly DOM_UNSUPPORTED_TAGS = new Set([
+    "Canvas",
+    "Container",
+    "Graphics",
+    "Rect",
+    "Circle",
+    "Ellipse",
+    "Triangle",
+    "Svg",
+    "Mesh",
+    "Scene",
+    "ParticlesEmitter",
+    "Sprite",
+    "Video",
+    "Text",
+    "TilingSprite",
+    "Viewport",
+    "NineSliceSprite",
+    "Button",
+    "Joystick",
+    "FocusContainer",
+  ]);
 
   private hasDomContainerAncestor(): boolean {
     const element = this.getElement();
@@ -203,6 +234,36 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
     }
   }
 
+  private routeDomChildren(children: any): any {
+    if (!children) return children;
+    if (Array.isArray(children)) {
+      return children.map((child) => this.routeDomChildren(child));
+    }
+    if (isElement(children)) {
+      if (CanvasDOMContainer.DOM_ALLOWED_TAGS.has(children.tag)) {
+        return children;
+      }
+      const routedTag = CanvasDOMContainer.DOM_ROUTING_MAP[children.tag];
+      if (routedTag) {
+        children.propSubscriptions?.forEach((sub) => sub.unsubscribe());
+        children.effectSubscriptions?.forEach((sub) => sub.unsubscribe());
+        children.effectUnmounts?.forEach((fn) => fn?.());
+        const routedProps = children.propObservables ?? children.props;
+        return createComponent(routedTag, routedProps);
+      }
+      if (CanvasDOMContainer.DOM_UNSUPPORTED_TAGS.has(children.tag)) {
+        throw new Error(
+          `Component ${children.tag} is not implemented for DOMContainer context yet. Only Sprite is supported.`
+        );
+      }
+      if (children.props?.children) {
+        children.props.children = this.routeDomChildren(children.props.children);
+      }
+      return children;
+    }
+    return children;
+  }
+
   onInit(props: any) {
     // Handle internal _scopeClass prop for scoped CSS
     const scopeClass = props._scopeClass;
@@ -229,7 +290,9 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
       divProps.attrs = props.attrs;
     }
 
-    const div = h(DOMElement, divProps, props.children) as unknown as Element<CanvasDOMElement>;
+    const routedChildren = this.routeDomChildren(props.children);
+    props.children = routedChildren;
+    const div = h(DOMElement, divProps, routedChildren) as unknown as Element<CanvasDOMElement>;
     this.element = div.componentInstance.element;
   }
 

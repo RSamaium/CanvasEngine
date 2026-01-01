@@ -81,6 +81,72 @@ export const isPrimitive = (value) => {
   );
 };
 
+const DOM_ROUTING_MAP: Record<string, string> = {
+  Sprite: "DOMSprite",
+};
+
+const DOM_ALLOWED_TAGS = new Set(["DOMContainer", "DOMElement", "DOMSprite"]);
+const DOM_UNSUPPORTED_TAGS = new Set([
+  "Canvas",
+  "Container",
+  "Graphics",
+  "Rect",
+  "Circle",
+  "Ellipse",
+  "Triangle",
+  "Svg",
+  "Mesh",
+  "Scene",
+  "ParticlesEmitter",
+  "Sprite",
+  "Video",
+  "Text",
+  "TilingSprite",
+  "Viewport",
+  "NineSliceSprite",
+  "Button",
+  "Joystick",
+  "FocusContainer",
+]);
+
+const hasDomAncestor = (element: Element | null): boolean => {
+  let current = element;
+  while (current) {
+    if (current.tag === "DOMContainer" || current.tag === "DOMElement") {
+      return true;
+    }
+    current = current.parent;
+  }
+  return false;
+};
+
+const cleanupElementForRouting = (element: Element) => {
+  element.propSubscriptions?.forEach((sub) => sub.unsubscribe());
+  element.effectSubscriptions?.forEach((sub) => sub.unsubscribe());
+  element.effectUnmounts?.forEach((fn) => fn?.());
+};
+
+const routeDomComponent = (parent: Element, child: Element): Element => {
+  if (!hasDomAncestor(parent)) {
+    return child;
+  }
+  if (DOM_ALLOWED_TAGS.has(child.tag)) {
+    return child;
+  }
+  const routedTag = DOM_ROUTING_MAP[child.tag];
+  if (routedTag) {
+    cleanupElementForRouting(child);
+    const routedProps = child.propObservables ?? child.props;
+    return createComponent(routedTag, routedProps);
+  }
+  if (DOM_UNSUPPORTED_TAGS.has(child.tag)) {
+    throw new Error(
+      `Component ${child.tag} is not implemented for DOMContainer context yet. Only Sprite is supported.`
+    );
+  }
+  return child;
+};
+
 export function registerComponent(name, component) {
   components[name] = component;
 }
@@ -609,8 +675,9 @@ export function createComponent(tag: string, props?: Props): Element {
                   // Handle observable component recursively
                   await createElement(parent, c);
                 } else if (isElement(c)) {
-                  onMount(parent, c, index + 1);
-                  propagateContext(c);
+                  const routed = routeDomComponent(parent, c);
+                  onMount(parent, routed, index + 1);
+                  propagateContext(routed);
                 }
               });
               return;
@@ -621,8 +688,9 @@ export function createComponent(tag: string, props?: Props): Element {
                   // Handle observable component recursively
                   await createElement(parent, component);
                 } else if (isElement(component)) {
-                  onMount(parent, component);
-                  propagateContext(component);
+                  const routed = routeDomComponent(parent, component);
+                  onMount(parent, routed);
+                  propagateContext(routed);
                 }
               } else {
                 component.forEach(async (comp) => {
@@ -630,16 +698,18 @@ export function createComponent(tag: string, props?: Props): Element {
                     // Handle observable component recursively
                     await createElement(parent, comp);
                   } else if (isElement(comp)) {
-                    onMount(parent, comp);
-                    propagateContext(comp);
+                    const routed = routeDomComponent(parent, comp);
+                    onMount(parent, routed);
+                    propagateContext(routed);
                   }
                 });
               }
             });
           } else if (isElement(value)) {
             // Handle direct Element emission
-            onMount(parent, value);
-            propagateContext(value);
+            const routed = routeDomComponent(parent, value);
+            onMount(parent, routed);
+            propagateContext(routed);
           } else if (Array.isArray(value)) {
             // Handle array of elements (which can also be observables)
             value.forEach(async (element) => {
@@ -647,8 +717,9 @@ export function createComponent(tag: string, props?: Props): Element {
                 // Handle observable element recursively
                 await createElement(parent, element);
               } else if (isElement(element)) {
-                onMount(parent, element);
-                propagateContext(element);
+                const routed = routeDomComponent(parent, element);
+                onMount(parent, routed);
+                propagateContext(routed);
               }
             });
           }
@@ -659,8 +730,9 @@ export function createComponent(tag: string, props?: Props): Element {
       // Store subscription for cleanup
       parent.effectSubscriptions.push(subscription);
     } else if (isElement(child)) {
-      onMount(parent, child);
-      await propagateContext(child);
+      const routed = routeDomComponent(parent, child);
+      onMount(parent, routed);
+      await propagateContext(routed);
     }
   }
 
