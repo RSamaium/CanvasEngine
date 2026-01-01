@@ -769,6 +769,14 @@ describe("Compiler", () => {
     const output = parser.parse(input);
     expect(output).toBe(`h(DOMElement, { element: "p", textContent: computed(() => 'Gold: ' + gold()) })`);
   });
+
+  test("should compile mixed text and void element content", () => {
+    const input = `<p>{gold} <br> G</p>`;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `h(DOMElement, { element: "p" }, [computed(() => gold()), h(DOMElement, { element: "br" }), ' G'])`.replace(/\s+/g, "")
+    );
+  });
 });
 
 describe("Loop", () => {

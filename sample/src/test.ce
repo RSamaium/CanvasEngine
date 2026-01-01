@@ -1,7 +1,7 @@
 
 <Canvas>
   <DOMContainer width={500}>
-      <p>{gold} <br> G</p>
+      <p>{gold}</p>
   </DOMContainer>
 </Canvas>
 

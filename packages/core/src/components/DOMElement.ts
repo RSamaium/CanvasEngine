@@ -205,6 +205,7 @@ export class CanvasDOMElement {
   private valueSignal: any = null;
   private isFormElementType: boolean = false;
   private classSubscriptions: Array<{ unsubscribe: () => void }> = [];
+  private childTextSubscriptions: Array<{ unsubscribe: () => void }> = [];
 
   /**
    * Checks if the element is a form element that supports the value attribute
@@ -295,6 +296,25 @@ export class CanvasDOMElement {
 
   private appendChildElement(child: any) {
     if (!child) return;
+
+    if (typeof child === "string" || typeof child === "number") {
+      this.element.appendChild(document.createTextNode(String(child)));
+      return;
+    }
+
+    if (isSignal(child)) {
+      const textNode = document.createTextNode(
+        child() == null ? "" : String(child())
+      );
+      this.element.appendChild(textNode);
+      if (child.observable?.subscribe) {
+        const sub = child.observable.subscribe((value: any) => {
+          textNode.textContent = value == null ? "" : String(value);
+        });
+        this.childTextSubscriptions.push(sub);
+      }
+      return;
+    }
 
     if (isObservable(child)) {
       child.subscribe((value: any) => {
@@ -501,6 +521,10 @@ export class CanvasDOMElement {
         sub.unsubscribe();
       }
       this.classSubscriptions = [];
+      for (const sub of this.childTextSubscriptions) {
+        sub.unsubscribe();
+      }
+      this.childTextSubscriptions = [];
 
       this.element.remove();
 

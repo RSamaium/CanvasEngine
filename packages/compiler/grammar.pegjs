@@ -39,6 +39,11 @@
     'Canvas', 'Container', 'Sprite', 'Text', 'DOMElement', 'Svg', 'Button'
   ]);
 
+  const voidElements = new Set([
+    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta',
+    'param', 'source', 'track', 'wbr'
+  ]);
+
   // DisplayObject special attributes that should not be in attrs
   const displayObjectAttributes = new Set([
     'x', 'y', 'scale', 'anchor', 'skew', 'tint', 'rotation', 'angle', 
@@ -56,6 +61,10 @@
       return false;
     }
     return domElements.has(tagName.toLowerCase());
+  }
+
+  function isVoidElement(tagName) {
+    return voidElements.has(tagName.toLowerCase());
   }
 
   function formatAttributes(attributes) {
@@ -177,7 +186,9 @@ element "component or control structure"
   / ifCondition
   / svgElement
   / domElementWithText
+  / domElementWithMixedContent
   / selfClosingElement
+  / voidElement
   / openCloseElement
   / openUnclosedTag
   / comment
@@ -193,8 +204,13 @@ selfClosingElement "self-closing component tag"
       return attrsString ? `h(${tagName}, ${attrsString})` : `h(${tagName})`;
     }
 
+voidElement "void DOM element tag"
+  = _ "<" _ tagName:tagName &{ return isVoidElement(tagName); } _ attributes:attributes _ ">" _ {
+      return formatDOMElement(tagName, attributes);
+    }
+
 domElementWithText "DOM element with text content"
-  = "<" _ tagName:tagName _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTagName:tagName _ ">" _ {
+  = "<" _ tagName:tagName &{ return !isVoidElement(tagName); } _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTagName:tagName _ ">" _ {
       if (tagName !== closingTagName) {
         generateError(
           `Mismatched tag: opened <${tagName}> but closed </${closingTagName}>`,
@@ -227,6 +243,45 @@ domElementWithText "DOM element with text content"
       
       // If not a DOM element, fall back to regular parsing
       return null;
+    }
+
+domElementWithMixedContent "DOM element with mixed content"
+  = "<" _ tagName:tagName &{ return isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ children:domContent _ "</" _ closingTagName:tagName _ ">" _ {
+      if (tagName !== closingTagName) {
+        generateError(
+          `Mismatched tag: opened <${tagName}> but closed </${closingTagName}>`,
+          location()
+        );
+      }
+
+      const childrenContent = children ? children : null;
+
+      if (attributes.length === 0) {
+        if (childrenContent) {
+          return `h(DOMElement, { element: "${tagName}" }, ${childrenContent})`;
+        } else {
+          return `h(DOMElement, { element: "${tagName}" })`;
+        }
+      }
+
+      const { domAttrs, displayObjectAttrs } = splitAttributes(attributes);
+
+      // Build the result
+      const parts = [`element: "${tagName}"`];
+      
+      if (domAttrs.length > 0) {
+        parts.push(`attrs: { ${domAttrs.join(', ')} }`);
+      }
+      
+      if (displayObjectAttrs.length > 0) {
+        parts.push(...displayObjectAttrs);
+      }
+
+      if (childrenContent) {
+        return `h(DOMElement, { ${parts.join(', ')} }, ${childrenContent})`;
+      } else {
+        return `h(DOMElement, { ${parts.join(', ')} })`;
+      }
     }
 
 simpleTextContent "simple text content"
@@ -629,6 +684,18 @@ content "component content"
       return `[${filteredElements.join(', ')}]`;
     }
 
+domContent "DOM content"
+  = elements:(domContentPart)* {
+      const filteredElements = elements.filter(el => el !== null);
+      if (filteredElements.length === 0) return null;
+      if (filteredElements.length === 1) return filteredElements[0];
+      return `[${filteredElements.join(', ')}]`;
+    }
+
+domContentPart
+  = element
+  / simpleTextContent
+
 
 
 textNode
@@ -1005,7 +1072,7 @@ singleComment
 
 // Add a special error detection rule for unclosed tags
 openUnclosedTag "unclosed tag"
-  = "<" _ tagName:tagName _ attributes:attributes _ ">" _ content:content _ !("</" _ closingTagName:tagName _ ">") {
+  = "<" _ tagName:tagName &{ return !isVoidElement(tagName); } _ attributes:attributes _ ">" _ content:content _ !("</" _ closingTagName:tagName _ ">") {
       generateError(
         `Unclosed tag: <${tagName}> is missing its closing tag`,
         location()
