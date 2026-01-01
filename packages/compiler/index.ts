@@ -247,7 +247,7 @@ export default function canvasengine() {
     "Viewport",
     "Graphics",
     "Container",
-    "FocusContainer",
+    "Navigation",
     "ImageMap",
     "NineSliceSprite",
     "Rect",

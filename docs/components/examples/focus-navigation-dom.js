@@ -13,7 +13,7 @@ export default {
     style={{ fontSize: 32, fill: "#ecf0f1" }}
   />
 
-  <FocusContainer
+  <Navigation
     tabindex={tabindex}
     controls={controls}
   >
@@ -28,7 +28,7 @@ export default {
         </div>
       </div>
     </DOMContainer>
-  </FocusContainer>
+  </Navigation>
 </Container>
 </Canvas>
 

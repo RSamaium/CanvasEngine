@@ -350,7 +350,7 @@ export class CanvasFocusContainer {
 
 export interface CanvasFocusContainer extends DisplayObjectProps { }
 
-registerComponent("FocusContainer", CanvasFocusContainer);
+registerComponent("Navigation", CanvasFocusContainer);
 
 /**
  * FocusContainer component function
@@ -359,5 +359,5 @@ registerComponent("FocusContainer", CanvasFocusContainer);
  * @returns FocusContainer element
  */
 export const FocusContainer: ComponentFunction<FocusContainerProps> = (props) => {
-  return createComponent("FocusContainer", props);
+  return createComponent("Navigation", props);
 };

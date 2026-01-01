@@ -1,21 +1,25 @@
-# FocusContainer Component
+# Navigation Component
+
+::: Warning Experimental
+This component is experimental and may change in the future.
+:::
 
 <script setup>
 import focusNavigationDomExample from './examples/focus-navigation-dom.js'
 </script>
 
-The `FocusContainer` component provides a flexible and primitive focus navigation system for CanvasEngine. It allows you to manage focus navigation between focusable child elements using keyboard, gamepad, or programmatic control.
+The `Navigation` component provides a flexible and primitive focus navigation system for CanvasEngine. It allows you to manage focus navigation between focusable child elements using keyboard, gamepad, or programmatic control.
 
 This component is especially useful for creating menu systems, lists, and any interface that requires keyboard/gamepad navigation.
 
 ## Basic Usage
 
 ```html
-<FocusContainer tabindex={0}>
+<Navigation tabindex={0}>
   <Button tabindex={0} text="Button 1" />
   <Button tabindex={1} text="Button 2" />
   <Button tabindex={2} text="Button 3" />
-</FocusContainer>
+</Navigation>
 ```
 
 ## Properties
@@ -39,11 +43,11 @@ To make an element focusable, add a `tabindex` attribute:
 For Canvas components (Button, Sprite, Rect, etc.), use the `tabindex` prop directly:
 
 ```html
-<FocusContainer tabindex={0}>
+<Navigation tabindex={0}>
   <Button tabindex={0} text="Item 1" />
   <Button tabindex={1} text="Item 2" />
   <Button tabindex={2} text="Item 3" />
-</FocusContainer>
+</Navigation>
 ```
 
 ### DOM Elements
@@ -51,13 +55,13 @@ For Canvas components (Button, Sprite, Rect, etc.), use the `tabindex` prop dire
 For DOM elements (inside DOMContainer), use `attrs.tabindex`:
 
 ```html
-<FocusContainer tabindex={0}>
+<Navigation tabindex={0}>
   <DOMContainer>
     <button attrs={{ tabindex: 0 }}>Button 1</button>
     <button attrs={{ tabindex: 1 }}>Button 2</button>
     <button attrs={{ tabindex: 2 }}>Button 3</button>
   </DOMContainer>
-</FocusContainer>
+</Navigation>
 ```
 
 ## DOM Navigation with Scoped Styles
@@ -77,7 +81,7 @@ Here's a complete example demonstrating focus navigation within a `DOMContainer`
 
 ## Navigation with Controls
 
-The `FocusContainer` wires the Controls directive, but you drive navigation by updating
+The `Navigation` wires the Controls directive, but you drive navigation by updating
 the `tabindex` signal in your handlers (see `sample/src/focus-navigation-dom.ce`).
 
 ```html
@@ -111,11 +115,11 @@ const controls = signal({
 })
 </script>
 
-<FocusContainer tabindex={tabindex} controls={controls}>
+<Navigation tabindex={tabindex} controls={controls}>
   <Button tabindex={0} text="Item 1" />
   <Button tabindex={1} text="Item 2" />
   <Button tabindex={2} text="Item 3" />
-</FocusContainer>
+</Navigation>
 ```
 
 ## Automatic Scrolling with Viewport
@@ -124,13 +128,13 @@ When using a `Viewport` with a long list, you can enable automatic scrolling to 
 
 ```html
 <Viewport worldWidth={2000} worldHeight={5000}>
-  <FocusContainer tabindex={0} autoScroll={true}>
+  <Navigation tabindex={0} autoScroll={true}>
     <Button tabindex={0} y={0} text="Item 1" />
     <Button tabindex={1} y={100} text="Item 2" />
     <Button tabindex={2} y={200} text="Item 3" />
     <!-- ... many more items ... -->
     <Button tabindex={49} y={4900} text="Item 50" />
-  </FocusContainer>
+  </Navigation>
 </Viewport>
 ```
 
@@ -139,7 +143,7 @@ When using a `Viewport` with a long list, you can enable automatic scrolling to 
 You can customize the scroll behavior:
 
 ```html
-<FocusContainer 
+<Navigation 
   tabindex={0} 
   autoScroll={{ 
     padding: 50,    // Padding around the element in pixels (default: 0)
@@ -149,7 +153,7 @@ You can customize the scroll behavior:
   }}
 >
   <!-- ... -->
-</FocusContainer>
+</Navigation>
 ```
 
 ## Reacting to Focus Changes
@@ -170,19 +174,19 @@ const handleFocusChange = (index, element) => {
 }
 </script>
 
-<FocusContainer 
+<Navigation 
   tabindex={0} 
   onFocusChange={handleFocusChange}
 >
   <Button tabindex={0} text="Item 1" />
   <Button tabindex={1} text="Item 2" />
   <Button tabindex={2} text="Item 3" />
-</FocusContainer>
+</Navigation>
 ```
 
 ### Two-way Synchronization with Signals
 
-You can pass a signal directly to the `tabindex` property of the `FocusContainer`. This enables two-way synchronization:
+You can pass a signal directly to the `tabindex` property of the `Navigation`. This enables two-way synchronization:
 1. When the focus changes (via keyboard, gamepad, or `FocusManager`), the signal is automatically updated.
 2. When you update the signal manually, the focus automatically moves to the new index.
 
@@ -202,11 +206,11 @@ const goToSecondItem = () => {
 </script>
 
 <!-- The signal is automatically synced with the focus state -->
-<FocusContainer tabindex={selectedIndex}>
+<Navigation tabindex={selectedIndex}>
   <Button tabindex={0} text="Item 1" />
   <Button tabindex={1} text="Item 2" />
   <Button tabindex={2} text="Item 3" />
-</FocusContainer>
+</Navigation>
 
 <Button text="Go to Item 2" click={goToSecondItem} />
 ```
@@ -241,21 +245,21 @@ import { useFocusIndex, useFocusedElement, useFocusChange } from 'canvasengine'
 import { mount, effect } from 'canvasengine'
 
 mount((element) => {
-  // Find FocusContainer
-  const findFocusContainer = (el) => {
-    if (el.tag === 'FocusContainer') return el
+  // Find Navigation
+  const findNavigation = (el) => {
+    if (el.tag === 'Navigation') return el
     if (el.children) {
       for (const child of Array.isArray(el.children) ? el.children : [el.children]) {
-        const found = findFocusContainer(child)
+        const found = findNavigation(child)
         if (found) return found
       }
     }
     return null
   }
 
-  const focusContainer = findFocusContainer(element)
-  if (focusContainer) {
-    const containerId = focusContainer.componentInstance.getContainerId()
+  const navigation = findNavigation(element)
+  if (navigation) {
+    const containerId = navigation.componentInstance.getContainerId()
     
     // Get current index signal
     const focusIndex = useFocusIndex(containerId)
@@ -281,9 +285,9 @@ mount((element) => {
 </script>
 ```
 
-## Nested FocusContainers
+## Nested Navigation
 
-Nested `FocusContainer` instances are scoped: the parent only registers focusables
+Nested `Navigation` instances are scoped: the parent only registers focusables
 in its own subtree and ignores children managed by nested containers.
 
 ## Programmatic Navigation
@@ -296,9 +300,9 @@ import { focusManager } from 'canvasengine'
 import { mount } from 'canvasengine'
 
 mount((element) => {
-  const focusContainer = findFocusContainer(element)
-  if (focusContainer) {
-    const containerId = focusContainer.componentInstance.getContainerId()
+  const navigation = findNavigation(element)
+  if (navigation) {
+    const containerId = navigation.componentInstance.getContainerId()
     
     // Set focus to specific index
     focusManager.setIndex(containerId, 2)
@@ -373,7 +377,7 @@ const handleFocusChange = (index, element) => {
       style={{ fontSize: 32, fill: "#ecf0f1" }}
     />
     
-    <FocusContainer 
+    <Navigation 
       tabindex={0} 
       controls={controls}
       onFocusChange={handleFocusChange}
@@ -412,7 +416,7 @@ const handleFocusChange = (index, element) => {
           </Container>
         }
       </Container>
-    </FocusContainer>
+    </Navigation>
   </Container>
 </Canvas>
 ```
@@ -441,7 +445,7 @@ const controls = signal({
 </script>
 
 <Viewport worldWidth={2000} worldHeight={5000}>
-  <FocusContainer 
+  <Navigation 
     tabindex={0} 
     controls={controls}
     autoScroll={{ smooth: true, center: true }}
@@ -453,7 +457,7 @@ const controls = signal({
         text={@item.@label}
       />
     }
-  </FocusContainer>
+  </Navigation>
 </Viewport>
 ```
 
@@ -466,7 +470,7 @@ The `FocusManager` is a singleton that manages all focus containers. You can acc
 ```typescript
 import { focusManager } from 'canvasengine'
 
-// Register a container (done automatically by FocusContainer)
+// Register a container (done automatically by Navigation)
 focusManager.registerContainer(id, data)
 
 // Navigate
@@ -530,7 +534,7 @@ useFocusChange('my-container', (index, element) => {
 
 ## Limitations
 
-- Focusable elements must be direct or nested children of the `FocusContainer`
+- Focusable elements must be direct or nested children of the `Navigation`
 - Tabindex values should be unique within a container
 - Elements with `tabindex < 0` are not registered as focusable
 

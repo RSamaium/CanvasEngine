@@ -12,6 +12,14 @@ This component is especially useful for rendering form elements like `<input>`, 
 </DOMContainer>
 ```
 
+## Sprite in DOMContainer
+
+You can use the standard `Sprite` component inside a `DOMContainer`. It will automatically render as a `DOMSprite` when placed anywhere under a `DOMContainer` (even if the parent is distant).
+
+Use the same props as `Sprite`:
+
+- See `docs/components/sprite.md`
+
 ## Form Elements with Reactive Signals
 
 For form elements (`input`, `textarea`, `select`), the component supports reactive two-way data binding using signals:
