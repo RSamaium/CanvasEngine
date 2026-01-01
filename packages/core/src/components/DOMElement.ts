@@ -295,7 +295,7 @@ export class CanvasDOMElement {
   }
 
   private appendChildElement(child: any) {
-    if (!child) return;
+    if (child === null || child === undefined || child === false) return;
 
     if (typeof child === "string" || typeof child === "number") {
       this.element.appendChild(document.createTextNode(String(child)));
@@ -496,8 +496,9 @@ export class CanvasDOMElement {
         this.element.setAttribute(key, value);
       }
     }
-    if (props.textContent) {
-      this.element.textContent = props.textContent;
+    if ("textContent" in props) {
+      const textContent = props.textContent;
+      this.element.textContent = textContent == null ? "" : String(textContent);
     }
   }
 

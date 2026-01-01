@@ -129,6 +129,20 @@ describe('DOMContainer and DOMElement Components', () => {
             expect(domElement.textContent).toBe('Test content')
         })
 
+        test('renders numeric textContent including zero', async () => {
+            const containerElement = await TestBed.createComponent(DOMContainer, {}, [
+                DOMElement({
+                    element: 'p',
+                    textContent: 0
+                })
+            ])
+
+            const wrapperDiv = (containerElement.componentInstance as any).element
+            const domElement = wrapperDiv.children[0]
+            expect(domElement.tagName.toLowerCase()).toBe('p')
+            expect(domElement.textContent).toBe('0')
+        })
+
         test('creates DOM element with HTML element object', async () => {
             const htmlElement = document.createElement('span')
             htmlElement.textContent = 'Span content'
