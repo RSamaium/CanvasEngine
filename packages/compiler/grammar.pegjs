@@ -236,17 +236,23 @@ simpleTextContent "simple text content"
       if (validParts.length === 1) return validParts[0];
       
       // Multiple parts - need to concatenate
-      const hasSignals = validParts.some(part => part && part.includes && part.includes('()'));
+      const normalizedParts = validParts.map(part => {
+        if (typeof part === 'string' && part.startsWith('computed(() => ') && part.endsWith(')')) {
+          return part.slice('computed(() => '.length, -1);
+        }
+        return part;
+      });
+      const hasSignals = normalizedParts.some(part => part && part.includes && part.includes('()'));
       if (hasSignals) {
-        return `computed(() => ${validParts.join(' + ')})`;
+        return `computed(() => ${normalizedParts.join(' + ')})`;
       }
-      return validParts.join(' + ');
+      return normalizedParts.join(' + ');
     }
 
 simpleTextPart "simple text part"
   = !("@for" / "@if") text:$([^<{@]+) {
       const trimmed = text.trim();
-      return trimmed ? `'${trimmed}'` : null;
+      return trimmed ? `'${text}'` : null;
     }
 
 simpleDynamicPart "simple dynamic part"

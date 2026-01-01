@@ -763,6 +763,12 @@ describe("Compiler", () => {
     const output = parser.parse(input);
     expect(output).toBe(`h(DOMElement, { element: "button", textContent: computed(() => item().label()) })`);
   });
+
+  test("should compile mixed text with signal without nested computed", () => {
+    const input = `<p>Gold: {gold}</p>`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(DOMElement, { element: "p", textContent: computed(() => 'Gold: ' + gold()) })`);
+  });
 });
 
 describe("Loop", () => {
@@ -1400,7 +1406,7 @@ describe('DOM with Control Structures', () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `h(DOMElement, { element: "div", attrs: { class: 'game-wrapper' } }, [h(Canvas, { width: 800, height: 600 }, loop(sprites, sprite => h(Sprite, { x: computed(() => sprite().x()), y: computed(() => sprite().y()) }))), h(DOMElement, { element: "div", attrs: { class: 'ui-overlay' } }, [cond(showScore, () => h(DOMElement, { element: "div", attrs: { class: 'score' }, textContent: computed(() => 'Score: ' + computed(() => score())) })), cond(showMenu, () => h(DOMElement, { element: "div", attrs: { class: 'menu' } }, loop(menuOptions, option => h(DOMElement, { element: "button", attrs: { class: 'menu-btn' }, textContent: computed(() => option().label()) }))))])])`.replace(/\s+/g, "")
+      `h(DOMElement, { element: "div", attrs: { class: 'game-wrapper' } }, [h(Canvas, { width: 800, height: 600 }, loop(sprites, sprite => h(Sprite, { x: computed(() => sprite().x()), y: computed(() => sprite().y()) }))), h(DOMElement, { element: "div", attrs: { class: 'ui-overlay' } }, [cond(showScore, () => h(DOMElement, { element: "div", attrs: { class: 'score' }, textContent: computed(() => 'Score: ' + score()) })), cond(showMenu, () => h(DOMElement, { element: "div", attrs: { class: 'menu' } }, loop(menuOptions, option => h(DOMElement, { element: "button", attrs: { class: 'menu-btn' }, textContent: computed(() => option().label()) }))))])])`.replace(/\s+/g, "")
     );
   });
 });
