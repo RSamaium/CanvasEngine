@@ -1,74 +1,64 @@
+
 <Canvas>
-   <Container width="80%" height="100%">
-      <Sprite
-        sheet={{
-          definition,
-          playing: "explode",
-          params: { direction: "right" },
-          onFinish
-        }}
-        playing={selected}
-        loop={true}
-        click
+  <DOMContainer>
+      <Sprite 
+          sheet={{
+              definition,
+              playing: "default",
+              onFinish
+          }}
+          playing={false}
       />
-    
-   </Container>
+  </DOMContainer>
+  <Sprite 
+    sheet={{
+        definition,
+        playing: "default"
+    }}
+    x ={500}
+    y ={100}
+  />
 </Canvas>
 
-<style>
-  .red {
-    background-color: red;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  }
-
-  .fontWeight {
-    font-weight: bold;
-  }
-
-  .blue {
-    background-color: blue;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  }
-</style>
-
 <script>
-  import { signal } from 'canvasengine'
-  import Child from './child.ce'
 
-  const test = signal(undefined)
-  const selected = signal(true)
-  const definition = {
-    id: "explosion",
-    image: "./exp.png",
-    framesWidth: 4,
-    framesHeight: 4,
-    textures: {
-      explode: {
-        animations: () => [
-          [
-            { time: 0, frameX: 0, frameY: 0 },
-            { time: 10, frameX: 1, frameY: 0 },
-            { time: 20, frameX: 2, frameY: 0 },
-            { time: 30, frameX: 3, frameY: 0 }
-          ]
-        ]
+const onFinish = () => {
+  console.log("Animation finished")
+}
+
+const definition = {
+  id: "explosion",
+  image: "./exp.png",
+  width: 1024,
+  height: 1024,
+  framesWidth: 4,
+  framesHeight: 4,
+  textures: {
+      default: {
+           animations: () => [
+              [ 
+                  { time: 0, frameX: 0, frameY: 0 },
+                  { time: 10, frameX: 1, frameY: 0 },
+                  { time: 20, frameX: 2, frameY: 0 },
+                  { time: 30, frameX: 3, frameY: 0 },
+                  { time: 40, frameX: 0, frameY: 1 },
+                  { time: 50, frameX: 1, frameY: 1 },
+                  { time: 60, frameX: 2, frameY: 1 },     
+                  { time: 70, frameX: 3, frameY: 1 },
+                  { time: 80, frameX: 0, frameY: 2 },
+                  { time: 90, frameX: 1, frameY: 2 },
+                  { time: 100, frameX: 2, frameY: 2 },
+                  { time: 110, frameX: 3, frameY: 2 },
+                  { time: 120, frameX: 0, frameY: 3 },
+                  { time: 130, frameX: 1, frameY: 3 },
+                  { time: 140, frameX: 2, frameY: 3 },
+                  { time: 150, frameX: 3, frameY: 3 },
+              ]
+           ]
       }
-    }
   }
+}
 
-  function onFinish() {
-    console.log("DOMSprite animation finished")
-  }
-
-  function click() {
-    selected.set(!selected())
-  }
 </script>
+
+      

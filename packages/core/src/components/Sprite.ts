@@ -323,6 +323,13 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       this.spritesheet = resolvedDefinition.value ?? resolvedDefinition;
       await this.createAnimations();
     }
+    if (sheet?.params) {
+      this.sheetParams = sheet.params;
+    }
+    if (sheet?.playing && this.has(sheet.playing)) {
+      this.sheetCurrentAnimation = sheet.playing;
+      this.play(this.sheetCurrentAnimation, [this.sheetParams]);
+    }
     if (sheet.params) {
       for (let key in propObservables?.sheet["params"]) {
         const value = propObservables?.sheet["params"][key] as Signal;
@@ -330,11 +337,13 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
           this.subscriptionSheet.push(
             value.observable.subscribe((value) => {
               if (this.animations.size == 0) return;
-              this.play(this.sheetCurrentAnimation, [{ [key]: value }]);
+              if (!this.has(this.sheetCurrentAnimation)) return;
+              this.play(this.sheetCurrentAnimation, [{ ...this.sheetParams, [key]: value }]);
             })
           );
         } else {
-          this.play(this.sheetCurrentAnimation, [{ [key]: value }]);
+          if (!this.has(this.sheetCurrentAnimation)) continue;
+          this.play(this.sheetCurrentAnimation, [{ ...this.sheetParams, [key]: value }]);
         }
       }
     }

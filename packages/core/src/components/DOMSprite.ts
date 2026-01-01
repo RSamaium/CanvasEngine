@@ -123,9 +123,9 @@ export class CanvasDOMSprite extends CanvasDOMElement {
   private frames: DOMSpriteFrame[] = [];
   private rectangle?: DOMSpriteFrame;
   private image?: string;
-  private fps = 12;
+  private fps = 120;
   private loop = true;
-  private playing = false;
+  private playing = true;
   private hasExternalFrameIndex = false;
   private elapsed = 0;
   private tickSignal?: Signal<Tick | null>;
@@ -400,9 +400,13 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     const frames = this.sheetCurrentAnimation.frames;
     if (frames.length <= 1) return;
 
-    const deltaRatio =
-      tick.deltaRatio ??
-      (tick.deltaTime ? tick.deltaTime / fps2ms(60) : 0);
+    const baseFps = this.fps > 0 ? this.fps : 60;
+    let deltaRatio = 0;
+    if (tick.deltaTime) {
+      deltaRatio = tick.deltaTime / fps2ms(baseFps);
+    } else if (typeof tick.deltaRatio === "number") {
+      deltaRatio = tick.deltaRatio * (baseFps / 60);
+    }
 
     const nextFrame = frames[this.sheetFrameIndex + 1];
     if (!nextFrame) {
@@ -680,7 +684,7 @@ export class CanvasDOMSprite extends CanvasDOMElement {
           timestamp,
           deltaTime: delta,
           frame: 0,
-          deltaRatio: delta / fps2ms(60),
+          deltaRatio: delta / fps2ms(this.fps),
         });
       } else {
         this.advance(delta);
