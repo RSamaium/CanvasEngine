@@ -237,7 +237,7 @@ export class CanvasFocusContainer {
 
     const processChild = (child: Element) => {
       if (!child || !child.componentInstance) return;
-      if (child.tag === "FocusContainer" && child !== (element as any)) {
+      if ((child.tag === "Navigation" || child.tag === "FocusContainer") && child !== (element as any)) {
         return;
       }
 
@@ -361,3 +361,5 @@ registerComponent("Navigation", CanvasFocusContainer);
 export const FocusContainer: ComponentFunction<FocusContainerProps> = (props) => {
   return createComponent("Navigation", props);
 };
+
+export const Navigation = FocusContainer;

@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { FocusContainer, Button, Container, signal } from 'canvasengine'
+import { Navigation, Button, Container, signal } from 'canvasengine'
 import { TestBed } from '../../packages/core/testing'
 import { focusManager } from '../../packages/core/src/engine/FocusManager'
 import { useFocusIndex, useFocusedElement, useFocusChange } from '../../packages/core/src/hooks/useFocus'
 
-describe('FocusContainer Component', () => {
+describe('Navigation Component', () => {
     beforeEach(() => {
         // Clean up any existing containers
         const containers = (focusManager as any).containers;
@@ -13,8 +13,8 @@ describe('FocusContainer Component', () => {
         }
     })
 
-    test('creates FocusContainer with basic properties', async () => {
-        const containerElement = await TestBed.createComponent(FocusContainer, {
+    test('creates Navigation with basic properties', async () => {
+        const containerElement = await TestBed.createComponent(Navigation, {
             tabindex: 0
         }, [], { enableLayout: false })
 
@@ -28,7 +28,7 @@ describe('FocusContainer Component', () => {
         const button1 = Button({ tabindex: 0, text: 'Button 1' })
         const button2 = Button({ tabindex: 1, text: 'Button 2' })
 
-        const containerElement = await TestBed.createComponent(FocusContainer, {
+        const containerElement = await TestBed.createComponent(Navigation, {
             tabindex: 0
         }, [button1, button2], { enableLayout: false })
 
@@ -48,16 +48,16 @@ describe('FocusContainer Component', () => {
         expect(element1).toBeDefined()
     })
 
-    test('does not register focusables from nested FocusContainer', async () => {
+    test('does not register focusables from nested Navigation', async () => {
         const button1 = Button({ tabindex: 0, text: 'Button 1' })
         const nestedButton = Button({ tabindex: 1, text: 'Nested Button' })
 
-        const nestedContainer = FocusContainer({
+        const nestedContainer = Navigation({
             tabindex: 0,
             children: [nestedButton]
         })
 
-        const containerElement = await TestBed.createComponent(FocusContainer, {
+        const containerElement = await TestBed.createComponent(Navigation, {
             tabindex: 0
         }, [button1, nestedContainer], { enableLayout: false })
 
@@ -77,7 +77,7 @@ describe('FocusContainer Component', () => {
         const button2 = Button({ tabindex: 1, text: 'Button 2' })
         const button3 = Button({ tabindex: 2, text: 'Button 3' })
 
-        const containerElement = await TestBed.createComponent(FocusContainer, {
+        const containerElement = await TestBed.createComponent(Navigation, {
             tabindex
         }, [button1, button2, button3], { enableLayout: false })
 
@@ -105,7 +105,7 @@ describe('FocusContainer Component', () => {
         const button1 = Button({ tabindex: 0, text: 'Button 1' })
         const button2 = Button({ tabindex: 1, text: 'Button 2' })
 
-        const containerElement = await TestBed.createComponent(FocusContainer, {
+        const containerElement = await TestBed.createComponent(Navigation, {
             tabindex
         }, [button1, button2], { enableLayout: false })
 
@@ -134,7 +134,7 @@ describe('FocusContainer Component', () => {
         const button1 = Button({ tabindex: 0, text: 'Button 1' })
         const button2 = Button({ tabindex: 1, text: 'Button 2' })
 
-        const containerElement = await TestBed.createComponent(FocusContainer, {
+        const containerElement = await TestBed.createComponent(Navigation, {
             tabindex: 0,
             onFocusChange,
         }, [button1, button2], { enableLayout: false })
@@ -156,7 +156,7 @@ describe('FocusContainer Component', () => {
         const button1 = Button({ tabindex: 0, text: 'Button 1' })
         const button2 = Button({ tabindex: 1, text: 'Button 2' })
 
-        const containerElement = await TestBed.createComponent(FocusContainer, {
+        const containerElement = await TestBed.createComponent(Navigation, {
             tabindex: 0
         }, [button1, button2], { enableLayout: false })
 
@@ -176,7 +176,7 @@ describe('FocusContainer Component', () => {
         const button1 = Button({ tabindex: 0, text: 'Button 1' })
         const button2 = Button({ tabindex: 1, text: 'Button 2' })
 
-        const containerElement = await TestBed.createComponent(FocusContainer, {
+        const containerElement = await TestBed.createComponent(Navigation, {
             tabindex: 0
         }, [button1, button2], { enableLayout: false })
 
@@ -197,7 +197,7 @@ describe('FocusContainer Component', () => {
         const button1 = Button({ tabindex: 0, text: 'Button 1' })
         const button2 = Button({ tabindex: 1, text: 'Button 2' })
 
-        const containerElement = await TestBed.createComponent(FocusContainer, {
+        const containerElement = await TestBed.createComponent(Navigation, {
             tabindex: 0
         }, [button1, button2], { enableLayout: false })
 
