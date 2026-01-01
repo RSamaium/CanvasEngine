@@ -1,14 +1,12 @@
 <Canvas>
    <DOMContainer width="80%" height="100%">
       <DOMSprite
-        image="./exp.png"
-        frames={[
-          { x: 0, y: 0, width: 256, height: 256 },
-          { x: 256, y: 0, width: 256, height: 256 },
-          { x: 512, y: 0, width: 256, height: 256 },
-          { x: 768, y: 0, width: 256, height: 256 },
-        ]}
-        fps={5}
+        sheet={{
+          definition,
+          playing: "explode",
+          params: { direction: "right" },
+          onFinish
+        }}
         playing={selected}
         loop={true}
         click
@@ -47,6 +45,28 @@
 
   const test = signal(undefined)
   const selected = signal(true)
+  const definition = {
+    id: "explosion",
+    image: "./exp.png",
+    framesWidth: 4,
+    framesHeight: 4,
+    textures: {
+      explode: {
+        animations: () => [
+          [
+            { time: 0, frameX: 0, frameY: 0 },
+            { time: 10, frameX: 1, frameY: 0 },
+            { time: 20, frameX: 2, frameY: 0 },
+            { time: 30, frameX: 3, frameY: 0 }
+          ]
+        ]
+      }
+    }
+  }
+
+  function onFinish() {
+    console.log("DOMSprite animation finished")
+  }
 
   function click() {
     selected.set(!selected())
