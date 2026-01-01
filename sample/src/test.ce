@@ -1,11 +1,18 @@
 <Canvas>
    <DOMContainer width="80%" height="100%">
-    <div class="red">
-      <DOMContainer width="100%" height="100%">
-        <div class="blue" class={ {selected: selected } }>
-        </div>
-      </DOMContainer>
-    </div>
+      <DOMSprite
+        image="./exp.png"
+        frames={[
+          { x: 0, y: 0, width: 256, height: 256 },
+          { x: 256, y: 0, width: 256, height: 256 },
+          { x: 512, y: 0, width: 256, height: 256 },
+          { x: 768, y: 0, width: 256, height: 256 },
+        ]}
+        fps={12}
+        playing={true}
+        loop={true}
+        click
+      />
     
    </DOMContainer>
 </Canvas>
@@ -39,5 +46,9 @@
   import Child from './child.ce'
 
   const test = signal(undefined)
-  const selected = signal(false)
+  const selected = signal(true)
+
+  function click() {
+    selected.set(!selected())
+  }
 </script>

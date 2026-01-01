@@ -261,6 +261,7 @@ export default function canvasengine() {
     "Svg",
     "DOMContainer",
     "DOMElement",
+    "DOMSprite",
     "Button",
     "Joystick"
   ];
