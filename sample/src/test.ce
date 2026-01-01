@@ -8,8 +8,8 @@
           { x: 512, y: 0, width: 256, height: 256 },
           { x: 768, y: 0, width: 256, height: 256 },
         ]}
-        fps={12}
-        playing={true}
+        fps={5}
+        playing={selected}
         loop={true}
         click
       />

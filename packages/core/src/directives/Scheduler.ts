@@ -30,7 +30,9 @@ export class Scheduler extends Directive {
     onUpdate(props: any) { }
 
     nextTick(timestamp: number) {
-        const now = Utils.preciseNow()
+        const now = (typeof timestamp === "number" && timestamp > 0)
+            ? timestamp
+            : Utils.preciseNow()
         if (this.lastTimestamp === 0) {
             this.lastTimestamp = now
             this.deltaTime = 0
@@ -38,9 +40,7 @@ export class Scheduler extends Directive {
             this.deltaTime = now - this.lastTimestamp
             this.lastTimestamp = now
         }
-        this.timestamp = (typeof timestamp === "number" && timestamp > 0)
-            ? timestamp
-            : now
+        this.timestamp = now
         this.tick.set({
             timestamp: this.timestamp,
             deltaTime: this.deltaTime,

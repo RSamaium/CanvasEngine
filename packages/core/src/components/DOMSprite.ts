@@ -317,7 +317,8 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     this.lastTickTimestamp = undefined;
 
     if (this.tickSignal?.observable) {
-      this.tickSubscription = this.tickSignal.observable.subscribe((tick) => {
+      this.tickSubscription = this.tickSignal.observable.subscribe((result: any) => {
+        const tick = result?.value ?? result;
         if (!tick) return;
         let deltaTime = tick.deltaTime || 0;
         if (deltaTime <= 0) {
