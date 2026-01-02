@@ -307,7 +307,14 @@ simpleTextContent "simple text content"
 simpleTextPart "simple text part"
   = !("@for" / "@if") text:$([^<{@]+) {
       const trimmed = text.trim();
-      return trimmed ? JSON.stringify(trimmed) : null;
+      if (!trimmed) return null;
+      const escaped = text
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r/g, '\\r')
+        .replace(/\n/g, '\\n')
+        .replace(/\t/g, '\\t');
+      return `'${escaped}'`;
     }
 
 simpleDynamicPart "simple dynamic part"
