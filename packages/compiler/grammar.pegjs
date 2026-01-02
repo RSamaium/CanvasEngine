@@ -307,7 +307,7 @@ simpleTextContent "simple text content"
 simpleTextPart "simple text part"
   = !("@for" / "@if") text:$([^<{@]+) {
       const trimmed = text.trim();
-      return trimmed ? `'${text}'` : null;
+      return trimmed ? JSON.stringify(trimmed) : null;
     }
 
 simpleDynamicPart "simple dynamic part"
