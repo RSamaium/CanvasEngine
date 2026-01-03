@@ -160,7 +160,7 @@ Use the `viewportCull` directive to hide off-screen elements:
 <Viewport worldWidth="5000" worldHeight="5000">
   <Container viewportCull={true}>
     @for (item of items) {
-      <Sprite x={@item.x} y={@item.y} />
+      <Sprite x={item().x} y={item().y} />
     }
   </Container>
 </Viewport>
@@ -175,8 +175,8 @@ Use the `viewportCull` directive to hide off-screen elements:
       @for (item of items) {
         <Sprite 
           image="sprite.png"
-          x={@item.x}
-          y={@item.y}
+          x={item().x}
+          y={item().y}
         />
       }
     </Container>
@@ -272,4 +272,3 @@ npm run dev
 ```
 
 Press `1-4` to switch between optimization modes and observe FPS differences.
-

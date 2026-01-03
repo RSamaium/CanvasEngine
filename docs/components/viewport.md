@@ -134,7 +134,7 @@ The `viewportCull` directive automatically hides elements outside the visible ar
 <Viewport worldWidth="5000" worldHeight="5000" drag={true}>
   <Container viewportCull={true}>
     @for (item of items) {
-      <Sprite image={@item.image} x={@item.x} y={@item.y} />
+      <Sprite image={item().image} x={item().x} y={item().y} />
     }
   </Container>
 </Viewport>

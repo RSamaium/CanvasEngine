@@ -8,7 +8,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup && cp grammar.pegjs ../../docs/public/grammar.pegjs",
+    "build": "tsup && cp grammar2.pegjs ../../docs/public/grammar.pegjs",
     "dev": "tsup --watch"
   },
   "type": "module",

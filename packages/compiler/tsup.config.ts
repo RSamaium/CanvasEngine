@@ -19,5 +19,9 @@ export default  defineConfig({
             join(process.cwd(), 'grammar.pegjs'),
             join(process.cwd(), 'dist', 'grammar.pegjs')
         )
+        copyFileSync(
+            join(process.cwd(), 'grammar2.pegjs'),
+            join(process.cwd(), 'dist', 'grammar2.pegjs')
+        )
     },
 })

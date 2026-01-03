@@ -1,8 +1,9 @@
 
 <Canvas>
-  <DOMContainer width={500}>
-      <p>{gold}</p>
-  </DOMContainer>
+    <Text text={text.gold() + 1} color="red" />
+    @if (text.gold() > 10) {
+      <Text text="Gold is greater than 10" color="blue" />
+    }
 </Canvas>
 
 <style scoped>
@@ -17,5 +18,11 @@
 <script>
 import { signal } from "canvasengine";
 
-const gold = signal(0)
+const text = {
+  gold: signal(0),
+}
+
+setInterval(() => {
+  text.gold.set(text.gold() + 1);
+}, 1000);
 </script>

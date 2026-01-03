@@ -384,25 +384,25 @@ const handleFocusChange = (index, element) => {
     >
       <Container y={-100}>
         @for (item of items) {
-          <Container y={@item.@id * 80}>
+          <Container y={item().id * 80}>
             <Rect
-              tabindex={@item.@id}
+              tabindex={item().id}
               width={300}
               height={60}
               x={0}
               y={0}
               anchor={{ x: 0.5, y: 0.5 }}
-              color={@item.@color}
-              alpha={computed(() => selectedIndex() === @item.@id ? 1 : 0.5)}
+              color={item().color}
+              alpha={computed(() => selectedIndex() === item().id ? 1 : 0.5)}
             />
             <Text
-              text={@item.@label}
+              text={item().label}
               x={0}
               y={0}
               anchor={{ x: 0.5, y: 0.5 }}
               style={{ fontSize: 24, fill: "#ffffff" }}
             />
-            @if (selectedIndex() === @item.@id) {
+            @if (selectedIndex() === item().id) {
               <Rect
                 width={320}
                 height={80}
@@ -452,9 +452,9 @@ const controls = signal({
   >
     @for (item of items) {
       <Button 
-        tabindex={@item.@id} 
-        y={@item.@y} 
-        text={@item.@label}
+        tabindex={item().id} 
+        y={item().y} 
+        text={item().label}
       />
     }
   </Navigation>

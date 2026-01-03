@@ -35,6 +35,26 @@ If the attribute name is the same as the variable, you can simplify:
 ```
 :::
 
+::: warning Grammar v2
+The compiler now uses grammar v2 by default. Literal `@` prefixes inside expressions are no longer supported (only `@if`, `@else`, `@for` remain). If you need the legacy grammar, set `CANVASENGINE_COMPILER_V1=1`.
+:::
+
+### Expressions and computed
+
+The compiler only wraps expressions containing a function call in `computed`. Simple expressions stay as-is.
+
+```html
+<Text text={1 + 1} />
+<Text text={nb() + 1} />
+```
+
+Compiles to:
+
+```js
+h(Text, { text: 1 + 1 })
+h(Text, { text: computed(() => nb() + 1) })
+```
+
 ## Event listeners
 
 You can use event listeners in your components
@@ -145,12 +165,12 @@ You can use the `@for` directive to loop over an array or an object.
 
 ::: warning With objects array
 
-`item` is transformed into a signal (see chapter on reactivity).
+If `item` is a signal (see chapter on reactivity), use `item()` to access it.
 
 ```angular-html
 <Container>
   @for (item of items) {
-    <Text text={item.text} /> <!-- error because item is a signal -->
+    <Text text={item().text} />
   }
 </Container>
 
@@ -163,18 +183,6 @@ You can use the `@for` directive to loop over an array or an object.
   }];
 </script>
 ```
-
-To fix it, you can "undo" the transformation by signaling on the property.
-
-```angular-html
-<Container>
-  @for (item of items) {
-    <Text text={@item.text} />
-  }
-</Container>
-```
-
-Use `@` to "undo" the transformation.
 :::
 
 ### With objects
