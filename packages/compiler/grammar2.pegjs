@@ -44,6 +44,13 @@
     'param', 'source', 'track', 'wbr'
   ]);
 
+  const eventAttributes = new Set([
+    'click', 'tap', 'pointertap', 'pointerdown', 'pointerup', 'pointermove',
+    'pointerover', 'pointerout', 'pointerupoutside', 'mousedown', 'mouseup',
+    'mousemove', 'mouseover', 'mouseout', 'touchstart', 'touchend', 'touchmove',
+    'touchcancel', 'rightclick', 'keydown', 'keyup', 'keypress'
+  ]);
+
   // DisplayObject special attributes that should not be in attrs
   const displayObjectAttributes = new Set([
     'x', 'y', 'scale', 'anchor', 'skew', 'tint', 'rotation', 'angle', 
@@ -491,6 +498,9 @@ dynamicAttribute "dynamic attribute"
       const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
       const formattedName = needsQuotes ? `'${attributeName}'` : attributeName;
       
+        if (eventAttributes.has(attributeName)) {
+          return `${formattedName}: ${attributeValue}`;
+        }
       
         // If it's a complex object with strings, preserve it as is
         if (attributeValue.trim().startsWith('{') && attributeValue.trim().endsWith('}') && 
@@ -531,6 +541,9 @@ dynamicAttribute "dynamic attribute"
         return `${formattedName}: ${formattedObject}`;
       }
       if (isArrayLiteral) {
+        if (hasFunctionCall(trimmedValue)) {
+          return `${formattedName}: computed(() => ${attributeValue})`;
+        }
         return `${formattedName}: ${attributeValue}`;
       }
 

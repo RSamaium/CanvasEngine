@@ -522,8 +522,20 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas, { width: \`direction: \${direction}\` })`);
   });
 
+  test("should compile template string without transforming identifiers", () => {
+    const input = `<Canvas width={\`hello \${name}\`} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: \`hello \${name}\` })`);
+  });
+
   test("should compile component with object attribute", () => {
     const input = `<Canvas width={ {x: 10, y: 20} } />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: { x: 10, y: 20 } })`);
+  });
+
+  test("should format compact object attribute spacing", () => {
+    const input = `<Canvas width={{x:10,y:20}} />`;
     const output = parser.parse(input);
     expect(output).toBe(`h(Canvas, { width: { x: 10, y: 20 } })`);
   });
@@ -542,6 +554,12 @@ describe("Compiler", () => {
     `;
     const output = parser.parse(input);
    expect(output).toBe(`h(Container, { obj: computed(() => ({ positive: positive(), negative: stat.delta < 0 })) })`);
+  });
+
+  test('should compile object attribute with function and nested value', () => {
+    const input = `<Container obj={{ foo: bar(), nested: baz }} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Container, { obj: computed(() => ({ foo: bar(), nested: baz })) })`);
   });
 
   test("should compile component with complex object attribute", () => {
@@ -629,6 +647,12 @@ describe("Compiler", () => {
     const input = `<Canvas width={ [x, 20] } />`;
     const output = parser.parse(input);
     expect(output).toBe(`h(Canvas, { width: [x, 20] })`);
+  });
+
+  test("should compile component with array attribute containing function", () => {
+    const input = `<Canvas width={ [x(), 20] } />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: computed(() => [x(), 20]) })`);
   });
 
   test("should compile component with standalone dynamic attribute", () => {
@@ -721,6 +745,12 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Sprite, { click: () => console.log('click') })`);
   });
 
+  test('should compile component with event handler function call without computed', () => {
+    const input = `<Sprite click={selected()} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Sprite, { click: selected() })`);
+  });
+
   test("should compile component with component attribute", () => {
     const input = `<Canvas child={<Sprite />} />`;
     const output = parser.parse(input);
@@ -778,6 +808,18 @@ describe("Compiler", () => {
     const input = `<button>{item().label()}</button>`;
     const output = parser.parse(input);
     expect(output).toBe(`h(DOMElement, { element: "button", textContent: computed(() => item().label()) })`);
+  });
+
+  test("should compile text content with mixed expression and function", () => {
+    const input = `<p>{a + b()}</p>`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(DOMElement, { element: "p", textContent: computed(() => a + b()) })`);
+  });
+
+  test("should compile text content with dot notation without computed", () => {
+    const input = `<p>{user.name}</p>`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(DOMElement, { element: "p", textContent: user.name })`);
   });
 
   test("should compile mixed text with signal without nested computed", () => {
@@ -951,6 +993,16 @@ describe("Condition", () => {
         `;
     const output = parser.parse(input);
     expect(output).toBe(`cond(computed(() => !sprite() || other()), () => h(Sprite))`);
+  });
+
+  test("should compile condition with nested parentheses", () => {
+    const input = `
+            @if ((a && b()) || c) {
+                <Sprite />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(computed(() => (a && b()) || c), () => h(Sprite))`);
   });
 
   test("should compile condition when sprite is visible", () => {
