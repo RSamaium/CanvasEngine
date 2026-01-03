@@ -562,6 +562,12 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Container, { obj: computed(() => ({ foo: bar(), nested: baz })) })`);
   });
 
+  test('should compile object attribute with spread and function', () => {
+    const input = `<Container obj={{ ...base, count: total() }} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Container, { obj: computed(() => ({ ...base, count: total() })) })`);
+  });
+
   test("should compile component with complex object attribute", () => {
     const input = `<Sprite 
         sheet={{
@@ -653,6 +659,12 @@ describe("Compiler", () => {
     const input = `<Canvas width={ [x(), 20] } />`;
     const output = parser.parse(input);
     expect(output).toBe(`h(Canvas, { width: computed(() => [x(), 20]) })`);
+  });
+
+  test("should compile component with array attribute containing expression without computed", () => {
+    const input = `<Canvas width={ [x + 1, y] } />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Canvas, { width: [x + 1, y] })`);
   });
 
   test("should compile component with standalone dynamic attribute", () => {
@@ -751,6 +763,12 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Sprite, { click: selected() })`);
   });
 
+  test('should compile component with complex event handler expression without computed', () => {
+    const input = `<Sprite click={selected() ? onA : onB} />`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(Sprite, { click: selected() ? onA : onB })`);
+  });
+
   test("should compile component with component attribute", () => {
     const input = `<Canvas child={<Sprite />} />`;
     const output = parser.parse(input);
@@ -814,6 +832,12 @@ describe("Compiler", () => {
     const input = `<p>{a + b()}</p>`;
     const output = parser.parse(input);
     expect(output).toBe(`h(DOMElement, { element: "p", textContent: computed(() => a + b()) })`);
+  });
+
+  test("should compile text content with multiple function calls", () => {
+    const input = `<p>{a() + b()}</p>`;
+    const output = parser.parse(input);
+    expect(output).toBe(`h(DOMElement, { element: "p", textContent: computed(() => a() + b()) })`);
   });
 
   test("should compile text content with dot notation without computed", () => {
@@ -1023,6 +1047,16 @@ describe("Condition", () => {
         `;
     const output = parser.parse(input);
     expect(output).toBe(`cond(val(), () => h(Sprite))`);
+  });
+
+  test("should compile condition with function call without computed", () => {
+    const input = `
+            @if (isVisible()) {
+                <Sprite />
+            }
+        `;
+    const output = parser.parse(input);
+    expect(output).toBe(`cond(isVisible(), () => h(Sprite))`);
   });
 
   test("should compile condition for multiple sprites", () => {
