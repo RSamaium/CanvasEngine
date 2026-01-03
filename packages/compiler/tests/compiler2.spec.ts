@@ -909,7 +909,7 @@ describe("Condition", () => {
 
   test("should compile negative condition", () => {
     const input = `
-            @if (!sprite) {
+            @if (!sprite()) {
                 <Sprite />
             }
         `;
@@ -919,7 +919,7 @@ describe("Condition", () => {
 
   test("should compile negative condition with multiple condition", () => {
     const input = `
-            @if (!sprite && other) {
+            @if (!sprite() && other()) {
                 <Sprite />
             }
         `;
@@ -929,7 +929,7 @@ describe("Condition", () => {
 
   test("should compile negative condition with multiple condition (or)", () => {
     const input = `
-            @if (!sprite || other) {
+            @if (!sprite() || other()) {
                 <Sprite />
             }
         `;
@@ -1037,10 +1037,10 @@ describe("Condition", () => {
   test("should compile if/else if/else within loop", () => {
     const input = `
             @for (item of items) {
-                @if (item.type === 'sprite') {
+                @if (item().type() === 'sprite') {
                     <Sprite />
                 }
-                @else if (item.type === 'text') {
+                @else if (item().type() === 'text') {
                     <Text />
                 }
                 @else {

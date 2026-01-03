@@ -171,6 +171,47 @@
 
     return { domAttrs, displayObjectAttrs };
   }
+
+  function hasFunctionCall(value) {
+    return /[a-zA-Z_][a-zA-Z0-9_]*\s*\(/.test(value);
+  }
+
+  function hasIdentifier(value) {
+    return /[a-zA-Z_]/.test(value);
+  }
+
+  function isSimpleAccessor(value) {
+    return /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$/.test(value.trim());
+  }
+
+  function transformBareIdentifiersToSignals(value) {
+    return value.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g, (match, name, offset) => {
+      if (['true', 'false', 'null'].includes(name)) {
+        return match;
+      }
+
+      const beforeMatch = value.substring(0, offset);
+      const singleQuotesBefore = (beforeMatch.match(/'/g) || []).length;
+      const doubleQuotesBefore = (beforeMatch.match(/"/g) || []).length;
+      if (singleQuotesBefore % 2 === 1 || doubleQuotesBefore % 2 === 1) {
+        return match;
+      }
+
+      const charBefore = offset > 0 ? value[offset - 1] : '';
+      const charAfter = offset + match.length < value.length ? value[offset + match.length] : '';
+
+      if (charBefore === '.' || charAfter === '.') {
+        return match;
+      }
+
+      const afterSlice = value.slice(offset + match.length);
+      if (/^\s*\(/.test(afterSlice)) {
+        return match;
+      }
+
+      return `${name}()`;
+    });
+  }
 }
 
 start
@@ -319,63 +360,24 @@ simpleTextPart "simple text part"
 
 simpleDynamicPart "simple dynamic part"
   = "{{" _ expr:attributeValue _ "}}" {
-      // Handle double brace expressions like {{ object.x }} or {{ @object.x }} or {{ @object.@x }}
-      if (expr.trim().match(/^(@?[a-zA-Z_][a-zA-Z0-9_]*)(\.@?[a-zA-Z_][a-zA-Z0-9_]*)*$/)) {
-        let foundSignal = false;
-        let hasLiterals = false;
-        
-        // Split by dots to handle each part separately
-        const parts = expr.split('.');
-        const allLiterals = parts.every(part => part.trim().startsWith('@'));
-        
-        let computedValue;
-        
-        if (allLiterals) {
-          // All parts are literals, just remove @ prefixes
-          computedValue = parts.map(part => part.replace('@', '')).join('.');
-          hasLiterals = true;
-        } else {
-          // Transform each part individually
-          computedValue = parts.map(part => {
-            const trimmedPart = part.trim();
-            if (trimmedPart.startsWith('@')) {
-              hasLiterals = true;
-              return trimmedPart.substring(1); // Remove @ prefix for literals
-            } else {
-              // Don't transform keywords
-              if (['true', 'false', 'null'].includes(trimmedPart)) {
-                return trimmedPart;
-              }
-              foundSignal = true;
-              return `${trimmedPart}()`;
-            }
-          }).join('.');
-        }
-        
-        if (foundSignal && !allLiterals) {
-          return `computed(() => ${computedValue})`;
-        }
-        return computedValue;
+      const trimmedExpr = expr.trim();
+      if (!trimmedExpr) {
+        return trimmedExpr;
       }
-      return expr;
+      if (hasFunctionCall(trimmedExpr)) {
+        return `computed(() => ${trimmedExpr})`;
+      }
+      return trimmedExpr;
     }
   / "{" _ expr:attributeValue _ "}" {
-      // Handle single brace expressions like {item.name} or {@text}
-      if (expr.trim().match(/^(@?[a-zA-Z_][a-zA-Z0-9_]*)(\.@?[a-zA-Z_][a-zA-Z0-9_]*)*$/)) {
-        let foundSignal = false;
-        const computedValue = expr.replace(/@?([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*:)/g, (match, p1) => {
-          if (match.startsWith('@')) {
-            return p1;
-          }
-          foundSignal = true;
-          return `${p1}()`;
-        });
-        if (foundSignal) {
-          return `computed(() => ${computedValue})`;
-        }
-        return computedValue;
+      const trimmedExpr = expr.trim();
+      if (!trimmedExpr) {
+        return trimmedExpr;
       }
-      return expr;
+      if (hasFunctionCall(trimmedExpr)) {
+        return `computed(() => ${trimmedExpr})`;
+      }
+      return trimmedExpr;
     }
 
 openCloseElement "component with content"
@@ -487,115 +489,45 @@ dynamicAttribute "dynamic attribute"
           return `${formattedName}: ${attributeValue}`;
         }
         
-        // If it's a template string, transform expressions inside ${}
+        // If it's a template string, keep it as-is
       if (attributeValue.trim().startsWith('`') && attributeValue.trim().endsWith('`')) {
-        // Transform expressions inside ${} in template strings
-        let transformedTemplate = attributeValue;
-        
-        // Find and replace ${expression} patterns
-        let startIndex = 0;
-        while (true) {
-          const dollarIndex = transformedTemplate.indexOf('${', startIndex);
-          if (dollarIndex === -1) break;
-          
-          const braceIndex = transformedTemplate.indexOf('}', dollarIndex);
-          if (braceIndex === -1) break;
-          
-          const expr = transformedTemplate.substring(dollarIndex + 2, braceIndex);
-          const trimmedExpr = expr.trim();
-          
-          let replacement;
-          if (trimmedExpr.startsWith('@')) {
-            // Remove @ prefix for literals
-            replacement = '${' + trimmedExpr.substring(1) + '}';
-          } else if (trimmedExpr.match(/^[a-zA-Z_][a-zA-Z0-9_.]*$/)) {
-            // Transform identifiers to signals
-            replacement = '${' + trimmedExpr + '()}';
-          } else {
-            // Keep as is for complex expressions
-            replacement = '${' + expr + '}';
-          }
-          
-          transformedTemplate = transformedTemplate.substring(0, dollarIndex) + 
-                               replacement + 
-                               transformedTemplate.substring(braceIndex + 1);
-          
-          startIndex = dollarIndex + replacement.length;
-        }
-        
-        return formattedName + ': ' + transformedTemplate;
+        return formattedName + ': ' + attributeValue;
       }
       
       // Handle other types of values
       if (attributeValue.startsWith('h(') || attributeValue.includes('=>')) {
         return `${formattedName}: ${attributeValue}`;
-      } else if (attributeValue.trim().match(/^[a-zA-Z_]\w*$/)) {
-        return `${formattedName}: ${attributeValue}`;
-      } else {
-        // Check if this is an object or array literal
-        const isObjectLiteral = attributeValue.trim().startsWith('{ ') && attributeValue.trim().endsWith(' }');
-        const isArrayLiteral = attributeValue.trim().startsWith('[') && attributeValue.trim().endsWith(']');
-        
-        let foundSignal = false;
-        let hasLiterals = false;
-        let computedValue = attributeValue;
-        
-        // For simple object and array literals (like {x: x, y: 20} or [x, 20]), 
-        // don't use computed() at all and don't transform identifiers
-        if ((isObjectLiteral || isArrayLiteral) && !attributeValue.includes('()')) {
-          // Don't transform anything, return as is
-          foundSignal = false;
-          computedValue = attributeValue;
-        } else {
-          // Apply signal transformation for other values
-          computedValue = attributeValue.replace(/@?([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*:)/g, (match, p1, offset) => {
-            // Don't transform keywords, numbers, or if we're inside quotes
-            if (['true', 'false', 'null'].includes(p1) || /^\d+(\.\d+)?$/.test(p1)) {
-              return match;
-            }
-            
-            // Check if we're inside a string literal
-            const beforeMatch = attributeValue.substring(0, offset);
-            const singleQuotesBefore = (beforeMatch.match(/'/g) || []).length;
-            const doubleQuotesBefore = (beforeMatch.match(/"/g) || []).length;
-            
-            // If we're inside quotes, don't transform
-            if (singleQuotesBefore % 2 === 1 || doubleQuotesBefore % 2 === 1) {
-              return match;
-            }
-            
-            if (match.startsWith('@')) {
-              hasLiterals = true;
-              return p1; // Remove @ prefix
-            }
-            foundSignal = true;
-            return `${p1}()`;
-          });
-          
-          // Check if any values already contain signals (ending with ())
-          if (attributeValue.includes('()')) {
-            foundSignal = true;
-          }
-        }
-        
-        if (foundSignal) {
-          // For objects, wrap in parentheses
-          if (attributeValue.trim().startsWith('{') && attributeValue.trim().endsWith('}')) {
-            // Remove spaces for objects in parentheses
-            const cleanedObject = computedValue.replace(/{ /g, '{').replace(/ }/g, '}');
-            return `${formattedName}: computed(() => (${cleanedObject}))`;
-          }
-          return `${formattedName}: computed(() => ${computedValue})`;
-        }
-        
-        // If only literals (all @), don't use computed
-        if (hasLiterals && !foundSignal) {
-          return `${formattedName}: ${computedValue}`;
-        }
-        
-        // For static objects and arrays, return as is without parentheses
-        return `${formattedName}: ${computedValue}`;
       }
+
+      const trimmedValue = attributeValue.trim();
+      if (trimmedValue.match(/^[a-zA-Z_]\w*$/)) {
+        return `${formattedName}: ${attributeValue}`;
+      }
+
+      if (/^\d+(\.\d+)?$/.test(trimmedValue) || ['true', 'false', 'null'].includes(trimmedValue)) {
+        return `${formattedName}: ${attributeValue}`;
+      }
+
+      if (isSimpleAccessor(trimmedValue)) {
+        return `${formattedName}: ${attributeValue}`;
+      }
+
+      const isObjectLiteral = trimmedValue.startsWith('{ ') && trimmedValue.endsWith(' }');
+      const isArrayLiteral = trimmedValue.startsWith('[') && trimmedValue.endsWith(']');
+      if (isObjectLiteral || isArrayLiteral) {
+        return `${formattedName}: ${attributeValue}`;
+      }
+
+      if (hasFunctionCall(trimmedValue)) {
+        return `${formattedName}: computed(() => ${attributeValue})`;
+      }
+
+      if (!hasIdentifier(trimmedValue)) {
+        return `${formattedName}: ${attributeValue}`;
+      }
+
+      const computedValue = transformBareIdentifiersToSignals(attributeValue);
+      return `${formattedName}: computed(() => ${computedValue})`;
     }
   / attributeName:attributeName _ {
       const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
@@ -797,165 +729,23 @@ dotFunctionChain
     }
 
 condition "condition expression"
-  = functionCall
-  / functionCallWithArgs
-  / text_condition:$([^)]*) {
-      const originalText = text_condition.trim();
-
-      // Handle expressions with @ literals (like @item.@id)
-      // First, process dot notation expressions with @ literals
-      let processedText = originalText;
-      const dotNotationReplacements = new Map();
-      let replacementCounter = 0;
-      
-      // Process dot notation expressions like @item.@id, @item.id, item.@id
-      // Only process expressions that contain at least one @
-      processedText = processedText.replace(/(@[a-zA-Z_][a-zA-Z0-9_]*)(\.@?[a-zA-Z_][a-zA-Z0-9_]*)+|([a-zA-Z_][a-zA-Z0-9_]*)(\.@[a-zA-Z_][a-zA-Z0-9_]*)+/g, (match) => {
-        // Split by dots to handle each part separately
-        const parts = match.split('.');
-        const allLiterals = parts.every(part => part.trim().startsWith('@'));
-        
-        let replacement;
-        if (allLiterals) {
-          // All parts are literals, just remove @ prefixes (no signal transformation)
-          replacement = parts.map(part => part.trim().replace('@', '')).join('.');
-        } else {
-          // Transform each part individually
-          // Note: In conditions with operators, even @ literals in the first part
-          // should be transformed to signals for comparison
-          replacement = parts.map((part, index) => {
-            const trimmedPart = part.trim();
-            if (trimmedPart.startsWith('@')) {
-              // For the first part in conditions with operators, we still want to transform to signal
-              // For later parts, keep as literal
-              if (index === 0) {
-                // First part: remove @ but will be transformed to signal later
-                return trimmedPart.substring(1);
-              } else {
-                // Later parts: remove @ and keep as literal (no signal)
-                return trimmedPart.substring(1);
-              }
-            } else {
-              // Don't transform keywords
-              if (['true', 'false', 'null'].includes(trimmedPart)) {
-                return trimmedPart;
-              }
-              // Check if already a function call
-              if (trimmedPart.includes('(')) {
-                return trimmedPart;
-              }
-              // Transform to signal
-              return `${trimmedPart}()`;
-            }
-          }).join('.');
-        }
-        
-        // Store replacement and use a temporary marker
-        const marker = `__DOT_NOTATION_${replacementCounter++}__`;
-        dotNotationReplacements.set(marker, replacement);
-        return marker;
-      });
-      
-      // Now handle standalone @ identifiers (not in dot notation)
-      processedText = processedText.replace(/@([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*\.)/g, (match, p1) => {
-        return p1; // Remove @ prefix for standalone literals
-      });
-
-      // Transform simple identifiers to function calls like "foo" to "foo()"
-      // This regex matches identifiers not followed by an opening parenthesis.
-      // This transformation should only apply if we are wrapping in 'computed'.
-      if (processedText.includes('!') || processedText.includes('&&') || processedText.includes('||') || 
-          processedText.includes('>=') || processedText.includes('<=') || processedText.includes('===') || 
-          processedText.includes('!==') || processedText.includes('==') || processedText.includes('!=') ||
-          processedText.includes('>') || processedText.includes('<')) {
-          // Replace dot notation markers with their processed values BEFORE transforming identifiers
-          // This way, expressions like @item.id become item.id() and then item() is transformed
-          let textWithReplacements = processedText;
-          dotNotationReplacements.forEach((value, marker) => {
-            textWithReplacements = textWithReplacements.replace(new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
-          });
-          
-          const transformedText = textWithReplacements.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*\()/g, (match, p1, offset) => {
-              // Do not transform keywords (true, false, null) or numeric literals
-              if (['true', 'false', 'null'].includes(match) || /^\d+(\.\d+)?$/.test(match)) {
-                  return match;
-              }
-              
-              // Check if this is a marker (starts with __DOT_NOTATION_)
-              if (match.startsWith('__DOT_NOTATION_')) {
-                return match; // Don't transform markers
-              }
-              
-              // Check if the match is inside quotes
-              const beforeMatch = processedText.substring(0, offset);
-              const afterMatch = processedText.substring(offset + match.length);
-              const singleQuotesBefore = (beforeMatch.match(/'/g) || []).length;
-              const doubleQuotesBefore = (beforeMatch.match(/"/g) || []).length;
-              
-              // If we're inside quotes, don't transform
-              if (singleQuotesBefore % 2 === 1 || doubleQuotesBefore % 2 === 1) {
-                  return match;
-              }
-              
-              // Check if this identifier is part of a dot notation expression
-              const charBefore = offset > 0 ? textWithReplacements[offset - 1] : '';
-              const charAfter = offset + match.length < textWithReplacements.length ? textWithReplacements[offset + match.length] : '';
-              
-              // If there's a dot before or after, this is part of dot notation
-              if (charBefore === '.' || charAfter === '.') {
-                // Check if this dot notation expression was a marker (had @ in original)
-                const beforeContext = originalText.substring(Math.max(0, offset - 20), offset);
-                const afterContext = originalText.substring(offset, Math.min(originalText.length, offset + match.length + 20));
-                const fullContext = beforeContext + afterContext;
-                
-                // Check if this identifier had @ in the original
-                const hadAt = fullContext.includes('@' + match) || fullContext.match(new RegExp('@' + match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b'));
-                
-                if (hadAt) {
-                  // Check if ALL parts of the dot notation had @ (all literals)
-                  // Find the full dot notation expression in the original
-                  const dotExprMatch = originalText.match(/(@?[a-zA-Z_][a-zA-Z0-9_]*)(\.@?[a-zA-Z_][a-zA-Z0-9_]*)+/);
-                  if (dotExprMatch) {
-                    const dotExpr = dotExprMatch[0];
-                    const allPartsHadAt = dotExpr.split('.').every(part => part.trim().startsWith('@'));
-                    if (allPartsHadAt) {
-                      // All parts were literals (@item.@id), don't transform
-                      return match;
-                    }
-                  }
-                  
-                  // Only some parts had @ (@item.id or item.@id)
-                  if (charAfter === '.') {
-                    // First part: transform to signal even if it had @
-                    return `${match}()`;
-                  } else if (charBefore === '.') {
-                    // Later part: already processed in marker, don't retransform
-                    return match;
-                  }
-                }
-                
-                // In conditions with operators, transform dot notation expressions to signals
-                // (e.g., user.role becomes user().role())
-                // This applies to regular dot notation, not markers (which are already processed)
-                return `${match}()`;
-              }
-              
-              return `${match}()`;
-          });
-          
-          return `computed(() => ${transformedText})`;
+  = text:$(conditionChunk*) {
+      const originalText = text.trim();
+      if (!originalText) {
+        return originalText;
       }
-      // For simple conditions (no !, &&, ||), return the processed text as is.
-      // Cases like `myFunction()` are handled by the `functionCallWithArgs` rule.
-      
-      // Replace dot notation markers with their processed values
-      let finalText = processedText;
-      dotNotationReplacements.forEach((value, marker) => {
-        finalText = finalText.replace(new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
-      });
-      
-      return finalText;
+
+      const hasOperator = /[!<>=&|]/.test(originalText);
+      if (hasOperator) {
+        return `computed(() => ${originalText})`;
+      }
+
+      return originalText;
   }
+
+conditionChunk
+  = "(" conditionChunk* ")"
+  / [^()]
 
 functionCall "function call"
   = name:identifier "(" args:functionArgs? ")" {
@@ -984,66 +774,7 @@ functionArg
 
 complexFunctionArg "complex function argument"
   = _ value:complexArgExpression _ {
-    // Process @ literals and transform identifiers to signals
-    // Handle dot notation with @ literals like @item.@id, @item.id, item.@id
-    // Similar logic to simpleDynamicPart but for function arguments
-    
-    let processed = value.trim();
-    const original = processed;
-    
-    // Check if it's a dot notation expression
-    if (processed.match(/^(@?[a-zA-Z_][a-zA-Z0-9_]*)(\.@?[a-zA-Z_][a-zA-Z0-9_]*)*$/)) {
-      // Split by dots to handle each part separately
-      const parts = processed.split('.');
-      const allLiterals = parts.every(part => part.trim().startsWith('@'));
-      
-      let computedValue;
-      
-      if (allLiterals) {
-        // All parts are literals, just remove @ prefixes
-        computedValue = parts.map(part => part.trim().replace('@', '')).join('.');
-      } else {
-        // Transform each part individually
-        computedValue = parts.map(part => {
-          const trimmedPart = part.trim();
-          if (trimmedPart.startsWith('@')) {
-            return trimmedPart.substring(1); // Remove @ prefix for literals
-          } else {
-            // Don't transform keywords
-            if (['true', 'false', 'null'].includes(trimmedPart)) {
-              return trimmedPart;
-            }
-            // Check if it's already a function call
-            if (trimmedPart.includes('(')) {
-              return trimmedPart;
-            }
-            // Transform to signal
-            return `${trimmedPart}()`;
-          }
-        }).join('.');
-      }
-      
-      return computedValue;
-    }
-    
-    // Handle standalone identifiers (not dot notation)
-    // If it starts with @, remove @ prefix (literal)
-    if (processed.startsWith('@')) {
-      return processed.substring(1);
-    }
-    
-    // Don't transform keywords or numbers
-    if (['true', 'false', 'null'].includes(processed) || /^\d+(\.\d+)?$/.test(processed)) {
-      return processed;
-    }
-    
-    // Check if it's already a function call
-    if (processed.includes('(')) {
-      return processed;
-    }
-    
-    // Transform identifier to signal
-    return `${processed}()`;
+    return value.trim();
   }
 
 complexArgExpression "complex argument expression"
