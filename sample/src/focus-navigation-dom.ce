@@ -10,25 +10,25 @@
    
       <DOMContainer>
         <div class="button-container">
-        <FocusContainer 
+        <Navigation 
             tabindex={tabindex} 
             controls={controls}
           >
               <div>
-                <FocusContainer tabindex={tabindex2} controls={controls2}>
+                <Navigation tabindex={tabindex2} controls={controls2}>
                   <div>
                     <button tabindex={0}>Button 1</button>
                     <button tabindex={1}>Button 2</button>
                     <button tabindex={2}>Button 3</button>
                   </div>
-                </FocusContainer>
+                </Navigation>
                   <div>
                       @for (item of items) {
-                          <button tabindex={@item.@id}>{@item.@label}</button>
+                          <button tabindex={item.id}>{item.label}</button>
                         }
                   </div>
               </div>
-            </FocusContainer>
+          </Navigation>
         </div>
       </DOMContainer>
    

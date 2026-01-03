@@ -119,8 +119,8 @@ const guideMenu = [
         link: "/components/dom-container",
       },
       {
-        text: "FocusContainer",
-        link: "/components/focus-container",
+        text: "Navigation",
+        link: "/components/navigation",
       },
       {
         text: "Joystick",
