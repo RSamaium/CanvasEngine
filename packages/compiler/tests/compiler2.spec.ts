@@ -528,6 +528,22 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Canvas, { width: { x: 10, y: 20 } })`);
   });
 
+  test('should compile component with object attribute', () => {
+    const input = `
+    <Container obj={{positive: stat.delta > 0, negative: stat.delta < 0}}></Container>
+    `;
+    const output = parser.parse(input);
+   expect(output).toBe(`h(Container, { obj: { positive: stat.delta > 0, negative: stat.delta < 0 } })`);
+  });
+
+  test('should compile component with object attribute', () => {
+    const input = `
+    <Container obj={{positive: positive(), negative: stat.delta < 0}}></Container>
+    `;
+    const output = parser.parse(input);
+   expect(output).toBe(`h(Container, { obj: computed(() => ({ positive: positive(), negative: stat.delta < 0 })) })`);
+  });
+
   test("should compile component with complex object attribute", () => {
     const input = `<Sprite 
         sheet={{
@@ -1526,4 +1542,6 @@ button {
     // Same file should produce same hash
     expect(hash1).toBe(hash2);
   });
+
+  
 });

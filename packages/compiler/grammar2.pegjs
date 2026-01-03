@@ -184,6 +184,15 @@
     return /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$/.test(value.trim());
   }
 
+  function formatObjectLiteralSpacing(value) {
+    const trimmed = value.trim();
+    if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) {
+      return value;
+    }
+    const inner = trimmed.slice(1, -1).trim();
+    return `{ ${inner} }`;
+  }
+
   function transformBareIdentifiersToSignals(value) {
     return value.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g, (match, name, offset) => {
       if (['true', 'false', 'null'].includes(name)) {
@@ -512,9 +521,16 @@ dynamicAttribute "dynamic attribute"
         return `${formattedName}: ${attributeValue}`;
       }
 
-      const isObjectLiteral = trimmedValue.startsWith('{ ') && trimmedValue.endsWith(' }');
+      const isObjectLiteral = trimmedValue.startsWith('{') && trimmedValue.endsWith('}');
       const isArrayLiteral = trimmedValue.startsWith('[') && trimmedValue.endsWith(']');
-      if (isObjectLiteral || isArrayLiteral) {
+      if (isObjectLiteral) {
+        const formattedObject = formatObjectLiteralSpacing(attributeValue);
+        if (hasFunctionCall(trimmedValue)) {
+          return `${formattedName}: computed(() => (${formattedObject}))`;
+        }
+        return `${formattedName}: ${formattedObject}`;
+      }
+      if (isArrayLiteral) {
         return `${formattedName}: ${attributeValue}`;
       }
 
