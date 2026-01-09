@@ -1425,6 +1425,12 @@ describe('DOM', () => {
     expect(output).toBe('h(DOMElement, { element: "div", attrs: { class: [\'container\', { active: true }] } })');
   });
 
+  test('reactive class attributes', () => {
+    const input = `<div class={{ active: active() }} />`;
+    const output = parser.parse(input);
+    expect(output).toBe('h(DOMElement, { element: "div", attrs: { class: computed(() => ({ active: active() })) } })');
+  });
+
   test('should compile button DOM', () => {
     const input = `<button type="submit" />`;
     const output = parser.parse(input);

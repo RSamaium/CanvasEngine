@@ -30,8 +30,10 @@ export class TestBed {
         const comp = () => h(Canvas, {
             tickStart: false
         }, h(component, props, children))
+        const enableLayout = options.enableLayout ?? true;
         const { canvasElement, app } = await bootstrapCanvas(root, comp, {
-            enableLayout: options.enableLayout ?? true
+            enableLayout,
+            ...(enableLayout ? { layout: { throttle: 0 } } : {})
         })
         app.render()
         TestBed.lastApp = app as Application;
