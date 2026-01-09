@@ -268,26 +268,72 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
     // Handle internal _scopeClass prop for scoped CSS
     const scopeClass = props._scopeClass;
     let divProps: any = { element: "div" };
+    const divAttrs = { ...(props.attrs || {}) };
+
+    const mergeScopeClass = (classValue: any) => {
+      if (!scopeClass) return classValue;
+      if (classValue == null) return scopeClass;
+      if (typeof classValue === "string") {
+        return `${scopeClass} ${classValue}`;
+      }
+      if (Array.isArray(classValue)) {
+        return [scopeClass, ...classValue];
+      }
+      if (typeof classValue === "object") {
+        if ("items" in classValue) {
+          const itemsValue = (classValue as any).items;
+          return { ...classValue, items: [scopeClass, itemsValue] };
+        }
+        if ("value" in classValue) {
+          const valueValue = (classValue as any).value;
+          return { ...classValue, value: [scopeClass, valueValue] };
+        }
+        return { [scopeClass]: true, ...classValue };
+      }
+      return [scopeClass, classValue];
+    };
+
+    if (props.class !== undefined) {
+      if (divAttrs.class) {
+        divAttrs.class = [props.class, divAttrs.class];
+      } else {
+        divAttrs.class = props.class;
+      }
+    }
+
+    if (props.style !== undefined) {
+      if (
+        typeof divAttrs.style === "object"
+        && divAttrs.style !== null
+        && typeof props.style === "object"
+        && props.style !== null
+      ) {
+        divAttrs.style = { ...divAttrs.style, ...props.style };
+      } else if (divAttrs.style === undefined) {
+        divAttrs.style = props.style;
+      } else if (typeof divAttrs.style === "string" && typeof props.style === "string") {
+        divAttrs.style = `${divAttrs.style}; ${props.style}`;
+      } else {
+        divAttrs.style = props.style;
+      }
+    }
+
+    if (props.zIndex !== undefined) {
+      if (typeof divAttrs.style === "object" && divAttrs.style !== null) {
+        divAttrs.style = { ...divAttrs.style, zIndex: props.zIndex };
+      } else if (typeof divAttrs.style === "string") {
+        divAttrs.style = `${divAttrs.style}; z-index: ${props.zIndex}`;
+      } else {
+        divAttrs.style = { zIndex: props.zIndex };
+      }
+    }
 
     if (scopeClass) {
       // Merge scope class with existing attrs.class
-      divProps.attrs = { ...props.attrs };
-      if (divProps.attrs.class) {
-        // If class exists, merge it with scope class
-        if (typeof divProps.attrs.class === 'string') {
-          divProps.attrs.class = `${scopeClass} ${divProps.attrs.class}`;
-        } else if (Array.isArray(divProps.attrs.class)) {
-          divProps.attrs.class = [scopeClass, ...divProps.attrs.class];
-        } else if (typeof divProps.attrs.class === 'object') {
-          // For object format, add scope class as true
-          divProps.attrs.class = { [scopeClass]: true, ...divProps.attrs.class };
-        }
-      } else {
-        // No existing class, just add scope class
-        divProps.attrs.class = scopeClass;
-      }
-    } else if (props.attrs) {
-      divProps.attrs = props.attrs;
+      divProps.attrs = { ...divAttrs };
+      divProps.attrs.class = mergeScopeClass(divProps.attrs.class);
+    } else if (Object.keys(divAttrs).length > 0) {
+      divProps.attrs = divAttrs;
     }
 
     const routedChildren = this.routeDomChildren(props.children);

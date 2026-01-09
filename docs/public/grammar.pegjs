@@ -44,6 +44,13 @@
     'param', 'source', 'track', 'wbr'
   ]);
 
+  const eventAttributes = new Set([
+    'click', 'tap', 'pointertap', 'pointerdown', 'pointerup', 'pointermove',
+    'pointerover', 'pointerout', 'pointerupoutside', 'mousedown', 'mouseup',
+    'mousemove', 'mouseover', 'mouseout', 'touchstart', 'touchend', 'touchmove',
+    'touchcancel', 'rightclick', 'keydown', 'keyup', 'keypress'
+  ]);
+
   // DisplayObject special attributes that should not be in attrs
   const displayObjectAttributes = new Set([
     'x', 'y', 'scale', 'anchor', 'skew', 'tint', 'rotation', 'angle', 
@@ -172,6 +179,106 @@
     return { domAttrs, displayObjectAttrs };
   }
 
+  function formatDOMContainerAttributes(attributes) {
+    if (attributes.length === 0) {
+      return null;
+    }
+
+    const propsEntries = [];
+    const domAttrs = [];
+    const classValues = [];
+    let classInsertIndex = null;
+    let attrsInsertIndex = null;
+    let attrsIndex = null;
+    let attrsValue = null;
+
+    attributes.forEach(attr => {
+      if (attr.startsWith('...')) {
+        propsEntries.push(attr);
+        return;
+      }
+
+      let attrName;
+      let attrValue;
+      if (attr.includes(':')) {
+        const colonIndex = attr.indexOf(':');
+        attrName = attr.slice(0, colonIndex).trim().replace(/['"]/g, '');
+        attrValue = attr.slice(colonIndex + 1).trim();
+      } else {
+        attrName = attr.replace(/['"]/g, '');
+      }
+
+      if (attrName === 'class' && attrValue !== undefined) {
+        classValues.push(attrValue);
+        if (classInsertIndex === null) {
+          classInsertIndex = domAttrs.length;
+        }
+        if (attrsInsertIndex === null) {
+          attrsInsertIndex = propsEntries.length;
+        }
+        return;
+      }
+
+      if (attrName === 'style') {
+        domAttrs.push(attr);
+        if (attrsInsertIndex === null) {
+          attrsInsertIndex = propsEntries.length;
+        }
+        return;
+      }
+
+      if (attrName === 'attrs' && attrValue !== undefined) {
+        attrsValue = attrValue;
+        attrsIndex = propsEntries.length;
+        propsEntries.push(null);
+        return;
+      }
+
+      propsEntries.push(attr);
+    });
+
+    if (classValues.length > 0) {
+      const mergedClass = classValues.length === 1
+        ? `class: ${classValues[0]}`
+        : `class: [${classValues.join(', ')}]`;
+      if (classInsertIndex === null) {
+        domAttrs.push(mergedClass);
+      } else {
+        domAttrs.splice(classInsertIndex, 0, mergedClass);
+      }
+    }
+
+    let attrsEntry = null;
+    if (attrsValue && domAttrs.length > 0) {
+      attrsEntry = `attrs: { ...${attrsValue}, ${domAttrs.join(', ')} }`;
+    } else if (attrsValue) {
+      attrsEntry = `attrs: ${attrsValue}`;
+    } else if (domAttrs.length > 0) {
+      attrsEntry = `attrs: { ${domAttrs.join(', ')} }`;
+    }
+
+    if (attrsEntry) {
+      if (attrsIndex !== null) {
+        propsEntries[attrsIndex] = attrsEntry;
+      } else if (attrsInsertIndex !== null) {
+        propsEntries.splice(attrsInsertIndex, 0, attrsEntry);
+      } else {
+        propsEntries.unshift(attrsEntry);
+      }
+    }
+
+    const filteredEntries = propsEntries.filter(entry => entry !== null);
+    if (filteredEntries.length === 0) {
+      return null;
+    }
+
+    if (filteredEntries.length === 1 && filteredEntries[0].startsWith('...')) {
+      return filteredEntries[0].substring(3);
+    }
+
+    return `{ ${filteredEntries.join(', ')} }`;
+  }
+
   function hasFunctionCall(value) {
     return /[a-zA-Z_][a-zA-Z0-9_]*\s*\(/.test(value);
   }
@@ -248,6 +355,10 @@ selfClosingElement "self-closing component tag"
       // Check if it's a DOM element
       if (isDOMElement(tagName)) {
         return formatDOMElement(tagName, attributes);
+      }
+      if (tagName === 'DOMContainer') {
+        const attrsString = formatDOMContainerAttributes(attributes);
+        return attrsString ? `h(DOMContainer, ${attrsString})` : `h(DOMContainer)`;
       }
       // Otherwise, treat as regular component
       const attrsString = formatAttributes(attributes);
@@ -398,10 +509,10 @@ openCloseElement "component with content"
         );
       }
       
+      const children = content ? content : null;
+
       // Check if it's a DOM element
       if (isDOMElement(tagName)) {
-        const children = content ? content : null;
-        
         if (attributes.length === 0) {
           if (children) {
             return `h(DOMElement, { element: "${tagName}" }, ${children})`;
@@ -431,8 +542,20 @@ openCloseElement "component with content"
       }
       
       // Otherwise, treat as regular component
+      if (tagName === 'DOMContainer') {
+        const attrsString = formatDOMContainerAttributes(attributes);
+        if (attrsString && children) {
+          return `h(DOMContainer, ${attrsString}, ${children})`;
+        } else if (attrsString) {
+          return `h(DOMContainer, ${attrsString})`;
+        } else if (children) {
+          return `h(DOMContainer, null, ${children})`;
+        } else {
+          return `h(DOMContainer)`;
+        }
+      }
+
       const attrsString = formatAttributes(attributes);
-      const children = content ? content : null;
       if (attrsString && children) {
         return `h(${tagName}, ${attrsString}, ${children})`;
       } else if (attrsString) {
@@ -491,6 +614,9 @@ dynamicAttribute "dynamic attribute"
       const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
       const formattedName = needsQuotes ? `'${attributeName}'` : attributeName;
       
+        if (eventAttributes.has(attributeName)) {
+          return `${formattedName}: ${attributeValue}`;
+        }
       
         // If it's a complex object with strings, preserve it as is
         if (attributeValue.trim().startsWith('{') && attributeValue.trim().endsWith('}') && 
@@ -531,6 +657,9 @@ dynamicAttribute "dynamic attribute"
         return `${formattedName}: ${formattedObject}`;
       }
       if (isArrayLiteral) {
+        if (hasFunctionCall(trimmedValue)) {
+          return `${formattedName}: computed(() => ${attributeValue})`;
+        }
         return `${formattedName}: ${attributeValue}`;
       }
 

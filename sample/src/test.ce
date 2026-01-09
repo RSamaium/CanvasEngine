@@ -1,9 +1,8 @@
 
 <Canvas>
-    <Text text={text.gold() + 1} color="red" />
-    @if (text.gold() > 10) {
-      <Text text="Gold is greater than 10" color="blue" />
-    }
+    <DOMContainer class="container" justifyContent="center">  
+      <p>Hello</p>
+    </DOMContainer>
 </Canvas>
 
 <style scoped>

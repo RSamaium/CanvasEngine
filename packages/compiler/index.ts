@@ -176,6 +176,206 @@ function scopeCSS(css: string, scopeClass: string): string {
   return result;
 }
 
+function splitCallArguments(argsText: string): string[] {
+  const args: string[] = [];
+  let current = "";
+  let depth = 0;
+  let inSingle = false;
+  let inDouble = false;
+  let inTemplate = false;
+  let escaped = false;
+
+  for (let i = 0; i < argsText.length; i++) {
+    const char = argsText[i];
+
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      current += char;
+      escaped = true;
+      continue;
+    }
+
+    if (inSingle) {
+      current += char;
+      if (char === "'") inSingle = false;
+      continue;
+    }
+
+    if (inDouble) {
+      current += char;
+      if (char === '"') inDouble = false;
+      continue;
+    }
+
+    if (inTemplate) {
+      current += char;
+      if (char === "`") inTemplate = false;
+      continue;
+    }
+
+    if (char === "'") {
+      inSingle = true;
+      current += char;
+      continue;
+    }
+
+    if (char === '"') {
+      inDouble = true;
+      current += char;
+      continue;
+    }
+
+    if (char === "`") {
+      inTemplate = true;
+      current += char;
+      continue;
+    }
+
+    if (char === "(" || char === "{" || char === "[") {
+      depth++;
+      current += char;
+      continue;
+    }
+
+    if (char === ")" || char === "}" || char === "]") {
+      depth--;
+      current += char;
+      continue;
+    }
+
+    if (char === "," && depth === 0) {
+      args.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current.trim()) {
+    args.push(current.trim());
+  }
+
+  return args;
+}
+
+function addScopeClassToDOMContainer(parsedTemplate: string, scopeClass: string): string {
+  let result = "";
+  let cursor = 0;
+
+  while (cursor < parsedTemplate.length) {
+    const start = parsedTemplate.indexOf("h(DOMContainer", cursor);
+    if (start === -1) {
+      result += parsedTemplate.slice(cursor);
+      break;
+    }
+
+    result += parsedTemplate.slice(cursor, start);
+    const openParen = parsedTemplate.indexOf("(", start);
+    if (openParen === -1) {
+      result += parsedTemplate.slice(start);
+      break;
+    }
+
+    let depth = 0;
+    let inSingle = false;
+    let inDouble = false;
+    let inTemplate = false;
+    let escaped = false;
+    let end = -1;
+
+    for (let i = openParen; i < parsedTemplate.length; i++) {
+      const char = parsedTemplate[i];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (char === "\\") {
+        escaped = true;
+        continue;
+      }
+
+      if (inSingle) {
+        if (char === "'") inSingle = false;
+        continue;
+      }
+
+      if (inDouble) {
+        if (char === '"') inDouble = false;
+        continue;
+      }
+
+      if (inTemplate) {
+        if (char === "`") inTemplate = false;
+        continue;
+      }
+
+      if (char === "'") {
+        inSingle = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inDouble = true;
+        continue;
+      }
+
+      if (char === "`") {
+        inTemplate = true;
+        continue;
+      }
+
+      if (char === "(") depth++;
+      if (char === ")") depth--;
+
+      if (depth === 0) {
+        end = i + 1;
+        break;
+      }
+    }
+
+    if (end === -1) {
+      result += parsedTemplate.slice(start);
+      break;
+    }
+
+    const callText = parsedTemplate.slice(start, end);
+    const argsText = parsedTemplate.slice(openParen + 1, end - 1);
+    const args = splitCallArguments(argsText);
+
+    if (args[0]?.trim() !== "DOMContainer") {
+      result += callText;
+      cursor = end;
+      continue;
+    }
+
+    if (args.length === 1) {
+      args.push(`{ _scopeClass: '${scopeClass}' }`);
+    } else {
+      const props = args[1].trim();
+      if (props === "null" || props === "undefined") {
+        args[1] = `{ _scopeClass: '${scopeClass}' }`;
+      } else if (props.startsWith("{")) {
+        args[1] = props.replace(/^\{\s*/, `{ _scopeClass: '${scopeClass}', `);
+      } else {
+        args[1] = `{ _scopeClass: '${scopeClass}', ...${props} }`;
+      }
+    }
+
+    result += `h(${args.join(", ")})`;
+    cursor = end;
+  }
+
+  return result;
+}
+
 /**
  * Vite plugin to load shader files (.frag, .vert, .wgsl) as text strings
  * 
@@ -409,26 +609,7 @@ export default function canvasengine() {
         processedStyleContent = scopeCSS(styleContent, scopeClass);
         
         // Add _scopeClass prop to all DOMContainer in the template
-        // Pattern: h(DOMContainer, { ... }) or h(DOMContainer) or h(DOMContainer, null, ...)
-        parsedTemplate = parsedTemplate.replace(
-          /h\(DOMContainer\s*,\s*(\{([^}]*)\}|null)\s*(,\s*[^)]*)?\)/g,
-          (match, propsPart, propsContent, childrenPart) => {
-            if (propsPart === 'null') {
-              // h(DOMContainer, null, ...) -> h(DOMContainer, { _scopeClass: '...' }, ...)
-              return `h(DOMContainer, { _scopeClass: '${scopeClass}' }${childrenPart || ''})`;
-            } else {
-              // h(DOMContainer, { ... }, ...) -> h(DOMContainer, { _scopeClass: '...', ... }, ...)
-              // Need to insert _scopeClass at the beginning of the props object
-              return `h(DOMContainer, { _scopeClass: '${scopeClass}', ${propsContent || ''} }${childrenPart || ''})`;
-            }
-          }
-        );
-        
-        // Also handle h(DOMContainer) without props
-        parsedTemplate = parsedTemplate.replace(
-          /h\(DOMContainer\s*\)(?!\s*\()/g,
-          `h(DOMContainer, { _scopeClass: '${scopeClass}' })`
-        );
+        parsedTemplate = addScopeClassToDOMContainer(parsedTemplate, scopeClass);
       }
       
       // Escape style content for safe embedding in JavaScript string (using single quotes)
