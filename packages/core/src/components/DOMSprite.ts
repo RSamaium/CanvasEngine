@@ -40,6 +40,8 @@ export interface DOMSpriteProps extends DOMElementProps {
     onFinish?: () => void;
   };
   element?: "div" | "img";
+  class?: any;
+  style?: any;
   attrs?: Record<string, any> & {
     class?:
     | string
@@ -144,7 +146,8 @@ export class CanvasDOMSprite extends CanvasDOMElement {
   private rafId?: number;
   private lastRafTimestamp?: number;
   private lastTickTimestamp?: number;
-  private elementType: "div" | "img" = "div";
+  private renderElementType: "div" | "img" = "div";
+  private wrapperElementType: "div" | "img" = "div";
   private isAnimating = false;
   private playingSubscription?: Subscription;
   private playingSignal?: Signal<boolean>;
@@ -152,14 +155,26 @@ export class CanvasDOMSprite extends CanvasDOMElement {
   private explicitHeight?: string;
   private frameWidth = 0;
   private frameHeight = 0;
+  private fitMode?: string;
+  private renderElement?: HTMLElement;
+  private isContained = false;
 
   onInit(props: DOMElementProps) {
     const spriteProps = props as DOMSpriteProps;
-    this.elementType = spriteProps.element ?? "div";
-    const nextProps = this.mergeEventAttrs({ ...spriteProps, element: this.elementType });
+    const hasSheet = spriteProps.sheet !== undefined;
+    const defaultElement: "div" | "img" = !hasSheet && spriteProps.image ? "img" : "div";
+    this.renderElementType = spriteProps.element ?? defaultElement;
+    const resolvedFit = this.resolveValue(spriteProps.objectFit);
+    this.fitMode = resolvedFit ?? undefined;
+    this.wrapperElementType =
+      this.fitMode === "contain" && this.renderElementType === "img"
+        ? "div"
+        : this.renderElementType;
+    const nextProps = this.mergeEventAttrs({ ...spriteProps, element: this.wrapperElementType });
     this.tickSignal = nextProps.context?.tick;
     this.applyProps(nextProps);
     super.onInit(nextProps as any);
+    this.syncRenderElement();
     this.applyDisplayProps(nextProps);
     this.render();
     this.updateAnimationLoop();
@@ -177,6 +192,7 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     const nextProps = this.mergeEventAttrs(props as DOMSpriteProps);
     super.onUpdate(nextProps as any);
     this.applyProps(nextProps);
+    this.syncRenderElement();
     this.applyDisplayProps(nextProps);
     this.render();
     this.updateAnimationLoop();
@@ -450,6 +466,31 @@ export class CanvasDOMSprite extends CanvasDOMElement {
         merged[event] = handler;
       }
     }
+    if (props.class !== undefined) {
+      if (!merged) merged = {};
+      if (merged.class) {
+        merged.class = [props.class, merged.class];
+      } else {
+        merged.class = props.class;
+      }
+    }
+    if (props.style !== undefined) {
+      if (!merged) merged = {};
+      if (
+        typeof merged.style === "object"
+        && merged.style !== null
+        && typeof props.style === "object"
+        && props.style !== null
+      ) {
+        merged.style = { ...merged.style, ...props.style };
+      } else if (merged.style === undefined) {
+        merged.style = props.style;
+      } else if (typeof merged.style === "string" && typeof props.style === "string") {
+        merged.style = `${merged.style}; ${props.style}`;
+      } else {
+        merged.style = props.style;
+      }
+    }
     if (!merged) return props;
     return { ...props, attrs: merged };
   }
@@ -523,6 +564,10 @@ export class CanvasDOMSprite extends CanvasDOMElement {
         this.loop = resolvedLoop;
       }
     }
+    if (props.objectFit !== undefined) {
+      const resolvedFit = this.resolveValue(props.objectFit);
+      this.fitMode = resolvedFit ?? undefined;
+    }
   }
 
   private resolveValue<T>(value: T | Signal<T> | { value?: T } | undefined): T | undefined {
@@ -557,6 +602,19 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     if (resolved === undefined || resolved === null) return undefined;
     if (typeof resolved === "number") return `${resolved}px`;
     if (typeof resolved === "string") return resolved;
+    return undefined;
+  }
+
+  private resolvePixelSize(value?: string): number | undefined {
+    if (!value) return undefined;
+    if (value.endsWith("px")) {
+      const parsed = parseFloat(value);
+      return Number.isNaN(parsed) ? undefined : parsed;
+    }
+    if (/^\d+(\.\d+)?$/.test(value)) {
+      const parsed = parseFloat(value);
+      return Number.isNaN(parsed) ? undefined : parsed;
+    }
     return undefined;
   }
 
@@ -681,6 +739,55 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     }
   }
 
+  private syncRenderElement() {
+    if (!this.element) return;
+    if (this.fitMode === "contain" && !(this.element instanceof HTMLImageElement)) {
+      if (!this.isContained) {
+        const inner = document.createElement(this.renderElementType);
+        this.element.style.position = "relative";
+        this.element.style.overflow = "hidden";
+        inner.style.position = "absolute";
+        inner.style.left = "0";
+        inner.style.top = "0";
+        inner.style.transformOrigin = "0 0";
+        this.element.appendChild(inner);
+        this.renderElement = inner;
+        this.isContained = true;
+      }
+      return;
+    }
+
+    if (this.isContained) {
+      if (this.renderElement && this.renderElement !== this.element) {
+        this.renderElement.remove();
+      }
+      this.renderElement = undefined;
+      this.isContained = false;
+    }
+  }
+
+  private getRenderElement() {
+    return this.renderElement ?? this.element;
+  }
+
+  private applyContainScale() {
+    if (!this.isContained) return;
+    const target = this.getRenderElement();
+    if (!target || !this.element) return;
+    if (this.frameWidth <= 0 || this.frameHeight <= 0) return;
+
+    const containerWidth =
+      this.resolvePixelSize(this.explicitWidth) ?? this.element.clientWidth;
+    const containerHeight =
+      this.resolvePixelSize(this.explicitHeight) ?? this.element.clientHeight;
+
+    if (!containerWidth || !containerHeight) return;
+
+    const scale = Math.min(containerWidth / this.frameWidth, containerHeight / this.frameHeight);
+    if (!Number.isFinite(scale) || scale <= 0) return;
+    target.style.transform = `scale(${scale})`;
+  }
+
   private bindPlayingSignal(context: Element<CanvasDOMElement>) {
     const playingValue = context.propObservables?.playing as any;
     if (!playingValue || !isSignal(playingValue)) return;
@@ -739,6 +846,7 @@ export class CanvasDOMSprite extends CanvasDOMElement {
 
   private render() {
     if (!this.element) return;
+    const target = this.getRenderElement();
     const sheetFrame = this.getCurrentSheetFrame();
     if (sheetFrame) {
       this.applyFrame(sheetFrame);
@@ -746,10 +854,10 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     }
     const frames = this.getFrames();
     if (frames.length === 0) {
-      if (this.elementType === "img" && this.image) {
-        (this.element as HTMLImageElement).src = this.image;
+      if (this.renderElementType === "img" && this.image && target) {
+        (target as HTMLImageElement).src = this.image;
       } else if (this.image) {
-        this.element.style.backgroundImage = `url("${this.image}")`;
+        target.style.backgroundImage = `url("${this.image}")`;
       }
       return;
     }
@@ -765,29 +873,38 @@ export class CanvasDOMSprite extends CanvasDOMElement {
 
   private applyFrame(frame: DOMSpriteFrame) {
     if (!this.element) return;
+    const target = this.getRenderElement();
+    if (!target) return;
     this.frameWidth = frame.width;
     this.frameHeight = frame.height;
-    this.element.style.width = this.explicitWidth ?? `${frame.width}px`;
-    this.element.style.height = this.explicitHeight ?? `${frame.height}px`;
+    if (this.fitMode === "contain") {
+      target.style.width = `${frame.width}px`;
+      target.style.height = `${frame.height}px`;
+    } else {
+      target.style.width = this.explicitWidth ?? `${frame.width}px`;
+      target.style.height = this.explicitHeight ?? `${frame.height}px`;
+    }
 
     const x = frame.x ?? 0;
     const y = frame.y ?? 0;
 
-    if (this.elementType === "img") {
-      const img = this.element as HTMLImageElement;
+    if (this.renderElementType === "img") {
+      const img = target as HTMLImageElement;
       if (this.image) {
         img.src = this.image;
       }
       img.style.objectFit = "none";
       img.style.objectPosition = `-${x}px -${y}px`;
+      this.applyContainScale();
       return;
     }
 
     if (this.image) {
-      this.element.style.backgroundImage = `url("${this.image}")`;
+      target.style.backgroundImage = `url("${this.image}")`;
     }
-    this.element.style.backgroundRepeat = "no-repeat";
-    this.element.style.backgroundPosition = `-${x}px -${y}px`;
+    target.style.backgroundRepeat = "no-repeat";
+    target.style.backgroundPosition = `-${x}px -${y}px`;
+    this.applyContainScale();
   }
 
   private updateAnimationLoop() {

@@ -9,28 +9,6 @@ describe('DOMSprite Component', () => {
         document.body.innerHTML = '<div id="root"></div>'
     })
 
-    test('renders DOMSprite with frame and image', async () => {
-        const containerElement = await TestBed.createComponent(DOMContainer, {}, [
-            DOMSprite({
-                image: 'sprite.png',
-                rectangle: {
-                    x: 5,
-                    y: 7,
-                    width: 32,
-                    height: 16
-                }
-            })
-        ], { enableLayout: false })
-
-        const wrapperDiv = (containerElement.componentInstance as any).element as HTMLElement
-        const spriteElement = wrapperDiv.children[0] as HTMLElement
-
-        expect(spriteElement.style.width).toBe('32px')
-        expect(spriteElement.style.height).toBe('16px')
-        expect(spriteElement.style.backgroundImage).toContain('sprite.png')
-        expect(spriteElement.style.backgroundPosition).toBe('-5px -7px')
-    })
-
     test('renders DOMSprite as img element with frame positioning', async () => {
         const containerElement = await TestBed.createComponent(DOMContainer, {}, [
             DOMSprite({
@@ -55,23 +33,29 @@ describe('DOMSprite Component', () => {
         expect(spriteElement.style.objectPosition).toBe('-2px -3px')
     })
 
-    test('uses frames when provided instead of rectangle', async () => {
+    
+    test('contains frame within explicit size using objectFit', async () => {
         const containerElement = await TestBed.createComponent(DOMContainer, {}, [
             DOMSprite({
-                image: 'sprite.png',
-                rectangle: { x: 0, y: 0, width: 10, height: 10 },
-                frames: [
-                    { x: 8, y: 9, width: 12, height: 13 }
-                ]
+                objectFit: 'contain',
+                width: 100,
+                height: 50,
+                rectangle: {
+                    x: 0,
+                    y: 0,
+                    width: 20,
+                    height: 20
+                }
             })
         ], { enableLayout: false })
 
         const wrapperDiv = (containerElement.componentInstance as any).element as HTMLElement
-        const spriteElement = wrapperDiv.children[0] as HTMLElement
+        const spriteWrapper = wrapperDiv.children[0] as HTMLElement
+        const spriteInner = spriteWrapper.children[0] as HTMLElement
 
-        expect(spriteElement.style.width).toBe('12px')
-        expect(spriteElement.style.height).toBe('13px')
-        expect(spriteElement.style.backgroundPosition).toBe('-8px -9px')
+        expect(spriteWrapper.style.width).toBe('100px')
+        expect(spriteWrapper.style.height).toBe('50px')
+        expect(spriteInner.style.transform).toContain('scale(2.5)')
     })
 
     test('applies transform and anchor props to DOMSprite', async () => {

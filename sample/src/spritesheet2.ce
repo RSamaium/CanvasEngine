@@ -9,15 +9,21 @@
         />
     </Container>
     <DOMContainer y={400}>
-        <Sprite 
+        <DOMSprite 
             sheet={{
                 definition: definition(),
                 playing: "default"
             }}
-            scale={0.5}
+            objectFit="contain"
+            width={100}
+            height={100}
         />
     </DOMContainer>
 </Canvas>
+
+<style scoped>
+
+</style>
 
 <script>
 import { signal } from 'canvasengine';

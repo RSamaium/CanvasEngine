@@ -110,6 +110,42 @@ const definition = {
 
 When using a hitbox, the sprite's anchor will be automatically calculated based on the `rectHeight` and `spriteRealSize` properties to properly align the sprite with its collision box. This is particularly useful for character sprites where the visual representation might be larger than the actual collision area.
 
+## DOMSprite: objectFit, width/height, class, style
+
+When a `Sprite` is rendered inside a `DOMContainer`, it is routed to `DOMSprite`. You can use DOM-specific props to control sizing and containment.
+
+### Contain a frame inside a fixed box
+
+Use `objectFit="contain"` with `width`/`height` to scale the frame to fit the box while preserving its aspect ratio.
+
+```html
+<DOMContainer>
+  <Sprite
+    objectFit="contain"
+    width={100}
+    height={100}
+    sheet={{
+      definition,
+      playing: "default"
+    }}
+  />
+</DOMContainer>
+```
+
+### class and style
+
+You can pass `class` and `style` directly on `Sprite`/`DOMSprite` when used inside a `DOMContainer`.
+
+```html
+<DOMContainer>
+  <Sprite
+    class="avatar"
+    style={{ border: "1px solid red" }}
+    image="./hero.png"
+  />
+</DOMContainer>
+```
+
 ## Available Sheet Definition Parameters
 
 | Parameter | Type | Description |
