@@ -148,6 +148,10 @@ export class CanvasDOMSprite extends CanvasDOMElement {
   private isAnimating = false;
   private playingSubscription?: Subscription;
   private playingSignal?: Signal<boolean>;
+  private explicitWidth?: string;
+  private explicitHeight?: string;
+  private frameWidth = 0;
+  private frameHeight = 0;
 
   onInit(props: DOMElementProps) {
     const spriteProps = props as DOMSpriteProps;
@@ -156,6 +160,7 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     this.tickSignal = nextProps.context?.tick;
     this.applyProps(nextProps);
     super.onInit(nextProps as any);
+    this.applyDisplayProps(nextProps);
     this.render();
     this.updateAnimationLoop();
   }
@@ -172,6 +177,7 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     const nextProps = this.mergeEventAttrs(props as DOMSpriteProps);
     super.onUpdate(nextProps as any);
     this.applyProps(nextProps);
+    this.applyDisplayProps(nextProps);
     this.render();
     this.updateAnimationLoop();
   }
@@ -519,6 +525,162 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     }
   }
 
+  private resolveValue<T>(value: T | Signal<T> | { value?: T } | undefined): T | undefined {
+    if (value === undefined) return undefined;
+    const resolved = isSignal(value as any) ? (value as any)() : value;
+    if (resolved && typeof resolved === "object" && "value" in (resolved as any)) {
+      return (resolved as any).value as T;
+    }
+    return resolved as T;
+  }
+
+  private resolvePoint(
+    value: DOMSpriteProps["scale"] | DOMSpriteProps["anchor"] | DOMSpriteProps["skew"] | DOMSpriteProps["pivot"]
+  ): { x: number; y: number } | undefined {
+    const resolved = this.resolveValue<any>(value as any);
+    if (resolved === undefined || resolved === null) return undefined;
+    if (typeof resolved === "number") {
+      return { x: resolved, y: resolved };
+    }
+    if (Array.isArray(resolved)) {
+      const [x, y] = resolved;
+      return { x: x ?? 0, y: y ?? x ?? 0 };
+    }
+    if (typeof resolved === "object") {
+      return { x: resolved.x ?? 0, y: resolved.y ?? 0 };
+    }
+    return undefined;
+  }
+
+  private resolveSize(value: DOMSpriteProps["width"] | DOMSpriteProps["height"]): string | undefined {
+    const resolved = this.resolveValue<any>(value as any);
+    if (resolved === undefined || resolved === null) return undefined;
+    if (typeof resolved === "number") return `${resolved}px`;
+    if (typeof resolved === "string") return resolved;
+    return undefined;
+  }
+
+  private toCssColor(tint: number): string {
+    const clamped = Math.max(0, Math.min(0xffffff, tint));
+    return `#${clamped.toString(16).padStart(6, "0")}`;
+  }
+
+  private applyDisplayProps(props: DOMSpriteProps) {
+    if (!this.element) return;
+
+    if (props.width !== undefined) {
+      this.explicitWidth = this.resolveSize(props.width);
+    } else {
+      this.explicitWidth = undefined;
+    }
+    if (props.height !== undefined) {
+      this.explicitHeight = this.resolveSize(props.height);
+    } else {
+      this.explicitHeight = undefined;
+    }
+    if (this.explicitWidth !== undefined) {
+      this.element.style.width = this.explicitWidth;
+    }
+    if (this.explicitHeight !== undefined) {
+      this.element.style.height = this.explicitHeight;
+    }
+
+    if (props.alpha !== undefined) {
+      const alpha = this.resolveValue(props.alpha);
+      if (alpha !== undefined) {
+        this.element.style.opacity = String(alpha);
+      }
+    }
+
+    if (props.visible !== undefined) {
+      const visible = this.resolveValue(props.visible);
+      this.element.style.display = visible === false ? "none" : "";
+    }
+
+    if (props.zIndex !== undefined) {
+      const zIndex = this.resolveValue(props.zIndex);
+      if (zIndex !== undefined) {
+        this.element.style.zIndex = String(zIndex);
+      }
+    }
+
+    if (props.cursor !== undefined) {
+      const cursor = this.resolveValue(props.cursor);
+      if (cursor !== undefined) {
+        this.element.style.cursor = String(cursor);
+      }
+    }
+
+    if (props.tint !== undefined) {
+      const tint = this.resolveValue(props.tint);
+      if (typeof tint === "number") {
+        this.element.style.filter = `drop-shadow(0 0 0 ${this.toCssColor(tint)})`;
+      }
+    }
+
+    const hasTransformProps = [
+      props.x,
+      props.y,
+      props.scale,
+      props.rotation,
+      props.angle,
+      props.skew,
+      props.roundPixels,
+    ].some((value) => value !== undefined);
+
+    if (hasTransformProps) {
+      let x = this.resolveValue(props.x) ?? 0;
+      let y = this.resolveValue(props.y) ?? 0;
+      const roundPixels = this.resolveValue(props.roundPixels);
+      if (roundPixels) {
+        x = Math.round(x);
+        y = Math.round(y);
+      }
+
+      const scale = this.resolvePoint(props.scale) ?? { x: 1, y: 1 };
+      const skew = this.resolvePoint(props.skew);
+
+      const angle = this.resolveValue(props.angle);
+      const rotation = this.resolveValue(props.rotation);
+      const rotationDeg = angle !== undefined
+        ? angle
+        : rotation !== undefined
+          ? (rotation * 180) / Math.PI
+          : 0;
+
+      const transformParts = [
+        `translate3d(${x}px, ${y}px, 0)`,
+      ];
+
+      if (rotationDeg !== 0) {
+        transformParts.push(`rotate(${rotationDeg}deg)`);
+      }
+
+      if (skew) {
+        const skewX = (skew.x * 180) / Math.PI;
+        const skewY = (skew.y * 180) / Math.PI;
+        if (skewX !== 0 || skewY !== 0) {
+          transformParts.push(`skew(${skewX}deg, ${skewY}deg)`);
+        }
+      }
+
+      if (scale.x !== 1 || scale.y !== 1) {
+        transformParts.push(`scale(${scale.x}, ${scale.y})`);
+      }
+
+      this.element.style.transform = transformParts.join(" ");
+
+    }
+
+    const pivot = this.resolvePoint(props.pivot);
+    const anchor = this.resolvePoint(props.anchor);
+    if (pivot) {
+      this.element.style.transformOrigin = `${pivot.x}px ${pivot.y}px`;
+    } else if (anchor) {
+      this.element.style.transformOrigin = `${anchor.x * 100}% ${anchor.y * 100}%`;
+    }
+  }
+
   private bindPlayingSignal(context: Element<CanvasDOMElement>) {
     const playingValue = context.propObservables?.playing as any;
     if (!playingValue || !isSignal(playingValue)) return;
@@ -603,8 +765,10 @@ export class CanvasDOMSprite extends CanvasDOMElement {
 
   private applyFrame(frame: DOMSpriteFrame) {
     if (!this.element) return;
-    this.element.style.width = `${frame.width}px`;
-    this.element.style.height = `${frame.height}px`;
+    this.frameWidth = frame.width;
+    this.frameHeight = frame.height;
+    this.element.style.width = this.explicitWidth ?? `${frame.width}px`;
+    this.element.style.height = this.explicitHeight ?? `${frame.height}px`;
 
     const x = frame.x ?? 0;
     const y = frame.y ?? 0;

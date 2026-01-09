@@ -1,7 +1,7 @@
 
 <Canvas>
-    <DOMContainer class="container" justifyContent="center">  
-      <p>Hello</p>
+    <DOMContainer>  
+      <img src="https://pixijs.com/assets/flowerTop.png" />
     </DOMContainer>
 </Canvas>
 

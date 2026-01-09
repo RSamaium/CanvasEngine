@@ -1,0 +1,45 @@
+
+<Canvas>
+    <Container>
+        <Sprite 
+            sheet={{
+                definition: definition(),
+                playing: "default"
+            }}
+        />
+    </Container>
+    <DOMContainer y={400}>
+        <Sprite 
+            sheet={{
+                definition: definition(),
+                playing: "default"
+            }}
+            scale={0.5}
+        />
+    </DOMContainer>
+</Canvas>
+
+<script>
+import { signal } from 'canvasengine';
+
+const definition =  async () => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return {
+        id: "faceset",
+        image: "./faceset.png",
+        framesWidth: 3,
+        framesHeight: 4,
+        textures: {
+            default: {
+                animations: () => [
+                    [ 
+                        { time: 0, frameX: 0, frameY: 0 }
+                    ]
+                ]
+            }
+        }
+    }
+}
+</script>
+
+        
