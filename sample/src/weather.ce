@@ -1,0 +1,13 @@
+<Canvas>
+    <Weather 
+        effect="snow" 
+        speed={5} 
+        windDirection={0.7} 
+        windStrength={0.6} 
+        density={100} 
+    />
+</Canvas>
+
+<script>
+    import { Weather } from '@canvasengine/presets'
+</script>
