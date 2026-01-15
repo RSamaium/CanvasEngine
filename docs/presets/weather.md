@@ -30,6 +30,9 @@ The Weather component creates realistic weather effects using WebGL shaders. It 
 
     <!-- Basic fog with default settings -->
     <Weather effect="fog" />
+
+    <!-- Cloud layer over the map -->
+    <Weather effect="cloud" />
 </Canvas>
 
 <script>
@@ -58,6 +61,9 @@ The Weather component creates realistic weather effects using WebGL shaders. It 
 
     <!-- Misty fog for atmospheric scenes -->
     <Weather effect="fog" speed={0.03} density={0.8} height={0.2} />
+
+    <!-- Soft cloud cover -->
+    <Weather effect="cloud" speed={0.04} density={0.9} height={0.6} />
 </Canvas>
 ```
 
@@ -120,6 +126,15 @@ You can configure weather effects with static values for consistent behavior:
         density={1.2}
         height={0.0}
     />
+
+    <!-- Cloud layer over the map -->
+    <Weather
+        effect="cloud"
+        speed={0.04}
+        density={0.9}
+        height={0.6}
+        scale={1.6}
+    />
 </Canvas>
 ```
 
@@ -145,11 +160,16 @@ You can configure weather effects with static values for consistent behavior:
 - Rain/Snow: 50-100 = Light weather (sparse), 100-200 = Normal weather, 200-300 = Heavy weather, 300-400 = Extreme weather
 - Fog: 0.3-0.6 = Light mist, 0.6-1.0 = Moderate fog, 1.0-1.5 = Thick fog, 1.5-2.0 = Dense fog
 
-**Height** (Fog only): Controls where fog concentrates vertically
+**Height** (Fog/Cloud only): Controls where fog or clouds concentrate vertically
 - 0.0 = Ground-level fog (concentrates at bottom)
 - 0.2-0.4 = Low-lying fog
 - 0.5 = Mid-height fog
 - 0.6-1.0 = High fog (distributed more evenly)
+
+**Scale** (Fog/Cloud only): Controls the size of the fog or cloud shapes
+- 0.8-1.2 = Large, soft shapes
+- 1.3-2.0 = Medium detail
+- 2.0+ = Smaller, more detailed texture
 
 ### Dynamic Control with Signals
 

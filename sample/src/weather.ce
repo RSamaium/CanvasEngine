@@ -1,11 +1,10 @@
 <Canvas>
-    <Weather 
-        effect="snow" 
-        speed={0.5} 
-        density={100} 
-        windStrength={0.5}
-        windDirection={0.5}
-    />
+   <Container>
+        <Sprite image="back.png" />
+        <Weather 
+            effect="fog" 
+        />
+   </Container>
 </Canvas>
 
 <script>

@@ -10,7 +10,7 @@ import {
 import { Geometry, Shader, UniformGroup } from "pixi.js";
 import { createRainShader } from "./rain";
 import { createSnowShader } from "./snow";
-import { createFogShader } from "./fog";
+import { createFogShader, createCloudShader } from "./fog";
 
 
 /**
@@ -24,7 +24,7 @@ export const WeatherEffect = (options) => {
     windStrength = signal(0.2),
     density = signal(120.0),  // Reduced default density for better performance
     maxDrops = signal(80.0),  // Reduced default maxDrops for better performance
-    height = signal(0.2),  // Fog height parameter (0 = bottom, 1 = top)
+    height = signal(1.0),  // Fog/cloud height parameter (0 = bottom, 1 = full)
     scale = signal(2.0),  // Fog noise scale parameter
     resolution,
   } = useProps(options);
@@ -95,9 +95,20 @@ export const WeatherEffect = (options) => {
       uSpeed: { value: speedSignal(), type: "f32" },
       uScale: { value: scaleSignal(), type: "f32" },
       uDensity: { value: densitySignal(), type: "f32" },
+      uHeight: { value: heightSignal(), type: "f32" },
+    };
+  } else if (effect() === 'cloud') {
+    glProgram = createCloudShader();
+    uniformConfig = {
+      uTime: { value: 0, type: "f32" },
+      uResolution: { value: resolutionSignal(), type: "vec2<f32>" },
+      uSpeed: { value: speedSignal(), type: "f32" },
+      uScale: { value: scaleSignal(), type: "f32" },
+      uDensity: { value: densitySignal(), type: "f32" },
+      uHeight: { value: heightSignal(), type: "f32" },
     };
   } else {
-    throw new Error(`Unknown weather effect: ${effect()}. Supported: rain, snow, fog`);
+    throw new Error(`Unknown weather effect: ${effect()}. Supported: rain, snow, fog, cloud`);
   }
 
   const uniformGroup = new UniformGroup(uniformConfig);
@@ -194,7 +205,7 @@ export const WeatherEffect = (options) => {
         uniformGroup.uniforms.uMaxFlakes = currentMaxDrops;
         prevMaxDrops = currentMaxDrops;
       }
-    } else if (effect() === 'fog') {
+    } else if (effect() === 'fog' || effect() === 'cloud') {
       // Only update fog-specific uniforms if they changed
       const currentSpeed = speedSignal();
       if (currentSpeed !== prevSpeed) {
@@ -212,6 +223,12 @@ export const WeatherEffect = (options) => {
       if (currentDensity !== prevDensity) {
         uniformGroup.uniforms.uDensity = currentDensity;
         prevDensity = currentDensity;
+      }
+
+      const currentHeight = heightSignal();
+      if (currentHeight !== prevHeight) {
+        uniformGroup.uniforms.uHeight = currentHeight;
+        prevHeight = currentHeight;
       }
     }
   });
