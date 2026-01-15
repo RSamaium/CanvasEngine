@@ -1,10 +1,10 @@
 <Canvas>
     <Weather 
         effect="snow" 
-        speed={5} 
-        windDirection={0.7} 
-        windStrength={0.6} 
+        speed={0.5} 
         density={100} 
+        windStrength={0.5}
+        windDirection={0.5}
     />
 </Canvas>
 

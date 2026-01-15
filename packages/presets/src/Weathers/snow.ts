@@ -1,31 +1,23 @@
 import { GlProgram } from "pixi.js";
 
 /**
- * Creates a slow & smooth snow shader program
- * 
- * Generates procedural snowflakes with circular shapes and size variation.
- * Simulates gentle physics with slower movement and subtle wind drift.
- * Optimized for performance with early exits and efficient calculations.
- * 
- * @returns {GlProgram} The compiled WebGL program for snow effect
+ * Creates a performant snow shader program.
+ * Optimized with early exits, capped loop count, and LOD based on resolution.
  */
 export function createSnowShader(): GlProgram {
-  // Vertex shader
   const vertexSrc = /* glsl */ `
     precision mediump float;
     attribute vec2 aPosition;
     attribute vec2 aUV;
-    varying   vec2 vUV;
+    varying vec2 vUV;
     void main() {
       vUV = aUV;
       gl_Position = vec4(aPosition, 0.0, 1.0);
     }
   `;
 
-  // Fragment shader optimized for soft falling snow
   const fragmentSrc = /* glsl */ `
     precision mediump float;
-
     varying vec2 vUV;
 
     uniform float uTime;
@@ -36,130 +28,81 @@ export function createSnowShader(): GlProgram {
     uniform float uSnowDensity;
     uniform float uMaxFlakes;
 
-    // Hash function for random number generation
-    float hash(float n) {
-      return fract(sin(n) * 43758.5453);
+    float hash(vec2 p) {
+      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
     }
 
-    // Generate a single snowflake
-    float snowFlake(vec2 uv, float t, float seed) {
-      // Pre-calculate all necessary hash values once
-      float rnd0 = hash(seed);
-      float rnd1 = hash(seed + 1.0);
-      float rnd2 = hash(seed + 2.0);
-      float rnd3 = hash(seed + 3.0);
-      float rnd4 = hash(seed + 4.0);
-      
-      // Base X position
-      float x = rnd0 * 2.4 - 1.2;
-      
-      // Falling speed (slower than rain)
-      float baseSpeed = 0.3 + rnd1 * 0.4;
-      float speed = baseSpeed * uSnowSpeed;
-      
-      // Y position falling from top to bottom
-      float y = 1.2 - fract(t * speed + rnd2) * 2.4;
-      
-      // Early exit if flake is too far vertically
-      if (y < -1.4 || y > 1.4) {
+    vec2 hash2(vec2 p) {
+      return vec2(
+        hash(p),
+        hash(p + 19.19)
+      );
+    }
+
+    float snowLayer(
+      vec2 uv,
+      float t,
+      float scale,
+      float speed,
+      float wind,
+      float density,
+      float sizeMin,
+      float sizeMax
+    ) {
+      vec2 p = uv;
+      p.x += wind * t;
+      p.y += t * speed;
+
+      p *= scale;
+      vec2 cell = floor(p);
+      vec2 f = fract(p);
+
+      float rnd = hash(cell);
+      if (rnd > density) {
         return 0.0;
       }
-      
-      // Fall progress (0 = top, 1 = bottom)
-      float fallProgress = (1.2 - y) / 2.4;
-      
-      // Optimized oscillation - natural and subtle movement
-      float oscillationPhase = t * 1.8 + seed * 6.28;
-      float oscillation = sin(oscillationPhase) * 0.08 + sin(oscillationPhase * 1.4) * 0.04;
-      oscillation *= (1.0 + fallProgress * 0.3);
-      
-      // Wind effect - more pronounced and progressive with fall
-      float windOffset = uWindDirection * uWindStrength * fallProgress * 0.8;
-      
-      // Add horizontal drift due to wind (even at top)
-      float windDrift = uWindDirection * uWindStrength * 0.2;
-      
-      // Final X position with wind and oscillation
-      x += windOffset + windDrift + oscillation;
-      
-      // Early exit if flake is too far horizontally
-      if (x < -1.4 || x > 1.4) {
-        return 0.0;
-      }
-      
-      vec2 diff = uv - vec2(x, y);
-      
-      // Fast distance check before expensive calculations
-      float distSq = dot(diff, diff);
-      
-      // Early exit if too far (major performance boost)
-      if (distSq > 0.015) {  // ~0.12 units distance
-        return 0.0;
-      }
-      
-      // Flake size (circular) - only calculate if close
-      float flakeSize = 0.008 + rnd3 * 0.006;
-      float sizeSq = flakeSize * flakeSize;
-      
-      // Additional early exit check
-      if (distSq > sizeSq * 1.5) {
-        return 0.0;
-      }
-      
-      float dist = sqrt(distSq) / flakeSize;
-      
-      // Intensity with soft flake shape
-      float intensity = 1.0 - smoothstep(0.0, 1.0, dist);
-      intensity *= 0.8 + 0.2 * rnd4;
-      
-      // Light twinkle (reduced frequency for performance)
-      float twinkle = 0.9 + 0.1 * sin(t * 6.0 + seed * 12.56);
-      intensity *= twinkle;
-      
-      // Fade at top and bottom
-      intensity *= smoothstep(-1.2, -0.8, y) * smoothstep(1.2, 0.8, y);
-      
-      return intensity;
+
+      vec2 jitter = hash2(cell + 3.7);
+      float wobble = (hash(cell + 9.1) - 0.5) * 0.3;
+      vec2 center = jitter;
+      center.x += sin(t * 0.7 + jitter.y * 6.283) * 0.15 + wobble;
+      center.y += cos(t * 0.5 + jitter.x * 6.283) * 0.12;
+
+      float size = mix(sizeMin, sizeMax, rnd);
+      float dist = length(f - center);
+      float alpha = 1.0 - smoothstep(size * 0.4, size, dist);
+      float twinkle = 0.7 + 0.3 * sin(t * 1.2 + rnd * 6.283);
+      return alpha * twinkle;
     }
 
     void main() {
-      vec2 uv = (gl_FragCoord.xy - 0.5 * uResolution.xy) / min(uResolution.x, uResolution.y);
-      
-      float snow = 0.0;
-      
-      // Calculate number of flakes based on density (optimized for performance)
-      // Density 50-400 corresponds to approximately 40-150 flakes (reduced for performance)
-      float targetFlakes = 40.0 + (uSnowDensity - 50.0) * (110.0 / 350.0);
-      float maxFlakes = clamp(max(uMaxFlakes, targetFlakes), 30.0, 120.0);
-      
-      // Performance optimization: reduce loop iterations based on resolution
+      vec2 uv = gl_FragCoord.xy / uResolution.xy;
+      float aspect = uResolution.x / uResolution.y;
+      uv.x *= aspect;
+
       float pixelCount = uResolution.x * uResolution.y;
-      float resolutionFactor = clamp(pixelCount / 500000.0, 0.5, 1.0);  // LOD based on resolution
-      float effectiveMaxFlakes = maxFlakes * resolutionFactor;
-      float loopMax = min(effectiveMaxFlakes, 120.0);
-      
-      // Generate flakes (limited to 120 for performance)
-      for (float i = 0.0; i < 120.0; i++) {
-        if (i >= loopMax) break;
-        float flakeValue = snowFlake(uv, uTime, i * 15.67);
-        snow += flakeValue;
-        
-        // Early exit if we've accumulated enough intensity (performance optimization)
-        if (snow > 2.5) break;
-      }
-      
-      // Intensity adjustment based on density (normalization)
-      // Higher density means more visible flakes
-      float densityFactor = clamp(uSnowDensity / 200.0, 0.3, 2.0);
-      snow *= densityFactor;
-      
-      // White color for snow
-      vec3 snowColor = vec3(1.0, 1.0, 1.0);
-      
-      gl_FragColor = vec4(snowColor * snow, snow * 0.9);
+      float resolutionFactor = clamp(pixelCount / 900000.0, 0.5, 1.0);
+
+      float densityFactor = clamp(uSnowDensity / 220.0, 0.15, 1.2);
+      float maxFlakeFactor = clamp(uMaxFlakes / 100.0, 0.3, 1.0);
+      float density = clamp(densityFactor * maxFlakeFactor * resolutionFactor, 0.05, 1.0);
+
+      float wind = uWindDirection * uWindStrength * 0.45;
+      float speed = uSnowSpeed * 0.9 + 0.15;
+
+      float snow = 0.0;
+      snow += snowLayer(uv, uTime, 18.0, speed * 0.5, wind * 0.6, density, 0.08, 0.18) * 0.6;
+      snow += snowLayer(uv, uTime, 28.0, speed * 0.75, wind * 0.9, density * 0.85, 0.06, 0.14) * 0.75;
+      snow += snowLayer(uv, uTime, 40.0, speed, wind, density * 0.7, 0.04, 0.1);
+
+      float heightFade = mix(0.7, 1.0, uv.y);
+      snow *= heightFade;
+
+      vec3 snowColor = vec3(0.92, 0.95, 1.0);
+      float alpha = clamp(snow, 0.0, 0.9);
+      gl_FragColor = vec4(snowColor * snow, alpha);
     }
   `;
 
   return new GlProgram({ vertex: vertexSrc, fragment: fragmentSrc });
 }
-
