@@ -6,9 +6,12 @@ export function createFogShader(): GlProgram {
     attribute vec2 aPosition;
     attribute vec2 aUV;
     varying vec2 vUV;
+    uniform mat3 translationMatrix;
+    uniform mat3 projectionMatrix;
     void main() {
       vUV = aUV;
-      gl_Position = vec4(aPosition, 0.0, 1.0);
+      vec3 world = projectionMatrix * translationMatrix * vec3(aPosition, 1.0);
+      gl_Position = vec4(world.xy, 0.0, 1.0);
     }
   `;
 
@@ -67,8 +70,11 @@ export function createFogShader(): GlProgram {
       float fogNoise = fbm(uv * scale + drift);
 
       float softness = smoothstep(0.35, 1.0, fogNoise);
-      float baseHeight = 0.6 + 0.4 * (1.0 - uv.y);
-      float heightFactor = mix(baseHeight, 1.0, clamp(uHeight, 0.0, 1.0));
+      float heightControl = clamp(uHeight, 0.0, 1.0);
+      float fullScreen = step(0.99, heightControl);
+      float baseHeight = 0.6 + 0.4 * uv.y;
+      float heightFactor = mix(baseHeight, 1.0, heightControl);
+      heightFactor = mix(heightFactor, 1.0, fullScreen);
 
       float fog = softness * density * 0.45 * heightFactor;
       float alpha = clamp(fog, 0.0, 0.35);
@@ -90,9 +96,12 @@ export function createCloudShader(): GlProgram {
     attribute vec2 aPosition;
     attribute vec2 aUV;
     varying vec2 vUV;
+    uniform mat3 translationMatrix;
+    uniform mat3 projectionMatrix;
     void main() {
       vUV = aUV;
-      gl_Position = vec4(aPosition, 0.0, 1.0);
+      vec3 world = projectionMatrix * translationMatrix * vec3(aPosition, 1.0);
+      gl_Position = vec4(world.xy, 0.0, 1.0);
     }
   `;
 
@@ -155,7 +164,11 @@ export function createCloudShader(): GlProgram {
       float detail = smoothstep(0.4, 0.9, detailNoise);
       float puff = shape * (0.6 + 0.4 * detail);
 
-      float heightFactor = mix(0.6 + 0.4 * uv.y, 1.0, clamp(uHeight, 0.0, 1.0));
+      float heightControl = clamp(uHeight, 0.0, 1.0);
+      float fullScreen = step(0.99, heightControl);
+      float baseHeight = 0.6 + 0.4 * uv.y;
+      float heightFactor = mix(baseHeight, 1.0, heightControl);
+      heightFactor = mix(heightFactor, 1.0, fullScreen);
       float cloud = puff * density * 0.6 * heightFactor;
       float alpha = clamp(cloud, 0.0, 0.55);
 

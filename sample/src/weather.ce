@@ -1,12 +1,37 @@
 <Canvas>
    <Container>
-        <Sprite image="back.png" />
-        <Weather 
-            effect="fog" 
-        />
+        <Viewport worldWidth="2000" worldHeight="2000" screenWidth="1000" screenHeight="1000" clamp={ {direction: 'all'} } >
+           <Sprite image="back.png" />
+            <Rect color="red" width={100} height={100} x={x} controls viewportFollow={true} />
+            <NightAmbiant  darkness={0.5}>
+                <LightSpot radius={100} x={200} y={200} />
+            </NightAmbiant>
+            <!-- <Weather effect="fog"  density={2}  /> -->
+        </Viewport>
+        
    </Container>
 </Canvas>
 
 <script>
-    import { Weather } from '@canvasengine/presets'
+    import { NightAmbiant, LightSpot, Weather } from '@canvasengine/presets'
+    import { signal } from 'canvasengine'
+
+    const x = signal(0);
+
+    const controls = signal({
+        right: {
+            repeat: true,
+            bind: "right",
+            keyDown() {
+                x.update((x) => x + 10);
+            },
+        },
+        left: {
+            repeat: true,
+            bind: "left",
+            keyDown() {
+                x.update((x) => x - 10);
+            },
+        }
+    })
 </script>

@@ -31,6 +31,11 @@ export const WeatherEffect = (options) => {
 
   // Auto-detect resolution from canvas if not provided
   const defaultResolution = signal([1000, 1000]);
+  const viewWidth = signal(0);
+  const viewHeight = signal(0);
+  const originX = signal(0);
+  const originY = signal(0);
+  let viewportRef;
   const resolutionSignal = resolution
     ? (typeof resolution === "function" ? resolution : signal(resolution))
     : defaultResolution;
@@ -38,11 +43,28 @@ export const WeatherEffect = (options) => {
   // Try to get canvas size from context if available
   mount((element) => {
     const context = element.props.context;
+    viewportRef = context?.viewport;
+    if (viewportRef?.getVisibleBounds) {
+      const bounds = viewportRef.getVisibleBounds();
+      if (bounds) {
+        defaultResolution.set([bounds.width, bounds.height]);
+        viewWidth.set(bounds.width);
+        viewHeight.set(bounds.height);
+        originX.set(bounds.x);
+        originY.set(bounds.y);
+      }
+    }
     if (context?.canvasSize) {
       effect(() => {
         const size = context.canvasSize();
         if (size && size.width > 0 && size.height > 0) {
-          defaultResolution.set([size.width, size.height]);
+          if (!viewportRef?.getVisibleBounds) {
+            defaultResolution.set([size.width, size.height]);
+            viewWidth.set(size.width);
+            viewHeight.set(size.height);
+            originX.set(0);
+            originY.set(0);
+          }
         }
       });
     }
@@ -61,6 +83,9 @@ export const WeatherEffect = (options) => {
     typeof height === "function" ? height : signal(height);
   const scaleSignal =
     typeof scale === "function" ? scale : signal(scale);
+
+  const normalizeHeightValue = (value) =>
+    typeof value === "number" && Number.isFinite(value) ? value : 1.0;
 
   let glProgram;
   let uniformConfig;
@@ -95,7 +120,7 @@ export const WeatherEffect = (options) => {
       uSpeed: { value: speedSignal(), type: "f32" },
       uScale: { value: scaleSignal(), type: "f32" },
       uDensity: { value: densitySignal(), type: "f32" },
-      uHeight: { value: heightSignal(), type: "f32" },
+      uHeight: { value: normalizeHeightValue(heightSignal()), type: "f32" },
     };
   } else if (effect() === 'cloud') {
     glProgram = createCloudShader();
@@ -105,7 +130,7 @@ export const WeatherEffect = (options) => {
       uSpeed: { value: speedSignal(), type: "f32" },
       uScale: { value: scaleSignal(), type: "f32" },
       uDensity: { value: densitySignal(), type: "f32" },
-      uHeight: { value: heightSignal(), type: "f32" },
+      uHeight: { value: normalizeHeightValue(heightSignal()), type: "f32" },
     };
   } else {
     throw new Error(`Unknown weather effect: ${effect()}. Supported: rain, snow, fog, cloud`);
@@ -120,7 +145,7 @@ export const WeatherEffect = (options) => {
 
   const geometry = new Geometry({
     attributes: {
-      aPosition: [-1, -1, 1, -1, 1, 1, -1, 1],
+      aPosition: [0, 0, 1, 0, 1, 1, 0, 1],
       aUV: [0, 0, 1, 0, 1, 1, 0, 1],
     },
     indexBuffer: [0, 1, 2, 0, 2, 3],
@@ -138,8 +163,26 @@ export const WeatherEffect = (options) => {
   let prevMaxDrops = maxDropsSignal();
   let prevHeight = heightSignal();
   let prevScale = scaleSignal();
-  
+
   tick(({ deltaTime }) => {
+    if (viewportRef?.getVisibleBounds) {
+      const bounds = viewportRef.getVisibleBounds();
+      if (bounds) {
+        const nextWidth = bounds.width;
+        const nextHeight = bounds.height;
+        const nextOriginX = bounds.x;
+        const nextOriginY = bounds.y;
+        if (nextWidth !== viewWidth()) viewWidth.set(nextWidth);
+        if (nextHeight !== viewHeight()) viewHeight.set(nextHeight);
+        if (nextOriginX !== originX()) originX.set(nextOriginX);
+        if (nextOriginY !== originY()) originY.set(nextOriginY);
+        const currentResolution = defaultResolution();
+        if (currentResolution[0] !== nextWidth || currentResolution[1] !== nextHeight) {
+          defaultResolution.set([nextWidth, nextHeight]);
+        }
+      }
+    }
+
     // Always update time (required for animation)
     timeAccumulator += deltaTime / 600;
     uniformGroup.uniforms.uTime = timeAccumulator;
@@ -225,7 +268,7 @@ export const WeatherEffect = (options) => {
         prevDensity = currentDensity;
       }
 
-      const currentHeight = heightSignal();
+      const currentHeight = normalizeHeightValue(heightSignal());
       if (currentHeight !== prevHeight) {
         uniformGroup.uniforms.uHeight = currentHeight;
         prevHeight = currentHeight;
@@ -236,8 +279,10 @@ export const WeatherEffect = (options) => {
   return h(Mesh, {
     geometry,
     shader,
-    width: "100%",
-    height: "100%",
+    width: viewWidth,
+    height: viewHeight,
+    x: originX,
+    y: originY,
   });
 };
 

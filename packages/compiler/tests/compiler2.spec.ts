@@ -1449,6 +1449,18 @@ describe('DOM', () => {
     expect(output).toBe('h(DOMElement, { element: "textarea", attrs: { rows: rows, cols: cols } })');
   });
 
+  test('should compile DOM with data-disabled expression', () => {
+    const input = `<button data-disabled={!skill || !skill.usable} />`;
+    const output = parser.parse(input);
+    expect(output).toBe('h(DOMElement, { element: "button", attrs: { \'data-disabled\': computed(() => !skill || !skill.usable) } })');
+  });
+
+  test('should compile DOM with conditional tabindex and click attributes', () => {
+    const input = `<button tabindex={skill ? index : -1} click={skill ? onSelectSkill(index) : undefined} />`;
+    const output = parser.parse(input);
+    expect(output).toBe('h(DOMElement, { element: "button", attrs: { tabindex: computed(() => skill ? index : -1), click: skill ? onSelectSkill(index) : undefined } })');
+  });
+
   test('should not transform Canvas to DOM', () => {
     const input = `<Canvas width={800} />`;
     const output = parser.parse(input);

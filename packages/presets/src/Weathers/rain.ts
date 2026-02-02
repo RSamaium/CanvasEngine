@@ -6,9 +6,12 @@ export function createRainShader(): GlProgram {
     attribute vec2 aPosition;
     attribute vec2 aUV;
     varying vec2 vUV;
+    uniform mat3 translationMatrix;
+    uniform mat3 projectionMatrix;
     void main() {
       vUV = aUV;
-      gl_Position = vec4(aPosition, 0.0, 1.0);
+      vec3 world = projectionMatrix * translationMatrix * vec3(aPosition, 1.0);
+      gl_Position = vec4(world.xy, 0.0, 1.0);
     }
   `;
 
