@@ -2,8 +2,8 @@ import { Filter } from "pixi.js";
 import fragmentShader from './shaders/nightSpot.frag.glsl?raw';
 import vertexShader from './shaders/defaultFilter.vert.glsl?raw';
 
-/** Default radius in "normalized screen" (0-1). Used when not compensating for zoom. */
-const SPOT_RADIUS_NORMALIZED = 0.25;
+const MAX_SPOTS = 24;
+const SPOT_RADIUS_PX = 180;
 /** Darkness outside the spot (0 = no darkening, 1 = black). */
 const DARKNESS = 0.75;
 /** Fog: distance from player (0-1) where fog starts. */
@@ -16,10 +16,21 @@ const FOG_COLOR = new Float32Array([0.08, 0.08, 0.14]);
 type PointLike = { x: number; y: number };
 type BoundsLike = { x: number; y: number; width: number; height: number };
 type ViewportLike = { getVisibleBounds?: () => BoundsLike | null | undefined };
+export type NightSpot = PointLike & {
+  radius?: number;
+  intensity?: number;
+  flicker?: boolean;
+  flickerSpeed?: number;
+  pulse?: boolean;
+  pulseSpeed?: number;
+  phase?: number;
+};
 
 export type NightFilter = Filter & {
   setLightWorldPosition: (position: PointLike | null) => void;
   getLightWorldPosition: () => PointLike | null;
+  setSpots: (spots: NightSpot[]) => void;
+  getSpots: () => NightSpot[];
   syncLightToViewport: () => void;
 };
 
@@ -27,9 +38,13 @@ export function createNightFilter(
   viewport?: ViewportLike,
   options?: {
     lightWorldPosition?: PointLike | null;
+    spots?: NightSpot[];
   }
 ): NightFilter {
-  const uLightPos = new Float32Array([0.5, 0.5]);
+  const uSpots = new Float32Array(MAX_SPOTS * 4);
+  const uSpotsUniform = { value: uSpots, type: 'vec4<f32>' as const, size: MAX_SPOTS };
+  const uAspect = { value: 1, type: 'f32' as const };
+  let customSpots: NightSpot[] = options?.spots ? [...options.spots] : [];
   let lightWorldPosition: PointLike | null = options?.lightWorldPosition ?? null;
 
   const nightFilter = Filter.from({
@@ -39,8 +54,8 @@ export function createNightFilter(
     },
     resources: {
       nightUniforms: {
-        uLightPos: { value: uLightPos, type: 'vec2<f32>' },
-        uRadius: { value: SPOT_RADIUS_NORMALIZED, type: 'f32' },
+        uSpots: uSpotsUniform,
+        uAspect,
         uDarkness: { value: DARKNESS, type: 'f32' },
         uFogColor: { value: FOG_COLOR, type: 'vec3<f32>' },
         uFogRadius: { value: FOG_RADIUS, type: 'f32' },
@@ -49,14 +64,52 @@ export function createNightFilter(
     },
   });
 
+  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+  const nowSeconds = () => Date.now() / 1000;
+
+  const getActiveSpots = (): NightSpot[] => {
+    if (!lightWorldPosition) return customSpots;
+    return [{ x: lightWorldPosition.x, y: lightWorldPosition.y }, ...customSpots];
+  };
+
   const syncLightToViewport = () => {
-    if (!lightWorldPosition || !viewport?.getVisibleBounds) return;
+    const activeSpots = getActiveSpots();
+    const spotCount = Math.min(activeSpots.length, MAX_SPOTS);
+    const bounds = viewport?.getVisibleBounds?.();
+    const hasViewport = !!bounds && bounds.width > 0 && bounds.height > 0;
+    const time = nowSeconds();
+    uAspect.value = hasViewport ? bounds.width / bounds.height : 1;
 
-    const bounds = viewport.getVisibleBounds();
-    if (!bounds || bounds.width <= 0 || bounds.height <= 0) return;
+    uSpots.fill(0);
+    for (let i = 0; i < spotCount; i++) {
+      const spot = activeSpots[i];
+      const radiusPx = spot.radius ?? SPOT_RADIUS_PX;
+      const intensityBase = clamp(spot.intensity ?? 1, 0, 2);
+      const phase = spot.phase ?? i * 0.7;
+      let intensity = intensityBase;
 
-    uLightPos[0] = (lightWorldPosition.x - bounds.x) / bounds.width;
-    uLightPos[1] = (lightWorldPosition.y - bounds.y) / bounds.height;
+      if (spot.flicker) {
+        const flickerSpeed = spot.flickerSpeed ?? 12;
+        intensity *= 0.88 + 0.12 * Math.sin(time * flickerSpeed + phase);
+      }
+      if (spot.pulse) {
+        const pulseSpeed = spot.pulseSpeed ?? 2;
+        intensity *= 0.8 + 0.2 * Math.sin(time * pulseSpeed + phase);
+      }
+
+      const x = hasViewport ? (spot.x - bounds.x) / bounds.width : spot.x;
+      const y = hasViewport ? (spot.y - bounds.y) / bounds.height : spot.y;
+      const radius = hasViewport
+        ? radiusPx / Math.max(bounds.width, bounds.height)
+        : (radiusPx <= 1 ? radiusPx : 0.15);
+      const base = i * 4;
+      uSpots[base] = x;
+      uSpots[base + 1] = y;
+      uSpots[base + 2] = radius;
+      uSpots[base + 3] = clamp(intensity, 0, 2);
+    }
+
+    uSpotsUniform.value = uSpots;
   };
 
   const originalApply = nightFilter.apply.bind(nightFilter);
@@ -72,6 +125,11 @@ export function createNightFilter(
     syncLightToViewport();
   };
   extendedFilter.getLightWorldPosition = () => lightWorldPosition;
+  extendedFilter.setSpots = (spots: NightSpot[]) => {
+    customSpots = [...spots];
+    syncLightToViewport();
+  };
+  extendedFilter.getSpots = () => getActiveSpots().map((spot) => ({ ...spot }));
   extendedFilter.syncLightToViewport = syncLightToViewport;
 
   syncLightToViewport();

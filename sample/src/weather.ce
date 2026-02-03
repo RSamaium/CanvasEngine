@@ -1,4 +1,5 @@
 <Canvas backgroundColor="#1a472a">
+   
     <Viewport worldWidth={2048} worldHeight={2048} screen clamp={clamp} filters={nightFilters()}>
         <Graphics
             width={800}
@@ -6,10 +7,12 @@
             draw={(g) => {
                 g.clear();
                 g.beginFill(0xffffff);
-                g.drawRect(0, 0, 1000, 1000);
+                g.drawRect(0, 0, 2048, 2048);
                 g.endFill();
             }}
         />
+
+        <Sprite image="back.png" />
         
         <Graphics
             x={playerX}
@@ -37,14 +40,27 @@
 
     const playerX = signal(400);
     const playerY = signal(300);
+    const staticLights = [
+        { x: 280, y: 260, radius: 180, intensity: 0.95, flicker: true, flickerSpeed: 13 },
+        { x: 720, y: 540, radius: 130, intensity: 0.8, pulse: true, pulseSpeed: 1.5, phase: 1.4 },
+        { x: 1450, y: 360, radius: 160, intensity: 1.0, flicker: true, flickerSpeed: 9, phase: 0.6 },
+        { x: 1650, y: 1020, radius: 220, intensity: 0.7, pulse: true, pulseSpeed: 0.9, phase: 2.1 },
+    ];
     let nightFilter;
 
-    function syncLightToPlayer() {
+    function syncLights() {
         if (!nightFilter) return;
-        // nightFilter.setLightWorldPosition({
-        //     x: playerX(),
-        //     y: playerY(),
-        // });
+        nightFilter.setSpots([
+            {
+                x: playerX(),
+                y: playerY(),
+                radius: 170,
+                intensity: 1.0,
+                flicker: true,
+                flickerSpeed: 15,
+            },
+            ...staticLights,
+        ]);
     }
 
     mount((element) => {
@@ -52,9 +68,8 @@
         const viewport = viewportComponent?.viewport;
         if (!viewport) return;
 
-        nightFilter = createNightFilter(viewport, {
-            lightWorldPosition: { x: 100, y: 100 },
-        });
+        nightFilter = createNightFilter(viewport);
+        syncLights();
         nightFilters.set([nightFilter]);
     });
 
@@ -64,7 +79,7 @@
             bind: "right",
             keyDown() {
                 playerX.update((x) => Math.min(x + 10, 2028));
-                syncLightToPlayer();
+                syncLights();
             },
         },
         left: {
@@ -72,7 +87,7 @@
             bind: "left",
             keyDown() {
                 playerX.update((x) => Math.max(x - 10, 20));
-                syncLightToPlayer();
+                syncLights();
             },
         },
         up: {
@@ -80,7 +95,7 @@
             bind: "up",
             keyDown() {
                 playerY.update((y) => Math.max(y - 10, 20));
-                syncLightToPlayer();
+                syncLights();
             },
         },
         down: {
@@ -88,7 +103,7 @@
             bind: "down",
             keyDown() {
                 playerY.update((y) => Math.min(y + 10, 2028));
-                syncLightToPlayer();
+                syncLights();
             },
         },
     })
