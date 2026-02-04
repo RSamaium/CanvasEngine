@@ -173,6 +173,10 @@ const guideMenu = [
       {
         text: "Weather",
         link: "/presets/weather",
+      },
+      {
+        text: "NightAmbiant",
+        link: "/presets/night-ambiant",
       }
     ],
   },

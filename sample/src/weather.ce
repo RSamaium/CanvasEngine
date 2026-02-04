@@ -1,6 +1,8 @@
 <Canvas backgroundColor="#1a472a">
    
-    <Viewport worldWidth={2048} worldHeight={2048} screen clamp={clamp} filters={nightFilters()}>
+    <Viewport worldWidth={2048} worldHeight={2048} screen clamp={clamp}>
+        <NightAmbiant lightSpots={lightSpots} />
+
         <Graphics
             width={800}
             height={600}
@@ -32,11 +34,10 @@
 </Canvas>
 
 <script>
-    import { createNightFilter } from '@canvasengine/presets'
-    import { mount, signal } from 'canvasengine'
+    import { NightAmbiant } from '@canvasengine/presets'
+    import { signal } from 'canvasengine'
 
     const clamp = {direction: 'all'};
-    const nightFilters = signal([]);
 
     const playerX = signal(400);
     const playerY = signal(300);
@@ -46,32 +47,17 @@
         { x: 1450, y: 360, radius: 160, intensity: 1.0, flicker: true, flickerSpeed: 9, phase: 0.6 },
         { x: 1650, y: 1020, radius: 220, intensity: 0.7, pulse: true, pulseSpeed: 0.9, phase: 2.1 },
     ];
-    let nightFilter;
-
-    function syncLights() {
-        if (!nightFilter) return;
-        nightFilter.setSpots([
-            {
-                x: playerX(),
-                y: playerY(),
-                radius: 170,
-                intensity: 1.0,
-                flicker: true,
-                flickerSpeed: 15,
-            },
-            ...staticLights,
-        ]);
-    }
-
-    mount((element) => {
-        const viewportComponent = element.componentInstance?.children?.find((child) => child?.viewport);
-        const viewport = viewportComponent?.viewport;
-        if (!viewport) return;
-
-        nightFilter = createNightFilter(viewport);
-        syncLights();
-        nightFilters.set([nightFilter]);
-    });
+    const lightSpots = () => [
+        {
+            x: playerX,
+            y: playerY,
+            radius: 170,
+            intensity: 1.0,
+            flicker: true,
+            flickerSpeed: 15,
+        },
+        ...staticLights,
+    ];
 
     const controls = signal({
         right: {
@@ -79,7 +65,6 @@
             bind: "right",
             keyDown() {
                 playerX.update((x) => Math.min(x + 10, 2028));
-                syncLights();
             },
         },
         left: {
@@ -87,7 +72,6 @@
             bind: "left",
             keyDown() {
                 playerX.update((x) => Math.max(x - 10, 20));
-                syncLights();
             },
         },
         up: {
@@ -95,7 +79,6 @@
             bind: "up",
             keyDown() {
                 playerY.update((y) => Math.max(y - 10, 20));
-                syncLights();
             },
         },
         down: {
@@ -103,7 +86,6 @@
             bind: "down",
             keyDown() {
                 playerY.update((y) => Math.min(y + 10, 2028));
-                syncLights();
             },
         },
     })

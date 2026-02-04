@@ -1,4 +1,5 @@
 import { Filter } from "pixi.js";
+import { Container, effect, h, mount, useProps } from "canvasengine";
 import fragmentShader from './shaders/nightSpot.frag.glsl?raw';
 import vertexShader from './shaders/defaultFilter.vert.glsl?raw';
 
@@ -16,6 +17,7 @@ const FOG_COLOR = new Float32Array([0.08, 0.08, 0.14]);
 type PointLike = { x: number; y: number };
 type BoundsLike = { x: number; y: number; width: number; height: number };
 type ScreenPointLike = { x: number; y: number };
+type ReactiveValue<T> = T | (() => T);
 type ViewportLike = {
   getVisibleBounds?: () => BoundsLike | null | undefined;
   toScreen?: (x: number, y: number) => ScreenPointLike;
@@ -32,6 +34,23 @@ export type NightSpot = PointLike & {
   phase?: number;
 };
 
+export type NightSpotInput = {
+  x: ReactiveValue<number>;
+  y: ReactiveValue<number>;
+  radius?: ReactiveValue<number>;
+  intensity?: ReactiveValue<number>;
+  flicker?: ReactiveValue<boolean>;
+  flickerSpeed?: ReactiveValue<number>;
+  pulse?: ReactiveValue<boolean>;
+  pulseSpeed?: ReactiveValue<number>;
+  phase?: ReactiveValue<number>;
+};
+
+export type NightAmbiantProps = {
+  lightSpots?: ReactiveValue<Array<NightSpotInput | NightSpot>>;
+  spots?: ReactiveValue<Array<NightSpotInput | NightSpot>>;
+};
+
 export type NightFilter = Filter & {
   setLightWorldPosition: (position: PointLike | null) => void;
   getLightWorldPosition: () => PointLike | null;
@@ -45,6 +64,7 @@ export function createNightFilter(
   options?: {
     lightWorldPosition?: PointLike | null;
     spots?: NightSpot[];
+    getBounds?: () => BoundsLike | null | undefined;
   }
 ): NightFilter {
   const uSpots = new Float32Array(MAX_SPOTS * 4);
@@ -81,7 +101,7 @@ export function createNightFilter(
   const syncLightToViewport = () => {
     const activeSpots = getActiveSpots();
     const spotCount = Math.min(activeSpots.length, MAX_SPOTS);
-    const bounds = viewport?.getVisibleBounds?.();
+    const bounds = viewport?.getVisibleBounds?.() ?? options?.getBounds?.();
     const hasBounds = !!bounds && bounds.width > 0 && bounds.height > 0;
     const screenWidth = viewport?.screenWidth ?? bounds?.width ?? 0;
     const screenHeight = viewport?.screenHeight ?? bounds?.height ?? 0;
@@ -154,4 +174,99 @@ export function createNightFilter(
   syncLightToViewport();
 
   return extendedFilter;
+}
+
+const resolveReactiveValue = <T>(value: ReactiveValue<T> | undefined): T | undefined => {
+  if (typeof value === "function") return (value as () => T)();
+  return value;
+};
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+
+const resolveSpot = (spot: NightSpotInput | NightSpot): NightSpot | null => {
+  const source = resolveReactiveValue(spot as ReactiveValue<NightSpotInput | NightSpot>);
+  if (!source) return null;
+
+  const x = resolveReactiveValue(source.x as ReactiveValue<number> | undefined);
+  const y = resolveReactiveValue(source.y as ReactiveValue<number> | undefined);
+  if (!isFiniteNumber(x) || !isFiniteNumber(y)) return null;
+
+  const radius = resolveReactiveValue(source.radius as ReactiveValue<number> | undefined);
+  const intensity = resolveReactiveValue(source.intensity as ReactiveValue<number> | undefined);
+  const flickerSpeed = resolveReactiveValue(source.flickerSpeed as ReactiveValue<number> | undefined);
+  const pulseSpeed = resolveReactiveValue(source.pulseSpeed as ReactiveValue<number> | undefined);
+  const phase = resolveReactiveValue(source.phase as ReactiveValue<number> | undefined);
+
+  return {
+    x,
+    y,
+    radius: isFiniteNumber(radius) ? radius : undefined,
+    intensity: isFiniteNumber(intensity) ? intensity : undefined,
+    flicker: !!resolveReactiveValue(source.flicker as ReactiveValue<boolean> | undefined),
+    flickerSpeed: isFiniteNumber(flickerSpeed) ? flickerSpeed : undefined,
+    pulse: !!resolveReactiveValue(source.pulse as ReactiveValue<boolean> | undefined),
+    pulseSpeed: isFiniteNumber(pulseSpeed) ? pulseSpeed : undefined,
+    phase: isFiniteNumber(phase) ? phase : undefined,
+  };
+};
+
+const resolveSpots = (
+  spots: ReactiveValue<Array<NightSpotInput | NightSpot>> | undefined
+): NightSpot[] => {
+  const list = resolveReactiveValue(spots);
+  if (!Array.isArray(list)) return [];
+  return list.map(resolveSpot).filter((spot): spot is NightSpot => !!spot);
+};
+
+const toBoundsLike = (target: any): BoundsLike | null => {
+  if (!target) return null;
+  if (typeof target.getVisibleBounds === "function") {
+    const bounds = target.getVisibleBounds();
+    if (bounds) return bounds;
+  }
+  if (typeof target.getLocalBounds === "function") {
+    const bounds = target.getLocalBounds();
+    if (bounds) return bounds;
+  }
+  if (isFiniteNumber(target.width) && isFiniteNumber(target.height)) {
+    return { x: 0, y: 0, width: target.width, height: target.height };
+  }
+  return null;
+};
+
+export function NightAmbiant(options: NightAmbiantProps = {}) {
+  const props = useProps(options);
+  const spotsSource = () =>
+    (props.lightSpots as ReactiveValue<Array<NightSpotInput | NightSpot>> | undefined) ??
+    (props.spots as ReactiveValue<Array<NightSpotInput | NightSpot>> | undefined);
+
+  mount((element) => {
+    const context = element.props.context;
+    const viewport = context?.viewport as ViewportLike | undefined;
+    const target: any = viewport ?? element.parent?.componentInstance;
+    if (!target) return;
+
+    const nightFilter = createNightFilter(viewport, {
+      spots: resolveSpots(spotsSource()),
+      getBounds: () => toBoundsLike(target),
+    });
+
+    const currentFilters = Array.isArray(target.filters) ? target.filters : [];
+    if (!currentFilters.includes(nightFilter)) {
+      target.filters = [...currentFilters, nightFilter];
+    }
+
+    effect(() => {
+      nightFilter.setSpots(resolveSpots(spotsSource()));
+    });
+
+    return () => {
+      const filters = Array.isArray(target.filters) ? target.filters : [];
+      const nextFilters = filters.filter((filter) => filter !== nightFilter);
+      target.filters = nextFilters.length > 0 ? nextFilters : null;
+    };
+  });
+
+  return h(Container);
 }

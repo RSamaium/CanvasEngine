@@ -300,7 +300,21 @@
     return `{ ${inner} }`;
   }
 
+  function collectMemberRoots(value) {
+    const roots = new Set();
+    const memberRegex = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\./g;
+    let match;
+
+    while ((match = memberRegex.exec(value)) !== null) {
+      roots.add(match[1]);
+    }
+
+    return roots;
+  }
+
   function transformBareIdentifiersToSignals(value) {
+    const memberRoots = collectMemberRoots(value);
+
     return value.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g, (match, name, offset) => {
       if (['true', 'false', 'null'].includes(name)) {
         return match;
@@ -317,6 +331,10 @@
       const charAfter = offset + match.length < value.length ? value[offset + match.length] : '';
 
       if (charBefore === '.' || charAfter === '.') {
+        return match;
+      }
+
+      if (memberRoots.has(name)) {
         return match;
       }
 
@@ -649,6 +667,7 @@ dynamicAttribute "dynamic attribute"
 
       const isObjectLiteral = trimmedValue.startsWith('{') && trimmedValue.endsWith('}');
       const isArrayLiteral = trimmedValue.startsWith('[') && trimmedValue.endsWith(']');
+      const isTernaryExpression = trimmedValue.includes('?') && trimmedValue.includes(':');
       if (isObjectLiteral) {
         const formattedObject = formatObjectLiteralSpacing(attributeValue);
         if (hasFunctionCall(trimmedValue)) {
@@ -661,6 +680,10 @@ dynamicAttribute "dynamic attribute"
           return `${formattedName}: computed(() => ${attributeValue})`;
         }
         return `${formattedName}: ${attributeValue}`;
+      }
+
+      if (isTernaryExpression) {
+        return `${formattedName}: computed(() => ${attributeValue})`;
       }
 
       if (hasFunctionCall(trimmedValue)) {
