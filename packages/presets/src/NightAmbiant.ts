@@ -15,7 +15,13 @@ const FOG_COLOR = new Float32Array([0.08, 0.08, 0.14]);
 
 type PointLike = { x: number; y: number };
 type BoundsLike = { x: number; y: number; width: number; height: number };
-type ViewportLike = { getVisibleBounds?: () => BoundsLike | null | undefined };
+type ScreenPointLike = { x: number; y: number };
+type ViewportLike = {
+  getVisibleBounds?: () => BoundsLike | null | undefined;
+  toScreen?: (x: number, y: number) => ScreenPointLike;
+  screenWidth?: number;
+  screenHeight?: number;
+};
 export type NightSpot = PointLike & {
   radius?: number;
   intensity?: number;
@@ -76,9 +82,12 @@ export function createNightFilter(
     const activeSpots = getActiveSpots();
     const spotCount = Math.min(activeSpots.length, MAX_SPOTS);
     const bounds = viewport?.getVisibleBounds?.();
-    const hasViewport = !!bounds && bounds.width > 0 && bounds.height > 0;
+    const hasBounds = !!bounds && bounds.width > 0 && bounds.height > 0;
+    const screenWidth = viewport?.screenWidth ?? bounds?.width ?? 0;
+    const screenHeight = viewport?.screenHeight ?? bounds?.height ?? 0;
+    const hasScreen = screenWidth > 0 && screenHeight > 0;
+    uAspect.value = hasScreen ? screenWidth / screenHeight : 1;
     const time = nowSeconds();
-    uAspect.value = hasViewport ? bounds.width / bounds.height : 1;
 
     uSpots.fill(0);
     for (let i = 0; i < spotCount; i++) {
@@ -97,11 +106,21 @@ export function createNightFilter(
         intensity *= 0.8 + 0.2 * Math.sin(time * pulseSpeed + phase);
       }
 
-      const x = hasViewport ? (spot.x - bounds.x) / bounds.width : spot.x;
-      const y = hasViewport ? (spot.y - bounds.y) / bounds.height : spot.y;
-      const radius = hasViewport
-        ? radiusPx / Math.max(bounds.width, bounds.height)
-        : (radiusPx <= 1 ? radiusPx : 0.15);
+      let x = spot.x;
+      let y = spot.y;
+      let radius = radiusPx <= 1 ? radiusPx : 0.15;
+
+      if (hasScreen && viewport?.toScreen) {
+        const screenPos = viewport.toScreen(spot.x, spot.y);
+        x = screenPos.x / screenWidth;
+        y = screenPos.y / screenHeight;
+        radius = radiusPx / Math.max(screenWidth, screenHeight);
+      } else if (hasBounds) {
+        x = (spot.x - bounds.x) / bounds.width;
+        y = (spot.y - bounds.y) / bounds.height;
+        radius = radiusPx / Math.max(bounds.width, bounds.height);
+      }
+
       const base = i * 4;
       uSpots[base] = x;
       uSpots[base + 1] = y;

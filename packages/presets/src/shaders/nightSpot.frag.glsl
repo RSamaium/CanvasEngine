@@ -26,6 +26,8 @@ void main() {
     vec2 lightPos = spotData.xy;
     float radius = max(spotData.z, 0.0001);
     float intensity = max(spotData.w, 0.0);
+    if (intensity <= 0.0001) continue;
+
     vec2 delta = vTextureCoord - lightPos;
     delta.x *= uAspect;
     float dist = length(delta);
