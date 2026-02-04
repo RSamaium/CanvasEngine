@@ -39,6 +39,12 @@
 
     const clamp = {direction: 'all'};
 
+    const intensity = signal(0.9)
+
+    // setInterval(() => {
+    //     intensity.update(n => n + 0.1)
+    // }, 1000)
+
     const playerX = signal(400);
     const playerY = signal(300);
     const staticLights = [

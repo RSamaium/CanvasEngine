@@ -1,8 +1,9 @@
 /**
  * Night + spot light + fog fragment shader.
  * - Supports multiple circular spots (uSpots) in normalized screen space.
- * - Each spot is vec4(x, y, radius, intensity).
+ * - Each spot is vec4(x, y, radius, intensity) in normalized coordinates.
  * - Fog is based on the nearest light source so illuminated areas stay readable.
+ * - Dark zones are tinted with uDarkColor for colored night effects.
  */
 in vec2 vTextureCoord;
 
@@ -12,6 +13,7 @@ uniform sampler2D uTexture;
 uniform vec4 uSpots[24];
 uniform float uAspect;
 uniform float uDarkness;
+uniform vec3 uDarkColor;
 uniform vec3 uFogColor;
 uniform float uFogRadius;
 uniform float uFogSoftness;
@@ -37,8 +39,12 @@ void main() {
   }
 
   // Night: full brightness where light is strong, darker elsewhere.
+  // Apply dark color tint in unlit areas.
   float factor = mix(1.0 - uDarkness, 1.0, light);
-  color.rgb *= factor;
+  vec3 darkened = color.rgb * factor;
+  // Blend towards dark color in unlit areas (when factor < 1)
+  float darkTint = (1.0 - factor) * uDarkness;
+  color.rgb = mix(darkened, uDarkColor, darkTint);
 
   // Fog fades in with distance to nearest light, but less inside lit areas.
   float fogFactor = smoothstep(uFogRadius, uFogRadius + uFogSoftness, nearestDist);
