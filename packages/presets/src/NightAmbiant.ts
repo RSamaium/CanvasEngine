@@ -16,9 +16,11 @@ const FOG_COLOR = new Float32Array([0.08, 0.08, 0.14]);
 
 type PointLike = { x: number; y: number };
 type BoundsLike = { x: number; y: number; width: number; height: number };
+type ScreenPointLike = { x: number; y: number };
 type ReactiveValue<T> = T | (() => T);
 type ViewportLike = {
   getVisibleBounds?: () => BoundsLike | null | undefined;
+  toScreen?: (x: number, y: number) => ScreenPointLike;
 };
 export type NightSpot = PointLike & {
   radius?: number;
@@ -209,6 +211,17 @@ export function createNightFilter(
     const spotCount = Math.min(activeSpots.length, MAX_SPOTS);
     const bounds = viewport?.getVisibleBounds?.() ?? options?.getBounds?.();
     const hasBounds = !!bounds && bounds.width > 0 && bounds.height > 0;
+    const toScreen = viewport?.toScreen?.bind(viewport);
+    const canUseViewportScreen = hasBounds && typeof toScreen === "function";
+    let viewportOriginX = 0;
+    let viewportOriginY = 0;
+    if (canUseViewportScreen) {
+      const origin = toScreen(bounds.x, bounds.y);
+      if (isFiniteNumber(origin?.x) && isFiniteNumber(origin?.y)) {
+        viewportOriginX = origin.x;
+        viewportOriginY = origin.y;
+      }
+    }
     const time = nowSeconds();
 
     uSpots.fill(0);
@@ -232,9 +245,13 @@ export function createNightFilter(
       let y = spot.y;
       let radius = radiusPx;
 
-      if (hasBounds) {
-        x = (spot.x - bounds.x) / bounds.width;
-        y = (spot.y - bounds.y) / bounds.height;
+      if (canUseViewportScreen) {
+        const point = toScreen!(spot.x, spot.y);
+        x = point.x - viewportOriginX;
+        y = point.y - viewportOriginY;
+      } else if (hasBounds) {
+        x = spot.x - bounds.x;
+        y = spot.y - bounds.y;
       }
 
       const base = i * 4;
