@@ -1,19 +1,10 @@
 <Canvas backgroundColor="#1a472a">
    
-    <Viewport worldWidth={2048} worldHeight={2048} screen clamp={clamp}>
-        <NightAmbiant lightSpots={lightSpots} darkness={intensity}  darkColor="#0a1020"
-        fogColor="#0a1020" />
+    <Viewport worldWidth={2048} worldHeight={2048} clamp={clamp}>
+        <!-- <NightAmbiant lightSpots={lightSpots} darkness={intensity}  darkColor="#0a1020"
+        fogColor="#0a1020" /> -->
 
-        <Graphics
-            width={800}
-            height={600}
-            draw={(g) => {
-                g.clear();
-                g.beginFill(0xffffff);
-                g.drawRect(0, 0, 2048, 2048);
-                g.endFill();
-            }}
-        />
+        
 
         <Sprite image="back.png" />
         
@@ -32,15 +23,26 @@
         
         
         </Viewport>
+
+       <Container>
+        <Weather
+            effect="rain"
+            speed={3}
+            windDirection={0.15}
+            windStrength={0.25}
+            density={20}
+            maxDrops={120}
+        />
+       </Container>
 </Canvas>
 
 <script>
-    import { NightAmbiant } from '@canvasengine/presets'
+    import { NightAmbiant, Weather } from '@canvasengine/presets'
     import { signal } from 'canvasengine'
 
     const clamp = {direction: 'all'};
 
-    const intensity = signal(0.9)
+    const intensity = signal(0.5)
 
     // setInterval(() => {
     //     intensity.update(n => n + 0.1)

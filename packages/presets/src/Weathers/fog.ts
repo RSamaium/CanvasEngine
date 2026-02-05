@@ -3,21 +3,23 @@ import { GlProgram } from "pixi.js";
 export function createFogShader(): GlProgram {
   const vertexSrc = /* glsl */ `
     precision mediump float;
-    attribute vec2 aPosition;
-    attribute vec2 aUV;
-    varying vec2 vUV;
-    uniform mat3 translationMatrix;
-    uniform mat3 projectionMatrix;
-    void main() {
+    in vec2 aPosition;
+    in vec2 aUV;
+    out vec2 vUV;
+    uniform mat3 uProjectionMatrix;
+    uniform mat3 uWorldTransformMatrix;
+    uniform mat3 uTransformMatrix;
+    void main(void) {
       vUV = aUV;
-      vec3 world = projectionMatrix * translationMatrix * vec3(aPosition, 1.0);
-      gl_Position = vec4(world.xy, 0.0, 1.0);
+      mat3 modelViewProjectionMatrix = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
+      gl_Position = vec4((modelViewProjectionMatrix * vec3(aPosition, 1.0)).xy, 0.0, 1.0);
     }
   `;
 
   const fragmentSrc = /* glsl */ `
     precision mediump float;
-    varying vec2 vUV;
+    in vec2 vUV;
+    out vec4 finalColor;
 
     uniform float uTime;
     uniform vec2  uResolution;
@@ -80,7 +82,7 @@ export function createFogShader(): GlProgram {
       float alpha = clamp(fog, 0.0, 0.35);
 
       vec3 fogColor = vec3(1.0);
-      gl_FragColor = vec4(fogColor * alpha, alpha);
+      finalColor = vec4(fogColor * alpha, alpha);
     }
   `;
 
@@ -93,21 +95,23 @@ export function createFogShader(): GlProgram {
 export function createCloudShader(): GlProgram {
   const vertexSrc = /* glsl */ `
     precision mediump float;
-    attribute vec2 aPosition;
-    attribute vec2 aUV;
-    varying vec2 vUV;
-    uniform mat3 translationMatrix;
-    uniform mat3 projectionMatrix;
-    void main() {
+    in vec2 aPosition;
+    in vec2 aUV;
+    out vec2 vUV;
+    uniform mat3 uProjectionMatrix;
+    uniform mat3 uWorldTransformMatrix;
+    uniform mat3 uTransformMatrix;
+    void main(void) {
       vUV = aUV;
-      vec3 world = projectionMatrix * translationMatrix * vec3(aPosition, 1.0);
-      gl_Position = vec4(world.xy, 0.0, 1.0);
+      mat3 modelViewProjectionMatrix = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
+      gl_Position = vec4((modelViewProjectionMatrix * vec3(aPosition, 1.0)).xy, 0.0, 1.0);
     }
   `;
 
   const fragmentSrc = /* glsl */ `
     precision mediump float;
-    varying vec2 vUV;
+    in vec2 vUV;
+    out vec4 finalColor;
 
     uniform float uTime;
     uniform vec2  uResolution;
@@ -173,7 +177,7 @@ export function createCloudShader(): GlProgram {
       float alpha = clamp(cloud, 0.0, 0.55);
 
       vec3 cloudColor = vec3(1.0);
-      gl_FragColor = vec4(cloudColor * alpha, alpha);
+      finalColor = vec4(cloudColor * alpha, alpha);
     }
   `;
 
