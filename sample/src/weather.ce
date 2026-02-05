@@ -23,12 +23,17 @@
         />
 
         <Weather
-            effect={fogPreset.effect}
-            speed={fogPreset.speed}
-            density={fogPreset.density}
-            height={fogPreset.height}
-            scale={fogPreset.scale}
-            zIndex={100}
+            effect={cloudPreset.effect}
+            speed={cloudPreset.speed}
+            density={cloudPreset.density}
+            height={cloudPreset.height}
+            scale={cloudPreset.scale}
+            sunIntensity={cloudPreset.sunIntensity}
+            sunAngle={cloudPreset.sunAngle}
+            raySpread={cloudPreset.raySpread}
+            rayTwinkle={cloudPreset.rayTwinkle}
+            rayTwinkleSpeed={cloudPreset.rayTwinkleSpeed}
+            zIndex={1000}
         />
         
         
@@ -39,13 +44,13 @@
 </Canvas>
 
 <script>
-    import { NightAmbiant, Weather, FOG_PRESETS } from '@canvasengine/presets'
+    import { NightAmbiant, Weather, CLOUD_PRESETS } from '@canvasengine/presets'
     import { signal } from 'canvasengine'
 
     const clamp = {direction: 'all'};
 
     const intensity = signal(0.5)
-    const fogPreset = FOG_PRESETS.rpgForestFog
+    const cloudPreset = CLOUD_PRESETS.dramaticCrepuscularRays
 
     // setInterval(() => {
     //     intensity.update(n => n + 0.1)

@@ -4,513 +4,186 @@
 
 ## Overview
 
-The Weather component creates realistic weather effects using WebGL shaders. It supports multiple weather types including rain, snow, and fog, with customizable parameters for wind influence, density, and speed control. The effects are inspired by Zelda-style weather systems and provide beautiful, performant weather overlays for your games.
+`Weather` is a shader-based overlay preset for:
 
-## Features
+- rain
+- snow
+- fog (RPG-style)
+- cloud (with optional sun rays)
 
-- **Multiple Weather Effects**: Support for rain, snow, and fog with different visual characteristics
-- **Procedural Generation**: Weather particles are generated using hash functions for natural randomness
-- **Wind Simulation**: Particles are affected by wind direction and strength as they fall
-- **Density Control**: Adjust the number of visible particles from light to heavy weather
-- **Speed Variation**: Each particle has slightly different movement speed for realistic behavior
-- **Signal Support**: All parameters can be controlled dynamically using signals
-- **Performance Optimized**: Uses efficient WebGL shaders for smooth 60fps rendering
+It supports static values and reactive signals, can be used inside or outside `Viewport`, and forwards display props like `zIndex` to the underlying `Mesh`.
+
+## What Is Included
+
+`@canvasengine/presets` exports:
+
+- `Weather`
+- `RAIN_PRESETS`
+- `SNOW_PRESETS`
+- `FOG_PRESETS`
+- `CLOUD_PRESETS`
+- `WEATHER_PRESETS`
 
 ## Basic Usage
 
-### Simple Weather Effects
-
 ```html
 <Canvas>
-    <!-- Basic rain with default settings -->
-    <Weather />
-
-    <!-- Basic snow with default settings -->
-    <Weather effect="snow" />
-
-    <!-- Basic fog with default settings -->
-    <Weather effect="fog" />
-
-    <!-- Cloud layer over the map -->
-    <Weather effect="cloud" />
+  <Weather effect="rain" />
+  <Weather effect="snow" />
+  <Weather effect="fog" />
+  <Weather effect="cloud" />
 </Canvas>
 
 <script>
-    import { Weather } from '@canvasengine/presets'
+  import { Weather } from '@canvasengine/presets'
 </script>
 ```
 
-### Quick Examples
+## Using Built-in Presets
 
 ```html
 <Canvas>
-    <!-- Gentle snowfall for winter scenes -->
-    <Weather effect="snow" speed={0.3} density={80} />
-
-    <!-- Light rain for atmosphere -->
-    <Weather effect="rain" speed={0.4} density={100} />
-
-    <!-- Storm effect -->
-    <Weather 
-        effect="rain" 
-        speed={1.5} 
-        windDirection={0.7} 
-        windStrength={0.6} 
-        density={300} 
-    />
-
-    <!-- Misty fog for atmospheric scenes -->
-    <Weather effect="fog" speed={0.03} density={0.8} height={0.2} />
-
-    <!-- Soft cloud cover -->
-    <Weather effect="cloud" speed={0.04} density={0.9} height={0.6} />
-</Canvas>
-```
-
-## Advanced Usage
-
-### Static Configuration
-
-You can configure weather effects with static values for consistent behavior:
-
-```html
-<Canvas>
-    <!-- Heavy rain with strong wind -->
-    <Weather
-        effect="rain"
-        speed={1.5}
-        windDirection={0.8}
-        windStrength={0.6}
-        density={300}
-    />
-
-    <!-- Light drizzle -->
-    <Weather
-        effect="rain"
-        speed={0.2}
-        density={80}
-        windStrength={0.1}
-    />
-
-    <!-- Heavy snow with gentle wind -->
-    <Weather
-        effect="snow"
-        speed={0.8}
-        windDirection={0.3}
-        windStrength={0.4}
-        density={200}
-    />
-
-    <!-- Light snowfall -->
-    <Weather
-        effect="snow"
-        speed={0.3}
-        density={60}
-        windStrength={0.2}
-    />
-
-    <!-- Misty valley fog -->
-    <Weather
-        effect="fog"
-        speed={0.03}
-        windDirection={0.5}
-        density={0.8}
-        height={0.2}
-    />
-
-    <!-- Thick ground fog -->
-    <Weather
-        effect="fog"
-        speed={0.02}
-        windDirection={0.3}
-        density={1.2}
-        height={0.0}
-    />
-
-    <!-- Cloud layer over the map -->
-    <Weather
-        effect="cloud"
-        speed={0.04}
-        density={0.9}
-        height={0.6}
-        scale={1.6}
-    />
-</Canvas>
-```
-
-### Understanding Parameters
-
-**Speed**: Controls how fast particles fall
-- Lower values (0.1-0.3) = Slow, gentle precipitation
-- Medium values (0.4-0.7) = Normal weather
-- Higher values (0.8-2.0) = Fast, intense weather
-
-**Wind Direction**: Horizontal movement direction
-- Negative values (-1.0 to 0) = Wind blows from right to left
-- Zero (0.0) = No horizontal wind
-- Positive values (0 to 1.0) = Wind blows from left to right
-
-**Wind Strength**: How much wind affects particles
-- 0.0 = No wind effect
-- 0.1-0.3 = Light breeze
-- 0.4-0.6 = Moderate wind
-- 0.7-1.0 = Strong wind/storm
-
-**Density**: Number of visible particles (or fog intensity for fog effect)
-- Rain/Snow: 50-100 = Light weather (sparse), 100-200 = Normal weather, 200-300 = Heavy weather, 300-400 = Extreme weather
-- Fog: 0.3-0.6 = Light mist, 0.6-1.0 = Moderate fog, 1.0-1.5 = Thick fog, 1.5-2.0 = Dense fog
-
-**Height** (Fog/Cloud only): Controls where fog or clouds concentrate vertically
-- 0.0 = Ground-level fog (concentrates at bottom)
-- 0.2-0.4 = Low-lying fog
-- 0.5 = Mid-height fog
-- 0.6-1.0 = High fog (distributed more evenly)
-
-**Scale** (Fog/Cloud only): Controls the size of the fog or cloud shapes
-- 0.8-1.2 = Large, soft shapes
-- 1.3-2.0 = Medium detail
-- 2.0+ = Smaller, more detailed texture
-
-### Dynamic Control with Signals
-
-Use signals to create interactive weather systems that respond to game events or user input:
-
-```html
-<Canvas>
-    <Weather
-        effect={currentEffect}
-        speed={weatherSpeed}
-        windDirection={windDirection}
-        windStrength={windStrength}
-        density={weatherDensity}
-    />
+  <Weather
+    effect={rainPreset.effect}
+    speed={rainPreset.speed}
+    windDirection={rainPreset.windDirection}
+    windStrength={rainPreset.windStrength}
+    density={rainPreset.density}
+    maxDrops={rainPreset.maxDrops}
+  />
 </Canvas>
 
 <script>
-    import { Weather } from '@canvasengine/presets'
-    import { signal } from 'canvasengine'
+  import { Weather, RAIN_PRESETS } from '@canvasengine/presets'
 
-    // Create reactive signals
-    const currentEffect = signal('rain')
-    const weatherSpeed = signal(0.5)
-    const windDirection = signal(0.0)
-    const windStrength = signal(0.2)
-    const weatherDensity = signal(180)
-
-    // Control rain dynamically
-    function startStorm() {
-        currentEffect.set('rain')
-        weatherSpeed.set(1.8)
-        windDirection.set(0.7)
-        windStrength.set(0.8)
-        weatherDensity.set(350)
-    }
-
-    function lightRain() {
-        currentEffect.set('rain')
-        weatherSpeed.set(0.3)
-        windDirection.set(0.1)
-        windStrength.set(0.1)
-        weatherDensity.set(100)
-    }
-
-    // Control snow dynamically
-    function startBlizzard() {
-        currentEffect.set('snow')
-        weatherSpeed.set(1.2)
-        windDirection.set(0.9)
-        windStrength.set(0.7)
-        weatherDensity.set(300)
-    }
-
-    function lightSnow() {
-        currentEffect.set('snow')
-        weatherSpeed.set(0.4)
-        windDirection.set(0.2)
-        windStrength.set(0.3)
-        weatherDensity.set(80)
-    }
-
-    // Control fog dynamically
-    function startFog() {
-        currentEffect.set('fog')
-        weatherSpeed.set(0.03)
-        windDirection.set(0.5)
-        weatherDensity.set(0.8)
-    }
-
-    function thickGroundFog() {
-        currentEffect.set('fog')
-        weatherSpeed.set(0.02)
-        windDirection.set(0.3)
-        weatherDensity.set(1.5)
-        // height would be set via a separate signal if needed
-    }
-
-    // Example: Change weather based on game state
-    function onEnterWinterArea() {
-        currentEffect.set('snow')
-        weatherSpeed.set(0.4)
-        weatherDensity.set(120)
-    }
-
-    // Example: Gradual weather transition
-    function transitionToStorm() {
-        currentEffect.set('rain')
-        // Gradually increase intensity
-        weatherSpeed.set(0.5)
-        weatherDensity.set(150)
-        
-        setTimeout(() => {
-            weatherSpeed.set(1.2)
-            windStrength.set(0.5)
-            weatherDensity.set(250)
-        }, 2000)
-    }
+  const rainPreset = RAIN_PRESETS.steadyRain
 </script>
 ```
 
-### Common Use Cases
+### Preset Names
 
-**Background Atmosphere**: Use light weather for ambient effects
+- Rain: `lightRain`, `steadyRain`, `stormRain`
+- Snow: `lightSnow`, `winterSnow`, `blizzardSnow`
+- Fog: `rpgMorningMist`, `rpgForestFog`, `rpgSwampFog`, `rpgNightFog`, `rpgHeavyFog`
+- Cloud: `lightClouds`, `overcastClouds`, `stormClouds`, `goldenHourRays`, `sunnySoftRays`, `sunsetTwinkleRays`, `dramaticCrepuscularRays`, `morningHazeRays`
+
+## Viewport and Layering
+
+### Viewport behavior
+
+When `Weather` is placed inside `Viewport`:
+
+- fog/cloud follow world/camera movement
+- weather resolution tracks visible viewport bounds
+
+### Draw order (on top of sprites)
+
+Use `sortableChildren` on `Viewport` and a high `zIndex` on `Weather`.
+
 ```html
-<Weather effect="snow" speed={0.3} density={60} windStrength={0.1} />
+<Canvas>
+  <Viewport worldWidth={2048} worldHeight={2048} sortableChildren={true}>
+    <Sprite image="back.png" zIndex={1} />
+    <Weather effect="fog" zIndex={1000} />
+  </Viewport>
+</Canvas>
 ```
 
-**Weather Transitions**: Change weather based on game events
-```javascript
-// When player enters a storm area
-function enterStormZone() {
-    currentEffect.set('rain')
-    weatherSpeed.set(1.5)
-    windStrength.set(0.7)
-    weatherDensity.set(280)
-}
+## Cloud Sun Rays
+
+Cloud mode supports sun shafts with directional control and twinkle.
+
+Important behavior:
+
+- rays do not scroll on X over time
+- animation is handled by twinkle (`rayTwinkle`, `rayTwinkleSpeed`)
+
+```html
+<Weather
+  effect="cloud"
+  speed={0.12}
+  density={0.75}
+  height={0.84}
+  scale={1.55}
+  sunIntensity={1.35}
+  sunAngle={0.64}
+  raySpread={0.8}
+  rayTwinkle={1.0}
+  rayTwinkleSpeed={1.6}
+/>
 ```
 
-**Performance-Conscious**: Reduce density for mobile devices
-```html
-<!-- Lower density for better performance on mobile -->
-<Weather effect="rain" speed={0.6} density={100} />
-```
+## Dynamic Control with Signals
 
-**Atmospheric Fog**: Use fog for mysterious or moody scenes
 ```html
-<!-- Valley mist for mysterious atmosphere -->
-<Weather effect="fog" speed={0.03} density={0.8} height={0.1} />
+<Canvas>
+  <Weather
+    effect={effectType}
+    speed={speed}
+    density={density}
+    sunIntensity={sunIntensity}
+    rayTwinkle={rayTwinkle}
+  />
+</Canvas>
+
+<script>
+  import { Weather } from '@canvasengine/presets'
+  import { signal } from 'canvasengine'
+
+  const effectType = signal('cloud')
+  const speed = signal(0.12)
+  const density = signal(0.75)
+  const sunIntensity = signal(1.2)
+  const rayTwinkle = signal(0.8)
+</script>
 ```
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| effect | `string` | No | 'rain' | Weather effect type: `'rain'`, `'snow'`, or `'fog'` |
-| speed | `number` \| `Signal<number>` | No | 0.5 | Falling/movement speed multiplier (0.1 = slow, 2.0 = fast). For fog, use lower values (0.01-0.05) |
-| windDirection | `number` \| `Signal<number>` | No | 0.0 | Wind direction (-1.0 = left, 0.0 = none, 1.0 = right) |
-| windStrength | `number` \| `Signal<number>` | No | 0.2 | Wind strength (0.0 = no wind, 1.0 = maximum). Not used for fog |
-| density | `number` \| `Signal<number>` | No | 180.0 | Particle density for rain/snow (50-400) or fog intensity (0.3-2.0) |
-| maxDrops | `number` \| `Signal<number>` | No | 60.0 | Maximum number of particles (30-150 for snow, 10-200 for rain). Not used for fog |
-| height | `number` \| `Signal<number>` | No | 0.2 | Fog height parameter (0.0 = bottom/concentrated, 1.0 = top/distributed). Only used for fog |
-| resolution | `Array<number>` \| `Signal<Array<number>>` | No | [1000, 1000] | Screen resolution `[width, height]` for proper scaling |
+| Prop | Type | Default | Used by | Description |
+|------|------|---------|---------|-------------|
+| `effect` | `string \| Signal<string>` | `'rain'` | all | `'rain'`, `'snow'`, `'fog'`, `'cloud'` |
+| `speed` | `number \| Signal<number>` | `0.5` | all | Movement/fall speed |
+| `windDirection` | `number \| Signal<number>` | `0.0` | rain/snow | Horizontal wind direction |
+| `windStrength` | `number \| Signal<number>` | `0.2` | rain/snow | Wind influence |
+| `density` | `number \| Signal<number>` | `120.0` | all | Particle density or fog/cloud intensity |
+| `maxDrops` | `number \| Signal<number>` | `80.0` | rain/snow | Particle cap (`uMaxDrops`/`uMaxFlakes`) |
+| `height` | `number \| Signal<number>` | `1.0` | fog/cloud | Vertical concentration |
+| `scale` | `number \| Signal<number>` | `2.0` | fog/cloud | Noise scale |
+| `sunIntensity` | `number \| Signal<number>` | `0.85` | cloud | Sun ray intensity |
+| `sunAngle` | `number \| Signal<number>` | `0.85` | cloud | Sun direction angle (radians) |
+| `raySpread` | `number \| Signal<number>` | `1.0` | cloud | Ray spread width |
+| `rayTwinkle` | `number \| Signal<number>` | `0.45` | cloud | Twinkle amount |
+| `rayTwinkleSpeed` | `number \| Signal<number>` | `1.0` | cloud | Twinkle speed |
+| `resolution` | `[number, number] \| Signal<[number, number]>` | auto | all | Override internal resolution |
 
-### Prop Examples
+### Forwarded display props
 
-```html
-<!-- Static values -->
-<Weather effect="snow" speed={0.4} density={100} />
+`Weather` forwards extra props to `Mesh` (for example: `zIndex`, `alpha`, `blendMode`, `visible`, `x`, `y`, etc.).
 
-<!-- Using signals for reactivity -->
-<Weather 
-    effect={weatherType}
-    speed={speedSignal}
-    windDirection={windDirSignal}
-    density={densitySignal}
-/>
+## Recommended Ranges
 
-<!-- Full configuration for rain -->
-<Weather
-    effect="rain"
-    speed={1.2}
-    windDirection={0.5}
-    windStrength={0.6}
-    density={250}
-    maxDrops={80}
-    resolution={[1920, 1080]}
-/>
+- Rain/Snow `density`: `80` to `320`
+- Fog `density`: `0.7` to `1.7`
+- Fog `height`: `0.45` to `0.9`
+- Cloud `density`: `0.5` to `1.3`
+- Cloud `sunIntensity`: `0.1` to `1.5`
+- Cloud `raySpread`: `0.68` to `1.35`
+- Cloud `rayTwinkle`: `0.0` to `1.0` (or more for stylized effects)
 
-<!-- Full configuration for fog -->
-<Weather
-    effect="fog"
-    speed={0.03}
-    windDirection={0.5}
-    density={0.8}
-    height={0.2}
-    resolution={[1920, 1080]}
-/>
-```
+## Troubleshooting
 
-## Parameter Guidelines
+### I don't see the weather
 
-### Speed
-- **Rain/Snow:**
-  - **0.1 - 0.3**: Light precipitation (gentle rain or snow)
-  - **0.4 - 0.7**: Normal weather
-  - **0.8 - 1.2**: Heavy weather
-  - **1.3 - 2.0**: Extreme weather (storm or blizzard)
-- **Fog:**
-  - **0.01 - 0.02**: Very slow, almost static mist
-  - **0.02 - 0.04**: Slow, gentle movement
-  - **0.04 - 0.06**: Moderate fog movement
-  - **0.06 - 0.1**: Fast-moving fog/mist
+- increase `density`
+- ensure `effect` matches props (e.g. cloud rays need `effect="cloud"`)
+- if inside `Viewport`, set `sortableChildren={true}` and `Weather zIndex` high enough
 
-### Wind Direction
-- **-1.0**: Strong wind from right to left
-- **-0.5**: Moderate wind from right to left
-- **0.0**: No horizontal wind
-- **0.5**: Moderate wind from left to right
-- **1.0**: Strong wind from left to right
+### Fog/cloud should move with camera
 
-### Wind Strength
-- **0.0**: No wind effect
-- **0.1 - 0.3**: Light breeze
-- **0.4 - 0.6**: Moderate wind
-- **0.7 - 1.0**: Strong wind/storm
+- place `Weather` inside `Viewport`
+- do not override `resolution` with unrelated values unless needed
 
-### Density
-- **Rain/Snow:**
-  - **50 - 100**: Light weather, sparse particles
-  - **100 - 200**: Normal weather
-  - **200 - 300**: Heavy weather
-  - **300 - 400**: Extreme weather (downpour or heavy snow)
-- **Fog:**
-  - **0.3 - 0.6**: Light mist, subtle atmosphere
-  - **0.6 - 1.0**: Moderate fog, visible mist
-  - **1.0 - 1.5**: Thick fog, limited visibility
-  - **1.5 - 2.0**: Dense fog, very limited visibility
+### Rays should not drift sideways
 
-### Height (Fog only)
-- **0.0 - 0.2**: Ground-level fog (valley effect, concentrates at bottom)
-- **0.2 - 0.4**: Low-lying fog
-- **0.4 - 0.6**: Mid-height fog
-- **0.6 - 1.0**: High fog (distributed more evenly across screen)
-
-## Performance Notes
-
-The Weather component is optimized for performance but here are some guidelines:
-
-### Performance Guidelines
-
-- **WebGL Shaders**: Uses efficient GPU-accelerated shaders for optimal performance
-- **Density Limits**: 
-  - Desktop: Up to 400 density works well
-  - Mobile: Keep density between 60-150 for best performance
-  - Low-end devices: Use density 50-100
-- **Target FPS**: Designed to run smoothly at 60fps on modern hardware
-- **Multiple Instances**: Avoid using multiple Weather components simultaneously
-
-### Optimization Tips
-
-1. **Reduce Density on Mobile**: Lower density values (60-120) work better on mobile devices
-2. **Adjust for Context**: Use lighter weather when other effects are active
-3. **Monitor Performance**: Test on target devices and adjust density accordingly
-4. **Resolution**: The `resolution` prop should match your canvas size for optimal scaling
-
-## Weather Presets
-
-Here are pre-configured weather scenarios you can use directly or as starting points:
-
-### Rain Presets
-
-```html
-<!-- Light Spring Rain - Gentle, atmospheric -->
-<Weather effect="rain" speed={0.3} windDirection={0.1} windStrength={0.15} density={120} />
-
-<!-- Summer Storm - Intense, dramatic -->
-<Weather effect="rain" speed={1.6} windDirection={0.8} windStrength={0.7} density={320} />
-
-<!-- Gentle Drizzle - Very light, subtle -->
-<Weather effect="rain" speed={0.2} windDirection={0.0} windStrength={0.05} density={80} />
-
-<!-- Windy Rain - Strong horizontal movement -->
-<Weather effect="rain" speed={0.8} windDirection={-0.6} windStrength={0.9} density={200} />
-
-<!-- Heavy Downpour - Maximum intensity -->
-<Weather effect="rain" speed={1.8} windDirection={0.2} windStrength={0.4} density={380} />
-```
-
-### Snow Presets
-
-```html
-<!-- Light Snowfall - Peaceful, gentle -->
-<Weather effect="snow" speed={0.4} windDirection={0.2} windStrength={0.2} density={80} />
-
-<!-- Winter Blizzard - Intense snowstorm -->
-<Weather effect="snow" speed={1.4} windDirection={0.8} windStrength={0.8} density={280} />
-
-<!-- Gentle Snow - Very light, calm -->
-<Weather effect="snow" speed={0.3} windDirection={0.0} windStrength={0.1} density={60} />
-
-<!-- Windy Snow - Snow with strong wind -->
-<Weather effect="snow" speed={0.9} windDirection={-0.7} windStrength={0.6} density={180} />
-
-<!-- Heavy Snowstorm - Maximum snow intensity -->
-<Weather effect="snow" speed={1.6} windDirection={0.3} windStrength={0.5} density={350} />
-```
-
-### Fog Presets
-
-```html
-<!-- Light Valley Mist - Subtle, atmospheric -->
-<Weather effect="fog" speed={0.02} windDirection={0.3} density={0.5} height={0.1} />
-
-<!-- Ground Fog - Low-lying, concentrated at bottom -->
-<Weather effect="fog" speed={0.03} windDirection={0.5} density={0.8} height={0.0} />
-
-<!-- Thick Mist - Moderate visibility reduction -->
-<Weather effect="fog" speed={0.04} windDirection={0.4} density={1.0} height={0.2} />
-
-<!-- Dense Fog - Heavy visibility reduction -->
-<Weather effect="fog" speed={0.03} windDirection={0.6} density={1.5} height={0.3} />
-
-<!-- High Altitude Fog - Distributed evenly -->
-<Weather effect="fog" speed={0.02} windDirection={0.2} density={0.7} height={0.7} />
-
-<!-- Moving Mist - Faster movement -->
-<Weather effect="fog" speed={0.06} windDirection={0.8} density={0.9} height={0.2} />
-```
-
-### Tips for Choosing Presets
-
-- **Atmospheric Background**: Use light presets (density 60-100 for rain/snow, 0.3-0.6 for fog) for subtle ambiance
-- **Gameplay Events**: Use medium presets (density 150-250 for rain/snow, 0.7-1.0 for fog) for weather-related gameplay
-- **Dramatic Moments**: Use heavy presets (density 280-380 for rain/snow, 1.2-1.5 for fog) for cutscenes or intense moments
-- **Performance**: Lower density (60-120 for rain/snow, 0.3-0.6 for fog) for mobile devices or when many effects are active
-- **Fog Specific**: Use ground fog (height 0.0-0.2) for valley/mountain scenes, high fog (height 0.6-1.0) for atmospheric backgrounds
-
-## Technical Details
-
-The Weather component uses specialized fragment shaders for each effect:
-
-### Rain Shader
-1. **Generates procedural raindrops** using hash functions for randomness
-2. **Simulates physics** with gravity and wind effects on elongated streaks
-3. **Applies visual styling** with Zelda-inspired raindrop appearance
-4. **Optimizes rendering** using efficient GPU calculations
-5. **Supports real-time updates** through uniform buffer updates
-
-### Snow Shader
-1. **Generates procedural snowflakes** with circular shapes and size variation
-2. **Simulates gentle physics** with slower movement and subtle wind drift
-3. **Applies visual styling** with soft, white snowflake appearance
-4. **Optimizes rendering** using efficient GPU calculations
-5. **Supports real-time updates** through uniform buffer updates
-
-### Fog Shader
-1. **Generates organic fog layers** using fractal noise (FBM) for natural cloud-like shapes
-2. **Creates multiple fog layers** with depth perception and overlapping patterns
-3. **Simulates natural movement** with wind direction and vertical wave oscillations
-4. **Applies height-based concentration** for valley effect (fog gathers at bottom)
-5. **Optimizes rendering** using efficient GPU calculations with multiple layered passes
-6. **Supports real-time updates** through uniform buffer updates
-
-Both rain and snow shaders render approximately 150-200 potential particles per frame, with the actual visible count controlled by the density parameter. The fog shader uses 4 overlapping layers with fractal noise generation for organic, realistic fog patterns. 
+- current cloud implementation keeps ray pattern stable in X and animates via twinkle controls

@@ -147,6 +147,11 @@ export function createCloudShader(): GlProgram {
     uniform float uDensity;
     uniform float uHeight;
     uniform vec2  uViewportOrigin;
+    uniform float uSunIntensity;
+    uniform vec2  uSunDirection;
+    uniform float uRaySpread;
+    uniform float uRayTwinkle;
+    uniform float uRayTwinkleSpeed;
 
     float hash(vec2 p) {
       return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -192,26 +197,66 @@ export function createCloudShader(): GlProgram {
         normalizedDensity = normalizedDensity / 100.0;
       }
       float density = clamp(normalizedDensity, 0.0, 2.0);
+      float scale = clamp(uScale, 0.2, 4.0);
+      float speed = max(uSpeed * 6.0, 0.12);
+      vec2 driftMain = vec2(uTime * 0.04 * speed, uTime * 0.012 * speed);
+      vec2 driftDetail = vec2(-uTime * 0.028 * speed, uTime * 0.01 * speed);
+      vec2 wobble = vec2(
+        sin(uTime * 0.18 * speed + worldUv.y * 4.8) * 0.035,
+        cos(uTime * 0.16 * speed + worldUv.x * 3.7) * 0.02
+      );
+      vec2 flowUv = worldUv + wobble;
 
-      float scale = max(uScale, 0.2);
-      vec2 drift = vec2(uTime * 0.03 * uSpeed, uTime * 0.01 * uSpeed);
-      float cloudNoise = fbm(worldUv * scale + drift);
-      float detailNoise = fbm(worldUv * (scale * 2.4) + drift * 1.7);
+      float cloudNoise = fbm(flowUv * scale + driftMain);
+      float detailNoise = fbm(flowUv * (scale * 2.4) + driftDetail);
 
-      float shape = smoothstep(0.45, 0.95, cloudNoise);
-      float detail = smoothstep(0.4, 0.9, detailNoise);
-      float puff = shape * (0.6 + 0.4 * detail);
+      float shape = smoothstep(0.4, 0.93, cloudNoise);
+      float detail = smoothstep(0.36, 0.9, detailNoise);
+      float puff = shape * (0.55 + 0.45 * detail);
 
       float heightControl = clamp(uHeight, 0.0, 1.0);
       float fullScreen = step(0.99, heightControl);
-      float baseHeight = 0.6 + 0.4 * uv.y;
-      float heightFactor = mix(baseHeight, 1.0, heightControl);
+      float skyHeight = pow(clamp(1.0 - vUV.y, 0.0, 1.0), 0.68);
+      float heightFactor = mix(skyHeight, 1.0, heightControl);
       heightFactor = mix(heightFactor, 1.0, fullScreen);
-      float cloud = puff * density * 0.6 * heightFactor;
-      float alpha = clamp(cloud, 0.0, 0.55);
+      float cloud = puff * density * 0.72 * heightFactor;
+      float cloudAlpha = clamp(cloud, 0.0, 0.68);
 
-      vec3 cloudColor = vec3(1.0);
-      finalColor = vec4(cloudColor * alpha, alpha);
+      vec2 sunDir = uSunDirection;
+      if (length(sunDir) < 0.0001) {
+        sunDir = vec2(0.55, 1.0);
+      }
+      sunDir = normalize(sunDir);
+      vec2 rayUv = worldUv;
+      float spread = clamp(uRaySpread, 0.35, 2.5);
+      float rayCoord = dot(rayUv, sunDir) * (6.5 / spread);
+      float rayNoise = fbm(vec2(rayCoord, rayUv.y * 0.55));
+      float shafts = smoothstep(0.5, 0.9, rayNoise);
+      float skyFade = pow(clamp(1.0 - vUV.y, 0.0, 1.0), 1.25);
+      float cloudGap = clamp(1.0 - cloudAlpha * 1.05, 0.0, 1.0);
+      float twinkleAmount = clamp(uRayTwinkle, 0.0, 1.5);
+      float twinkleSpeed = max(uRayTwinkleSpeed, 0.01);
+      float twinklePulse = 0.5 + 0.5 * sin(uTime * 1.9 * twinkleSpeed + rayCoord * 1.8);
+      float twinkleNoise = fbm(vec2(rayCoord * 1.35 + 13.7, uTime * 0.1 * twinkleSpeed));
+      float twinkle = mix(
+        1.0,
+        clamp(0.7 + 0.35 * twinklePulse + 0.25 * twinkleNoise, 0.35, 1.55),
+        twinkleAmount
+      );
+      float rayAlpha = shafts * skyFade * cloudGap * clamp(uSunIntensity, 0.0, 2.0) * twinkle * 0.58;
+
+      vec3 cloudDark = vec3(0.82, 0.87, 0.94);
+      vec3 cloudBright = vec3(0.98, 0.99, 1.0);
+      vec3 cloudColor = mix(cloudDark, cloudBright, detail * 0.55);
+      vec3 rayColor = vec3(1.0, 0.95, 0.8);
+
+      float totalAlpha = cloudAlpha + rayAlpha;
+      float alpha = clamp(totalAlpha, 0.0, 0.86);
+      vec3 premulColor = cloudColor * cloudAlpha + rayColor * rayAlpha;
+      if (totalAlpha > 0.0001) {
+        premulColor *= (alpha / totalAlpha);
+      }
+      finalColor = vec4(premulColor, alpha);
     }
   `;
 
