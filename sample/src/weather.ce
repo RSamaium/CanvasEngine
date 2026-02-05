@@ -1,7 +1,7 @@
 <Canvas backgroundColor="#1a472a">
    
     <Viewport worldWidth={2048} worldHeight={2048} screen clamp={clamp}>
-        <NightAmbiant lightSpots={lightSpots} />
+        <NightAmbiant lightSpots={lightSpots} darkness={intensity} />
 
         <Graphics
             width={800}

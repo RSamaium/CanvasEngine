@@ -16,13 +16,9 @@ const FOG_COLOR = new Float32Array([0.08, 0.08, 0.14]);
 
 type PointLike = { x: number; y: number };
 type BoundsLike = { x: number; y: number; width: number; height: number };
-type ScreenPointLike = { x: number; y: number };
 type ReactiveValue<T> = T | (() => T);
 type ViewportLike = {
   getVisibleBounds?: () => BoundsLike | null | undefined;
-  toScreen?: (x: number, y: number) => ScreenPointLike;
-  screenWidth?: number;
-  screenHeight?: number;
 };
 export type NightSpot = PointLike & {
   radius?: number;
@@ -174,7 +170,6 @@ export function createNightFilter(
 ): NightFilter {
   const uSpots = new Float32Array(MAX_SPOTS * 4);
   const uSpotsUniform = { value: uSpots, type: 'vec4<f32>' as const, size: MAX_SPOTS };
-  const uAspect = { value: 1, type: 'f32' as const };
   const uDarkness = { value: options?.darkness ?? DARKNESS, type: 'f32' as const };
   const uFogColor = { value: options?.fogColor ? parseColor(options.fogColor) : FOG_COLOR, type: 'vec3<f32>' as const };
   const uFogRadius = { value: options?.fogRadius ?? FOG_RADIUS, type: 'f32' as const };
@@ -192,7 +187,6 @@ export function createNightFilter(
     resources: {
       nightUniforms: {
         uSpots: uSpotsUniform,
-        uAspect,
         uDarkness,
         uDarkColor,
         uFogColor,
@@ -217,11 +211,6 @@ export function createNightFilter(
     const hasBounds = !!bounds && bounds.width > 0 && bounds.height > 0;
     const time = nowSeconds();
 
-    // Update aspect ratio from bounds
-    if (hasBounds) {
-      uAspect.value = bounds.width / bounds.height;
-    }
-
     uSpots.fill(0);
     for (let i = 0; i < spotCount; i++) {
       const spot = activeSpots[i];
@@ -241,13 +230,11 @@ export function createNightFilter(
 
       let x = spot.x;
       let y = spot.y;
-      let radius = 0.15;
+      let radius = radiusPx;
 
-      // Convert world position to normalized texture coordinates using bounds
       if (hasBounds) {
         x = (spot.x - bounds.x) / bounds.width;
         y = (spot.y - bounds.y) / bounds.height;
-        radius = radiusPx / bounds.height;
       }
 
       const base = i * 4;
@@ -393,6 +380,18 @@ export function NightAmbiant(options: NightAmbiantProps = {}) {
     const viewport = context?.viewport as ViewportLike | undefined;
     const target: any = viewport ?? element.parent?.componentInstance;
     if (!target) return;
+    const canvasSizeSignal = context?.canvasSize as (() => { width: number; height: number }) | undefined;
+
+    const resolveFilterBounds = (): BoundsLike | null => {
+      // Outside a Viewport, use the reactive canvas size to avoid stale fixed widths.
+      if (!viewport && typeof canvasSizeSignal === "function") {
+        const size = canvasSizeSignal();
+        if (size && isFiniteNumber(size.width) && isFiniteNumber(size.height) && size.width > 0 && size.height > 0) {
+          return { x: 0, y: 0, width: size.width, height: size.height };
+        }
+      }
+      return toBoundsLike(target);
+    };
 
     // Resolve initial values for filter options
     const initialDarkness = resolveReactiveValue(props.darkness as ReactiveValue<number> | undefined);
@@ -403,7 +402,7 @@ export function NightAmbiant(options: NightAmbiantProps = {}) {
 
     const nightFilter = createNightFilter(viewport, {
       spots: resolveSpots(spotsSource()),
-      getBounds: () => toBoundsLike(target),
+      getBounds: resolveFilterBounds,
       darkness: isFiniteNumber(initialDarkness) ? initialDarkness : undefined,
       darkColor: initialDarkColor ?? undefined,
       fogColor: initialFogColor ?? undefined,
