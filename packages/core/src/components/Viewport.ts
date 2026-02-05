@@ -34,6 +34,7 @@ export interface ViewportProps extends Props {
     screenHeight?: number;
     worldWidth?: number;
     worldHeight?: number;
+    sortableChildren?: boolean;
     clamp?: boolean | {
         left?: number;
         right?: number;
@@ -145,6 +146,9 @@ export class CanvasViewport extends DisplayObject(Container) {
         }
         if (props.worldHeight !== undefined) {
             this.viewport.worldHeight = props.worldHeight
+        }
+        if (props.sortableChildren !== undefined) {
+            this.viewport.sortableChildren = props.sortableChildren
         }
         if (props.drag) {
             this.viewport.drag(props.drag)

@@ -12,6 +12,39 @@ import { createRainShader } from "./rain";
 import { createSnowShader } from "./snow";
 import { createFogShader, createCloudShader } from "./fog";
 
+export const RAIN_PRESETS = {
+  lightRain: { effect: "rain", speed: 0.35, windDirection: 0.1, windStrength: 0.15, density: 110, maxDrops: 90 },
+  steadyRain: { effect: "rain", speed: 0.6, windDirection: 0.2, windStrength: 0.3, density: 180, maxDrops: 120 },
+  stormRain: { effect: "rain", speed: 1.4, windDirection: 0.7, windStrength: 0.75, density: 300, maxDrops: 150 },
+} as const;
+
+export const SNOW_PRESETS = {
+  lightSnow: { effect: "snow", speed: 0.35, windDirection: 0.1, windStrength: 0.18, density: 90, maxDrops: 100 },
+  winterSnow: { effect: "snow", speed: 0.5, windDirection: 0.2, windStrength: 0.28, density: 150, maxDrops: 130 },
+  blizzardSnow: { effect: "snow", speed: 1.1, windDirection: 0.8, windStrength: 0.75, density: 290, maxDrops: 160 },
+} as const;
+
+export const FOG_PRESETS = {
+  rpgMorningMist: { effect: "fog", speed: 0.16, density: 0.75, height: 0.45, scale: 1.35 },
+  rpgForestFog: { effect: "fog", speed: 0.22, density: 1.0, height: 0.62, scale: 1.75 },
+  rpgSwampFog: { effect: "fog", speed: 0.14, density: 1.3, height: 0.55, scale: 2.1 },
+  rpgNightFog: { effect: "fog", speed: 0.12, density: 1.15, height: 0.58, scale: 1.9 },
+  rpgHeavyFog: { effect: "fog", speed: 0.1, density: 1.7, height: 0.72, scale: 2.3 },
+} as const;
+
+export const CLOUD_PRESETS = {
+  lightClouds: { effect: "cloud", speed: 0.03, density: 0.55, height: 0.65, scale: 1.4 },
+  overcastClouds: { effect: "cloud", speed: 0.035, density: 0.9, height: 0.72, scale: 1.8 },
+  stormClouds: { effect: "cloud", speed: 0.05, density: 1.2, height: 0.78, scale: 2.2 },
+} as const;
+
+export const WEATHER_PRESETS = {
+  rain: RAIN_PRESETS,
+  snow: SNOW_PRESETS,
+  fog: FOG_PRESETS,
+  cloud: CLOUD_PRESETS,
+} as const;
+
 
 /**
  * Weather Effect Component (optimized)
@@ -27,6 +60,7 @@ export const WeatherEffect = (options) => {
     height = signal(1.0),  // Fog/cloud height parameter (0 = bottom, 1 = full)
     scale = signal(2.0),  // Fog noise scale parameter
     resolution,
+    ...meshProps
   } = useProps(options);
 
   // Auto-detect resolution from canvas if not provided
@@ -144,6 +178,7 @@ export const WeatherEffect = (options) => {
       uScale: { value: scaleSignal(), type: "f32" },
       uDensity: { value: densitySignal(), type: "f32" },
       uHeight: { value: normalizeHeightValue(heightSignal()), type: "f32" },
+      uViewportOrigin: { value: [originX(), originY()], type: "vec2<f32>" },
     };
   } else if (effectSignal() === 'cloud') {
     glProgram = createCloudShader();
@@ -154,6 +189,7 @@ export const WeatherEffect = (options) => {
       uScale: { value: scaleSignal(), type: "f32" },
       uDensity: { value: densitySignal(), type: "f32" },
       uHeight: { value: normalizeHeightValue(heightSignal()), type: "f32" },
+      uViewportOrigin: { value: [originX(), originY()], type: "vec2<f32>" },
     };
   } else {
     throw new Error(`Unknown weather effect: ${effectSignal()}. Supported: rain, snow, fog, cloud`);
@@ -186,6 +222,8 @@ export const WeatherEffect = (options) => {
   let prevMaxDrops = maxDropsSignal();
   let prevHeight = heightSignal();
   let prevScale = scaleSignal();
+  let prevOriginX = originX();
+  let prevOriginY = originY();
 
   tick(({ deltaTime }) => {
     if (viewportRef?.getVisibleBounds) {
@@ -215,6 +253,16 @@ export const WeatherEffect = (options) => {
     if (currentResolution[0] !== prevResolution[0] || currentResolution[1] !== prevResolution[1]) {
       uniformGroup.uniforms.uResolution = currentResolution;
       prevResolution = [...currentResolution];
+    }
+
+    if (effectSignal() === 'fog' || effectSignal() === 'cloud') {
+      const currentOriginX = originX();
+      const currentOriginY = originY();
+      if (currentOriginX !== prevOriginX || currentOriginY !== prevOriginY) {
+        uniformGroup.uniforms.uViewportOrigin = [currentOriginX, currentOriginY];
+        prevOriginX = currentOriginX;
+        prevOriginY = currentOriginY;
+      }
     }
 
     // Only update wind if it changed
@@ -300,6 +348,7 @@ export const WeatherEffect = (options) => {
   });
 
   return h(Mesh, {
+    ...meshProps,
     geometry,
     shader,
     width: viewWidth,
