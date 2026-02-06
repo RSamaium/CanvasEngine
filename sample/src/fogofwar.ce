@@ -1,0 +1,85 @@
+<Canvas backgroundColor="#1b2430">
+  <Viewport worldWidth={worldWidth} worldHeight={worldHeight} clamp={clamp} sortableChildren={true}>
+
+    <Sprite image="back.png" />
+ 
+    <Graphics
+    x={playerX}
+    y={playerY}
+    zIndex={1}
+    draw={(g) => {
+        g.clear();
+        g.beginFill(0xffcc00);
+        g.drawCircle(0, 0, 20);
+        g.endFill();
+    }}
+    controls
+    viewportFollow={true}
+/>
+    <FogOfWar
+      mapWidth={worldWidth}
+      mapHeight={worldHeight}
+      tileSize={tileSize}
+      visionSources={visionSources}
+      updateHz={15}
+      colors={fogColors}
+      zIndex={1000}
+    />
+  </Viewport>
+</Canvas>
+
+<script>
+  import { computed, signal } from 'canvasengine'
+  import { FogOfWar } from '@canvasengine/presets'
+
+  const worldWidth = 2048
+  const worldHeight = 2048
+  const tileSize = 32
+  const clamp = { direction: 'all' }
+
+  const playerX = signal(360)
+  const playerY = signal(320)
+  const allyX = signal(760)
+  const allyY = signal(520)
+
+  const fogColors = {
+    unknown: [0, 0, 0, 1],
+    explored: [0, 0, 0, 0.55],
+  }
+
+  const visionSources = computed(() => [
+    { x: playerX(), y: playerY(), radius: 240, enabled: true },
+    { x: allyX(), y: allyY(), radius: 170, enabled: true },
+  ])
+
+  const controls = signal({
+    right: {
+      repeat: true,
+      bind: 'right',
+      keyDown() {
+        playerX.update((x) => Math.min(x + 12, worldWidth - 12))
+      },
+    },
+    left: {
+      repeat: true,
+      bind: 'left',
+      keyDown() {
+        playerX.update((x) => Math.max(x - 12, 12))
+      },
+    },
+    up: {
+      repeat: true,
+      bind: 'up',
+      keyDown() {
+        playerY.update((y) => Math.max(y - 12, 12))
+      },
+    },
+    down: {
+      repeat: true,
+      bind: 'down',
+      keyDown() {
+        playerY.update((y) => Math.min(y + 12, worldHeight - 12))
+      },
+    },
+  })
+</script>
