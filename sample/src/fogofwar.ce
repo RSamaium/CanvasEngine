@@ -13,7 +13,7 @@
       height={34}
       color="#5ee7ff"
       zIndex={3}
-      visible={enemyVisibleInClearZone}
+      fogVisibility={enemyFogVisibility}
     />
 
     <Graphics
@@ -76,9 +76,15 @@
     { x: allyX(), y: allyY(), radius: 170, enabled: true },
   ])
 
-  const enemyVisibleInClearZone = computed(() =>
-    fogController.isVisibleAt(enemyX() + 17, enemyY() + 17, 0.72)
-  )
+  const enemyFogVisibility = {
+    controller: fogController,
+    mode: 'visible',
+    threshold: 0.72,
+    point: {
+      x: computed(() => enemyX() + 17),
+      y: computed(() => enemyY() + 17),
+    },
+  }
 
   const controls = signal({
     right: {

@@ -112,6 +112,38 @@ Use this when some objects should stay normal (current behavior), while others a
 </script>
 ```
 
+## `fogVisibility` Directive
+
+You can also attach visibility logic directly on an element.
+
+```html
+<Sprite
+  image="enemy.png"
+  x={enemyX}
+  y={enemyY}
+  fogVisibility={{
+    controller: fog,
+    mode: 'visible',
+    threshold: 0.72,
+    point: {
+      x: computed(() => enemyX() + 16),
+      y: computed(() => enemyY() + 16),
+    },
+    hideAs: 'visible'
+  }}
+/>
+```
+
+Directive options:
+
+- `controller`: `FogOfWar` controller created with `createFogOfWarController()`
+- `mode`: `'visible' | 'explored'` (`'visible'` by default)
+- `threshold`: clear zone threshold (`0..1`, default `0.65`)
+- `point`: optional sample point `{ x, y }` in world coordinates
+- `hideAs`: `'visible'` (hide/show) or `'alpha'` (fade only)
+- `hiddenAlpha`: alpha used when hidden with `hideAs: 'alpha'`
+- `sampleHz`: recomputation frequency (default `30`)
+
 ## Notes
 
 - Use `computed()` for `visionSources` so updates track unit movement naturally.

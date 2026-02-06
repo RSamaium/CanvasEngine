@@ -4,6 +4,7 @@ import { DragProps } from "../../directives/Drag";
 import { ViewportFollowProps } from "../../directives/ViewportFollow";
 import { ShakeProps } from "../../directives/Shake";
 import { FlashProps } from "../../directives/Flash";
+import { FogVisibilityProps } from "../../directives/FogVisibility";
 
 export type FlexDirection = 'row' | 'column' | 'row-reverse' | 'column-reverse';
 export type JustifyContent = 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around';
@@ -70,6 +71,7 @@ export interface DisplayObjectProps {
     viewportFollow?: ViewportFollowProps;
     shake?: ShakeProps;
     flash?: FlashProps;
+    fogVisibility?: FogVisibilityProps;
 
     // Events
     click?: PIXI.FederatedEventHandler;
