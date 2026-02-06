@@ -11,6 +11,13 @@ type VisionSource = {
   enabled?: boolean | (() => boolean);
 };
 
+type ResolvedVisionSource = {
+  x: number;
+  y: number;
+  radius: number;
+  enabled: boolean;
+};
+
 type FogOfWarColors = {
   unknown?: FogColor;
   explored?: FogColor;
@@ -172,6 +179,7 @@ export function FogOfWar(options: FogOfWarProps) {
   let forceRefresh = true;
   let activeController: FogOfWarController | null = null;
   let activeControllerInternals: FogControllerInternals | null = null;
+  let previousSourcesSnapshot: number[] = [];
 
   const createFogCanvas = () => {
     if (typeof document === "undefined") {
@@ -210,6 +218,48 @@ export function FogOfWar(options: FogOfWarProps) {
     return value && typeof value === "object"
       ? (value as FogOfWarController)
       : undefined;
+  };
+
+  const resolveVisionSources = (): ResolvedVisionSource[] => {
+    const sources = resolveSources(visionSources);
+    const resolved: ResolvedVisionSource[] = [];
+    for (let i = 0; i < sources.length; i++) {
+      const source = sources[i];
+      resolved.push({
+        x: Number(resolveValue(source.x)),
+        y: Number(resolveValue(source.y)),
+        radius: Number(resolveValue(source.radius)),
+        enabled: resolveValue(source.enabled) !== false,
+      });
+    }
+    return resolved;
+  };
+
+  const didSourcesChange = (sources: ResolvedVisionSource[]) => {
+    const snapshot = new Array(sources.length * 4);
+    let index = 0;
+    for (let i = 0; i < sources.length; i++) {
+      const source = sources[i];
+      snapshot[index++] = source.x;
+      snapshot[index++] = source.y;
+      snapshot[index++] = source.radius;
+      snapshot[index++] = source.enabled ? 1 : 0;
+    }
+
+    let changed = snapshot.length !== previousSourcesSnapshot.length;
+    if (!changed) {
+      for (let i = 0; i < snapshot.length; i++) {
+        const next = snapshot[i];
+        const prev = previousSourcesSnapshot[i];
+        if (Number.isNaN(next) !== Number.isNaN(prev) || Math.abs(next - prev) > 0.01) {
+          changed = true;
+          break;
+        }
+      }
+    }
+
+    previousSourcesSnapshot = snapshot;
+    return changed;
   };
 
   const sampleFog = (worldX: number, worldY: number): FogSample => {
@@ -291,17 +341,20 @@ export function FogOfWar(options: FogOfWarProps) {
     forceRefresh = true;
   };
 
-  const drawVisionCircle = (source: VisionSource, featherCells: number) => {
-    const enabled = resolveValue(source.enabled);
-    if (enabled === false) return;
-
-    const x = Number(resolveValue(source.x));
-    const y = Number(resolveValue(source.y));
-    const radius = Number(resolveValue(source.radius));
-    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(radius) || radius <= 0) {
+  const drawVisionCircle = (source: ResolvedVisionSource, featherCells: number) => {
+    if (
+      source.enabled === false ||
+      !Number.isFinite(source.x) ||
+      !Number.isFinite(source.y) ||
+      !Number.isFinite(source.radius) ||
+      source.radius <= 0
+    ) {
       return;
     }
 
+    const x = source.x;
+    const y = source.y;
+    const radius = source.radius;
     const radiusInCells = radius / cachedCellSize;
     const innerRadius = Math.max(0, radiusInCells - featherCells);
     const outerRadius = Math.max(radiusInCells, radiusInCells + featherCells);
@@ -339,7 +392,7 @@ export function FogOfWar(options: FogOfWarProps) {
     }
   };
 
-  const rasterizeFog = () => {
+  const rasterizeFog = (resolvedSources?: ResolvedVisionSource[]) => {
     if (!imageData || !pixelData || !fogCtx) return;
 
     const rawColors = resolveValue(colors) || {};
@@ -347,7 +400,7 @@ export function FogOfWar(options: FogOfWarProps) {
     const known = toColorBytes(rawColors.explored, DEFAULT_EXPLORED);
 
     visibilityNow.fill(0);
-    const sources = resolveSources(visionSources);
+    const sources = resolvedSources ?? resolveVisionSources();
     const featherCells = resolveEdgeSoftness() / cachedCellSize;
     for (let i = 0; i < sources.length; i++) {
       drawVisionCircle(sources[i], featherCells);
@@ -395,15 +448,21 @@ export function FogOfWar(options: FogOfWarProps) {
     }
     applyTextureScaleMode();
     syncController(false);
+    const resolvedSources = resolveVisionSources();
+    const sourcesChanged = didSourcesChange(resolvedSources);
+    if (sourcesChanged) {
+      // Keep vision movement visually smooth even with low updateHz.
+      forceRefresh = true;
+    }
 
     const hz = Math.max(1, Number(resolveValue(updateHz)) || 15);
     const intervalMs = 1000 / hz;
     accumulatorMs += deltaTime;
 
-    if (forceRefresh || accumulatorMs >= intervalMs) {
+    if (forceRefresh || sourcesChanged || accumulatorMs >= intervalMs) {
       accumulatorMs = 0;
       forceRefresh = false;
-      rasterizeFog();
+      rasterizeFog(resolvedSources);
     }
   });
 

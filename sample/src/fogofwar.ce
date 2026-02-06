@@ -35,11 +35,11 @@
       mapHeight={worldHeight}
       tileSize={tileSize}
       smooth={true}
-      renderScale={2}
-      edgeSoftness={22}
+      renderScale={4}
+      edgeSoftness={26}
       visionSources={visionSources}
       controller={fogController}
-      updateHz={15}
+      updateHz={60}
       colors={fogColors}
       zIndex={1000}
     />
