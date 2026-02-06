@@ -1,26 +1,44 @@
 <Canvas backgroundColor="#1b2430">
   <Viewport worldWidth={worldWidth} worldHeight={worldHeight} clamp={clamp} sortableChildren={true}>
-
     <Sprite image="back.png" />
- 
+
+    <!-- Objet normal: reste visible comme aujourd'hui (atténué par le fog) -->
+    <Rect x={relicX} y={relicY} width={34} height={34} color="#ffd166" zIndex={2} />
+
+    <!-- Objet strict: visible seulement dans la zone très claire -->
+    <Rect
+      x={enemyX}
+      y={enemyY}
+      width={34}
+      height={34}
+      color="#5ee7ff"
+      zIndex={3}
+      visible={enemyVisibleInClearZone}
+    />
+
     <Graphics
-    x={playerX}
-    y={playerY}
-    zIndex={1}
-    draw={(g) => {
+      x={playerX}
+      y={playerY}
+      zIndex={10}
+      draw={(g) => {
         g.clear();
         g.beginFill(0xffcc00);
         g.drawCircle(0, 0, 20);
         g.endFill();
-    }}
-    controls
-    viewportFollow={true}
-/>
+      }}
+      controls
+      viewportFollow={true}
+    />
+
     <FogOfWar
       mapWidth={worldWidth}
       mapHeight={worldHeight}
       tileSize={tileSize}
+      smooth={true}
+      renderScale={2}
+      edgeSoftness={22}
       visionSources={visionSources}
+      controller={fogController}
       updateHz={15}
       colors={fogColors}
       zIndex={1000}
@@ -30,7 +48,7 @@
 
 <script>
   import { computed, signal } from 'canvasengine'
-  import { FogOfWar } from '@canvasengine/presets'
+  import { FogOfWar, createFogOfWarController } from '@canvasengine/presets'
 
   const worldWidth = 2048
   const worldHeight = 2048
@@ -41,16 +59,26 @@
   const playerY = signal(320)
   const allyX = signal(760)
   const allyY = signal(520)
+  const enemyX = signal(1080)
+  const enemyY = signal(690)
+  const relicX = 118
+  const relicY = 128
+
+  const fogController = createFogOfWarController()
 
   const fogColors = {
-    unknown: [0, 0, 0, 1],
-    explored: [0, 0, 0, 0.55],
+    unknown: [8, 12, 22, 0.95],
+    explored: [0, 0, 0, 0.45],
   }
 
   const visionSources = computed(() => [
     { x: playerX(), y: playerY(), radius: 240, enabled: true },
     { x: allyX(), y: allyY(), radius: 170, enabled: true },
   ])
+
+  const enemyVisibleInClearZone = computed(() =>
+    fogController.isVisibleAt(enemyX() + 17, enemyY() + 17, 0.72)
+  )
 
   const controls = signal({
     right: {
