@@ -177,6 +177,10 @@ const guideMenu = [
       {
         text: "NightAmbiant",
         link: "/presets/night-ambiant",
+      },
+      {
+        text: "Footprints",
+        link: "/presets/footprints",
       }
     ],
   },

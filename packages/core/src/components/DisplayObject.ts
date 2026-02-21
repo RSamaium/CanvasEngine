@@ -333,6 +333,20 @@ export function DisplayObject(extendClass) {
           (this as any).shadowCaster = shadowCasterValue;
         }
       }
+      if (props.footprintCaster !== undefined) {
+        const footprintCasterValue =
+          (props.footprintCaster as any)?.value ?? props.footprintCaster;
+        if (
+          footprintCasterValue &&
+          typeof footprintCasterValue === "object" &&
+          !Array.isArray(footprintCasterValue)
+        ) {
+          const current = ((this as any).footprintCaster ?? {}) as Record<string, unknown>;
+          (this as any).footprintCaster = { ...current, ...footprintCasterValue };
+        } else {
+          (this as any).footprintCaster = footprintCasterValue;
+        }
+      }
       if (props.blendMode) this.blendMode = props.blendMode;
       if (props.filterArea) this.filterArea = props.filterArea;
       const currentFilters = this.filters || [];

@@ -70,6 +70,11 @@ export interface DisplayObjectProps {
      * to mark this display object as a shadow caster.
      */
     shadowCaster?: any;
+    /**
+     * Optional metadata used by presets (for example `Footprints`)
+     * to mark this display object as a footprint caster.
+     */
+    footprintCaster?: any;
 
     // Directives
     drag?: DragProps;

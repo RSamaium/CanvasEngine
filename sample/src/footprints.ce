@@ -1,0 +1,300 @@
+<Canvas backgroundColor="#0d1424">
+  <Viewport
+    worldWidth={worldWidth}
+    worldHeight={worldHeight}
+    sortableChildren={true}
+    clamp={viewportClamp}
+  >
+    <Graphics zIndex={0} draw={drawTerrain} />
+
+    <Footprints
+      profiles={surfaceProfiles}
+      defaultSurface="sand"
+      updateHz={45}
+      maxFootprints={320}
+    />
+
+    <Sprite
+      x={heroX}
+      y={heroY}
+      width={88}
+      height={88}
+      zIndex={30}
+      viewportFollow={true}
+      controls={heroControls}
+      sheet={heroSheet}
+      footprintCaster={heroFootprintCaster}
+    />
+
+    <Text
+      x={26}
+      y={24}
+      zIndex={100}
+      text="Footprints demo: move with arrows. Rules change by terrain zone (snow/sand/mud/rock)."
+      style={labelStyle}
+    />
+
+    <Text
+      x={26}
+      y={58}
+      zIndex={100}
+      text={surfaceLabel}
+      style={surfaceStyle}
+    />
+  </Viewport>
+</Canvas>
+
+<script>
+  import { computed, signal } from "canvasengine";
+  import { Footprints } from "@canvasengine/presets";
+
+  const worldWidth = 2048;
+  const worldHeight = 1280;
+  const viewportClamp = { direction: "all" };
+  const moveSpeed = 10;
+
+  const labelStyle = {
+    fill: "#f3f4ff",
+    fontSize: 18,
+    fontFamily: "Courier New",
+    wordWrap: true,
+    wordWrapWidth: 980,
+  };
+
+  const surfaceStyle = {
+    fill: "#dfe8ff",
+    fontSize: 16,
+    fontFamily: "Courier New",
+  };
+
+  const heroX = signal(420);
+  const heroY = signal(840);
+
+  const zones = [
+    {
+      name: "mud-pit",
+      x1: 860,
+      y1: 760,
+      x2: 1260,
+      y2: 980,
+      surface: "mud",
+      enabled: true,
+      minStepDistance: 13,
+      minSpeed: 28,
+      alpha: 0.46,
+      blur: 0.25,
+      size: 1.03,
+    },
+    {
+      name: "rock-platform",
+      x1: 1460,
+      y1: 840,
+      x2: 1880,
+      y2: 1100,
+      surface: "rock",
+      enabled: false,
+      minStepDistance: 20,
+      minSpeed: 80,
+      alpha: 0,
+      blur: 0,
+      size: 1,
+    },
+    {
+      name: "snow-field",
+      x1: 0,
+      y1: 0,
+      x2: worldWidth,
+      y2: 560,
+      surface: "snow",
+      enabled: true,
+      minStepDistance: 14,
+      minSpeed: 36,
+      alpha: 0.28,
+      blur: 0.2,
+      size: 0.98,
+    },
+    {
+      name: "sand-dune",
+      x1: 0,
+      y1: 560,
+      x2: worldWidth,
+      y2: worldHeight,
+      surface: "sand",
+      enabled: true,
+      minStepDistance: 18,
+      minSpeed: 44,
+      alpha: 0.34,
+      blur: 0.1,
+      size: 0.94,
+    },
+  ];
+
+  const inZone = (x, y, zone) =>
+    x >= zone.x1 && x <= zone.x2 && y >= zone.y1 && y <= zone.y2;
+
+  const fallbackZone = zones[zones.length - 1];
+
+  const zoneAt = (x, y) => {
+    for (let i = 0; i < zones.length; i++) {
+      const zone = zones[i];
+      if (inZone(x, y, zone)) return zone;
+    }
+    return fallbackZone;
+  };
+
+  const currentZone = computed(() => zoneAt(heroX(), heroY()));
+
+  const heroControls = signal({
+    right: {
+      repeat: true,
+      bind: "right",
+      keyDown() {
+        heroX.update((x) => Math.min(x + moveSpeed, worldWidth - 32));
+      },
+    },
+    left: {
+      repeat: true,
+      bind: "left",
+      keyDown() {
+        heroX.update((x) => Math.max(x - moveSpeed, 32));
+      },
+    },
+    up: {
+      repeat: true,
+      bind: "up",
+      keyDown() {
+        heroY.update((y) => Math.max(y - moveSpeed, 32));
+      },
+    },
+    down: {
+      repeat: true,
+      bind: "down",
+      keyDown() {
+        heroY.update((y) => Math.min(y + moveSpeed, worldHeight - 32));
+      },
+    },
+  });
+
+  const heroSheetDefinition = {
+    id: "footprints-hero",
+    image: "./exp.png",
+    framesWidth: 4,
+    framesHeight: 4,
+    textures: {
+      loop: {
+        animations: () => [
+          [
+            { time: 0, frameX: 0, frameY: 0, anchor: [0.5, 0.86] },
+            { time: 8, frameX: 1, frameY: 0, anchor: [0.5, 0.86] },
+            { time: 16, frameX: 2, frameY: 0, anchor: [0.5, 0.86] },
+            { time: 24, frameX: 3, frameY: 0, anchor: [0.5, 0.86] },
+            { time: 32, frameX: 0, frameY: 1, anchor: [0.5, 0.86] },
+            { time: 40, frameX: 1, frameY: 1, anchor: [0.5, 0.86] },
+            { time: 48, frameX: 2, frameY: 1, anchor: [0.5, 0.86] },
+            { time: 56, frameX: 3, frameY: 1, anchor: [0.5, 0.86] },
+          ],
+        ],
+      },
+    },
+  };
+
+  const heroSheet = {
+    definition: heroSheetDefinition,
+    playing: "loop",
+  };
+
+  const heroFootprintCaster = {
+    enabled: () => currentZone().enabled,
+    surface: () => currentZone().surface,
+    minStepDistance: () => currentZone().minStepDistance,
+    minSpeed: () => currentZone().minSpeed,
+    alpha: () => currentZone().alpha,
+    blur: () => currentZone().blur,
+    size: () => currentZone().size,
+    stepIntervalMs: 70,
+    leftOffset: { x: -10, y: 2 },
+    rightOffset: { x: 10, y: 2 },
+    jitter: 11,
+  };
+
+  const surfaceLabel = computed(() => {
+    const zone = currentZone();
+    const mode = zone.enabled ? "footprints ON" : "footprints OFF";
+    return `Zone: ${zone.name} | surface: ${zone.surface} | ${mode} | x=${Math.round(heroX())}, y=${Math.round(heroY())}`;
+  });
+
+  const surfaceProfiles = {
+    sand: {
+      tint: "#7f5d34",
+      startAlpha: 0.34,
+      endAlpha: 0,
+      lifetimeMs: 1800,
+      blurStart: 0.35,
+      blurEnd: 1.6,
+      erosionStart: 0.62,
+      blendMode: "multiply",
+    },
+    snow: {
+      tint: "#889db6",
+      startAlpha: 0.26,
+      endAlpha: 0,
+      lifetimeMs: 2600,
+      blurStart: 0.62,
+      blurEnd: 2.35,
+      erosionStart: 0.43,
+      blendMode: "multiply",
+    },
+    mud: {
+      tint: "#4e3421",
+      startAlpha: 0.42,
+      endAlpha: 0,
+      lifetimeMs: 3000,
+      blurStart: 0.24,
+      blurEnd: 1.1,
+      erosionStart: 0.78,
+      blendMode: "multiply",
+      scale: 1.06,
+    },
+    rock: {
+      tint: "#5f646b",
+      startAlpha: 0.1,
+      endAlpha: 0,
+      lifetimeMs: 900,
+      blurStart: 0.2,
+      blurEnd: 0.5,
+      erosionStart: 0.35,
+      blendMode: "normal",
+    },
+  };
+
+  const drawTerrain = (graphics) => {
+    graphics.clear();
+
+    graphics.rect(0, 0, worldWidth, 560);
+    graphics.fill({ color: 0xeaf3fb, alpha: 1 });
+
+    graphics.rect(0, 560, worldWidth, worldHeight - 560);
+    graphics.fill({ color: 0xd6b17b, alpha: 1 });
+
+    graphics.rect(860, 760, 400, 220);
+    graphics.fill({ color: 0x6e4b2f, alpha: 0.85 });
+
+    graphics.rect(1460, 840, 420, 260);
+    graphics.fill({ color: 0x69717b, alpha: 0.9 });
+
+    graphics.rect(0, 552, worldWidth, 16);
+    graphics.fill({ color: 0xffffff, alpha: 0.22 });
+
+    for (let i = 0; i < 7; i++) {
+      const y = 72 + i * 68;
+      graphics.rect(0, y, worldWidth, 2);
+      graphics.fill({ color: 0xc8d8e7, alpha: 0.18 });
+    }
+
+    for (let i = 0; i < 8; i++) {
+      const y = 620 + i * 74;
+      graphics.rect(0, y, worldWidth, 2);
+      graphics.fill({ color: 0xaf8452, alpha: 0.2 });
+    }
+  };
+</script>
