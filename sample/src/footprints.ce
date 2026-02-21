@@ -83,7 +83,7 @@
       minSpeed: 28,
       alpha: 0.46,
       blur: 0.25,
-      size: 1.03,
+      size: 0.78,
     },
     {
       name: "rock-platform",
@@ -97,7 +97,7 @@
       minSpeed: 80,
       alpha: 0,
       blur: 0,
-      size: 1,
+      size: 0.76,
     },
     {
       name: "snow-field",
@@ -111,7 +111,7 @@
       minSpeed: 36,
       alpha: 0.28,
       blur: 0.2,
-      size: 0.98,
+      size: 0.72,
     },
     {
       name: "sand-dune",
@@ -125,7 +125,7 @@
       minSpeed: 44,
       alpha: 0.34,
       blur: 0.1,
-      size: 0.94,
+      size: 0.7,
     },
   ];
 
@@ -212,8 +212,9 @@
     blur: () => currentZone().blur,
     size: () => currentZone().size,
     stepIntervalMs: 70,
-    leftOffset: { x: -10, y: 2 },
-    rightOffset: { x: 10, y: 2 },
+    leftOffset: { x: -8, y: 1 },
+    rightOffset: { x: 8, y: 1 },
+    angleOffset: 180,
     jitter: 11,
   };
 
@@ -233,6 +234,8 @@
       blurEnd: 1.6,
       erosionStart: 0.62,
       blendMode: "multiply",
+      depth: 0.58,
+      rimStrength: 0.12,
     },
     snow: {
       tint: "#889db6",
@@ -243,6 +246,8 @@
       blurEnd: 2.35,
       erosionStart: 0.43,
       blendMode: "multiply",
+      depth: 0.74,
+      rimStrength: 0.3,
     },
     mud: {
       tint: "#4e3421",
@@ -254,6 +259,8 @@
       erosionStart: 0.78,
       blendMode: "multiply",
       scale: 1.06,
+      depth: 0.88,
+      rimStrength: 0.08,
     },
     rock: {
       tint: "#5f646b",
@@ -264,6 +271,8 @@
       blurEnd: 0.5,
       erosionStart: 0.35,
       blendMode: "normal",
+      depth: 0.34,
+      rimStrength: 0.05,
     },
   };
 

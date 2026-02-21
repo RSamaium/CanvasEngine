@@ -22,6 +22,8 @@ type ResolvedSurfaceProfile = {
   blurStart: number;
   blurEnd: number;
   erosionStart: number;
+  depth: number;
+  rimStrength: number;
 };
 
 type ResolvedCaster = {
@@ -49,8 +51,12 @@ type ManagedCasterState = {
 };
 
 type ManagedFootprint = {
-  sprite: PixiSprite;
-  blurFilter: BlurFilter;
+  baseSprite: PixiSprite;
+  depthSprite: PixiSprite;
+  rimSprite: PixiSprite;
+  baseBlurFilter: BlurFilter;
+  depthBlurFilter: BlurFilter;
+  rimBlurFilter: BlurFilter;
   bornAt: number;
   lifetimeMs: number;
   startAlpha: number;
@@ -60,6 +66,8 @@ type ManagedFootprint = {
   blurStart: number;
   blurEnd: number;
   erosionStart: number;
+  depth: number;
+  rimStrength: number;
 };
 
 export type FootprintSurfaceProfile = {
@@ -72,6 +80,8 @@ export type FootprintSurfaceProfile = {
   blurStart?: ReactiveValue<number>;
   blurEnd?: ReactiveValue<number>;
   erosionStart?: ReactiveValue<number>;
+  depth?: ReactiveValue<number>;
+  rimStrength?: ReactiveValue<number>;
 };
 
 export type FootprintCasterOptions = {
@@ -127,6 +137,8 @@ const BASE_PROFILE: ResolvedSurfaceProfile = {
   blurStart: 0.45,
   blurEnd: 1.9,
   erosionStart: 0.54,
+  depth: 0.58,
+  rimStrength: 0.14,
 };
 
 const BUILTIN_PROFILES: Record<string, ResolvedSurfaceProfile> = {
@@ -141,6 +153,8 @@ const BUILTIN_PROFILES: Record<string, ResolvedSurfaceProfile> = {
     blurStart: 0.35,
     blurEnd: 1.5,
     erosionStart: 0.62,
+    depth: 0.54,
+    rimStrength: 0.12,
   },
   snow: {
     lifetimeMs: 2550,
@@ -152,6 +166,8 @@ const BUILTIN_PROFILES: Record<string, ResolvedSurfaceProfile> = {
     blurStart: 0.6,
     blurEnd: 2.25,
     erosionStart: 0.45,
+    depth: 0.72,
+    rimStrength: 0.28,
   },
 };
 
@@ -209,6 +225,22 @@ const parseColorToNumber = (color: ColorInput | undefined, fallback: number): nu
   return fallback;
 };
 
+const darkenColor = (color: number, amount: number): number => {
+  const normalized = clamp(amount, 0, 1);
+  const r = Math.round(((color >> 16) & 0xff) * (1 - normalized));
+  const g = Math.round(((color >> 8) & 0xff) * (1 - normalized));
+  const b = Math.round((color & 0xff) * (1 - normalized));
+  return (r << 16) | (g << 8) | b;
+};
+
+const lightenColor = (color: number, amount: number): number => {
+  const normalized = clamp(amount, 0, 1);
+  const r = Math.round(((color >> 16) & 0xff) + (255 - ((color >> 16) & 0xff)) * normalized);
+  const g = Math.round(((color >> 8) & 0xff) + (255 - ((color >> 8) & 0xff)) * normalized);
+  const b = Math.round((color & 0xff) + (255 - (color & 0xff)) * normalized);
+  return (r << 16) | (g << 8) | b;
+};
+
 const resolvePoint = (value: ReactiveValue<PointLike> | undefined, fallback: PointLike): PointLike => {
   const resolved = resolveReactiveValue(value);
   const x = Number((resolved as PointLike | undefined)?.x);
@@ -250,6 +282,8 @@ const resolveProfileInput = (
   const blurStart = Number(resolveReactiveValue(source?.blurStart));
   const blurEnd = Number(resolveReactiveValue(source?.blurEnd));
   const erosionStart = Number(resolveReactiveValue(source?.erosionStart));
+  const depth = Number(resolveReactiveValue(source?.depth));
+  const rimStrength = Number(resolveReactiveValue(source?.rimStrength));
   const tintInput = resolveReactiveValue(source?.tint);
   const blendInput = resolveReactiveValue(source?.blendMode);
 
@@ -265,6 +299,10 @@ const resolveProfileInput = (
     erosionStart: isFiniteNumber(erosionStart)
       ? clamp(erosionStart, 0.05, 0.95)
       : fallback.erosionStart,
+    depth: isFiniteNumber(depth) ? clamp(depth, 0, 1) : fallback.depth,
+    rimStrength: isFiniteNumber(rimStrength)
+      ? clamp(rimStrength, 0, 1)
+      : fallback.rimStrength,
   };
 };
 
@@ -445,21 +483,28 @@ const resolveCasterBasePoint = (
 };
 
 const placeBelowCaster = (
-  sprite: PixiSprite,
+  managed: ManagedFootprint,
   caster: any,
   parent: PixiContainer
 ) => {
   const casterZIndex = isFiniteNumber(caster?.zIndex) ? caster.zIndex : 0;
-  sprite.zIndex = casterZIndex - 0.16;
+  managed.rimSprite.zIndex = casterZIndex - 0.2;
+  managed.baseSprite.zIndex = casterZIndex - 0.18;
+  managed.depthSprite.zIndex = casterZIndex - 0.16;
 
   if ((parent as any).sortableChildren) return;
   if (!Array.isArray(parent.children)) return;
-  if (!parent.children.includes(caster) || !parent.children.includes(sprite)) return;
+  if (!parent.children.includes(caster)) return;
 
-  const casterIndex = parent.getChildIndex(caster);
-  const targetIndex = Math.max(0, casterIndex - 1);
-  if (parent.getChildIndex(sprite) !== targetIndex) {
-    parent.setChildIndex(sprite, targetIndex);
+  const ordered = [managed.rimSprite, managed.baseSprite, managed.depthSprite];
+  for (let i = 0; i < ordered.length; i++) {
+    const sprite = ordered[i];
+    if (!parent.children.includes(sprite)) continue;
+    const casterIndex = parent.getChildIndex(caster);
+    const targetIndex = Math.max(0, casterIndex - 1);
+    if (parent.getChildIndex(sprite) !== targetIndex) {
+      parent.setChildIndex(sprite, targetIndex);
+    }
   }
 };
 
@@ -499,38 +544,63 @@ export function Footprints(options: FootprintsProps = {}) {
     };
 
     const releaseFootprint = (managed: ManagedFootprint) => {
-      const sprite = managed.sprite;
-      sprite.visible = false;
-      sprite.alpha = 0;
-      if (sprite.parent) {
-        sprite.parent.removeChild(sprite);
+      const sprites = [managed.baseSprite, managed.depthSprite, managed.rimSprite];
+      for (let i = 0; i < sprites.length; i++) {
+        const sprite = sprites[i];
+        sprite.visible = false;
+        sprite.alpha = 0;
+        if (sprite.parent) {
+          sprite.parent.removeChild(sprite);
+        }
       }
       freeFootprints.push(managed);
     };
 
     const destroyFootprint = (managed: ManagedFootprint) => {
-      if (managed.sprite.parent) {
-        managed.sprite.parent.removeChild(managed.sprite);
+      const sprites = [managed.baseSprite, managed.depthSprite, managed.rimSprite];
+      for (let i = 0; i < sprites.length; i++) {
+        const sprite = sprites[i];
+        if (sprite.parent) {
+          sprite.parent.removeChild(sprite);
+        }
+        sprite.destroy();
       }
-      managed.sprite.destroy();
     };
 
     const acquireFootprint = (texture: Texture): ManagedFootprint => {
       let managed = freeFootprints.pop();
       if (!managed) {
-        const sprite = new PixiSprite(texture);
-        const blurFilter = new BlurFilter({ strength: 0, quality: 1 });
+        const baseSprite = new PixiSprite(texture);
+        const depthSprite = new PixiSprite(texture);
+        const rimSprite = new PixiSprite(texture);
 
-        sprite.filters = [blurFilter];
-        sprite.anchor.set(0.5, 0.84);
-        sprite.roundPixels = true;
-        sprite.eventMode = "none";
-        sprite.visible = false;
-        (sprite as any)[FOOTPRINT_MANAGED_MARK] = true;
+        const baseBlurFilter = new BlurFilter({ strength: 0, quality: 1 });
+        const depthBlurFilter = new BlurFilter({ strength: 0, quality: 1 });
+        const rimBlurFilter = new BlurFilter({ strength: 0, quality: 1 });
+
+        const sprites = [baseSprite, depthSprite, rimSprite];
+        for (let i = 0; i < sprites.length; i++) {
+          const sprite = sprites[i];
+          sprite.anchor.set(0.5, 0.84);
+          sprite.roundPixels = true;
+          sprite.eventMode = "none";
+          sprite.visible = false;
+          (sprite as any)[FOOTPRINT_MANAGED_MARK] = true;
+        }
+
+        baseSprite.filters = [baseBlurFilter];
+        depthSprite.filters = [depthBlurFilter];
+        rimSprite.filters = [rimBlurFilter];
+        depthSprite.blendMode = "multiply" as any;
+        rimSprite.blendMode = "screen" as any;
 
         managed = {
-          sprite,
-          blurFilter,
+          baseSprite,
+          depthSprite,
+          rimSprite,
+          baseBlurFilter,
+          depthBlurFilter,
+          rimBlurFilter,
           bornAt: 0,
           lifetimeMs: BASE_PROFILE.lifetimeMs,
           startAlpha: BASE_PROFILE.startAlpha,
@@ -540,9 +610,13 @@ export function Footprints(options: FootprintsProps = {}) {
           blurStart: BASE_PROFILE.blurStart,
           blurEnd: BASE_PROFILE.blurEnd,
           erosionStart: BASE_PROFILE.erosionStart,
+          depth: BASE_PROFILE.depth,
+          rimStrength: BASE_PROFILE.rimStrength,
         };
       } else {
-        managed.sprite.texture = texture;
+        managed.baseSprite.texture = texture;
+        managed.depthSprite.texture = texture;
+        managed.rimSprite.texture = texture;
       }
 
       return managed;
@@ -559,9 +633,18 @@ export function Footprints(options: FootprintsProps = {}) {
     const updateActiveFootprints = (nowMs: number) => {
       for (let i = activeFootprints.length - 1; i >= 0; i--) {
         const managed = activeFootprints[i];
-        const sprite = managed.sprite;
+        const baseSprite = managed.baseSprite;
+        const depthSprite = managed.depthSprite;
+        const rimSprite = managed.rimSprite;
 
-        if (!sprite || sprite.destroyed) {
+        if (
+          !baseSprite ||
+          !depthSprite ||
+          !rimSprite ||
+          baseSprite.destroyed ||
+          depthSprite.destroyed ||
+          rimSprite.destroyed
+        ) {
           activeFootprints.splice(i, 1);
           continue;
         }
@@ -579,10 +662,40 @@ export function Footprints(options: FootprintsProps = {}) {
         }
 
         const spread = 1 + t * 0.08;
-        sprite.scale.set(managed.baseScaleX * spread, managed.baseScaleY * spread);
-        sprite.alpha = alpha;
-        managed.blurFilter.strength = lerp(managed.blurStart, managed.blurEnd, t);
-        sprite.visible = true;
+        const depthSpread = 1 + t * 0.05;
+        const rimSpread = 1 + t * 0.12;
+        const depthScaleMul = 0.78 - managed.depth * 0.1;
+        const rimScaleMul = 1.05 + managed.depth * 0.12;
+
+        baseSprite.scale.set(managed.baseScaleX * spread, managed.baseScaleY * spread);
+        depthSprite.scale.set(
+          managed.baseScaleX * depthScaleMul * depthSpread,
+          managed.baseScaleY * depthScaleMul * depthSpread
+        );
+        rimSprite.scale.set(
+          managed.baseScaleX * rimScaleMul * rimSpread,
+          managed.baseScaleY * rimScaleMul * rimSpread
+        );
+
+        baseSprite.alpha = alpha;
+        depthSprite.alpha = clamp(alpha * (0.58 + managed.depth * 0.34), 0, 1.2);
+        rimSprite.alpha = clamp(alpha * managed.rimStrength, 0, 0.65);
+
+        managed.baseBlurFilter.strength = lerp(managed.blurStart, managed.blurEnd, t);
+        managed.depthBlurFilter.strength = lerp(
+          managed.blurStart * (0.45 + (1 - managed.depth) * 0.25),
+          managed.blurEnd * (0.72 + (1 - managed.depth) * 0.22),
+          t
+        );
+        managed.rimBlurFilter.strength = lerp(
+          managed.blurStart * 0.8,
+          managed.blurEnd * (1.28 + managed.depth * 0.24),
+          t
+        );
+
+        baseSprite.visible = true;
+        depthSprite.visible = true;
+        rimSprite.visible = rimSprite.alpha > 0.001;
       }
     };
 
@@ -611,47 +724,68 @@ export function Footprints(options: FootprintsProps = {}) {
       const y = basePoint.y + rightY * offset.x + forwardY * offset.y;
 
       const managed = acquireFootprint(texture);
-      const sprite = managed.sprite;
-
-      if (sprite.parent && sprite.parent !== parent) {
-        sprite.parent.removeChild(sprite);
-      }
-      if (!sprite.parent) {
-        parent.addChild(sprite);
+      const sprites = [managed.rimSprite, managed.baseSprite, managed.depthSprite];
+      for (let i = 0; i < sprites.length; i++) {
+        const sprite = sprites[i];
+        if (sprite.parent && sprite.parent !== parent) {
+          sprite.parent.removeChild(sprite);
+        }
+        if (!sprite.parent) {
+          parent.addChild(sprite);
+        }
       }
 
       const jitterRad = degToRad(casterConfig.jitter);
       const randomJitter = (Math.random() * 2 - 1) * jitterRad;
       const angleOffsetRad = degToRad(casterConfig.angleOffset);
-      const rotation = heading + Math.PI / 2 + angleOffsetRad + randomJitter;
+      const rotation = heading - Math.PI / 2 + angleOffsetRad + randomJitter;
       const profileScale = profile.scale * casterConfig.size;
       const scaleX = (state.nextFoot === "left" ? 1 : -1) * Math.max(0.01, profileScale);
       const scaleY = Math.max(0.01, profileScale);
+      const baseAlpha = clamp(profile.startAlpha * casterConfig.alpha, 0, 1.5);
+      const depthTint = darkenColor(profile.tint, 0.38 + profile.depth * 0.26);
+      const rimTint = lightenColor(profile.tint, 0.22 + profile.depth * 0.38);
 
-      sprite.position.set(x, y);
-      sprite.rotation = rotation;
-      sprite.scale.set(scaleX, scaleY);
-      sprite.tint = profile.tint;
-      sprite.blendMode = profile.blendMode as any;
-      sprite.alpha = clamp(profile.startAlpha * casterConfig.alpha, 0, 1.5);
-      sprite.visible = true;
+      managed.baseSprite.position.set(x, y);
+      managed.depthSprite.position.set(x, y);
+      managed.rimSprite.position.set(x, y);
+      managed.baseSprite.rotation = rotation;
+      managed.depthSprite.rotation = rotation;
+      managed.rimSprite.rotation = rotation;
+      managed.baseSprite.scale.set(scaleX, scaleY);
+      managed.depthSprite.scale.set(scaleX * 0.82, scaleY * 0.82);
+      managed.rimSprite.scale.set(scaleX * 1.08, scaleY * 1.08);
+      managed.baseSprite.tint = profile.tint;
+      managed.depthSprite.tint = depthTint;
+      managed.rimSprite.tint = rimTint;
+      managed.baseSprite.blendMode = profile.blendMode as any;
+      managed.baseSprite.alpha = baseAlpha;
+      managed.depthSprite.alpha = clamp(baseAlpha * (0.58 + profile.depth * 0.34), 0, 1.2);
+      managed.rimSprite.alpha = clamp(baseAlpha * profile.rimStrength, 0, 0.65);
+      managed.baseSprite.visible = true;
+      managed.depthSprite.visible = true;
+      managed.rimSprite.visible = managed.rimSprite.alpha > 0.001;
 
-      placeBelowCaster(sprite, casterInstance, parent);
+      placeBelowCaster(managed, casterInstance, parent);
 
       managed.bornAt = nowMs;
       managed.lifetimeMs = profile.lifetimeMs;
-      managed.startAlpha = clamp(profile.startAlpha * casterConfig.alpha, 0, 1.5);
+      managed.startAlpha = baseAlpha;
       managed.endAlpha = clamp(profile.endAlpha * casterConfig.alpha, 0, 1.5);
       managed.baseScaleX = scaleX;
       managed.baseScaleY = scaleY;
       managed.blurStart = Math.max(0, profile.blurStart + casterConfig.blur);
       managed.blurEnd = Math.max(managed.blurStart, profile.blurEnd + casterConfig.blur);
+      managed.depth = profile.depth;
+      managed.rimStrength = profile.rimStrength;
       managed.erosionStart = clamp(
         profile.erosionStart + (Math.random() * 2 - 1) * 0.11,
         0.05,
         0.95
       );
-      managed.blurFilter.strength = managed.blurStart;
+      managed.baseBlurFilter.strength = managed.blurStart;
+      managed.depthBlurFilter.strength = managed.blurStart * (0.45 + (1 - profile.depth) * 0.25);
+      managed.rimBlurFilter.strength = managed.blurStart * 0.8;
 
       activeFootprints.push(managed);
       trimOverflow(maxFootprints);

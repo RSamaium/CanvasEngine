@@ -92,6 +92,8 @@
 | `blurStart` | `number` | `0.45` | Initial blur strength |
 | `blurEnd` | `number` | `1.9` | Final blur strength |
 | `erosionStart` | `number` | `0.54` | Normalized time (`0..1`) where erosion starts |
+| `depth` | `number` | `0.58` | Depression intensity (`0..1`) for center darkening |
+| `rimStrength` | `number` | `0.14` | Strength of the soft raised edge highlight |
 
 ## `footprintCaster` Options
 
@@ -131,6 +133,8 @@ Attach on each sprite that should leave footprints:
 | `surface` | `string` | `defaultSurface` | Profile name for this caster |
 | `angleOffset` | `number` | `0` | Extra rotation offset in degrees |
 | `jitter` | `number` | `8` | Random rotation variation in degrees |
+
+If the footprint appears visually reversed in your art direction, set `angleOffset: 180`.
 
 ## Conditional Rules (Terrain / Zones / X-Y)
 
