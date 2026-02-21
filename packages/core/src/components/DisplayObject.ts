@@ -320,6 +320,19 @@ export function DisplayObject(extendClass) {
           props.maskOf.componentInstance.mask = this as any;
         }
       }
+      if (props.shadowCaster !== undefined) {
+        const shadowCasterValue = (props.shadowCaster as any)?.value ?? props.shadowCaster;
+        if (
+          shadowCasterValue &&
+          typeof shadowCasterValue === "object" &&
+          !Array.isArray(shadowCasterValue)
+        ) {
+          const current = ((this as any).shadowCaster ?? {}) as Record<string, unknown>;
+          (this as any).shadowCaster = { ...current, ...shadowCasterValue };
+        } else {
+          (this as any).shadowCaster = shadowCasterValue;
+        }
+      }
       if (props.blendMode) this.blendMode = props.blendMode;
       if (props.filterArea) this.filterArea = props.filterArea;
       const currentFilters = this.filters || [];

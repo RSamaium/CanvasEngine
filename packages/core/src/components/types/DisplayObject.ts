@@ -65,6 +65,11 @@ export interface DisplayObjectProps {
     filters?: any[];
     blendMode?: SignalOrPrimitive<PIXI.BLEND_MODES>;
     blur?: SignalOrPrimitive<number>;
+    /**
+     * Optional metadata used by presets (for example `SpriteShadows`)
+     * to mark this display object as a shadow caster.
+     */
+    shadowCaster?: any;
 
     // Directives
     drag?: DragProps;
