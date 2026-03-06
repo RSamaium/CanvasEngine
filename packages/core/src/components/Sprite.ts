@@ -58,7 +58,13 @@ type AnimationDataFrames = {
   data: TextureOptionsMerging;
 };
 
-type Hitbox = { w: number; h: number };
+export type HitboxAnchorMode = "top-left" | "center" | "foot";
+
+export type Hitbox = {
+  w: number;
+  h: number;
+  anchorMode?: HitboxAnchorMode;
+};
 
 export enum StandardAnimation {
   Stand = "stand",
@@ -66,7 +72,7 @@ export enum StandardAnimation {
 }
 
 export class CanvasSprite extends DisplayObject(PixiSprite) {
-  public hitbox: Hitbox;
+  public hitbox: Hitbox | null = null;
   public applyTransform: (
     frame: FrameOptionsMerging,
     data: TextureOptionsMerging,
@@ -444,7 +450,9 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       this.play(this.sheetCurrentAnimation, [this.sheetParams]);
     }
 
-    if (props.hitbox) this.hitbox = props.hitbox.value ?? props.hitbox;
+    if (props.hitbox !== undefined) {
+      this.hitbox = this.normalizeHitbox(props.hitbox);
+    }
 
     if (props.scaleMode) this.baseTexture.scaleMode = props.scaleMode;
     else if (props.image && this.fullProps.rectangle === undefined) {
@@ -722,16 +730,60 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       typeof realSize === "number" ? realSize : realSize?.height;
     const resolvedHeight = heightOfSprite ?? spriteHeight;
     const gap = Math.max(0, (spriteHeight - resolvedHeight) / 2);
-    const anchorX = Math.min(
-      1,
-      Math.max(0, (spriteWidth - this.hitbox.w) / 2 / spriteWidth)
+    const hitboxTopLeftX = this.clamp(
+      (spriteWidth - this.hitbox.w) / 2 / spriteWidth
     );
-    const anchorY = Math.min(
-      1,
-      Math.max(0, (spriteHeight - this.hitbox.h - gap) / spriteHeight)
+    const hitboxTopLeftY = this.clamp(
+      (spriteHeight - this.hitbox.h - gap) / spriteHeight
     );
+    const hitboxCenterX = this.clamp(
+      hitboxTopLeftX + this.hitbox.w / 2 / spriteWidth
+    );
+    const hitboxCenterY = this.clamp(
+      hitboxTopLeftY + this.hitbox.h / 2 / spriteHeight
+    );
+    const footY = this.clamp((spriteHeight - gap) / spriteHeight);
+
+    let anchorX = hitboxTopLeftX;
+    let anchorY = hitboxTopLeftY;
+
+    switch (this.hitbox.anchorMode ?? "top-left") {
+      case "center":
+        anchorX = hitboxCenterX;
+        anchorY = hitboxCenterY;
+        break;
+      case "foot":
+        anchorX = hitboxCenterX;
+        anchorY = footY;
+        break;
+      case "top-left":
+      default:
+        break;
+    }
 
     this.anchor.set(anchorX, anchorY);
+  }
+
+  private normalizeHitbox(hitbox: unknown): Hitbox | null {
+    const resolvedHitbox = (hitbox as any)?.value ?? hitbox;
+    if (!resolvedHitbox || typeof resolvedHitbox !== "object") {
+      return null;
+    }
+
+    const { w, h, anchorMode } = resolvedHitbox as Partial<Hitbox>;
+    if (typeof w !== "number" || typeof h !== "number") {
+      return null;
+    }
+
+    return {
+      w,
+      h,
+      anchorMode,
+    };
+  }
+
+  private clamp(value: number) {
+    return Math.min(1, Math.max(0, value));
   }
 }
 

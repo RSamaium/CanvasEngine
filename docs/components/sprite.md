@@ -108,7 +108,49 @@ const definition = {
 />
 ```
 
-When using a hitbox, the sprite's anchor will be automatically calculated based on the `rectHeight` and `spriteRealSize` properties to properly align the sprite with its collision box. This is particularly useful for character sprites where the visual representation might be larger than the actual collision area.
+When using a hitbox, the sprite's anchor can be automatically calculated from the hitbox bounds, `rectHeight`, and `spriteRealSize` so the visual sprite aligns with the desired reference point inside the collision box. This is particularly useful for character sprites where the visual representation is larger than the actual collision area.
+
+By default, `hitbox.anchorMode` is `"top-left"`, which preserves the legacy behavior: the sprite is positioned so the top-left of the hitbox area inside the frame matches the sprite position.
+
+### Hitbox Anchor Modes
+
+```html
+<Sprite
+    image="path/to/character.png"
+    hitbox={{ w: 32, h: 48, anchorMode: "top-left" }}
+/>
+```
+
+`"top-left"`:
+- Default mode.
+- Aligns the sprite so the top-left corner of the hitbox matches the sprite position.
+- Useful when your `x`/`y` coordinates already represent the top-left of a collision box.
+
+```html
+<Sprite
+    image="path/to/character.png"
+    hitbox={{ w: 32, h: 48, anchorMode: "center" }}
+/>
+```
+
+`"center"`:
+- Uses the center of the hitbox as the sprite anchor.
+- Useful when your entity position should represent the center of its collision area.
+
+```html
+<Sprite
+    image="path/to/character.png"
+    hitbox={{ w: 32, h: 48, anchorMode: "foot" }}
+/>
+```
+
+`"foot"`:
+- Uses the bottom-center of the visible sprite area as the anchor.
+- Useful for character-based games where `x`/`y` should represent the feet or ground contact point.
+
+::: tip
+When `spriteRealSize` is provided on a spritesheet definition, CanvasEngine uses it to remove transparent margins from the hitbox anchor calculation. Without `spriteRealSize`, the full frame size is used.
+:::
 
 ## DOMSprite: objectFit, width/height, class, style
 
@@ -160,7 +202,7 @@ You can pass `class` and `style` directly on `Sprite`/`DOMSprite` when used insi
 | `rectHeight` | number | (Optional) Height of each frame if not equal to height/framesHeight |
 | `offset` | `{ x: number, y: number }` | (Optional) Offset to start frame cutting from |
 | `sound` | string | (Optional) Path to sound file that plays when animation starts |
-| `spriteRealSize` | number \| `{ width: number, height: number }` | (Optional) Real size of sprite for collision detection |
+| `spriteRealSize` | number \| `{ width: number, height: number }` | (Optional) Real size of sprite for collision detection and hitbox anchor calculations |
 | `anchor` | [number, number] | (Optional) Anchor point [x, y] for positioning (0-1) |
 | `scale` | [number, number] | (Optional) Scale factor [x, y] |
 | `skew` | [number, number] | (Optional) Skew value [x, y] |
@@ -296,7 +338,7 @@ The global loader provides the following methods:
 | `loader.onProgress` | function | Progress callback for loading (per-sprite) |
 | `loader.onComplete` | function | Completion callback for loading (per-sprite) |
 | `scaleMode` | number | PIXI.js scale mode for the texture |
-| `hitbox` | `{ w: number, h: number }` | (Optional) Collision box dimensions. Automatically calculates anchor positioning based on `rectHeight` and `spriteRealSize` to properly align the sprite with its hitbox |
+| `hitbox` | `{ w: number, h: number, anchorMode?: "top-left" \| "center" \| "foot" }` | (Optional) Collision box dimensions and alignment mode. Automatically calculates anchor positioning based on the hitbox, `rectHeight`, and `spriteRealSize` |
 
 ::: tip
 The `loader` prop on individual sprites tracks that specific sprite's loading progress, while `context.globalLoader` tracks all sprites in the component tree. Use the global loader for overall progress, and individual loaders for sprite-specific handling.

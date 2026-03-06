@@ -5,6 +5,29 @@ import { TestBed } from '../../packages/core/testing'
 import { CanvasSprite } from '../../packages/core/src/components/Sprite'
 import { GlobalAssetLoader } from '../../packages/core/src/utils/GlobalAssetLoader'
 
+function createAnimatedHitboxSprite(hitbox: { w: number; h: number; anchorMode?: 'top-left' | 'center' | 'foot' }) {
+    const sprite = new CanvasSprite()
+    sprite.hitbox = hitbox
+
+    ;(sprite as any).spritesheet = {}
+    ;(sprite as any).currentAnimationContainer = { children: [{}] }
+    ;(sprite as any).currentAnimation = {
+        frames: [[Texture.EMPTY]],
+        sprites: [{ time: 0, frameX: 0, frameY: 0 }],
+        name: 'stand',
+        animations: [],
+        params: [],
+        data: {
+            spriteWidth: 64,
+            spriteHeight: 128,
+            image: 'hero.png',
+            spriteRealSize: { width: 32, height: 96 }
+        }
+    }
+
+    return sprite
+}
+
 describe('Sprite Component', () => {
     test('creates sprite component with basic properties', async () => {
         const spriteElement = await TestBed.createComponent(Sprite, {
@@ -146,30 +169,39 @@ describe('Sprite Component', () => {
         expect(typeof instance.isPlaying).toBe('function')
     })
 
-    test('aligns the sprite with the hitbox bounds inside the frame', () => {
-        const sprite = new CanvasSprite()
-        sprite.hitbox = { w: 32, h: 48 }
-
-        ;(sprite as any).spritesheet = {}
-        ;(sprite as any).currentAnimationContainer = { children: [{}] }
-        ;(sprite as any).currentAnimation = {
-            frames: [[Texture.EMPTY]],
-            sprites: [{ time: 0, frameX: 0, frameY: 0 }],
-            name: 'stand',
-            animations: [],
-            params: [],
-            data: {
-                spriteWidth: 64,
-                spriteHeight: 128,
-                image: 'hero.png',
-                spriteRealSize: { width: 32, height: 96 }
-            }
-        }
+    test('uses top-left hitbox alignment by default', () => {
+        const sprite = createAnimatedHitboxSprite({ w: 32, h: 48 })
 
         sprite.update({ deltaRatio: 1 })
 
         expect(sprite.anchor.x).toBeCloseTo(0.25)
         expect(sprite.anchor.y).toBeCloseTo(0.5)
+    })
+
+    test('can align to the hitbox center', () => {
+        const sprite = createAnimatedHitboxSprite({
+            w: 32,
+            h: 48,
+            anchorMode: 'center'
+        })
+
+        sprite.update({ deltaRatio: 1 })
+
+        expect(sprite.anchor.x).toBeCloseTo(0.5)
+        expect(sprite.anchor.y).toBeCloseTo(0.6875)
+    })
+
+    test('can align to the character foot point', () => {
+        const sprite = createAnimatedHitboxSprite({
+            w: 32,
+            h: 48,
+            anchorMode: 'foot'
+        })
+
+        sprite.update({ deltaRatio: 1 })
+
+        expect(sprite.anchor.x).toBeCloseTo(0.5)
+        expect(sprite.anchor.y).toBeCloseTo(0.875)
     })
 
     test('keeps sprite and hitbox bottoms aligned when spriteRealSize is not provided', () => {
