@@ -2,8 +2,18 @@
     <TiledMap 
         map={map} 
         createLayersPerTilesZ={true} 
-        basePath="/map" 
-        objectLayer={(layer) => <Rect width={32} height={32} color="red" />} 
+        basePath="/tiled" 
+            objectLayer={(layer) => <Container x y  controls>
+                <Sprite 
+                    sheet={{
+                        definition: definition(),
+                        playing: "default"
+                    }}
+                   
+                    hitbox
+                />
+                <Rect width={hitbox.w} height={hitbox.h} color="red" />
+            </Container> } 
     />
 </Canvas>
 
@@ -12,19 +22,78 @@
     import { signal } from 'canvasengine'
     
     let map = signal(null)
-    
-    fetch('/simplemap.tmx')
-        .then((res) => res.text())
-        .then((text) => {
-            map.set(text)
-        })
+    const x = signal(0)
+    const y = signal(0)
+    const speed = signal(4)
+    const hitbox = { w: 32, h: 32 }
+    const controls = signal({
+        up: {
+            repeat: true,
+            bind: 'up',
+            keyDown() {
+                y.update((y) => y - speed())
+            }
+        },
+        down: {
+            repeat: true,
+            bind: 'down',
+            keyDown() {
+                y.update((y) => y + speed())
+            }
+        },
+        left: {
+            repeat: true,
+            bind: 'left',
+            keyDown() {
+                x.update((x) => x - speed())
+            }
+        },
+        right: {
+            repeat: true,
+            bind: 'right',
+            keyDown() {
+                x.update((x) => x + speed())
+            }
+        }
+    })
 
-    setTimeout(() => {
-        console.log('loading map.tmx')
-        fetch('/map.tmx')
+    const definition =   () => {
+        return {
+        id: "explosion",
+        image: "./exp.png",
+        framesWidth: 4,
+        framesHeight: 4,
+        textures: {
+            default: {
+                animations: () => [
+                    [ 
+                        { time: 0, frameX: 0, frameY: 0 },
+                        { time: 10, frameX: 1, frameY: 0 },
+                        { time: 20, frameX: 2, frameY: 0 },
+                        { time: 30, frameX: 3, frameY: 0 },
+                        { time: 40, frameX: 0, frameY: 1 },
+                        { time: 50, frameX: 1, frameY: 1 },
+                        { time: 60, frameX: 2, frameY: 1 },     
+                        { time: 70, frameX: 3, frameY: 1 },
+                        { time: 80, frameX: 0, frameY: 2 },
+                        { time: 90, frameX: 1, frameY: 2 },
+                        { time: 100, frameX: 2, frameY: 2 },
+                        { time: 110, frameX: 3, frameY: 2 },
+                        { time: 120, frameX: 0, frameY: 3 },
+                        { time: 130, frameX: 1, frameY: 3 },
+                        { time: 140, frameX: 2, frameY: 3 },
+                        { time: 150, frameX: 3, frameY: 3 },
+                    ]
+                    ]
+                }
+            }
+        }
+    }
+
+    
+    fetch('/tiled/simplemap.tmx')
         .then((res) => res.text())
         .then((text) => {
             map.set(text)
         })
-    }, 3000)
 </script>

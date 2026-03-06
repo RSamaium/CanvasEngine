@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { Sprite, signal, Canvas, mount } from 'canvasengine'
+import { Texture } from 'pixi.js'
 import { TestBed } from '../../packages/core/testing'
+import { CanvasSprite } from '../../packages/core/src/components/Sprite'
 import { GlobalAssetLoader } from '../../packages/core/src/utils/GlobalAssetLoader'
 
 describe('Sprite Component', () => {
@@ -142,6 +144,52 @@ describe('Sprite Component', () => {
         expect(typeof instance.has).toBe('function')
         expect(typeof instance.get).toBe('function')
         expect(typeof instance.isPlaying).toBe('function')
+    })
+
+    test('aligns the sprite with the hitbox bounds inside the frame', () => {
+        const sprite = new CanvasSprite()
+        sprite.hitbox = { w: 32, h: 48 }
+
+        ;(sprite as any).spritesheet = {}
+        ;(sprite as any).currentAnimationContainer = { children: [{}] }
+        ;(sprite as any).currentAnimation = {
+            frames: [[Texture.EMPTY]],
+            sprites: [{ time: 0, frameX: 0, frameY: 0 }],
+            name: 'stand',
+            animations: [],
+            params: [],
+            data: {
+                spriteWidth: 64,
+                spriteHeight: 128,
+                image: 'hero.png',
+                spriteRealSize: { width: 32, height: 96 }
+            }
+        }
+
+        sprite.update({ deltaRatio: 1 })
+
+        expect(sprite.anchor.x).toBeCloseTo(0.25)
+        expect(sprite.anchor.y).toBeCloseTo(0.5)
+    })
+
+    test('keeps sprite and hitbox bottoms aligned when spriteRealSize is not provided', () => {
+        const sprite = new CanvasSprite()
+        sprite.hitbox = { w: 32, h: 48 }
+
+        ;(sprite as any).applyHitboxAnchor(64, 128)
+
+        expect(sprite.anchor.x).toBeCloseTo(0.25)
+        expect(sprite.anchor.y).toBeCloseTo(0.625)
+    })
+
+    test('does not offset a sprite when the hitbox matches the frame size', () => {
+        const sprite = new CanvasSprite()
+        sprite.hitbox = { w: 32, h: 32 }
+
+        ;(sprite as any).applyHitboxAnchor(32, 32)
+
+        expect(sprite.anchor.x).toBeCloseTo(0)
+        expect(sprite.anchor.y).toBeCloseTo(0)
     })
 
     describe('Global Asset Loader Integration', () => {

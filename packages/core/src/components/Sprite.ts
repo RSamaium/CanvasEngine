@@ -58,13 +58,15 @@ type AnimationDataFrames = {
   data: TextureOptionsMerging;
 };
 
+type Hitbox = { w: number; h: number };
+
 export enum StandardAnimation {
   Stand = "stand",
   Walk = "walk",
 }
 
 export class CanvasSprite extends DisplayObject(PixiSprite) {
-  public hitbox: { w: number; h: number };
+  public hitbox: Hitbox;
   public applyTransform: (
     frame: FrameOptionsMerging,
     data: TextureOptionsMerging,
@@ -470,6 +472,10 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         });
       }
     }
+
+    if (this.hitbox && !this.spritesheet) {
+      this.applyHitboxAnchor(this.texture.width, this.texture.height);
+    }
   }
 
   async onDestroy(parent: Element, afterDestroy: () => void): Promise<void> {
@@ -669,27 +675,12 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       }
 
       const realSize = getVal<"spriteRealSize">("spriteRealSize");
-      const heightOfSprite =
-        typeof realSize == "number" ? realSize : realSize?.height;
-      const widthOfSprite =
-        typeof realSize == "number" ? realSize : realSize?.width;
-
-
-      const applyAnchorBySize = () => {
-        if (heightOfSprite && this.hitbox) {
-          const { spriteWidth, spriteHeight } = data;
-          const w = (spriteWidth - this.hitbox.w) / 2 / spriteWidth;
-          const gap = (spriteHeight - heightOfSprite) / 2;
-          const h = (spriteHeight - this.hitbox.h - gap) / spriteHeight;
-          this.anchor.set(w, h);
-        }
-      };
 
       if (frame.sound) {
         //RpgSound.get(frame.sound).play()
       }
 
-      applyAnchorBySize();
+      this.applyHitboxAnchor(data.spriteWidth, data.spriteHeight, realSize);
 
       applyTransform("anchor");
       applyTransform("scale");
@@ -717,6 +708,31 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       this.frameIndex++;
     }
   }
+
+  private applyHitboxAnchor(
+    spriteWidth: number,
+    spriteHeight: number,
+    realSize?: TextureOptionsMerging["spriteRealSize"]
+  ) {
+    if (!this.hitbox || !spriteWidth || !spriteHeight) {
+      return;
+    }
+
+    const heightOfSprite =
+      typeof realSize === "number" ? realSize : realSize?.height;
+    const resolvedHeight = heightOfSprite ?? spriteHeight;
+    const gap = Math.max(0, (spriteHeight - resolvedHeight) / 2);
+    const anchorX = Math.min(
+      1,
+      Math.max(0, (spriteWidth - this.hitbox.w) / 2 / spriteWidth)
+    );
+    const anchorY = Math.min(
+      1,
+      Math.max(0, (spriteHeight - this.hitbox.h - gap) / spriteHeight)
+    );
+
+    this.anchor.set(anchorX, anchorY);
+  }
 }
 
 export interface CanvasSprite extends PixiSprite {
@@ -733,6 +749,7 @@ export interface SpriteProps extends DisplayObjectProps {
     params?: any;
     onFinish?: () => void;
   };
+  hitbox?: Hitbox;
   scaleMode?: number;
   image?: string;
   rectangle?: {
