@@ -1,4 +1,4 @@
-import { loop, Container, h, signal, Text, computed } from "canvasengine";
+import { loop, Container, h, signal, Text, computed, mount } from "canvasengine";
 import { describe, expect, test, vi } from "vitest";
 import { TestBed } from "../../packages/core/testing";
 
@@ -42,6 +42,34 @@ describe("loop with array", () => {
     items().push(3);
     expect(container.componentInstance.children.length).toBe(3);
     expect(container.componentInstance.children[2].x).toBe(3);
+  });
+
+  test(`Test loop does not remount existing items when adding`, async () => {
+    const items = signal([1, 2]);
+    const mounted = vi.fn();
+
+    function Item(props: { value: number }) {
+      mount(() => {
+        mounted(props.value);
+      });
+      return h(Container, { x: props.value });
+    }
+
+    const value = loop(items, (item) => h(Item, { value: item }));
+    const container = await TestBed.createComponent(Container, {}, value);
+
+    expect(container.componentInstance.children.length).toBe(2);
+    expect(mounted).toHaveBeenCalledTimes(2);
+    expect(mounted.mock.calls.map(([value]) => value)).toEqual([1, 2]);
+
+    items().push(3);
+
+    await vi.waitFor(() => {
+      expect(container.componentInstance.children.length).toBe(3);
+      expect(mounted).toHaveBeenCalledTimes(3);
+    });
+
+    expect(mounted.mock.calls.map(([value]) => value)).toEqual([1, 2, 3]);
   });
 
   test(`Test loop with removing items`, async () => {
