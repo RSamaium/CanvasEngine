@@ -14,18 +14,18 @@
   "dependencies": {
     "@barvynkoa/particle-emitter": "^0.0.1",
     "@pixi/layout": "^3.2.0",
-    "@signe/reactive": "^2.6.0",
+    "@signe/reactive": "^2.9.0",
     "howler": "^2.2.4",
     "joypad.js": "^2.3.5",
-    "pixi-filters": "^6.0.5",
+    "pixi-filters": "^6.1.5",
     "pixi-viewport": "^6.0.3",
     "popmotion": "^11.0.5",
-    "rxjs": "^7.8.1",
+    "rxjs": "^7.8.2",
     "yoga-layout": "^3.2.1"
   },
   "devDependencies": {
-    "@types/howler": "^2.2.11",
-    "vite": "^7.3.0",
+    "@types/howler": "^2.2.12",
+    "vite": "^8.0.10",
     "vite-plugin-dts": "^4.5.4"
   },
   "author": "Samuel Ronce",

@@ -19,13 +19,13 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "dependencies": {
-    "acorn": "^8.14.0",
-    "peggy": "^4.2.0",
-    "typescript": "^5.7.2",
-    "vite": "^6.0.3"
+    "acorn": "^8.16.0",
+    "peggy": "^5.1.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
-    "tsup": "^8.3.5"
+    "@types/node": "^25.6.0",
+    "tsup": "^8.5.1"
   }
 }

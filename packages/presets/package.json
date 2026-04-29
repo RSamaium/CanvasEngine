@@ -16,8 +16,8 @@
     "pixi.js": "^8.9.2"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "vite": "^7.3.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10",
     "vite-plugin-dts": "^4.5.4"
   },
   "author": "Samuel Ronce",
