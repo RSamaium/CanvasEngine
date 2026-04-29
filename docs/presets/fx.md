@@ -40,11 +40,17 @@ import { FX_PRESETS } from '@canvasengine/presets'
 Available preset names:
 
 - `hitSpark`
+- `slashSpark`
+- `impactBurst`
 - `smokePuff`
 - `dustStep`
+- `dashDust`
 - `magicBurst`
+- `healPulse`
 - `campfire`
+- `torchFire`
 - `pickup`
+- `levelUp`
 - `explosionSmall`
 
 ## Custom Preset
@@ -72,6 +78,131 @@ Available preset names:
     ],
   }
 </script>
+```
+
+## Creating Your Own FX
+
+An FX preset has three levels:
+
+- `Fx` component: where the effect is placed and when it starts.
+- `FxPreset`: global timing and the list of emitters.
+- `FxEmitterConfig`: how particles are emitted.
+- `FxParticleConfig`: what each particle looks like and how it evolves.
+
+Start with a small burst:
+
+```js
+const hit = {
+  duration: 220,
+  emitters: [
+    {
+      burst: 16,
+      angle: [0, 360],
+      speed: [100, 260],
+      particle: {
+        shape: 'spark',
+        lifetime: [160, 360],
+        color: ['#ffffff', '#ff9f43'],
+        alpha: [1, 0],
+        scale: [0.18, 0],
+        rotationSpeed: [-360, 360],
+        blendMode: 'add',
+        ease: 'outCubic',
+      },
+    },
+  ],
+}
+```
+
+Use it with a trigger:
+
+```html
+<Fx preset={hit} trigger={hitTrigger} x={enemyX} y={enemyY} />
+```
+
+For a looped effect, use `rate` and `loop`:
+
+```js
+const aura = {
+  duration: 1000,
+  emitters: [
+    {
+      loop: true,
+      rate: 18,
+      angle: [-120, -60],
+      speed: [10, 46],
+      spreadX: 18,
+      particle: {
+        shape: 'softCircle',
+        lifetime: [600, 1200],
+        color: ['#8fffe0', '#4aa8ff'],
+        alpha: [0.45, 0],
+        scale: [0.25, 1.2],
+        blendMode: 'add',
+      },
+    },
+  ],
+}
+```
+
+Use it with `loop` on the component:
+
+```html
+<Fx preset={aura} x={playerX} y={playerY} loop />
+```
+
+### Tuning Rules
+
+- Use `burst` for instantaneous effects: hit, pickup, explosion, landing.
+- Use `rate` for continuous effects: fire, aura, smoke, fireflies.
+- `angle` is in degrees. `0` goes right, `90` goes down, `-90` goes up.
+- Use the component `rotation` to orient directional presets such as slash or dash effects.
+- Keep short combat particles around `120-450ms`.
+- Keep smoke, healing, and magic particles around `500-1200ms`.
+- Prefer `blendMode: 'add'` for light, magic, fire, sparks, and stars.
+- Prefer normal blend mode for smoke, dust, leaves, and debris.
+- If many effects can overlap, lower `rate`, `burst`, or set `maxParticles`.
+
+### Design Pattern
+
+Most polished effects combine two emitters:
+
+- one fast emitter for the readable impact shape;
+- one slower emitter for glow, smoke, dust, or secondary particles.
+
+Example:
+
+```js
+const impactWithSmoke = {
+  duration: 280,
+  emitters: [
+    {
+      burst: 20,
+      angle: [0, 360],
+      speed: [140, 320],
+      particle: {
+        shape: 'spark',
+        lifetime: [140, 340],
+        color: ['#ffffff', '#ffb347'],
+        alpha: [1, 0],
+        scale: [0.2, 0],
+        blendMode: 'add',
+      },
+    },
+    {
+      burst: 8,
+      angle: [0, 360],
+      speed: [20, 70],
+      particle: {
+        shape: 'softCircle',
+        lifetime: [360, 760],
+        color: '#777777',
+        alpha: [0.25, 0],
+        scale: [0.35, 1.4],
+      },
+    },
+  ],
+}
 ```
 
 ## Image Particles
@@ -104,6 +235,31 @@ const smoke = {
 }
 ```
 
+### Prompt for a Single Particle Image
+
+Use this kind of prompt when you want one reusable particle texture:
+
+```txt
+Create a single game VFX particle sprite: [spark / smoke puff / flame ember / magic star].
+Centered object, isolated, transparent background, square image, clean alpha edges.
+White or grayscale material so it can be tinted in-engine.
+Soft falloff, no hard black outline, no text, no UI, no scene, no ground shadow.
+The particle must fit entirely inside the canvas with safe padding on every side.
+Export as transparent PNG, 1024x1024.
+```
+
+Good variants:
+
+```txt
+Single soft smoke particle, centered, transparent background, grayscale, soft circular falloff, no scene, no text, no border, transparent PNG, 1024x1024.
+```
+
+```txt
+Single bright slash spark particle, horizontal streak, centered, transparent background, white core with soft glow, no scene, no text, safe padding, transparent PNG, 1024x1024.
+```
+
+After generation, resize to `64x64` or `128x128` for runtime use.
+
 ## Spritesheet Frames
 
 Spritesheets are useful when you have many FX images, random variants, or animated particles.
@@ -128,6 +284,40 @@ const fire = {
   ],
 }
 ```
+
+### Prompt for a Spritesheet
+
+CanvasEngine expects Pixi-compatible spritesheet data when using `spritesheet`.
+Image generation tools usually create only the PNG. Use a packer such as Aseprite,
+TexturePacker, or Free Texture Packer to export the Pixi JSON file.
+
+Prompt for animated frames:
+
+```txt
+Create a 4x4 spritesheet for a looping game VFX animation: [small flame / magic sparkle / smoke dissolve].
+Transparent background. Equal-size cells. Each frame centered with consistent registration.
+No text, no numbers, no grid lines, no scene, no camera perspective, no cropped particles.
+Keep the effect inside each cell with safe padding.
+White or grayscale if it should be tinted in-engine.
+Output as one transparent PNG spritesheet.
+```
+
+Prompt for random variants:
+
+```txt
+Create a spritesheet with 12 different small particle variants: [gold spark / dust mote / blue magic star].
+Transparent background, equal-size cells, one centered particle per cell, consistent scale, safe padding.
+No text, no labels, no grid lines, no background, no shadows outside the particles.
+Output as one transparent PNG spritesheet.
+```
+
+Recommended export:
+
+- use square cells: `64x64` for sparks/stars, `128x128` for smoke/fire;
+- keep frame names stable, for example `spark_01.png`, `spark_02.png`;
+- export a Pixi JSON spritesheet and reference those names in `frames`;
+- use `frameMode: 'random'` for variants;
+- use `frameMode: 'animated'` and `frameRate` for frame-by-frame particles.
 
 ## Props
 
@@ -200,4 +390,3 @@ Extra display props such as `zIndex` are forwarded to the underlying `Container`
 | `blendMode` | `string` | Pixi blend mode |
 | `anchor` | `{ x, y }` | Sprite anchor |
 | `ease` | `'linear' \| 'outQuad' \| 'outCubic' \| 'inQuad'` | Lifetime interpolation |
-

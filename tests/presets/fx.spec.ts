@@ -34,6 +34,18 @@ describe("Fx preset runtime", () => {
     expect(particle.width).toBeGreaterThan(1);
   });
 
+  test("all built-in presets can emit particles", () => {
+    for (const [name, preset] of Object.entries(FX_PRESETS)) {
+      const container = new Container();
+      const runtime = new FxRuntime({ seed: 1 });
+
+      runtime.spawn(container, preset);
+      runtime.update(100);
+
+      expect(container.children.length, name).toBeGreaterThan(0);
+    }
+  });
+
   test("removes particles after their lifetime", () => {
     const container = new Container();
     const runtime = new FxRuntime({ seed: 1 });

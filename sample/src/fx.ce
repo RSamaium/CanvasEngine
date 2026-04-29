@@ -12,13 +12,25 @@
       click={spawnAtPointer}
     />
 
-    <Fx name="campfire" x={450} y={360} loop zIndex={1} />
-    <Fx name="magicBurst" trigger={magicTrigger} x={450} y={270} zIndex={2} />
+    <Fx name="slashSpark" trigger={slashTrigger} x={210} y={185} zIndex={2} />
+    <Fx name="impactBurst" trigger={impactTrigger} x={335} y={185} zIndex={2} />
+    <Fx name="healPulse" trigger={healTrigger} x={210} y={315} zIndex={2} />
+    <Fx name="levelUp" trigger={levelTrigger} x={335} y={315} zIndex={2} />
+    <Fx name="magicBurst" trigger={magicTrigger} x={470} y={250} zIndex={2} />
+    <Fx name="dashDust" trigger={dashTrigger} x={470} y={425} zIndex={2} />
+    <Fx name="campfire" x={620} y={360} loop zIndex={1} />
+    <Fx name="torchFire" x={700} y={360} loop zIndex={1} />
     <Fx name="hitSpark" trigger={hitTrigger} x={sparkX} y={sparkY} zIndex={3} />
-    <Fx preset={imageSpark} trigger={imageTrigger} x={690} y={350} zIndex={4} />
+    <Fx preset={imageSpark} trigger={imageTrigger} x={770} y={250} zIndex={4} />
 
-    <Text text="loop: campfire" x={390} y={410} color="#ffd36d" size="13" />
-    <Text text="image particle" x={642} y={410} color="#9fd7ff" size="13" />
+    <Text text="slash" x={190} y={225} color="#ffd36d" size="13" />
+    <Text text="impact" x={310} y={225} color="#ffd36d" size="13" />
+    <Text text="heal" x={190} y={365} color="#9fffc5" size="13" />
+    <Text text="level" x={315} y={365} color="#ffe870" size="13" />
+    <Text text="magic" x={445} y={305} color="#b970ff" size="13" />
+    <Text text="dash dust" x={435} y={462} color="#d9c08a" size="13" />
+    <Text text="loops" x={635} y={410} color="#ffd36d" size="13" />
+    <Text text="image" x={748} y={305} color="#9fd7ff" size="13" />
   </Container>
 </Canvas>
 
@@ -27,6 +39,11 @@
   import { signal, trigger } from 'canvasengine'
 
   const hitTrigger = trigger()
+  const slashTrigger = trigger()
+  const impactTrigger = trigger()
+  const healTrigger = trigger()
+  const levelTrigger = trigger()
+  const dashTrigger = trigger()
   const magicTrigger = trigger()
   const imageTrigger = trigger()
   const sparkX = signal(260)
@@ -59,6 +76,11 @@
   }
 
   setInterval(() => {
+    slashTrigger.start()
+    impactTrigger.start()
+    healTrigger.start()
+    levelTrigger.start()
+    dashTrigger.start()
     magicTrigger.start()
   }, 1400)
 
@@ -66,4 +88,3 @@
     imageTrigger.start()
   }, 1800)
 </script>
-
