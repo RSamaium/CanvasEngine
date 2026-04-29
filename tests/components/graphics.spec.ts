@@ -1,12 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Canvas, ComponentInstance, bootstrapCanvas, Container, Element, h, signal, Rect, mount, computed } from 'canvasengine';
 import { TestBed } from '../../packages/core/testing';
-import { Graphics } from 'pixi.js'
 
 const mockRect = vi.fn()
 
-beforeEach(() => {
-    vi.spyOn(Graphics.prototype, 'rect').mockImplementation(mockRect)
+function findPrototypeWithMethod(instance: object, method: string) {
+    let proto = Object.getPrototypeOf(instance);
+    while (proto && !Object.prototype.hasOwnProperty.call(proto, method)) {
+        proto = Object.getPrototypeOf(proto);
+    }
+    return proto;
+}
+
+beforeEach(async () => {
+    const rect = await TestBed.createComponent(Rect, { width: 1, height: 1, color: '#fff' })
+    const graphicsPrototype = findPrototypeWithMethod(rect.componentInstance, 'rect')
+    vi.spyOn(graphicsPrototype, 'rect').mockImplementation(mockRect)
+    mockRect.mockClear()
 })
 
 afterEach(() => {

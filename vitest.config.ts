@@ -6,7 +6,6 @@ export default defineConfig(async () => {
         resolve: {
             alias: {
                 'canvasengine': path.resolve(__dirname, 'packages/core/src'),
-                'pixi.js': path.resolve(__dirname, 'packages/core/node_modules/pixi.js'),
                 'pixi-viewport': path.resolve(__dirname, 'packages/core/node_modules/pixi-viewport')
             }
         },

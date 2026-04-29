@@ -2,7 +2,14 @@ import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
 import { Container, h, signal, cond } from 'canvasengine';
 import { TestBed } from '../../packages/core/testing';
 import { Point, FederatedPointerEvent } from 'pixi.js';
-import { Container as PixiContainer } from 'pixi.js';
+
+function findPrototypeWithMethod(instance: object, method: string) {
+    let proto = Object.getPrototypeOf(instance);
+    while (proto && !Object.prototype.hasOwnProperty.call(proto, method)) {
+        proto = Object.getPrototypeOf(proto);
+    }
+    return proto;
+}
 
 describe('Drag', () => {
     let mockOn: ReturnType<typeof vi.fn>;
@@ -10,15 +17,17 @@ describe('Drag', () => {
     let mockToLocal: ReturnType<typeof vi.fn>;
     
     // Mock window event listeners
-    beforeEach(() => {
+    beforeEach(async () => {
         mockOn = vi.fn();
         mockOff = vi.fn();
         mockToLocal = vi.fn().mockReturnValue(new Point(10, 10));
 
-        // Mock Container instance methods
-        vi.spyOn(PixiContainer.prototype, 'on').mockImplementation(mockOn);
-        vi.spyOn(PixiContainer.prototype, 'off').mockImplementation(mockOff);
-        vi.spyOn(PixiContainer.prototype, 'toLocal').mockImplementation(mockToLocal);
+        const container = await TestBed.createComponent(Container);
+        const onPrototype = findPrototypeWithMethod(container.componentInstance, 'on');
+        const toLocalPrototype = findPrototypeWithMethod(container.componentInstance, 'toLocal');
+        vi.spyOn(onPrototype, 'on').mockImplementation(mockOn);
+        vi.spyOn(onPrototype, 'off').mockImplementation(mockOff);
+        vi.spyOn(toLocalPrototype, 'toLocal').mockImplementation(mockToLocal);
         
         // Spy on window methods without implementation to avoid browser errors
         vi.spyOn(window, 'addEventListener').mockImplementation(vi.fn());
@@ -93,6 +102,7 @@ describe('Drag', () => {
                } 
             );
 
+            mockOff.mockClear();
             expect(mockOff).not.toHaveBeenCalled();
             display.set(false);
             expect(mockOff).toHaveBeenCalled();
