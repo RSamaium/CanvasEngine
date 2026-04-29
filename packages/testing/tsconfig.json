@@ -5,6 +5,7 @@
     "declaration": true,
     "emitDeclarationOnly": false,
     "declarationMap": true,
+    "ignoreDeprecations": "6.0",
     "rootDir": "src",
     "types": ["vitest/globals", "node"]
   },
