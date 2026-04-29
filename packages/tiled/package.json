@@ -1,6 +1,6 @@
 {
   "name": "@canvasengine/tiled",
-  "version": "2.0.0-beta.57",
+  "version": "2.0.0-beta.58",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
