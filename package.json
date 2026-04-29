@@ -51,10 +51,5 @@
   ],
   "publishConfig": {
     "access": "public"
-  },
-  "overrides": {
-    "revolt-fx": {
-      "pixi.js": "^8.9.2"
-    }
   }
 }
