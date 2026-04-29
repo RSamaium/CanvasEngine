@@ -117,16 +117,16 @@ You can use `@else if` and `@else` to create more complex conditional logic:
 
 ```angular-html
 <Container>
-   @if (score >= 90) {
+   @if (score() >= 90) {
      <Text text="Grade: A+" color="gold" />
    }
-   @else if (score >= 80) {
+   @else if (score() >= 80) {
      <Text text="Grade: A" color="green" />
    }
-   @else if (score >= 70) {
+   @else if (score() >= 70) {
      <Text text="Grade: B" color="blue" />
    }
-   @else if (score >= 60) {
+   @else if (score() >= 60) {
      <Text text="Grade: C" color="orange" />
    }
    @else {

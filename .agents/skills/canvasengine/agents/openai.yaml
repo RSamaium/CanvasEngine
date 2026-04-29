@@ -1,0 +1,4 @@
+interface:
+  display_name: "CanvasEngine"
+  short_description: "Guide projets CanvasEngine et fichiers .ce"
+  default_prompt: "Use $canvasengine to implement or explain a CanvasEngine .ce component with the official docs."

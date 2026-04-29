@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "pixijs": {
+      "source": "pixijs/pixijs-skills",
+      "sourceType": "github",
+      "skillPath": "skills/pixijs/SKILL.md",
+      "computedHash": "880175c74d347ba7e40e8434544f4ae8c1d006ed68296cec6ba355da0d532508"
+    }
+  }
+}
