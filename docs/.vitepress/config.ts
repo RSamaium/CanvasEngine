@@ -181,6 +181,10 @@ const guideMenu = [
       {
         text: "Footprints",
         link: "/presets/footprints",
+      },
+      {
+        text: "Fx",
+        link: "/presets/fx",
       }
     ],
   },

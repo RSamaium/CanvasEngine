@@ -1,5 +1,6 @@
 export * from './Bar'
 export * from './Particle'
+export * from './fx'
 export * from './NightAmbiant'
 export * from './Loading'
 export * from './Tilemap'

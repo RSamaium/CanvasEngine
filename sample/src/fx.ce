@@ -1,0 +1,69 @@
+<Canvas backgroundColor="#151922">
+  <Container sortableChildren={true}>
+    <Text text="Fx preset sample" x={24} y={20} color="#ffffff" size="22" />
+    <Text text="Click anywhere to spawn hit sparks" x={24} y={52} color="#b9c0cc" size="14" />
+
+    <Rect
+      x={0}
+      y={0}
+      width={900}
+      height={620}
+      color="rgba(0,0,0,0)"
+      click={spawnAtPointer}
+    />
+
+    <Fx name="campfire" x={450} y={360} loop zIndex={1} />
+    <Fx name="magicBurst" trigger={magicTrigger} x={450} y={270} zIndex={2} />
+    <Fx name="hitSpark" trigger={hitTrigger} x={sparkX} y={sparkY} zIndex={3} />
+    <Fx preset={imageSpark} trigger={imageTrigger} x={690} y={350} zIndex={4} />
+
+    <Text text="loop: campfire" x={390} y={410} color="#ffd36d" size="13" />
+    <Text text="image particle" x={642} y={410} color="#9fd7ff" size="13" />
+  </Container>
+</Canvas>
+
+<script>
+  import { Fx } from '@canvasengine/presets'
+  import { signal, trigger } from 'canvasengine'
+
+  const hitTrigger = trigger()
+  const magicTrigger = trigger()
+  const imageTrigger = trigger()
+  const sparkX = signal(260)
+  const sparkY = signal(250)
+
+  const imageSpark = {
+    duration: 360,
+    emitters: [
+      {
+        burst: 18,
+        angle: [0, 360],
+        speed: [80, 220],
+        particle: {
+          image: 'https://pixijs.com/assets/flowerTop.png',
+          lifetime: [360, 720],
+          alpha: [0.95, 0],
+          scale: [0.18, 0.55],
+          rotationSpeed: [-180, 180],
+          blendMode: 'add',
+          ease: 'outCubic',
+        },
+      },
+    ],
+  }
+
+  function spawnAtPointer(event) {
+    sparkX.set(event.global.x)
+    sparkY.set(event.global.y)
+    hitTrigger.start()
+  }
+
+  setInterval(() => {
+    magicTrigger.start()
+  }, 1400)
+
+  setInterval(() => {
+    imageTrigger.start()
+  }, 1800)
+</script>
+
