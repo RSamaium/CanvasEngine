@@ -395,6 +395,9 @@ export function DisplayObject(extendClass) {
         await this.onBeforeDestroy();
       }
       if (afterDestroy) afterDestroy();
+      if (this.parent && typeof this.parent.removeChild === "function") {
+        this.parent.removeChild(this);
+      }
       super.destroy();
     }
 

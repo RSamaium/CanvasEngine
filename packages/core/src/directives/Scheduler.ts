@@ -19,13 +19,16 @@ export class Scheduler extends Directive {
     private requestedDelay: number = 0
     private lastTimestamp: number = 0
     private _stop: boolean = false
+    private running: boolean = false
     private tick: WritableSignal<Tick | null>
     
     onInit(element: Element) { 
         this.tick = element.propObservables?.tick as any
     }
 
-    onDestroy() { }
+    onDestroy() {
+        this.stop()
+    }
     onMount(element: Element) { }
     onUpdate(props: any) { }
 
@@ -59,6 +62,9 @@ export class Scheduler extends Directive {
         fps?: number,
         delay?: number
     } = {}) {
+        if (this.running) return this
+        this._stop = false
+        this.running = true
         if (options.maxFps) this.maxFps = options.maxFps
         if (options.fps) this.fps = options.fps
         if (options.delay) this.requestedDelay = options.delay
@@ -76,6 +82,7 @@ export class Scheduler extends Directive {
 
         if (!this.maxFps) {
             const loop = (timestamp: number) => {
+                if (this._stop) return
                 requestAnimationFrame(loop)
                 this.nextTick(timestamp)
             }
@@ -103,6 +110,7 @@ export class Scheduler extends Directive {
 
     stop() {
         this._stop = true
+        this.running = false
     }
 }
 

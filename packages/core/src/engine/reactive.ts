@@ -294,7 +294,7 @@ function handleAnimatedSignalsFreeze(element: Element, shouldPause: boolean) {
   Object.values(element.propObservables).forEach(processValue);
 }
 
-function destroyElement(element: Element | Element[]) {
+export function destroyElement(element: Element | Element[]) {
   if (Array.isArray(element)) {
     element.forEach((e) => destroyElement(e));
     return;

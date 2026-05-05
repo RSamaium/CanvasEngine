@@ -28,12 +28,12 @@
   
   let map = signal({})
   
-  const x = signal(0)
+  const x = signal(1)
   const y = signal(0)
 
   setInterval(() => {
     x.update(x => x + 1)
     y.update(y => y + 1)
-  }, 16)
+  }, 100)
 </script>
       

@@ -712,11 +712,14 @@ export default function canvasengine() {
       // Use single quotes to avoid escaping issues with backticks
       const styleInjectionCode = styleContent ? 
         '// Inject CSS styles into the document head\n' +
-        `if (typeof document !== 'undefined' && !document.getElementById('${styleId}')) {\n` +
-        '  const styleElement = document.createElement(\'style\');\n' +
-        `  styleElement.id = '${styleId}';\n` +
+        `if (typeof document !== 'undefined') {\n` +
+        `  let styleElement = document.getElementById('${styleId}');\n` +
+        '  if (!styleElement) {\n' +
+        '    styleElement = document.createElement(\'style\');\n' +
+        `    styleElement.id = '${styleId}';\n` +
+        '    document.head.appendChild(styleElement);\n' +
+        '  }\n' +
         `  styleElement.textContent = '${escapedStyleContent}';\n` +
-        '  document.head.appendChild(styleElement);\n' +
         '}\n'
         : '';
       
@@ -724,15 +727,25 @@ export default function canvasengine() {
       // Generate the output
       const output = String.raw`
       ${importsCode}
-      import { useProps, useDefineProps } from ${isDev ? `'${DEV_SRC}'` : "'canvasengine'"}
+      import { createHotComponent, useProps, useDefineProps } from ${isDev ? `'${DEV_SRC}'` : "'canvasengine'"}
       ${styleInjectionCode}
-      export default function component($$props) {
+      function component($$props) {
         const $props = useProps($$props)
         const defineProps = useDefineProps($$props)
         ${nonImportCode}
         let $this = ${parsedTemplate}
         return $this
       }
+
+      const __ce_component = import.meta.hot
+        ? createHotComponent(${JSON.stringify(id)}, component)
+        : component
+
+      if (import.meta.hot) {
+        import.meta.hot.accept()
+      }
+
+      export default __ce_component
       `;
 
       return {

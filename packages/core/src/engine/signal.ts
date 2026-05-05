@@ -1,21 +1,37 @@
 import {
   Observable,
+  Subject,
   Subscription
 } from "rxjs";
 import { isSignal } from "@signe/reactive";
 import type { Element } from "./reactive";
-import { isElementFrozen, waitForDependencies } from "./reactive";
+import { destroyElement, isElementFrozen, waitForDependencies } from "./reactive";
 import { isPromise } from "./utils";
 import { Tick } from "../directives/Scheduler";
 import { Container } from "../components";
 
-type MountFunction = (fn: (element: Element) => void) => void;
+type MountCallback = (element: Element) => any;
+type MountFunction = (fn: MountCallback) => void;
 
 // Define ComponentFunction type
 export type ComponentFunction<P = {}> = (props: P) => Element | Promise<Element>;
+type HotFlowResult = { elements: Element[] };
+type HotComponentRecord = {
+  component: ComponentFunction<any>;
+  updates: Subject<void>;
+  wrapper?: ComponentFunction<any>;
+};
 
 export let currentSubscriptionsTracker: ((subscription: Subscription) => void) | null = null;
 export let mountTracker: MountFunction | null = null;
+
+const getHotComponentRegistry = (): Map<string, HotComponentRecord> => {
+  const hotGlobal = globalThis as any;
+  if (!hotGlobal.__CANVAS_ENGINE_HOT_COMPONENTS__) {
+    hotGlobal.__CANVAS_ENGINE_HOT_COMPONENTS__ = new Map<string, HotComponentRecord>();
+  }
+  return hotGlobal.__CANVAS_ENGINE_HOT_COMPONENTS__;
+};
 
 /**
  * Registers a mount function to be called when the component is mounted.
@@ -57,7 +73,7 @@ export function tick(fn: (tickValue: Tick, element: Element) => void) {
     const { context } = el.props
     let subscription: Subscription | undefined
     if (context.tick) {
-      subscription = context.tick.observable.subscribe(({ value }) => {
+      subscription = context.tick.observable.subscribe(({ value }: { value: Tick }) => {
         // Block tick if element is frozen
         if (isElementFrozen(el)) {
           return;
@@ -104,17 +120,6 @@ function _h<C extends ComponentFunction<any>>(
   props: Parameters<C>[0] = {} as Parameters<C>[0],
   children: any[]
 ): ReturnType<C> {
-  const allSubscriptions = new Set<Subscription>();
-  const allMounts = new Set<MountFunction>();
-
-  currentSubscriptionsTracker = (subscription) => {
-    allSubscriptions.add(subscription);
-  };
-
-  mountTracker = (fn: any) => {
-    allMounts.add(fn);
-  };
-
   if (children[0] instanceof Array) {
     children = children[0]
   }
@@ -136,18 +141,12 @@ function _h<C extends ComponentFunction<any>>(
     component = componentFunction as any
   }
   else {
-    component = componentFunction({ ...props, children }) as Element;
+    component = createTrackedComponent(componentFunction, { ...props, children }) as Element;
   }
 
   if (!component) {
     component = {} as any
   }
-
-  component.effectSubscriptions = Array.from(allSubscriptions);
-  component.effectMounts = [
-    ...Array.from(allMounts),
-    ...((component as any).effectMounts ?? [])
-  ];
 
   // Copy dependencies prop to the returned element so it can be used for delayed mounting
   if (props?.dependencies) {
@@ -155,19 +154,126 @@ function _h<C extends ComponentFunction<any>>(
     component.props.dependencies = props.dependencies;
   }
 
-  // call mount hook for root component
-  if (component instanceof Promise) {
-    component.then((component) => {
-      if (component.props.isRoot) {
-        allMounts.forEach((fn) => fn(component));
-      }
-    })
+  return component as ReturnType<C>;
+}
+
+function createTrackedComponent<C extends ComponentFunction<any>>(
+  componentFunction: C,
+  props: Parameters<C>[0]
+): ReturnType<C> {
+  const allSubscriptions = new Set<Subscription>();
+  const allMounts = new Set<MountCallback>();
+
+  currentSubscriptionsTracker = (subscription) => {
+    allSubscriptions.add(subscription);
+  };
+
+  mountTracker = (fn: any) => {
+    allMounts.add(fn);
+  };
+
+  let component: ReturnType<C> = undefined as any;
+  try {
+    component = componentFunction(props) as ReturnType<C>;
+  } finally {
+    currentSubscriptionsTracker = null;
+    mountTracker = null;
   }
 
-  currentSubscriptionsTracker = null;
-  mountTracker = null;
+  const applyTrackedEffects = (element: Element) => {
+    if (!element) return;
+    element.effectSubscriptions = [
+      ...Array.from(allSubscriptions),
+      ...((element as any).effectSubscriptions ?? [])
+    ];
+    element.effectMounts = [
+      ...Array.from(allMounts),
+      ...((element as any).effectMounts ?? [])
+    ];
+  };
 
-  return component as ReturnType<C>;
+  if (component instanceof Promise) {
+    component.then((element) => {
+      applyTrackedEffects(element);
+      if (element?.props?.isRoot) {
+        allMounts.forEach((fn) => fn(element));
+      }
+    });
+  } else if (component instanceof Observable) {
+    (component as any).effectSubscriptions = [
+      ...Array.from(allSubscriptions),
+      ...((component as any).effectSubscriptions ?? [])
+    ];
+    (component as any).effectMounts = [
+      ...Array.from(allMounts),
+      ...((component as any).effectMounts ?? [])
+    ];
+  } else {
+    applyTrackedEffects(component as Element);
+  }
+
+  return component;
+}
+
+export function createHotComponent<P>(
+  id: string,
+  component: ComponentFunction<P>
+): ComponentFunction<P> {
+  const registry = getHotComponentRegistry();
+  let record = registry.get(id);
+
+  if (!record) {
+    record = {
+      component,
+      updates: new Subject<void>(),
+    };
+    registry.set(id, record);
+  } else {
+    record.component = component;
+    record.updates.next();
+  }
+
+  if (!record.wrapper) {
+    record.wrapper = ((props: P) => {
+      return new Observable<HotFlowResult>((subscriber) => {
+        let disposed = false;
+        let currentElement: Element | null = null;
+
+        const emit = () => {
+          const rendered = createTrackedComponent(record!.component, props);
+          const next = (element: Element | null | undefined) => {
+            if (!disposed) {
+              subscriber.next({ elements: element ? [element] : [] });
+              if (currentElement && currentElement !== element) {
+                destroyElement(currentElement);
+              }
+              currentElement = element ?? null;
+            }
+          };
+
+          if (rendered instanceof Promise) {
+            rendered.then(next).catch((error) => subscriber.error(error));
+          } else {
+            next(rendered as Element);
+          }
+        };
+
+        emit();
+        const subscription = record!.updates.subscribe(emit);
+
+        return () => {
+          disposed = true;
+          if (currentElement) {
+            destroyElement(currentElement);
+            currentElement = null;
+          }
+          subscription.unsubscribe();
+        };
+      }) as any;
+    }) as ComponentFunction<any>;
+  }
+
+  return record.wrapper as ComponentFunction<P>;
 }
 
 /**
@@ -206,7 +312,7 @@ export function h<C extends ComponentFunction<any>>(
   if (props?.dependencies) {
     const hasPromise = props.dependencies.some(isPromise);
     if (!hasPromise) {
-      const allReady = props.dependencies.every(dep => {
+      const allReady = props.dependencies.every((dep: any) => {
         if (isSignal(dep)) return dep() !== undefined;
         return dep !== undefined;
       });

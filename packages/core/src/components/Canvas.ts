@@ -91,7 +91,7 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
 
     if (props.tickStart !== false) canvasElement.directives.tick.start()
 
-    effect(() => {
+    const renderEffect = effect(() => {
       canvasElement.propObservables!.tick();
       renderer.render(canvasElement.componentInstance as any);
     });
@@ -107,7 +107,7 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
 
     canvasSize.set({ width: app.screen.width, height: app.screen.height })
 
-    app.renderer.on('resize', (width: number, height: number) => {
+    const resizeHandler = (width: number, height: number) => {
       canvasSize.set({ width, height });
 
       if (app.stage.layout) {
@@ -116,32 +116,47 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
           height
         }
       }
-    });
+    };
+
+    app.renderer.on('resize', resizeHandler);
 
     if (props.tickStart !== false) canvasElement.directives.tick.start();
 
-    app.ticker.add(() => {
+    const tickerHandler = () => {
       canvasElement.propObservables!.tick();
-    });
+    };
 
+    app.ticker.add(tickerHandler);
+
+    let cursorEffect: any;
     if (cursorStyles) {
-      effect(() => {
+      cursorEffect = effect(() => {
         renderer.events.cursorStyles = cursorStyles();
       });
     }
 
+    let classEffect: any;
     if (className) {
-      effect(() => {
+      classEffect = effect(() => {
         canvasEl.classList.add(className());
       });
     }
 
     const existingCanvas = rootElement.querySelector("canvas");
-    if (existingCanvas) {
+    if (existingCanvas && existingCanvas !== canvasEl) {
       rootElement.replaceChild(canvasEl, existingCanvas);
-    } else {
+    } else if (!existingCanvas) {
       rootElement.appendChild(canvasEl);
     }
+
+    canvasElement.effectUnmounts.push(() => {
+      renderEffect?.subscription?.unsubscribe?.();
+      cursorEffect?.subscription?.unsubscribe?.();
+      classEffect?.subscription?.unsubscribe?.();
+      app.ticker.remove(tickerHandler);
+      app.renderer.off?.('resize', resizeHandler);
+      canvasElement.directives.tick?.stop();
+    });
 
     options.context!.app.set(app)
   };

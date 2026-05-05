@@ -1,4 +1,5 @@
 import { Application, ApplicationOptions } from "pixi.js";
+import { Observable, Subscription } from "rxjs";
 import { ComponentFunction, h } from "./signal";
 import { useProps } from '../hooks/useProps';
 import { registerAllComponents, registerComponent } from './reactive';
@@ -33,6 +34,12 @@ export interface BootstrapOptions extends ApplicationOptions {
   enableLayout?: boolean; // true by default
 }
 
+type BootstrapResult = {
+  canvasElement: any;
+  app: Application;
+  hmrSubscription?: Subscription;
+};
+
 /**
  * Bootstraps a canvas element and renders it to the DOM.
  * 
@@ -61,7 +68,7 @@ export interface BootstrapOptions extends ApplicationOptions {
  * });
  * ```
  */
-export const bootstrapCanvas = async (rootElement: HTMLElement | null, canvas: ComponentFunction<any>, options?: BootstrapOptions) => {
+export const bootstrapCanvas = async (rootElement: HTMLElement | null, canvas: ComponentFunction<any>, options?: BootstrapOptions): Promise<BootstrapResult> => {
   // Extract component registration options
   const { components, autoRegister, enableLayout, ...appOptions } = options ?? {};
   if (enableLayout !== false) {
@@ -90,20 +97,57 @@ export const bootstrapCanvas = async (rootElement: HTMLElement | null, canvas: C
     antialias: true,
     ...appOptions
   });
-  const canvasElement = await h(canvas);
-  if (canvasElement.tag != 'Canvas') {
-    throw new Error('Canvas is required');
-  }
-  (canvasElement as any).render(rootElement, app);
 
-  const { backgroundColor } = useProps(canvasElement.props, {
-    backgroundColor: 'black'
-  });
+  const renderCanvasElement = (canvasElement: any) => {
+    if (canvasElement.tag != 'Canvas') {
+      throw new Error('Canvas is required');
+    }
+    canvasElement.render(rootElement, app);
 
-  app.renderer.background.color = backgroundColor()
+    const { backgroundColor } = useProps(canvasElement.props, {
+      backgroundColor: 'black'
+    });
 
-  return {
-    canvasElement,
-    app
+    app.renderer.background.color = backgroundColor()
+
+    return {
+      canvasElement,
+      app
+    };
   };
+
+  const canvasElement = h(canvas) as any;
+
+  if (canvasElement instanceof Observable) {
+    return new Promise<BootstrapResult>((resolve, reject) => {
+      let resolved = false;
+      let hmrSubscription: Subscription;
+
+      hmrSubscription = canvasElement.subscribe({
+        next(value: any) {
+          try {
+            const nextCanvasElement = value?.elements?.[0] ?? value;
+            if (!nextCanvasElement) return;
+
+            const result = renderCanvasElement(nextCanvasElement);
+
+            if (!resolved) {
+              resolved = true;
+              Promise.resolve().then(() => {
+                resolve({
+                  ...result,
+                  hmrSubscription
+                });
+              });
+            }
+          } catch (error) {
+            reject(error);
+          }
+        },
+        error: reject
+      });
+    });
+  }
+
+  return renderCanvasElement(await canvasElement);
 };
