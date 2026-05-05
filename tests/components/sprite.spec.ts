@@ -169,6 +169,44 @@ describe('Sprite Component', () => {
         expect(typeof instance.isPlaying).toBe('function')
     })
 
+    test('keeps custom animation when moving without stand or walk animations', () => {
+        const sprite = new CanvasSprite()
+        const runAnimation = {
+            frames: [[Texture.EMPTY]],
+            sprites: [],
+            name: 'run',
+            animations: [],
+            params: [],
+            data: {}
+        }
+
+        ;(sprite as any).animations = new Map([['run', runAnimation]])
+        ;(sprite as any).spritesheet = {}
+        ;(sprite as any).sheetCurrentAnimation = 'run'
+        ;(sprite as any).currentAnimation = runAnimation
+
+        expect((sprite as any).getMovementAnimationName(true)).toBe('run')
+        expect((sprite as any).getMovementAnimationName(false)).toBe('run')
+    })
+
+    test('falls back to an existing animation instead of missing stand or walk on reset', () => {
+        const sprite = new CanvasSprite()
+
+        ;(sprite as any).animations = new Map([
+            ['idle', {
+                frames: [[Texture.EMPTY]],
+                sprites: [],
+                name: 'idle',
+                animations: [],
+                params: [],
+                data: {}
+            }]
+        ])
+
+        expect((sprite as any).getPlayableAnimationName('walk')).toBe('idle')
+        expect((sprite as any).getPlayableAnimationName('stand')).toBe('idle')
+    })
+
     test('uses top-left hitbox alignment by default', () => {
         const sprite = createAnimatedHitboxSprite({ w: 32, h: 48 })
 

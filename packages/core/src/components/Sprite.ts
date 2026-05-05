@@ -375,13 +375,11 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
       if (!this.isMounted) return;
 
-      if (_isMoving) {
-        this.sheetCurrentAnimation = StandardAnimation.Walk;
-      } else {
-        this.sheetCurrentAnimation = StandardAnimation.Stand;
-      }
+      const animationName = this.getMovementAnimationName(_isMoving);
+      if (!animationName) return;
 
-      if (this.spritesheet && this.has(this.sheetCurrentAnimation)) this.play(this.sheetCurrentAnimation, [this.sheetParams]);
+      this.sheetCurrentAnimation = animationName;
+      if (this.spritesheet) this.play(this.sheetCurrentAnimation, [this.sheetParams]);
     });
     super.onMount(params);
   }
@@ -521,6 +519,35 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     return this.currentAnimation.name == name;
   }
 
+  private getFirstAnimationName(): string | undefined {
+    return this.animations.keys().next().value;
+  }
+
+  private getPlayableAnimationName(preferred?: string): string | undefined {
+    if (preferred && this.has(preferred)) {
+      return preferred;
+    }
+    return this.getFirstAnimationName();
+  }
+
+  private getMovementAnimationName(isMoving: boolean): string | undefined {
+    const standardAnimation = isMoving
+      ? StandardAnimation.Walk
+      : StandardAnimation.Stand;
+
+    if (this.has(standardAnimation)) {
+      return standardAnimation;
+    }
+
+    if (this.sheetCurrentAnimation && this.has(this.sheetCurrentAnimation)) {
+      return this.sheetCurrentAnimation;
+    }
+
+    if (this.currentAnimation?.name && this.has(this.currentAnimation.name)) {
+      return this.currentAnimation.name;
+    }
+  }
+
   stop() {
     this.currentAnimation = null;
   }
@@ -612,7 +639,11 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     // Recreate animations from spritesheet
     if (this.spritesheet) {
       await this.createAnimations();
-      this.play(this.sheetCurrentAnimation, [this.sheetParams]);
+      const animationName = this.getPlayableAnimationName(this.sheetCurrentAnimation);
+      if (animationName) {
+        this.sheetCurrentAnimation = animationName;
+        this.play(animationName, [this.sheetParams]);
+      }
     }
   }
 
