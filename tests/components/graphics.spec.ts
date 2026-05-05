@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Canvas, ComponentInstance, bootstrapCanvas, Container, Element, h, signal, Rect, mount, computed } from 'canvasengine';
+import { Canvas, Circle, ComponentInstance, bootstrapCanvas, Container, Element, h, signal, Rect, mount, computed } from 'canvasengine';
 import { TestBed } from '../../packages/core/testing';
 
 const mockRect = vi.fn()
@@ -48,6 +48,20 @@ describe('Graphics', () => {
             expect(mockRect).toHaveBeenCalledTimes(2)
             // Second call should be with updated width
             expect(mockRect).toHaveBeenLastCalledWith(-0, -0, 200, 100)
+        })
+    })
+
+    describe('Circle', () => {
+        it('should create a circle with an object border', async () => {
+            const circle = await TestBed.createComponent(Circle, {
+                x: 100,
+                y: 100,
+                radius: 42,
+                color: '#f97316',
+                border: { width: 4, color: '#ffffff', alpha: 0.75 }
+            })
+
+            expect(circle.componentInstance).toBeDefined()
         })
     })
 })

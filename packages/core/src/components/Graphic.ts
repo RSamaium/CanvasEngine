@@ -184,6 +184,8 @@ const graphicsAnchor = (anchor, width, height) => {
   return { x: -ax * width, y: -ay * height };
 }
 
+const propValue = (value: any) => isSignal(value) ? value() : value;
+
 export function Rect(props: RectProps) {
   const { color, borderRadius, border } = useProps(props, {
     borderRadius: null,
@@ -198,10 +200,11 @@ export function Rect(props: RectProps) {
       } else {
         g.rect(x, y, width, height);
       }
-      if (border) {
-        g.stroke(border);
+      const borderValue = propValue(border);
+      if (borderValue) {
+        g.stroke(borderValue);
       }
-      g.fill(color());
+      g.fill(propValue(color));
     },
     ...props
   })
@@ -216,14 +219,15 @@ export function Circle(props: CircleProps) {
     draw: (g, width, height, anchor) => {
       const { x, y } = graphicsAnchor(anchor, width, height);
       if (width == height || height == 0) {
-        g.circle(x, y, radius() || width);
+        g.circle(x, y, propValue(radius) || width);
       } else {
         g.ellipse(x, y, width, height);
       }
-      if (border()) {
-        g.stroke(border());
+      const borderValue = propValue(border);
+      if (borderValue) {
+        g.stroke(borderValue);
       }
-      g.fill(color());
+      g.fill(propValue(color));
     },
     ...props
   })
@@ -245,9 +249,10 @@ export function Triangle(props: TriangleProps) {
       g.lineTo(x + gWidth / 2, y);
       g.lineTo(x + gWidth, y + gHeight);
       g.lineTo(x, y + gHeight);
-      g.fill(color());
-      if (border) {
-        g.stroke(border);
+      g.fill(propValue(color));
+      const borderValue = propValue(border);
+      if (borderValue) {
+        g.stroke(borderValue);
       }
     },
     ...props

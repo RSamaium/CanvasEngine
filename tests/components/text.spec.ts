@@ -1,8 +1,32 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { Text, signal } from 'canvasengine'
 import { TestBed } from '../../packages/core/testing'
 
 describe('Text Component', () => {
+    beforeEach(() => {
+        vi.stubGlobal('OffscreenCanvas', class {
+            width: number
+            height: number
+
+            constructor(width: number, height: number) {
+                this.width = width
+                this.height = height
+            }
+
+            getContext(type: string) {
+                if (type !== '2d') return null
+                return {
+                    font: '',
+                    measureText: (text: string) => ({ width: text.length * 10 })
+                }
+            }
+        })
+    })
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+    })
+
     test('creates text component with basic properties', async () => {
         const textElement = await TestBed.createComponent(Text, {
             text: 'Hello World',
@@ -94,6 +118,90 @@ describe('Text Component', () => {
 
         expect((textElement.componentInstance as any).style.wordWrapWidth).toBe(200)
         expect((textElement.componentInstance as any).style.wordWrap).toBe(true)
+    })
+
+    test('uses Pretext measurement for wrapped text layout dimensions', async () => {
+        const textElement = await TestBed.createComponent(Text, {
+            text: 'one two three four five six seven eight nine ten',
+            style: {
+                wordWrapWidth: 70,
+                wordWrap: true,
+                fontSize: 20,
+                fontFamily: 'Arial',
+                lineHeight: 30
+            }
+        })
+
+        const instance = textElement.componentInstance as any
+
+        expect(instance.style.wordWrap).toBe(true)
+        expect(instance._wordWrapWidth).toBe(70)
+        expect(instance.displayWidth()).toBe(70)
+        expect(instance.displayHeight()).toBeGreaterThan(30)
+        expect(instance.getWidth()).toBe(70)
+        expect(instance.getHeight()).toBe(instance.displayHeight())
+    })
+
+    test('does not use Pretext for unwrapped text', async () => {
+        const textElement = await TestBed.createComponent(Text, {
+            text: 'Single line text',
+            style: {
+                fontSize: 20,
+                fontFamily: 'Arial'
+            }
+        })
+
+        const instance = textElement.componentInstance as any
+
+        expect(instance._wordWrapWidth).toBe(0)
+        expect(instance.displayWidth()).toBe(instance.getWidth())
+    })
+
+    test('recomputes wrapped layout dimensions when wrap width changes', async () => {
+        const textElement = await TestBed.createComponent(Text, {
+            text: 'one two three four five six seven eight nine ten',
+            style: {
+                wordWrapWidth: 70,
+                wordWrap: true,
+                fontSize: 20,
+                lineHeight: 30
+            }
+        })
+
+        const instance = textElement.componentInstance as any
+        const initialHeight = instance.displayHeight()
+
+        instance.onUpdate({
+            style: {
+                wordWrapWidth: 140,
+                wordWrap: true,
+                fontSize: 20,
+                lineHeight: 30
+            }
+        })
+
+        expect(instance.displayWidth()).toBe(140)
+        expect(instance.displayHeight()).toBeLessThan(initialHeight)
+    })
+
+    test('recomputes wrapped layout dimensions when text changes', async () => {
+        const dynamicText = signal('short')
+
+        const textElement = await TestBed.createComponent(Text, {
+            text: dynamicText,
+            style: {
+                wordWrapWidth: 70,
+                wordWrap: true,
+                fontSize: 20,
+                lineHeight: 30
+            }
+        })
+
+        const instance = textElement.componentInstance as any
+        const initialHeight = instance.displayHeight()
+        dynamicText.set('one two three four five six seven eight nine ten')
+
+        expect(instance.displayHeight()).toBeGreaterThan(initialHeight)
     })
 
     test('typewriter effect with different speeds', async () => {

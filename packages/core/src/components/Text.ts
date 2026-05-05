@@ -1,6 +1,7 @@
+import { layout as layoutPretext, prepare as preparePretext, type PreparedText, type PrepareOptions } from "@chenglou/pretext";
 import { Text as PixiText, TextStyle } from "pixi.js";
-import { createComponent, registerComponent, Element, Props } from "../engine/reactive";
-import { DisplayObject, ComponentInstance } from "./DisplayObject";
+import { createComponent, registerComponent, Element } from "../engine/reactive";
+import { DisplayObject } from "./DisplayObject";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { Signal } from "@signe/reactive";
 import { on, isTrigger } from "../engine/trigger";
@@ -14,7 +15,7 @@ export interface TextProps extends DisplayObjectProps {
   text?: string;
   style?: Partial<TextStyle>;
   color?: string;
-  size?: string;
+  size?: string | number;
   fontFamily?: string;
   typewriter?: {
     speed?: number;
@@ -30,6 +31,22 @@ export interface TextProps extends DisplayObjectProps {
   context?: any; // Ensure context is available, ideally typed from a base prop or injected
 }
 
+type PretextMeasurement = {
+  width: number;
+  height: number;
+};
+
+const toFiniteNumber = (value: unknown): number | null => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
 class CanvasText extends DisplayObject(PixiText) {
   private subscriptionTick: any;
   private fullText: string = "";
@@ -41,6 +58,9 @@ class CanvasText extends DisplayObject(PixiText) {
   private typewriterSound?: Howl;
   private lastSoundTime: number = 0;
   private soundDuration: number = 0; // Duration of the sound in milliseconds
+  private pretextPrepared: PreparedText | null = null;
+  private pretextPrepareKey: string = "";
+  private measuredLayout: PretextMeasurement | null = null;
 
   /**
    * Called when the component is mounted to the scene graph.
@@ -102,12 +122,7 @@ class CanvasText extends DisplayObject(PixiText) {
       this.updateLayout();
     }
     if (props.style) {
-      for (const key in props.style) {
-        this.style[key] = props.style[key];
-      }
-      if (props.style.wordWrapWidth) {
-        this._wordWrapWidth = props.style.wordWrapWidth;
-      }
+      this.applyTextStyle(props.style);
     }
     if (props.color) {
       this.style.fill = props.color;
@@ -118,6 +133,7 @@ class CanvasText extends DisplayObject(PixiText) {
     if (props.fontFamily) {
       this.style.fontFamily = props.fontFamily;
     }
+    this.updateWordWrapWidth();
     
     // Use the centralized layout update method
     this.updateLayout();
@@ -171,12 +187,130 @@ class CanvasText extends DisplayObject(PixiText) {
    * This method ensures consistent width, height and word wrap behavior.
    */
   private updateLayout() {
-    if (this._wordWrapWidth) {
-      this.setWidth(this._wordWrapWidth);
-    } else {
-      this.setWidth(this.width);
+    const measured = this.measurePretextLayout();
+    const width = measured?.width ?? this.width;
+    const height = measured?.height ?? this.height;
+
+    this.measuredLayout = measured ?? { width, height };
+    this.setMeasuredLayout(width, height);
+  }
+
+  private applyTextStyle(style: Partial<TextStyle>) {
+    const assign = (this.style as TextStyle & { assign?: (values: any) => TextStyle }).assign;
+    if (typeof assign === "function") {
+      assign.call(this.style, style);
+      return;
     }
-    this.setHeight(this.height);
+
+    for (const key in style) {
+      (this.style as any)[key] = (style as any)[key];
+    }
+  }
+
+  private updateWordWrapWidth() {
+    if (!this.style.wordWrap) {
+      this._wordWrapWidth = 0;
+      return;
+    }
+    const wordWrapWidth = toFiniteNumber(this.style.wordWrapWidth);
+    this._wordWrapWidth = wordWrapWidth !== null && wordWrapWidth > 0 ? wordWrapWidth : 0;
+  }
+
+  private measurePretextLayout(): PretextMeasurement | null {
+    if (!this.style.wordWrap || this._wordWrapWidth <= 0) {
+      this.pretextPrepared = null;
+      this.pretextPrepareKey = "";
+      return null;
+    }
+
+    const text = `${this.text ?? ""}`;
+    const font = this.resolvePretextFont();
+    const lineHeight = this.resolveLineHeight();
+    const options = this.resolvePretextOptions();
+    const prepareKey = JSON.stringify([text, font, options.whiteSpace, options.wordBreak, options.letterSpacing]);
+
+    try {
+      if (this.pretextPrepareKey !== prepareKey || !this.pretextPrepared) {
+        this.pretextPrepared = preparePretext(text, font, options);
+        this.pretextPrepareKey = prepareKey;
+      }
+
+      const result = layoutPretext(this.pretextPrepared, this._wordWrapWidth, lineHeight);
+      return {
+        width: this._wordWrapWidth,
+        height: result.height,
+      };
+    } catch {
+      this.pretextPrepared = null;
+      this.pretextPrepareKey = "";
+      return null;
+    }
+  }
+
+  private resolvePretextFont(): string {
+    const fontString = (this.style as TextStyle & { _fontString?: string })._fontString;
+    if (fontString) return fontString;
+
+    const fontSize = this.resolveFontSize();
+    const fontFamily = Array.isArray(this.style.fontFamily)
+      ? this.style.fontFamily.join(",")
+      : this.style.fontFamily;
+
+    return `${this.style.fontStyle} ${this.style.fontVariant} ${this.style.fontWeight} ${fontSize}px ${fontFamily}`;
+  }
+
+  private resolvePretextOptions(): PrepareOptions {
+    return {
+      whiteSpace: this.style.whiteSpace === "normal" ? "normal" : "pre-wrap",
+      letterSpacing: this.style.letterSpacing || undefined,
+    };
+  }
+
+  private resolveLineHeight(): number {
+    const lineHeight = toFiniteNumber(this.style.lineHeight);
+    if (lineHeight !== null && lineHeight > 0) return lineHeight;
+    return this.resolveFontSize();
+  }
+
+  private resolveFontSize(): number {
+    const fontSize = toFiniteNumber(this.style.fontSize);
+    return fontSize !== null && fontSize > 0 ? fontSize : 16;
+  }
+
+  private setMeasuredLayout(width: number, height: number) {
+    const layout: { width?: number; height?: number } = {};
+
+    if (this.fullProps.width === undefined) {
+      this.displayWidth.set(width);
+      if (this.parentIsFlex) {
+        layout.width = width;
+      }
+    }
+
+    if (this.fullProps.height === undefined) {
+      this.displayHeight.set(height);
+      if (this.parentIsFlex) {
+        layout.height = height;
+      }
+    }
+
+    if (this.parentIsFlex && (layout.width !== undefined || layout.height !== undefined)) {
+      (this as any).layout = layout;
+    }
+  }
+
+  getWidth(): number {
+    if (this.fullProps.width === undefined && this.measuredLayout) {
+      return this.measuredLayout.width;
+    }
+    return super.getWidth();
+  }
+
+  getHeight(): number {
+    if (this.fullProps.height === undefined && this.measuredLayout) {
+      return this.measuredLayout.height;
+    }
+    return super.getHeight();
   }
 
   private typewriterEffect() {
@@ -235,6 +369,9 @@ class CanvasText extends DisplayObject(PixiText) {
         this.typewriterSound.unload();
         this.typewriterSound = undefined;
       }
+      this.pretextPrepared = null;
+      this.pretextPrepareKey = "";
+      this.measuredLayout = null;
       if (afterDestroy) {
         afterDestroy();
       }

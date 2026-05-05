@@ -1,0 +1,136 @@
+<Canvas backgroundColor="#111827" width={800} height={600}>
+  <Container>
+    @for (line of lines) {
+      <Text
+        x={line.x}
+        y={line.y}
+        text={line.text}
+        style={lineStyle}
+      />
+    }
+
+    <Circle
+      x={circleLeft}
+      y={circleTop}
+      radius={circleRadius}
+      color={circleColor}
+      border={circleBorder}
+      cursor="grab"
+      drag={dragOptions}
+    />
+
+    <Text
+      x={40}
+      y={552}
+      text="Drag the circle: Pretext recalculates the lines around its shape."
+      color="#93c5fd"
+      size={13}
+      fontFamily="Arial"
+    />
+  </Container>
+</Canvas>
+
+<script>
+  import { computed, signal } from "canvasengine";
+  import {
+    layoutNextLineRange,
+    materializeLineRange,
+    prepareWithSegments,
+  } from "@chenglou/pretext";
+
+  const textLeft = 40;
+  const textTop = 38;
+  const textWidth = 720;
+  const textRight = textLeft + textWidth;
+  const lineHeight = 28;
+  const maxRows = 18;
+  const gap = 14;
+  const minSpanWidth = 92;
+  const circleRadius = 48;
+  const avoidRadius = circleRadius + gap;
+  const font = '20px Arial';
+  const circleLeft = signal(352);
+  const circleTop = signal(252);
+  const dragging = signal(false);
+
+  const lineStyle = {
+    fontSize: 20,
+    lineHeight,
+    fontFamily: "Arial",
+    fill: "#f9fafb",
+  };
+
+  const article = `Pretext is not only useful for measuring a paragraph's height: it can also route text one line at a time. In this example, the circle is treated as a floating shape. When you drag it, CanvasEngine updates its signals, then Pretext recalculates the available fragments on the left and right without reading from the DOM. AGI 春天到了. بدأت الرحلة 🚀. The lines keep stable measurements even with multilingual text and an object crossing the column.`;
+
+  const prepared = prepareWithSegments(article, font);
+
+  const circleColor = computed(() => dragging() ? "#38bdf8" : "#f97316");
+  const circleBorder = { width: 4, color: "#ffffff", alpha: 0.75 };
+  const circleCenterX = computed(() => circleLeft() + circleRadius);
+  const circleCenterY = computed(() => circleTop() + circleRadius);
+
+  const lines = computed(() => {
+    const fragments = [];
+    let cursor = { segmentIndex: 0, graphemeIndex: 0 };
+
+    for (let row = 0; row < maxRows; row++) {
+      const y = textTop + row * lineHeight;
+      const spans = rowSpans(y + lineHeight / 2);
+
+      for (const span of spans) {
+        const range = layoutNextLineRange(prepared, cursor, span.width);
+        if (range === null) return fragments;
+
+        const line = materializeLineRange(prepared, range);
+        fragments.push({
+          id: `${row}-${fragments.length}`,
+          text: line.text,
+          x: span.x,
+          y,
+        });
+        cursor = range.end;
+      }
+    }
+
+    return fragments;
+  });
+
+  function rowSpans(rowCenterY) {
+    const dy = Math.abs(rowCenterY - circleCenterY());
+    if (dy >= avoidRadius) {
+      return [{ x: textLeft, width: textWidth }];
+    }
+
+    const halfWidth = Math.sqrt(avoidRadius * avoidRadius - dy * dy);
+    const obstacleLeft = Math.max(textLeft, circleCenterX() - halfWidth);
+    const obstacleRight = Math.min(textRight, circleCenterX() + halfWidth);
+
+    if (obstacleRight <= textLeft || obstacleLeft >= textRight) {
+      return [{ x: textLeft, width: textWidth }];
+    }
+
+    const leftWidth = obstacleLeft - textLeft - gap;
+    const rightX = obstacleRight + gap;
+    const rightWidth = textRight - rightX;
+    const spans = [];
+
+    if (leftWidth >= minSpanWidth) {
+      spans.push({ x: textLeft, width: leftWidth });
+    }
+    if (rightWidth >= minSpanWidth) {
+      spans.push({ x: rightX, width: rightWidth });
+    }
+
+    return spans;
+  }
+
+  const dragOptions = {
+    direction: "all",
+    start() {
+      dragging.set(true);
+    },
+    end() {
+      dragging.set(false);
+    },
+  };
+</script>
