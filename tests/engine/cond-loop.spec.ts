@@ -120,4 +120,48 @@ describe('Cond cleanup in Loop', () => {
             expect(root.componentInstance.children[1].x).toBe(100)
         })
     })
+
+    test('should destroy else loop elements when condition switches branch', async () => {
+        const show = signal(false)
+        const items = signal([1, 2, 3])
+
+        const value = cond(
+            show,
+            () => h(Container, { name: 'if-branch', x: 100 }),
+            () => loop(items, (item) => h(Container, { name: `else-${item}`, x: item })) as any
+        )
+
+        const root = await TestBed.createComponent(Container, {}, value)
+
+        expect(root.componentInstance.children.length).toBe(3)
+        expect(root.componentInstance.children.map((child) => child.x)).toEqual([1, 2, 3])
+
+        show.set(true)
+
+        await vi.waitFor(() => {
+            expect(root.componentInstance.children.length).toBe(1)
+            expect(root.componentInstance.children[0].x).toBe(100)
+        })
+
+        items.set([4, 5])
+
+        await vi.waitFor(() => {
+            expect(root.componentInstance.children.length).toBe(1)
+            expect(root.componentInstance.children[0].x).toBe(100)
+        })
+
+        show.set(false)
+
+        await vi.waitFor(() => {
+            expect(root.componentInstance.children.length).toBe(2)
+            expect(root.componentInstance.children.map((child) => child.x)).toEqual([4, 5])
+        })
+
+        items.set([6])
+
+        await vi.waitFor(() => {
+            expect(root.componentInstance.children.length).toBe(1)
+            expect(root.componentInstance.children[0].x).toBe(6)
+        })
+    })
 })

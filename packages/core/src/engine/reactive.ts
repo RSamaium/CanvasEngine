@@ -653,7 +653,23 @@ export function createComponent(tag: string, props?: Props): Element {
       child = await child;
     }
     if (child instanceof Observable) {
-      const mountedFlowElements = new Map<Element, Element>();
+      const mountedFlowElements = new Map<any, Element>();
+
+      const createFragmentOwner = (): Element => ({
+        tag: 'fragment',
+        props: { children: [] },
+        componentInstance: {} as any,
+        propSubscriptions: [],
+        effectSubscriptions: [],
+        effectMounts: [],
+        effectUnmounts: [],
+        propObservables: {},
+        parent,
+        directives: {},
+        destroy() { destroyElement(this) },
+        allElements: new Subject(),
+        isFrozen: false
+      });
 
       const mountFlowElement = (element: Element, index?: number) => {
         if (mountedFlowElements.has(element)) {
@@ -666,7 +682,7 @@ export function createComponent(tag: string, props?: Props): Element {
         propagateContext(routed);
       };
 
-      const syncFlowElements = (nextElements: Set<Element>) => {
+      const syncFlowElements = (nextElements: Set<any>) => {
         mountedFlowElements.forEach((mounted, source) => {
           if (nextElements.has(source)) {
             return;
@@ -680,11 +696,16 @@ export function createComponent(tag: string, props?: Props): Element {
 
       const processFlowComponent = (
         component: any,
-        nextElements: Set<Element>,
+        nextElements: Set<any>,
         index?: number
       ) => {
         if (component instanceof Observable) {
-          void createElement(parent, component);
+          nextElements.add(component);
+          if (!mountedFlowElements.has(component)) {
+            const owner = createFragmentOwner();
+            mountedFlowElements.set(component, owner);
+            void createElement(owner, component);
+          }
           return;
         }
         if (Array.isArray(component)) {
@@ -716,7 +737,7 @@ export function createComponent(tag: string, props?: Props): Element {
             } = value;
 
             const components = comp.filter((c) => c !== null);
-            const nextElements = new Set<Element>();
+            const nextElements = new Set<any>();
             if (prev) {
               components.forEach((c) => {
                 const index = parent.props.children.indexOf(prev.props.key);
@@ -736,20 +757,22 @@ export function createComponent(tag: string, props?: Props): Element {
             propagateContext(routed);
           } else if (Array.isArray(value)) {
             // Handle array of elements (which can also be observables)
-            value.forEach(async (element) => {
-              if (element instanceof Observable) {
-                // Handle observable element recursively
-                await createElement(parent, element);
-              } else if (isElement(element)) {
-                const routed = routeDomComponent(parent, element);
-                onMount(parent, routed);
-                propagateContext(routed);
-              }
+            const nextElements = new Set<any>();
+            value.forEach((element, index) => {
+              processFlowComponent(element, nextElements, index);
             });
+            syncFlowElements(nextElements);
           }
           elementsListen.next(undefined);
         }
       );
+
+      subscription.add(() => {
+        mountedFlowElements.forEach((mounted) => {
+          destroyElement(mounted);
+        });
+        mountedFlowElements.clear();
+      });
 
       // Store subscription for cleanup
       parent.effectSubscriptions.push(subscription);
