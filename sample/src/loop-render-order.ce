@@ -1,0 +1,30 @@
+<Canvas>
+  <Container>
+    <Text text="Issue #41: async first @for stays before second @for" x={20} y={20} color="#ffffff" size={20} />
+    <Text text="The blue rows must appear above the yellow row." x={20} y={52} color="#9dd6ff" size={14} />
+
+    @for (item of firstItems) {
+      <Text text={item.label} x={20} y={item.y} color="#6bbcff" size={18} />
+    }
+
+    @for (item of secondItems) {
+      <Text text={item.label} x={20} y={item.y} color="#f8c555" size={18} />
+    }
+  </Container>
+</Canvas>
+
+<script>
+  import { signal } from 'canvasengine'
+
+  const firstItems = signal([])
+  const secondItems = signal([
+    { label: 'Second loop row', y: 150 }
+  ])
+
+  setTimeout(() => {
+    firstItems.set([
+      { label: 'First loop row A', y: 90 },
+      { label: 'First loop row B', y: 120 }
+    ])
+  }, 1200)
+</script>

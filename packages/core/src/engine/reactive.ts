@@ -609,9 +609,10 @@ export function createComponent(tag: string, props?: Props): Element {
     if (!element.props.children) {
       return;
     }
-    for (let child of element.props.children) {
+    for (let i = 0; i < element.props.children.length; i++) {
+      const child = element.props.children[i];
       if (!child) continue;
-      await createElement(element, child)
+      await createElement(element, child, i)
     }
   };
 
@@ -648,25 +649,71 @@ export function createComponent(tag: string, props?: Props): Element {
  * await createElement(parent, import('./MyComponent').then(mod => h(mod.default)));
  * ```
  */
-  async function createElement(parent: Element, child: Element | Observable<any> | Promise<Element>) {
+  async function createElement(parent: Element, child: Element | Observable<any> | Promise<Element>, childOrder?: number) {
     if (isPromise(child)) {
       child = await child;
     }
-    if (child instanceof Observable) {
-      const mountedFlowElements = new Map<Element, Element>();
 
-      const mountFlowElement = (element: Element, index?: number) => {
+    const childGroups = ((parent as any).__childGroups ??= []);
+    const resolvedOrder =
+      childOrder ??
+      (parent.props.children ? parent.props.children.indexOf(child as any) : -1);
+    const childGroup = {
+      order: resolvedOrder >= 0 ? resolvedOrder : childGroups.length,
+      mounted: new Map<any, Element>(),
+    };
+    childGroups.push(childGroup);
+
+    const getMountedIndex = (element?: Element): number | undefined => {
+      const children = (parent.componentInstance as any)?.children;
+      if (!element || !children) return;
+      const index = children.indexOf(element.componentInstance);
+      return index >= 0 ? index : undefined;
+    };
+
+    const getNextGroupIndex = (): number | undefined => {
+      const nextGroups = childGroups
+        .filter((group) => group !== childGroup && group.order > childGroup.order)
+        .sort((a, b) => a.order - b.order);
+
+      for (const group of nextGroups) {
+        for (const mounted of group.mounted.values()) {
+          const index = getMountedIndex(mounted);
+          if (index !== undefined) return index;
+        }
+      }
+    };
+
+    const getInsertIndex = (
+      sourceIndex: number,
+      orderedSources: any[]
+    ): number | undefined => {
+      for (let i = sourceIndex + 1; i < orderedSources.length; i++) {
+        const index = getMountedIndex(childGroup.mounted.get(orderedSources[i]));
+        if (index !== undefined) return index;
+      }
+      return getNextGroupIndex();
+    };
+
+    if (child instanceof Observable) {
+      const mountedFlowElements = childGroup.mounted;
+
+      const mountFlowElement = (
+        element: Element,
+        sourceIndex: number,
+        orderedSources: any[]
+      ) => {
         if (mountedFlowElements.has(element)) {
           return;
         }
 
         const routed = routeDomComponent(parent, element);
         mountedFlowElements.set(element, routed);
-        onMount(parent, routed, index);
+        onMount(parent, routed, getInsertIndex(sourceIndex, orderedSources));
         propagateContext(routed);
       };
 
-      const syncFlowElements = (nextElements: Set<Element>) => {
+      const syncFlowElements = (nextElements: Set<any>) => {
         mountedFlowElements.forEach((mounted, source) => {
           if (nextElements.has(source)) {
             return;
@@ -680,8 +727,9 @@ export function createComponent(tag: string, props?: Props): Element {
 
       const processFlowComponent = (
         component: any,
-        nextElements: Set<Element>,
-        index?: number
+        nextElements: Set<any>,
+        index: number,
+        orderedSources: any[]
       ) => {
         if (component instanceof Observable) {
           void createElement(parent, component);
@@ -689,7 +737,7 @@ export function createComponent(tag: string, props?: Props): Element {
         }
         if (Array.isArray(component)) {
           component.forEach((comp) =>
-            processFlowComponent(comp, nextElements, index)
+            processFlowComponent(comp, nextElements, index, orderedSources)
           );
           return;
         }
@@ -698,7 +746,7 @@ export function createComponent(tag: string, props?: Props): Element {
         }
 
         nextElements.add(component);
-        mountFlowElement(component, index);
+        mountFlowElement(component, index, orderedSources);
       };
 
       // Subscribe to the observable and handle the emitted values
@@ -716,36 +764,38 @@ export function createComponent(tag: string, props?: Props): Element {
             } = value;
 
             const components = comp.filter((c) => c !== null);
-            const nextElements = new Set<Element>();
+            const nextElements = new Set<any>();
             if (prev) {
               components.forEach((c) => {
                 const index = parent.props.children.indexOf(prev.props.key);
-                processFlowComponent(c, nextElements, index + 1);
+                processFlowComponent(c, nextElements, index + 1, components);
               });
               syncFlowElements(nextElements);
               return;
             }
             components.forEach((component, index) => {
-              processFlowComponent(component, nextElements, index);
+              processFlowComponent(component, nextElements, index, components);
             });
             syncFlowElements(nextElements);
           } else if (isElement(value)) {
             // Handle direct Element emission
             const routed = routeDomComponent(parent, value);
-            onMount(parent, routed);
+            childGroup.mounted.set(value, routed);
+            onMount(parent, routed, getInsertIndex(0, [value]));
             propagateContext(routed);
           } else if (Array.isArray(value)) {
             // Handle array of elements (which can also be observables)
-            value.forEach(async (element) => {
+            const nextElements = new Set<any>();
+            value.forEach(async (element, index) => {
               if (element instanceof Observable) {
                 // Handle observable element recursively
                 await createElement(parent, element);
               } else if (isElement(element)) {
-                const routed = routeDomComponent(parent, element);
-                onMount(parent, routed);
-                propagateContext(routed);
+                nextElements.add(element);
+                mountFlowElement(element, index, value);
               }
             });
+            syncFlowElements(nextElements);
           }
           elementsListen.next(undefined);
         }
@@ -755,7 +805,8 @@ export function createComponent(tag: string, props?: Props): Element {
       parent.effectSubscriptions.push(subscription);
     } else if (isElement(child)) {
       const routed = routeDomComponent(parent, child);
-      onMount(parent, routed);
+      childGroup.mounted.set(child, routed);
+      onMount(parent, routed, getInsertIndex(0, [child]));
       await propagateContext(routed);
     }
   }
