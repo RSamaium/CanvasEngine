@@ -11,7 +11,7 @@ import { bootstrapCanvas } from 'canvasengine';
 // import App from './cond-else-loop.ce'
 // import App from './sprite-moving-custom.ce'
 // import App from './loop-render-order.ce'
-import App from './fx.ce'
+import App from './weather.ce'
 
 bootstrapCanvas(document.getElementById("root"), App).then(() => {
     console.log("CanvasEngine initialized");

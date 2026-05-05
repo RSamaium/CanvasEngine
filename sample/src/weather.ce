@@ -1,14 +1,14 @@
 <Canvas backgroundColor="#000">
    
     <Viewport worldWidth={2048} worldHeight={2048} clamp={clamp} sortableChildren={true}>
-        <!-- <NightAmbiant lightSpots={lightSpots} darkness={intensity}  darkColor="#0a1020"
-        fogColor="#0a1020" /> -->
+        <NightAmbiant lightSpots={lightSpots} darkness={intensity}  darkColor="#0a1020"
+        fogColor="#0a1020" />
 
         
 
           <Sprite image="back.png" />  
         
-        <Graphics
+         <Graphics
             x={playerX}
             y={playerY}
             zIndex={1}
@@ -22,7 +22,7 @@
             viewportFollow={true}
         />
 
-        <Weather
+        <!-- <Weather
             effect={cloudPreset.effect}
             speed={cloudPreset.speed}
             density={cloudPreset.density}
@@ -34,7 +34,7 @@
             rayTwinkle={cloudPreset.rayTwinkle}
             rayTwinkleSpeed={cloudPreset.rayTwinkleSpeed}
             zIndex={1000}
-        />
+        /> -->
         
         
         
@@ -49,12 +49,12 @@
 
     const clamp = {direction: 'all'};
 
-    const intensity = signal(0.5)
+    const intensity = signal(0)
     const cloudPreset = CLOUD_PRESETS.dramaticCrepuscularRays
 
-    // setInterval(() => {
-    //     intensity.update(n => n + 0.1)
-    // }, 1000)
+    setInterval(() => {
+        intensity.update(n => n + 0.1)
+    }, 1000)
 
     const playerX = signal(400);
     const playerY = signal(300);

@@ -14,6 +14,9 @@ const FOG_SOFTNESS = 0.35;
 /** Fog color (RGB, linear 0-1). Dark blue-gray for night. */
 const FOG_COLOR = new Float32Array([0.08, 0.08, 0.14]);
 
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const clampDarkness = (value: number) => clamp(value, 0, 1);
+
 type PointLike = { x: number; y: number };
 type BoundsLike = { x: number; y: number; width: number; height: number };
 type ScreenPointLike = { x: number; y: number };
@@ -21,6 +24,14 @@ type ReactiveValue<T> = T | (() => T);
 type ViewportLike = {
   getVisibleBounds?: () => BoundsLike | null | undefined;
   toScreen?: (x: number, y: number) => ScreenPointLike;
+};
+type NightUniformValues = {
+  uSpots: Float32Array;
+  uDarkness: number;
+  uDarkColor: Float32Array;
+  uFogColor: Float32Array;
+  uFogRadius: number;
+  uFogSoftness: number;
 };
 export type NightSpot = PointLike & {
   radius?: number;
@@ -172,7 +183,7 @@ export function createNightFilter(
 ): NightFilter {
   const uSpots = new Float32Array(MAX_SPOTS * 4);
   const uSpotsUniform = { value: uSpots, type: 'vec4<f32>' as const, size: MAX_SPOTS };
-  const uDarkness = { value: options?.darkness ?? DARKNESS, type: 'f32' as const };
+  const uDarkness = { value: clampDarkness(options?.darkness ?? DARKNESS), type: 'f32' as const };
   const uFogColor = { value: options?.fogColor ? parseColor(options.fogColor) : FOG_COLOR, type: 'vec3<f32>' as const };
   const uFogRadius = { value: options?.fogRadius ?? FOG_RADIUS, type: 'f32' as const };
   const uFogSoftness = { value: options?.fogSoftness ?? FOG_SOFTNESS, type: 'f32' as const };
@@ -197,9 +208,17 @@ export function createNightFilter(
       },
     },
   });
+  const nightUniforms = (nightFilter as any).resources.nightUniforms.uniforms as NightUniformValues;
 
-  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
   const nowSeconds = () => Date.now() / 1000;
+  const setColorUniform = (name: "uDarkColor" | "uFogColor", color: Float32Array) => {
+    const current = nightUniforms[name];
+    if (current instanceof Float32Array && current.length >= color.length) {
+      current.set(color);
+    } else {
+      nightUniforms[name] = color;
+    }
+  };
 
   const getActiveSpots = (): NightSpot[] => {
     if (!lightWorldPosition) return customSpots;
@@ -261,7 +280,7 @@ export function createNightFilter(
       uSpots[base + 3] = clamp(intensity, 0, 2);
     }
 
-    uSpotsUniform.value = uSpots;
+    nightUniforms.uSpots = uSpots;
   };
 
   const originalApply = nightFilter.apply.bind(nightFilter);
@@ -284,19 +303,19 @@ export function createNightFilter(
   extendedFilter.getSpots = () => getActiveSpots().map((spot) => ({ ...spot }));
   extendedFilter.syncLightToViewport = syncLightToViewport;
   extendedFilter.setDarkness = (value: number) => {
-    uDarkness.value = value;
+    nightUniforms.uDarkness = clampDarkness(value);
   };
   extendedFilter.setDarkColor = (color: ColorInput) => {
-    uDarkColor.value = parseColor(color);
+    setColorUniform("uDarkColor", parseColor(color));
   };
   extendedFilter.setFogColor = (color: ColorInput) => {
-    uFogColor.value = parseColor(color);
+    setColorUniform("uFogColor", parseColor(color));
   };
   extendedFilter.setFogRadius = (value: number) => {
-    uFogRadius.value = value;
+    nightUniforms.uFogRadius = value;
   };
   extendedFilter.setFogSoftness = (value: number) => {
-    uFogSoftness.value = value;
+    nightUniforms.uFogSoftness = value;
   };
 
   syncLightToViewport();
