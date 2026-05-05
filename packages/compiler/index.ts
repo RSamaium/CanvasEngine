@@ -10,6 +10,86 @@ const { generate } = pkg;
 
 const DEV_SRC = "../../src"
 
+type ManualChunksFunction = (id: string, meta: any) => string | void;
+type ManualChunksOption = ManualChunksFunction | Record<string, string[]>;
+
+function normalizeModuleId(id: string): string {
+  return id.replace(/\\/g, "/");
+}
+
+function matchesAnyModule(id: string, modules: string[]): boolean {
+  return modules.some((moduleId) => id === moduleId || id.includes(moduleId));
+}
+
+/**
+ * Groups CanvasEngine and Pixi runtime modules into stable production chunks.
+ *
+ * Pixi registers renderer extensions during module evaluation. Keeping Pixi and
+ * CanvasEngine dependencies out of the app entry chunk avoids Rollup/Vite split
+ * chunks that can create circular ESM initialization in production builds.
+ */
+export function canvasengineManualChunks(id: string): string | void {
+  const normalizedId = normalizeModuleId(id);
+
+  if (
+    normalizedId.includes("/node_modules/pixi.js/") ||
+    normalizedId.includes("/node_modules/.pnpm/pixi.js@") ||
+    normalizedId.includes("/node_modules/@pixi/") ||
+    normalizedId.includes("/node_modules/.pnpm/@pixi+") ||
+    normalizedId.includes("/node_modules/pixi-") ||
+    normalizedId.includes("/node_modules/.pnpm/pixi-")
+  ) {
+    return "pixi";
+  }
+
+  if (
+    normalizedId.includes("/node_modules/canvasengine/") ||
+    normalizedId.includes("/node_modules/.pnpm/canvasengine@") ||
+    normalizedId.includes("/node_modules/@canvasengine/") ||
+    normalizedId.includes("/node_modules/.pnpm/@canvasengine+")
+  ) {
+    return "canvasengine";
+  }
+}
+
+function callManualChunks(manualChunks: ManualChunksOption | undefined, id: string, meta: any): string | void {
+  if (!manualChunks) return;
+
+  if (typeof manualChunks === "function") {
+    return manualChunks(id, meta);
+  }
+
+  const normalizedId = normalizeModuleId(id);
+  for (const [chunkName, modules] of Object.entries(manualChunks)) {
+    if (matchesAnyModule(normalizedId, modules.map(normalizeModuleId))) {
+      return chunkName;
+    }
+  }
+}
+
+export function withCanvasEngineManualChunks(
+  manualChunks?: ManualChunksOption
+): ManualChunksFunction {
+  return (id, meta) => {
+    return canvasengineManualChunks(id) ?? callManualChunks(manualChunks, id, meta);
+  };
+}
+
+function applyCanvasEngineManualChunks(config: any): void {
+  config.build ??= {};
+  config.build.rollupOptions ??= {};
+
+  const output = config.build.rollupOptions.output;
+  const applyToOutput = (outputOptions: any = {}) => ({
+    ...outputOptions,
+    manualChunks: withCanvasEngineManualChunks(outputOptions.manualChunks),
+  });
+
+  config.build.rollupOptions.output = Array.isArray(output)
+    ? output.map(applyToOutput)
+    : applyToOutput(output);
+}
+
 /**
  * Generates a short hash (8 characters, letters only) from a string
  * 
@@ -471,6 +551,11 @@ export default function canvasengine() {
 
   return {
     name: "vite-plugin-ce",
+    config(config: any, { command }: any) {
+      if (command === "build") {
+        applyCanvasEngineManualChunks(config);
+      }
+    },
     transform(code: string, id: string) {
       if (!filter(id)) return null;
       if (!warnedAboutGrammar) {

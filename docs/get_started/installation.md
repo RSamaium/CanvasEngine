@@ -27,3 +27,26 @@ export default defineConfig({
   plugins: [canvasengine()],
 });
 ```
+
+For production builds, the CanvasEngine plugin automatically keeps PixiJS and
+CanvasEngine runtime modules in stable chunks. If your project already defines
+custom Rollup chunks, keep them as usual; CanvasEngine chunks are applied first
+and your custom chunks are preserved.
+
+```ts
+import { defineConfig } from 'vite';
+import canvasengine, { withCanvasEngineManualChunks } from '@canvasengine/compiler';
+
+export default defineConfig({
+  plugins: [canvasengine()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: withCanvasEngineManualChunks((id) => {
+          if (id.includes('node_modules/lodash')) return 'vendor';
+        }),
+      },
+    },
+  },
+});
+```
