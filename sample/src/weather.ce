@@ -6,7 +6,7 @@
         speed={2}
         windDirection={0.38}
         windStrength={0.44}
-        density={200}
+        density
         maxDrops={100}
         topDown={true}
         />
@@ -14,5 +14,13 @@
 </Canvas>
 
 <script>
+    import { signal } from 'canvasengine'
   import { Weather } from '@canvasengine/presets'
+
+
+  const density = signal(1)
+
+  setInterval(() => {
+    density.update(n => n + 10)
+  }, 1000)
 </script>

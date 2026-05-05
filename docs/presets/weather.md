@@ -11,6 +11,9 @@
 - fog (RPG-style)
 - cloud (with optional sun rays)
 
+Rain mode combines scrolling streak layers with short ground impact splashes.
+Rain props are read reactively, including `speed`, `windDirection`, `windStrength`, `density`, `maxDrops`, and `topDown`.
+
 It supports static values and reactive signals, can be used inside or outside `Viewport`, and forwards display props like `zIndex` to the underlying `Mesh`.
 
 ## What Is Included
@@ -148,8 +151,8 @@ Important behavior:
 | `windDirection` | `number \| Signal<number>` | `0.0` | rain/snow | Horizontal wind direction |
 | `windStrength` | `number \| Signal<number>` | `0.2` | rain/snow | Wind influence |
 | `density` | `number \| Signal<number>` | `120.0` | all | Particle density or fog/cloud intensity |
-| `maxDrops` | `number \| Signal<number>` | `80.0` | rain/snow | Particle cap (`uMaxDrops`/`uMaxFlakes`) |
-| `topDown` | `boolean \| Signal<boolean>` | `true` | rain | Tunes the rain layer spacing for top-down maps. Use `false` for a flatter side-view overlay |
+| `maxDrops` | `number \| Signal<number>` | `80.0` | rain/snow | Rain impact cap / snowflake cap |
+| `topDown` | `boolean \| Signal<boolean>` | `true` | rain | Spreads impacts across the visible map. Use `false` to keep impacts near the bottom ground line |
 | `height` | `number \| Signal<number>` | `1.0` | fog/cloud | Vertical concentration |
 | `scale` | `number \| Signal<number>` | `2.0` | fog/cloud | Noise scale |
 | `sunIntensity` | `number \| Signal<number>` | `0.85` | cloud | Sun ray intensity |

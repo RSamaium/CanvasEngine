@@ -12,7 +12,9 @@ import {
   effect as watchEffect,
 } from "canvasengine";
 import {
+  Container as PixiContainer,
   Geometry,
+  Graphics as PixiGraphics,
   Shader,
   TilingSprite as PixiTilingSprite,
   Texture,
@@ -23,7 +25,16 @@ import { createFogShader, createCloudShader } from "./fog";
 
 const rainTextures = new Map<number, Texture>();
 
-const resolveValue = (value) => (typeof value === "function" ? value() : value);
+const resolveValue = (value: any) => (typeof value === "function" ? value() : value);
+
+type RainSplash = {
+  x: number;
+  y: number;
+  age: number;
+  life: number;
+  radius: number;
+  delay: number;
+};
 
 function seededRandom(seed: number) {
   let value = seed * 9301 + 49297;
@@ -47,13 +58,13 @@ function createRainTexture(seed = 1): Texture {
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.lineCap = "round";
 
-  for (let i = 0; i < 46; i++) {
+  for (let i = 0; i < 62; i++) {
     const x = random() * canvas.width;
     const y = random() * canvas.height;
-    const length = 14 + random() * 20;
-    const slant = 3 + random() * 7;
-    const alpha = 0.12 + random() * 0.18;
-    const lineWidth = random() > 0.82 ? 1.45 : 0.85;
+    const length = 18 + random() * 24;
+    const slant = 4 + random() * 8;
+    const alpha = 0.2 + random() * 0.22;
+    const lineWidth = random() > 0.76 ? 1.9 : 1.15;
     const gradient = context.createLinearGradient(x, y, x + slant, y + length);
 
     gradient.addColorStop(0, "rgba(220,235,255,0)");
@@ -75,49 +86,87 @@ function createRainTexture(seed = 1): Texture {
 }
 
 class RainTextureLayer extends DisplayObject(PixiTilingSprite) {
-  private tickSubscription;
+  private tickSubscription: any;
+  private widthInput = 1000;
+  private heightInput = 1000;
   private speedInput = 1;
   private windInput = 0;
   private windStrengthInput = 0;
   private fallScaleInput = 1;
+  private densityInput = 120;
+  private maxDropsInput = 80;
+  private topDownInput = true;
+  private topDownTileScale = { x: 1, y: 1 };
+  private sideTileScale = { x: 1, y: 1 };
+  private topDownAlpha = 0.5;
+  private sideAlpha = 0.4;
   private offsetX = 0;
   private offsetY = 0;
 
-  onUpdate(props) {
+  onUpdate(props: any) {
     super.onUpdate(props);
     if (props.texture) this.texture = props.texture;
-    if (props.tileScale) this.tileScale.set(props.tileScale.x, props.tileScale.y);
+    if (props.topDownTileScale) this.topDownTileScale = props.topDownTileScale;
+    if (props.sideTileScale) this.sideTileScale = props.sideTileScale;
+    if (props.topDownAlpha !== undefined) this.topDownAlpha = props.topDownAlpha;
+    if (props.sideAlpha !== undefined) this.sideAlpha = props.sideAlpha;
     if (props.startX !== undefined) this.offsetX = props.startX;
     if (props.startY !== undefined) this.offsetY = props.startY;
     if (props.speed !== undefined) this.speedInput = props.speed;
     if (props.windDirection !== undefined) this.windInput = props.windDirection;
     if (props.windStrength !== undefined) this.windStrengthInput = props.windStrength;
     if (props.fallScale !== undefined) this.fallScaleInput = props.fallScale;
-    if (props.width !== undefined) this.width = props.width;
-    if (props.height !== undefined) this.height = props.height;
+    if (props.density !== undefined) this.densityInput = props.density;
+    if (props.maxDrops !== undefined) this.maxDropsInput = props.maxDrops;
+    if (props.topDown !== undefined) this.topDownInput = props.topDown;
+    if (props.width !== undefined) {
+      this.widthInput = props.width;
+      this.width = Number(resolveValue(props.width)) || this.width;
+    }
+    if (props.height !== undefined) {
+      this.heightInput = props.height;
+      this.height = Number(resolveValue(props.height)) || this.height;
+    }
   }
 
-  async onMount(element, index) {
+  async onMount(element: any, index?: number) {
     await super.onMount(element, index);
+    this.widthInput = element.propObservables?.width ?? element.props.width ?? this.widthInput;
+    this.heightInput = element.propObservables?.height ?? element.props.height ?? this.heightInput;
     this.speedInput = element.propObservables?.speed ?? element.props.speed ?? this.speedInput;
     this.windInput = element.propObservables?.windDirection ?? element.props.windDirection ?? this.windInput;
     this.windStrengthInput = element.propObservables?.windStrength ?? element.props.windStrength ?? this.windStrengthInput;
-    this.tickSubscription = element.props.context?.tick?.observable?.subscribe(({ value }) => {
+    this.densityInput = element.propObservables?.density ?? element.props.density ?? this.densityInput;
+    this.maxDropsInput = element.propObservables?.maxDrops ?? element.props.maxDrops ?? this.maxDropsInput;
+    this.topDownInput = element.propObservables?.topDown ?? element.props.topDown ?? this.topDownInput;
+    this.tickSubscription = element.props.context?.tick?.observable?.subscribe(({ value }: any) => {
       const delta = Math.min(value?.deltaTime ?? 16.67, 50) / 16.67;
       const speed = Number(resolveValue(this.speedInput)) || 0;
       const windDirection = Number(resolveValue(this.windInput)) || 0;
       const windStrength = Number(resolveValue(this.windStrengthInput)) || 0;
       const fallScale = Number(resolveValue(this.fallScaleInput)) || 1;
+      const density = Number(resolveValue(this.densityInput)) || 120;
+      const maxDrops = Number(resolveValue(this.maxDropsInput)) || 80;
+      const topDown = resolveValue(this.topDownInput) !== false && resolveValue(this.topDownInput) !== 0;
+      const width = Number(resolveValue(this.widthInput)) || this.width;
+      const height = Number(resolveValue(this.heightInput)) || this.height;
+      const dropFactor = Math.min(Math.max(maxDrops / 100, 0.45), 1.65);
+      const intensity = Math.min(Math.max((density / 180) * dropFactor, 0.35), 1.55);
+      const tileScale = topDown ? this.topDownTileScale : this.sideTileScale;
       const fall = (7.2 + speed * 4.8) * fallScale * delta;
       const drift = windDirection * windStrength * 3.8 * delta;
 
+      this.width = width;
+      this.height = height;
+      this.alpha = (topDown ? this.topDownAlpha : this.sideAlpha) * intensity;
+      this.tileScale.set(tileScale.x, tileScale.y);
       this.offsetX += drift + fall * 0.12;
       this.offsetY += fall;
       this.tilePosition.set(this.offsetX, this.offsetY);
     });
   }
 
-  async onDestroy(parent, afterDestroy) {
+  async onDestroy(parent: any, afterDestroy: any) {
     this.tickSubscription?.unsubscribe?.();
     await super.onDestroy(parent, afterDestroy);
   }
@@ -125,7 +174,151 @@ class RainTextureLayer extends DisplayObject(PixiTilingSprite) {
 
 registerComponent("RainTextureLayer", RainTextureLayer);
 
-const RainLayer = (props) => createComponent("RainTextureLayer", props);
+const RainLayer = (props: any) => createComponent("RainTextureLayer", props);
+
+class RainImpactLayer extends DisplayObject(PixiContainer) {
+  private tickSubscription: any;
+  private graphics = new PixiGraphics();
+  private widthInput = 1000;
+  private heightInput = 1000;
+  private speedInput = 1;
+  private densityInput = 120;
+  private maxDropsInput = 80;
+  private topDownInput = true;
+  private windInput = 0;
+  private windStrengthInput = 0;
+  private lastTopDown: boolean | null = null;
+  private splashes: RainSplash[] = [];
+
+  onUpdate(props: any) {
+    super.onUpdate(props);
+    if (props.width !== undefined) {
+      this.widthInput = props.width;
+      this.width = Number(resolveValue(props.width)) || this.width;
+    }
+    if (props.height !== undefined) {
+      this.heightInput = props.height;
+      this.height = Number(resolveValue(props.height)) || this.height;
+    }
+    if (props.speed !== undefined) this.speedInput = props.speed;
+    if (props.density !== undefined) this.densityInput = props.density;
+    if (props.maxDrops !== undefined) this.maxDropsInput = props.maxDrops;
+    if (props.topDown !== undefined) this.topDownInput = props.topDown;
+    if (props.windDirection !== undefined) this.windInput = props.windDirection;
+    if (props.windStrength !== undefined) this.windStrengthInput = props.windStrength;
+  }
+
+  async onMount(element: any, index?: number) {
+    await super.onMount(element, index);
+    this.addChild(this.graphics);
+    this.widthInput = element.propObservables?.width ?? element.props.width ?? this.widthInput;
+    this.heightInput = element.propObservables?.height ?? element.props.height ?? this.heightInput;
+    this.speedInput = element.propObservables?.speed ?? element.props.speed ?? this.speedInput;
+    this.densityInput = element.propObservables?.density ?? element.props.density ?? this.densityInput;
+    this.maxDropsInput = element.propObservables?.maxDrops ?? element.props.maxDrops ?? this.maxDropsInput;
+    this.topDownInput = element.propObservables?.topDown ?? element.props.topDown ?? this.topDownInput;
+    this.windInput = element.propObservables?.windDirection ?? element.props.windDirection ?? this.windInput;
+    this.windStrengthInput = element.propObservables?.windStrength ?? element.props.windStrength ?? this.windStrengthInput;
+
+    this.tickSubscription = element.props.context?.tick?.observable?.subscribe(({ value }: any) => {
+      const delta = Math.min(value?.deltaTime ?? 16.67, 50) / 16.67;
+      this.drawImpacts(delta);
+    });
+  }
+
+  private numberValue(input: any, fallback: number) {
+    const value = Number(resolveValue(input));
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+  }
+
+  private booleanValue(input: any) {
+    const value = resolveValue(input);
+    return value !== false && value !== 0;
+  }
+
+  private resetSplash(splash: RainSplash, width: number, height: number, topDown: boolean, warm = false) {
+    splash.x = Math.random() * width;
+    splash.y = topDown
+      ? height * (0.12 + Math.random() * 0.78)
+      : height * (0.78 + Math.random() * 0.12);
+    splash.life = 0.24 + Math.random() * 0.22;
+    splash.radius = topDown ? 2.2 + Math.random() * 3.2 : 3.4 + Math.random() * 4.4;
+    splash.delay = 0.12 + Math.random() * 0.55;
+    splash.age = warm ? Math.random() * splash.life : -Math.random() * splash.delay;
+  }
+
+  private ensureSplashCount(count: number, width: number, height: number, topDown: boolean) {
+    while (this.splashes.length < count) {
+      const splash = { x: 0, y: 0, age: 0, life: 0.35, radius: 3, delay: 0.25 };
+      this.resetSplash(splash, width, height, topDown, true);
+      this.splashes.push(splash);
+    }
+    if (this.splashes.length > count) {
+      this.splashes.length = count;
+    }
+  }
+
+  private drawImpacts(delta: number) {
+    const width = this.numberValue(this.widthInput, 1000);
+    const height = this.numberValue(this.heightInput, 1000);
+    const speed = this.numberValue(this.speedInput, 1);
+    const density = this.numberValue(this.densityInput, 120);
+    const maxDrops = this.numberValue(this.maxDropsInput, 80);
+    const topDown = this.booleanValue(this.topDownInput);
+    const windDirection = Number(resolveValue(this.windInput)) || 0;
+    const windStrength = Number(resolveValue(this.windStrengthInput)) || 0;
+    const intensity = Math.min(Math.max(density / 180, 0.45), 1.55);
+    const count = Math.min(Math.round(maxDrops), Math.round((topDown ? 54 : 34) * intensity));
+    const g = this.graphics;
+
+    if (this.lastTopDown !== topDown) {
+      this.splashes.length = 0;
+      this.lastTopDown = topDown;
+    }
+
+    this.alpha = topDown ? 0.9 : 0.82;
+    this.ensureSplashCount(count, width, height, topDown);
+    g.clear();
+
+    for (const splash of this.splashes) {
+      splash.age += (0.045 + speed * 0.018) * delta;
+      if (splash.age > splash.life) {
+        this.resetSplash(splash, width, height, topDown);
+        continue;
+      }
+      if (splash.age < 0) continue;
+
+      const phase = splash.age / splash.life;
+      const fade = Math.pow(1 - phase, 1.7) * intensity;
+      const spread = splash.radius * (0.65 + phase * 2.6);
+      const yLift = topDown ? phase * 0.8 : phase * 1.6;
+      const drift = windDirection * windStrength * 7 * phase;
+      const x = splash.x + drift;
+      const y = splash.y - yLift;
+      const alpha = Math.min(0.62, 0.44 * fade);
+
+      g.ellipse(x, y, spread, splash.radius * (0.18 + phase * 0.16))
+        .stroke({ color: 0xcfe9ff, alpha, width: topDown ? 1.15 : 1.35 });
+
+      g.moveTo(x - spread * 1.15, y - 0.4)
+        .lineTo(x - spread * 0.35, y - splash.radius * 0.24)
+        .stroke({ color: 0xe5f6ff, alpha: alpha * 0.78, width: 1 });
+
+      g.moveTo(x + spread * 0.35, y - splash.radius * 0.24)
+        .lineTo(x + spread * 1.15, y - 0.4)
+        .stroke({ color: 0xe5f6ff, alpha: alpha * 0.78, width: 1 });
+    }
+  }
+
+  async onDestroy(parent: any, afterDestroy: any) {
+    this.tickSubscription?.unsubscribe?.();
+    await super.onDestroy(parent, afterDestroy);
+  }
+}
+
+registerComponent("RainImpactLayer", RainImpactLayer);
+
+const RainImpacts = (props: any) => createComponent("RainImpactLayer", props);
 
 export const RAIN_PRESETS = {
   lightRain: { effect: "rain", speed: 0.35, windDirection: 0.1, windStrength: 0.15, density: 110, maxDrops: 90 },
@@ -169,7 +362,7 @@ export const WEATHER_PRESETS = {
 /**
  * Weather Effect Component (optimized)
  */
-export const WeatherEffect = (options) => {
+export const WeatherEffect = (options: any) => {
   const {
     effect: effectType = signal('rain'),
     speed = signal(0.5),
@@ -195,7 +388,7 @@ export const WeatherEffect = (options) => {
   const viewHeight = signal(defaultResolution()[1]);
   const originX = signal(0);
   const originY = signal(0);
-  let viewportRef;
+  let viewportRef: any;
   const effectSignal =
     typeof effectType === "function" ? effectType : signal(effectType);
   const resolutionSignal = resolution
@@ -267,22 +460,22 @@ export const WeatherEffect = (options) => {
   const rayTwinkleSpeedSignal =
     typeof rayTwinkleSpeed === "function" ? rayTwinkleSpeed : signal(rayTwinkleSpeed);
 
-  const normalizeHeightValue = (value) =>
+  const normalizeHeightValue = (value: any) =>
     typeof value === "number" && Number.isFinite(value) ? value : 1.0;
-  const normalizeSunIntensityValue = (value) =>
+  const normalizeSunIntensityValue = (value: any) =>
     typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0.85;
-  const normalizeSunAngleValue = (value) =>
+  const normalizeSunAngleValue = (value: any) =>
     typeof value === "number" && Number.isFinite(value) ? value : 0.85;
-  const normalizeRaySpreadValue = (value) =>
+  const normalizeRaySpreadValue = (value: any) =>
     typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 1.0;
-  const normalizeRayTwinkleValue = (value) =>
+  const normalizeRayTwinkleValue = (value: any) =>
     typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0.45;
-  const normalizeRayTwinkleSpeedValue = (value) =>
+  const normalizeRayTwinkleSpeedValue = (value: any) =>
     typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 1.0;
-  const normalizeTopDownValue = (value) =>
+  const normalizeTopDownValue = (value: any) =>
     value === false || value === 0 ? 0 : 1;
-  const sunDirectionFromAngle = (angle) => [Math.cos(angle), Math.sin(angle)];
-  const normalizeResolutionValue = (value) => {
+  const sunDirectionFromAngle = (angle: number) => [Math.cos(angle), Math.sin(angle)];
+  const normalizeResolutionValue = (value: any) => {
     if (!Array.isArray(value)) return [1, 1];
     const width =
       typeof value[0] === "number" && Number.isFinite(value[0]) && value[0] > 0
@@ -296,8 +489,6 @@ export const WeatherEffect = (options) => {
   };
 
   if (effectSignal() === 'rain') {
-    const intensity = Math.min(Math.max(Number(densitySignal()) / 180, 0.35), 1.35);
-    const topDownMode = normalizeTopDownValue(topDownSignal()) === 1;
     return h(Container, {
       ...meshProps,
       width: viewWidth,
@@ -312,9 +503,14 @@ export const WeatherEffect = (options) => {
         speed: speedSignal,
         windDirection: windDirectionSignal,
         windStrength: windStrengthSignal,
+        density: densitySignal,
+        maxDrops: maxDropsSignal,
+        topDown: topDownSignal,
         fallScale: 1.08,
-        tileScale: { x: topDownMode ? 0.92 : 1.08, y: topDownMode ? 0.92 : 1.18 },
-        alpha: (topDownMode ? 0.42 : 0.36) * intensity,
+        topDownTileScale: { x: 0.92, y: 0.92 },
+        sideTileScale: { x: 1.08, y: 1.18 },
+        topDownAlpha: 0.58,
+        sideAlpha: 0.48,
         blendMode: "screen",
         startX: 0,
         startY: 0,
@@ -326,9 +522,14 @@ export const WeatherEffect = (options) => {
         speed: speedSignal,
         windDirection: windDirectionSignal,
         windStrength: windStrengthSignal,
+        density: densitySignal,
+        maxDrops: maxDropsSignal,
+        topDown: topDownSignal,
         fallScale: 0.82,
-        tileScale: { x: topDownMode ? 1.25 : 1.42, y: topDownMode ? 1.25 : 1.55 },
-        alpha: (topDownMode ? 0.28 : 0.22) * intensity,
+        topDownTileScale: { x: 1.25, y: 1.25 },
+        sideTileScale: { x: 1.42, y: 1.55 },
+        topDownAlpha: 0.38,
+        sideAlpha: 0.3,
         blendMode: "screen",
         startX: 53,
         startY: 37,
@@ -340,12 +541,28 @@ export const WeatherEffect = (options) => {
         speed: speedSignal,
         windDirection: windDirectionSignal,
         windStrength: windStrengthSignal,
+        density: densitySignal,
+        maxDrops: maxDropsSignal,
+        topDown: topDownSignal,
         fallScale: 0.64,
-        tileScale: { x: topDownMode ? 1.7 : 1.9, y: topDownMode ? 1.7 : 2.1 },
-        alpha: (topDownMode ? 0.18 : 0.14) * intensity,
+        topDownTileScale: { x: 1.7, y: 1.7 },
+        sideTileScale: { x: 1.9, y: 2.1 },
+        topDownAlpha: 0.24,
+        sideAlpha: 0.18,
         blendMode: "screen",
         startX: 101,
         startY: 73,
+      }),
+      h(RainImpacts, {
+        width: viewWidth,
+        height: viewHeight,
+        speed: speedSignal,
+        density: densitySignal,
+        maxDrops: maxDropsSignal,
+        topDown: topDownSignal,
+        windDirection: windDirectionSignal,
+        windStrength: windStrengthSignal,
+        blendMode: "screen",
       })
     );
   }
@@ -396,7 +613,7 @@ export const WeatherEffect = (options) => {
     throw new Error(`Unknown weather effect: ${effectSignal()}. Supported: rain, snow, fog, cloud`);
   }
 
-  const uniformGroup = new UniformGroup(uniformConfig);
+  const uniformGroup = new UniformGroup(uniformConfig as any);
 
   const shader = new Shader({
     glProgram,
