@@ -1,0 +1,43 @@
+<Canvas>
+  <Container>
+    <Text text="Issue #45: moving sprite with custom animation only" x={20} y={20} color="#ffffff" size={20} />
+    <Text text="This sheet has a 'run' animation, no 'stand' or 'walk'." x={20} y={52} color="#9dd6ff" size={14} />
+    <Sprite
+      x={x}
+      y={140}
+      sheet={{
+        definition: spritesheetDefinition,
+        playing: "run"
+      }}
+    />
+  </Container>
+</Canvas>
+
+<script>
+  import { animatedSignal } from 'canvasengine'
+
+  const x = animatedSignal(40, { duration: 1200 })
+  let right = true
+
+  setInterval(() => {
+    x.set(right ? 420 : 40)
+    right = !right
+  }, 1400)
+
+  const spritesheetDefinition = {
+    image: 'exp.png',
+    width: 200,
+    height: 200,
+    framesWidth: 1,
+    framesHeight: 1,
+    textures: {
+      run: {
+        animations: () => [
+          [
+            { frameX: 0, frameY: 0, time: 0 }
+          ]
+        ]
+      }
+    }
+  }
+</script>
