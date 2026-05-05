@@ -1,109 +1,18 @@
-<Canvas backgroundColor="#000">
-   
-    <Viewport worldWidth={2048} worldHeight={2048} clamp={clamp} sortableChildren={true}>
-        <NightAmbiant lightSpots={lightSpots} darkness={intensity}  darkColor="#0a1020"
-        fogColor="#0a1020" />
-
-        
-
-          <Sprite image="back.png" />  
-        
-         <Graphics
-            x={playerX}
-            y={playerY}
-            zIndex={1}
-            draw={(g) => {
-                g.clear();
-                g.beginFill(0xffcc00);
-                g.drawCircle(0, 0, 20);
-                g.endFill();
-            }}
-            controls
-            viewportFollow={true}
+<Canvas backgroundColor="#07111f">
+   <Container>
+        <Sprite image="./back.png" width={2048} height={2048} />
+        <Weather
+        effect="rain"
+        speed={2}
+        windDirection={0.38}
+        windStrength={0.44}
+        density={200}
+        maxDrops={100}
+        topDown={true}
         />
-
-        <!-- <Weather
-            effect={cloudPreset.effect}
-            speed={cloudPreset.speed}
-            density={cloudPreset.density}
-            height={cloudPreset.height}
-            scale={cloudPreset.scale}
-            sunIntensity={cloudPreset.sunIntensity}
-            sunAngle={cloudPreset.sunAngle}
-            raySpread={cloudPreset.raySpread}
-            rayTwinkle={cloudPreset.rayTwinkle}
-            rayTwinkleSpeed={cloudPreset.rayTwinkleSpeed}
-            zIndex={1000}
-        /> -->
-        
-        
-        
-        </Viewport>
-
-       
+   </Container>
 </Canvas>
 
 <script>
-    import { NightAmbiant, Weather, CLOUD_PRESETS } from '@canvasengine/presets'
-    import { signal } from 'canvasengine'
-
-    const clamp = {direction: 'all'};
-
-    const intensity = signal(0)
-    const cloudPreset = CLOUD_PRESETS.dramaticCrepuscularRays
-
-    setInterval(() => {
-        intensity.update(n => n + 0.1)
-    }, 1000)
-
-    const playerX = signal(400);
-    const playerY = signal(300);
-    const staticLights = [
-        { x: 280, y: 260, radius: 180, intensity: 0.95, flicker: true, flickerSpeed: 13 },
-        { x: 720, y: 540, radius: 130, intensity: 0.8, pulse: true, pulseSpeed: 1.5, phase: 1.4 },
-        { x: 1450, y: 360, radius: 160, intensity: 1.0, flicker: true, flickerSpeed: 9, phase: 0.6 },
-        { x: 1650, y: 1020, radius: 220, intensity: 0.7, pulse: true, pulseSpeed: 0.9, phase: 2.1 },
-    ];
-    const lightSpots = () => [
-        {
-            x: playerX,
-            y: playerY,
-            radius: 170,
-            intensity: 1.0,
-            flicker: true,
-            flickerSpeed: 15,
-        },
-        ...staticLights,
-    ];
-
-    const controls = signal({
-        right: {
-            repeat: true,
-            bind: "right",
-            keyDown() {
-                playerX.update((x) => Math.min(x + 10, 2028));
-            },
-        },
-        left: {
-            repeat: true,
-            bind: "left",
-            keyDown() {
-                playerX.update((x) => Math.max(x - 10, 20));
-            },
-        },
-        up: {
-            repeat: true,
-            bind: "up",
-            keyDown() {
-                playerY.update((y) => Math.max(y - 10, 20));
-            },
-        },
-        down: {
-            repeat: true,
-            bind: "down",
-            keyDown() {
-                playerY.update((y) => Math.min(y + 10, 2028));
-            },
-        },
-    })
+  import { Weather } from '@canvasengine/presets'
 </script>

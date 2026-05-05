@@ -4,7 +4,7 @@
 
 ## Overview
 
-`Weather` is a shader-based overlay preset for:
+`Weather` is an animated overlay preset for:
 
 - rain
 - snow
@@ -50,6 +50,7 @@ It supports static values and reactive signals, can be used inside or outside `V
     windStrength={rainPreset.windStrength}
     density={rainPreset.density}
     maxDrops={rainPreset.maxDrops}
+    topDown={true}
   />
 </Canvas>
 
@@ -148,6 +149,7 @@ Important behavior:
 | `windStrength` | `number \| Signal<number>` | `0.2` | rain/snow | Wind influence |
 | `density` | `number \| Signal<number>` | `120.0` | all | Particle density or fog/cloud intensity |
 | `maxDrops` | `number \| Signal<number>` | `80.0` | rain/snow | Particle cap (`uMaxDrops`/`uMaxFlakes`) |
+| `topDown` | `boolean \| Signal<boolean>` | `true` | rain | Tunes the rain layer spacing for top-down maps. Use `false` for a flatter side-view overlay |
 | `height` | `number \| Signal<number>` | `1.0` | fog/cloud | Vertical concentration |
 | `scale` | `number \| Signal<number>` | `2.0` | fog/cloud | Noise scale |
 | `sunIntensity` | `number \| Signal<number>` | `0.85` | cloud | Sun ray intensity |

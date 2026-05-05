@@ -1,16 +1,131 @@
 import {
+  Container,
+  createComponent,
+  DisplayObject,
   tick,
   useProps,
   h,
   Mesh,
+  registerComponent,
   signal,
   mount,
   effect as watchEffect,
 } from "canvasengine";
-import { Geometry, Shader, UniformGroup } from "pixi.js";
-import { createRainShader } from "./rain";
+import {
+  Geometry,
+  Shader,
+  TilingSprite as PixiTilingSprite,
+  Texture,
+  UniformGroup,
+} from "pixi.js";
 import { createSnowShader } from "./snow";
 import { createFogShader, createCloudShader } from "./fog";
+
+const rainTextures = new Map<number, Texture>();
+
+const resolveValue = (value) => (typeof value === "function" ? value() : value);
+
+function seededRandom(seed: number) {
+  let value = seed * 9301 + 49297;
+  return () => {
+    value = (value * 9301 + 49297) % 233280;
+    return value / 233280;
+  };
+}
+
+function createRainTexture(seed = 1): Texture {
+  if (rainTextures.has(seed)) return rainTextures.get(seed)!;
+  if (typeof document === "undefined") return Texture.WHITE;
+
+  const random = seededRandom(seed);
+  const canvas = document.createElement("canvas");
+  canvas.width = 192;
+  canvas.height = 192;
+  const context = canvas.getContext("2d");
+  if (!context) return Texture.WHITE;
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.lineCap = "round";
+
+  for (let i = 0; i < 46; i++) {
+    const x = random() * canvas.width;
+    const y = random() * canvas.height;
+    const length = 14 + random() * 20;
+    const slant = 3 + random() * 7;
+    const alpha = 0.12 + random() * 0.18;
+    const lineWidth = random() > 0.82 ? 1.45 : 0.85;
+    const gradient = context.createLinearGradient(x, y, x + slant, y + length);
+
+    gradient.addColorStop(0, "rgba(220,235,255,0)");
+    gradient.addColorStop(0.28, `rgba(220,235,255,${alpha})`);
+    gradient.addColorStop(0.72, `rgba(235,245,255,${alpha * 0.86})`);
+    gradient.addColorStop(1, "rgba(220,235,255,0)");
+
+    context.strokeStyle = gradient;
+    context.lineWidth = lineWidth;
+    context.beginPath();
+    context.moveTo(x, y);
+    context.lineTo(x + slant, y + length);
+    context.stroke();
+  }
+
+  const texture = Texture.from(canvas);
+  rainTextures.set(seed, texture);
+  return texture;
+}
+
+class RainTextureLayer extends DisplayObject(PixiTilingSprite) {
+  private tickSubscription;
+  private speedInput = 1;
+  private windInput = 0;
+  private windStrengthInput = 0;
+  private fallScaleInput = 1;
+  private offsetX = 0;
+  private offsetY = 0;
+
+  onUpdate(props) {
+    super.onUpdate(props);
+    if (props.texture) this.texture = props.texture;
+    if (props.tileScale) this.tileScale.set(props.tileScale.x, props.tileScale.y);
+    if (props.startX !== undefined) this.offsetX = props.startX;
+    if (props.startY !== undefined) this.offsetY = props.startY;
+    if (props.speed !== undefined) this.speedInput = props.speed;
+    if (props.windDirection !== undefined) this.windInput = props.windDirection;
+    if (props.windStrength !== undefined) this.windStrengthInput = props.windStrength;
+    if (props.fallScale !== undefined) this.fallScaleInput = props.fallScale;
+    if (props.width !== undefined) this.width = props.width;
+    if (props.height !== undefined) this.height = props.height;
+  }
+
+  async onMount(element, index) {
+    await super.onMount(element, index);
+    this.speedInput = element.propObservables?.speed ?? element.props.speed ?? this.speedInput;
+    this.windInput = element.propObservables?.windDirection ?? element.props.windDirection ?? this.windInput;
+    this.windStrengthInput = element.propObservables?.windStrength ?? element.props.windStrength ?? this.windStrengthInput;
+    this.tickSubscription = element.props.context?.tick?.observable?.subscribe(({ value }) => {
+      const delta = Math.min(value?.deltaTime ?? 16.67, 50) / 16.67;
+      const speed = Number(resolveValue(this.speedInput)) || 0;
+      const windDirection = Number(resolveValue(this.windInput)) || 0;
+      const windStrength = Number(resolveValue(this.windStrengthInput)) || 0;
+      const fallScale = Number(resolveValue(this.fallScaleInput)) || 1;
+      const fall = (7.2 + speed * 4.8) * fallScale * delta;
+      const drift = windDirection * windStrength * 3.8 * delta;
+
+      this.offsetX += drift + fall * 0.12;
+      this.offsetY += fall;
+      this.tilePosition.set(this.offsetX, this.offsetY);
+    });
+  }
+
+  async onDestroy(parent, afterDestroy) {
+    this.tickSubscription?.unsubscribe?.();
+    await super.onDestroy(parent, afterDestroy);
+  }
+}
+
+registerComponent("RainTextureLayer", RainTextureLayer);
+
+const RainLayer = (props) => createComponent("RainTextureLayer", props);
 
 export const RAIN_PRESETS = {
   lightRain: { effect: "rain", speed: 0.35, windDirection: 0.1, windStrength: 0.15, density: 110, maxDrops: 90 },
@@ -62,6 +177,7 @@ export const WeatherEffect = (options) => {
     windStrength = signal(0.2),
     density = signal(120.0),  // Reduced default density for better performance
     maxDrops = signal(80.0),  // Reduced default maxDrops for better performance
+    topDown = signal(true),  // Full-screen rain tuned for top-down maps by default
     height = signal(1.0),  // Fog/cloud height parameter (0 = bottom, 1 = full)
     scale = signal(2.0),  // Fog noise scale parameter
     sunIntensity = signal(0.85),  // Cloud sunlight shaft intensity
@@ -134,6 +250,8 @@ export const WeatherEffect = (options) => {
     typeof density === "function" ? density : signal(density);
   const maxDropsSignal =
     typeof maxDrops === "function" ? maxDrops : signal(maxDrops);
+  const topDownSignal =
+    typeof topDown === "function" ? topDown : signal(topDown);
   const heightSignal =
     typeof height === "function" ? height : signal(height);
   const scaleSignal =
@@ -161,6 +279,8 @@ export const WeatherEffect = (options) => {
     typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0.45;
   const normalizeRayTwinkleSpeedValue = (value) =>
     typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 1.0;
+  const normalizeTopDownValue = (value) =>
+    value === false || value === 0 ? 0 : 1;
   const sunDirectionFromAngle = (angle) => [Math.cos(angle), Math.sin(angle)];
   const normalizeResolutionValue = (value) => {
     if (!Array.isArray(value)) return [1, 1];
@@ -175,21 +295,65 @@ export const WeatherEffect = (options) => {
     return [width, height];
   };
 
+  if (effectSignal() === 'rain') {
+    const intensity = Math.min(Math.max(Number(densitySignal()) / 180, 0.35), 1.35);
+    const topDownMode = normalizeTopDownValue(topDownSignal()) === 1;
+    return h(Container, {
+      ...meshProps,
+      width: viewWidth,
+      height: viewHeight,
+      x: originX,
+      y: originY,
+    },
+      h(RainLayer, {
+        texture: createRainTexture(11),
+        width: viewWidth,
+        height: viewHeight,
+        speed: speedSignal,
+        windDirection: windDirectionSignal,
+        windStrength: windStrengthSignal,
+        fallScale: 1.08,
+        tileScale: { x: topDownMode ? 0.92 : 1.08, y: topDownMode ? 0.92 : 1.18 },
+        alpha: (topDownMode ? 0.42 : 0.36) * intensity,
+        blendMode: "screen",
+        startX: 0,
+        startY: 0,
+      }),
+      h(RainLayer, {
+        texture: createRainTexture(29),
+        width: viewWidth,
+        height: viewHeight,
+        speed: speedSignal,
+        windDirection: windDirectionSignal,
+        windStrength: windStrengthSignal,
+        fallScale: 0.82,
+        tileScale: { x: topDownMode ? 1.25 : 1.42, y: topDownMode ? 1.25 : 1.55 },
+        alpha: (topDownMode ? 0.28 : 0.22) * intensity,
+        blendMode: "screen",
+        startX: 53,
+        startY: 37,
+      }),
+      h(RainLayer, {
+        texture: createRainTexture(47),
+        width: viewWidth,
+        height: viewHeight,
+        speed: speedSignal,
+        windDirection: windDirectionSignal,
+        windStrength: windStrengthSignal,
+        fallScale: 0.64,
+        tileScale: { x: topDownMode ? 1.7 : 1.9, y: topDownMode ? 1.7 : 2.1 },
+        alpha: (topDownMode ? 0.18 : 0.14) * intensity,
+        blendMode: "screen",
+        startX: 101,
+        startY: 73,
+      })
+    );
+  }
+
   let glProgram;
   let uniformConfig;
 
-  if (effectSignal() === 'rain') {
-    glProgram = createRainShader();
-    uniformConfig = {
-      uTime: { value: 0, type: "f32" },
-      uResolution: { value: normalizeResolutionValue(resolutionSignal()), type: "vec2<f32>" },
-      uRainSpeed: { value: speedSignal(), type: "f32" },
-      uWindDirection: { value: windDirectionSignal(), type: "f32" },
-      uWindStrength: { value: windStrengthSignal(), type: "f32" },
-      uRainDensity: { value: densitySignal(), type: "f32" },
-      uMaxDrops: { value: maxDropsSignal(), type: "f32" },
-    };
-  } else if (effectSignal() === 'snow') {
+  if (effectSignal() === 'snow') {
     glProgram = createSnowShader();
     uniformConfig = {
       uTime: { value: 0, type: "f32" },
@@ -257,6 +421,7 @@ export const WeatherEffect = (options) => {
   let prevSpeed = speedSignal();
   let prevDensity = densitySignal();
   let prevMaxDrops = maxDropsSignal();
+  let prevTopDown = normalizeTopDownValue(topDownSignal());
   let prevHeight = heightSignal();
   let prevScale = scaleSignal();
   let prevSunIntensity = normalizeSunIntensityValue(sunIntensitySignal());
@@ -341,6 +506,12 @@ export const WeatherEffect = (options) => {
       if (currentMaxDrops !== prevMaxDrops) {
         uniformGroup.uniforms.uMaxDrops = currentMaxDrops;
         prevMaxDrops = currentMaxDrops;
+      }
+
+      const currentTopDown = normalizeTopDownValue(topDownSignal());
+      if (currentTopDown !== prevTopDown) {
+        uniformGroup.uniforms.uRainTopDown = currentTopDown;
+        prevTopDown = currentTopDown;
       }
     } else if (effectSignal() === 'snow') {
       // Only update snow-specific uniforms if they changed
