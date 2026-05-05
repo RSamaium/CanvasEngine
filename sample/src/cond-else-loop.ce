@@ -1,0 +1,64 @@
+<Canvas>
+  <Container>
+    <Text text="Issue #53: @for inside @else cleanup" x={20} y={20} color="#ffffff" size={20} />
+    <Text text={statusText} x={20} y={52} color="#9dd6ff" size={14} />
+
+    @if (showFallback) {
+      <Container x={20} y={100}>
+        <Text text="IF branch" x={0} y={0} color="#53d769" size={18} />
+        <Text text="The previous @else loop must be gone." x={0} y={28} color="#ffffff" size={14} />
+      </Container>
+    }
+    @else {
+      <Container x={20} y={100}>
+        <Text text="ELSE branch list" x={0} y={0} color="#f8c555" size={18} />
+        @for (item of items) {
+          <Text text={item.label} x={0} y={item.y} color={item.color} size={16} />
+        }
+      </Container>
+    }
+  </Container>
+</Canvas>
+
+<script>
+  import { computed, signal } from 'canvasengine'
+
+  const showFallback = signal(false)
+  const items = signal([
+    { label: 'A - should disappear on IF', y: 34, color: '#ffffff' },
+    { label: 'B - should disappear on IF', y: 62, color: '#ffffff' },
+    { label: 'C - should disappear on IF', y: 90, color: '#ffffff' },
+  ])
+
+  const statusText = computed(() =>
+    showFallback()
+      ? 'Showing IF branch'
+      : `Showing ELSE branch with ${items().length} item(s)`
+  )
+
+  let step = 0
+  setInterval(() => {
+    step = (step + 1) % 4
+
+    if (step === 0) {
+      showFallback.set(false)
+      items.set([
+        { label: 'A - should disappear on IF', y: 34, color: '#ffffff' },
+        { label: 'B - should disappear on IF', y: 62, color: '#ffffff' },
+        { label: 'C - should disappear on IF', y: 90, color: '#ffffff' },
+      ])
+    } else if (step === 1) {
+      items.set([
+        { label: 'Only one item remains', y: 34, color: '#53d769' },
+      ])
+    } else if (step === 2) {
+      showFallback.set(true)
+    } else {
+      showFallback.set(false)
+      items.set([
+        { label: 'Fresh item after IF branch', y: 34, color: '#9dd6ff' },
+        { label: 'No stale old rows should remain', y: 62, color: '#9dd6ff' },
+      ])
+    }
+  }, 1600)
+</script>
