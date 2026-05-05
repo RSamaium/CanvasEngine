@@ -20,17 +20,26 @@
         <div class="hero-text">
           <h1 class="hero-title">
             <img src="/logo.png" alt="Canvas Engine" class="logo" />
+            <span>Build 2D games faster with AI</span>
           </h1>
           <p class="hero-subtitle">
-            A reactive HTML5 Canvas management library built on top of PixiJS
+            Install the CanvasEngine skill, prompt your coding agent, and start from a playable game scene.
           </p>
           <p class="hero-description">
-            Component-oriented approach to canvas rendering, similar to modern frontend frameworks.
-            Build interactive games and applications with ease.
+            CanvasEngine gives AI assistants the framework context they need to generate .ce components,
+            tilemaps, controls, joystick input, sound, weather, FX particles, DOM overlays, and reactive game logic.
           </p>
+          <div class="hero-command" aria-label="Install the CanvasEngine AI skill">
+            <span class="command-label">Install AI skill</span>
+            <code>npx skills add https://github.com/RSamaium/CanvasEngine</code>
+          </div>
+          <div class="hero-prompt">
+            <span>Try asking:</span>
+            <strong>create mario style game</strong>
+          </div>
           <div class="hero-actions">
             <a href="/get_started/installation" class="btn btn-primary">
-              Get Started
+              Start Building
             </a>
             <a href="https://github.com/RSamaium/CanvasEngine" class="btn btn-secondary" target="_blank">
               <svg class="github-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -41,17 +50,14 @@
           </div>
         </div>
         <div class="hero-visual">
-          <div class="canvas-preview">
-            <div class="canvas-mock">
-              <div class="canvas-element sprite"></div>
-              <div class="canvas-element container">
-                <div class="canvas-element text">Canvas Engine</div>
-                <div class="canvas-element graphic"></div>
-              </div>
-              <div class="canvas-element particle"></div>
-              <div class="canvas-element particle"></div>
-              <div class="canvas-element particle"></div>
-            </div>
+          <div class="hero-playground">
+            <Playground
+              title="Playable CanvasEngine mini project"
+              description="Use arrow keys to move the player, drag it with the pointer, or switch to Code and edit the scene."
+              :files="heroDemoFiles"
+              :height="520"
+              defaultViewMode="preview"
+            />
           </div>
         </div>
       </div>
@@ -60,7 +66,7 @@
     <!-- Features Section -->
     <section class="features">
       <div class="features-container">
-        <h2 class="section-title">Why Canvas Engine?</h2>
+        <h2 class="section-title">Everything for 2D games</h2>
         <div class="features-grid">
           <div class="feature-card">
             <div class="feature-icon">
@@ -68,8 +74,8 @@
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
               </svg>
             </div>
-            <h3>Reactive Components</h3>
-            <p>Build interactive canvas applications with reactive components that automatically update when data changes.</p>
+            <h3>Reactive game components</h3>
+            <p>Compose scenes with .ce components, signals, lifecycle hooks, template syntax, sprites, graphics, text, and canvas layouts.</p>
           </div>
           
           <div class="feature-card">
@@ -80,8 +86,8 @@
                 <line x1="12" y1="17" x2="12" y2="21"/>
               </svg>
             </div>
-            <h3>Flexbox in Canvas</h3>
-            <p>Use familiar CSS Flexbox layout system directly in your canvas applications for responsive designs.</p>
+            <h3>Tilemaps and worlds</h3>
+            <p>Render Tiled Map Editor worlds, object layers, animated tiles, and large maps with Viewport pan, zoom, clamp, and culling.</p>
           </div>
           
           <div class="feature-card">
@@ -90,8 +96,8 @@
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
             </div>
-            <h3>Easy Animations</h3>
-            <p>Create smooth animations with a simple and intuitive animation system built for performance.</p>
+            <h3>Weather and ambience</h3>
+            <p>Add rain, snow, fog, clouds, night ambience, shadows, footprints, and atmospheric presets directly to your scenes.</p>
           </div>
           
           <div class="feature-card">
@@ -103,8 +109,8 @@
                 <path d="M7.5 8a2.5 2.5 0 010-5A4.8 8 0 0112 8a4.8 8 0 014.5-5 2.5 2.5 0 010 5"/>
               </svg>
             </div>
-            <h3>Input Controls</h3>
-            <p>Support for keyboard, gamepad (ready when connected), and virtual joystick controls out of the box.</p>
+            <h3>Controls for every device</h3>
+            <p>Wire gameplay to keyboard, gamepad, and virtual joystick controls, with drag and drop for pointer-driven interactions.</p>
           </div>
           
           <div class="feature-card">
@@ -115,8 +121,8 @@
                 <line x1="12" y1="22.08" x2="12" y2="12"/>
               </svg>
             </div>
-            <h3>Tiled Map Support</h3>
-            <p>Seamless integration with Tiled Map Editor for creating complex game worlds and levels.</p>
+            <h3>Sound and FX particles</h3>
+            <p>Trigger sound, ambience, hit sparks, smoke, magic bursts, fire, pickups, explosions, and custom particle effects.</p>
           </div>
           
           <div class="feature-card">
@@ -127,26 +133,8 @@
                 <circle cx="18" cy="16" r="3"/>
               </svg>
             </div>
-            <h3>Audio System</h3>
-            <p>Built-in audio system with particle emitters for creating immersive gaming experiences.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Examples Section -->
-    <section class="examples">
-      <div class="examples-container">
-        <h2 class="section-title">Interactive Examples</h2>
-        <p class="section-description">Try these examples directly in your browser</p>
-        
-        <div class="examples-grid">
-          <div v-for="example in examples" :key="example.title" class="example-item">
-            <Playground 
-              :title="example.title"
-              :description="example.description"
-              :files="example.files" 
-            />
+            <h3>Canvas and DOM together</h3>
+            <p>Use DOMContainer to mix HTML overlays, menus, forms, and UI panels with the same game scene structure.</p>
           </div>
         </div>
       </div>
@@ -157,7 +145,225 @@
 
 <script setup>
 import Playground from './Playground.vue'
-import examples from './example'
+
+const heroDemoFiles = {
+  'app.ce': `
+<Canvas backgroundColor="#111827" width="100%" height="100%" antialias="true">
+  <Container width="100%" height="100%">
+    <Container x={worldX} y={worldY}>
+      @for (tile of tiles) {
+        <Sprite image="/base.png" rectangle={{ x: tile.sx, y: tile.sy, width: 32, height: 32 }} x={tile.x} y={tile.y} width={48} height={48} />
+      }
+
+      @for (prop of props) {
+        <Sprite image="/base.png" rectangle={{ x: prop.sx, y: prop.sy, width: prop.sw, height: prop.sh }} x={prop.x} y={prop.y} width={prop.w} height={prop.h} />
+      }
+
+      <Sprite x={playerX} y={playerY} sheet={{
+        definition: heroDefinition,
+        playing: animation,
+        params: { direction }
+      }} controls={controls} drag={drag} />
+
+      <Circle x={sparkX} y={sparkY} radius={3} color="#fff176" alpha={sparkAlpha} />
+      <Circle x={sparkX2} y={sparkY2} radius={3} color="#80deea" alpha={sparkAlpha} />
+      <Circle x={sparkX3} y={sparkY3} radius={4} color="#ff8a65" alpha={sparkAlpha} />
+
+      <Sprite image="/LightShadow_pipo.png" x={-24} y={-12} width={360} height={260} alpha={0.26} />
+    </Container>
+
+    <DOMContainer x={18} y={18}>
+      <div class="hud">
+        <strong>RPG mini scene</strong>
+        <span>hero.png</span>
+        <span>base.png</span>
+        <span>controls + drag</span>
+      </div>
+    </DOMContainer>
+
+    <Text text="Move with arrows, drag the hero, switch to Code to edit" x={20} y={382} color="#ffffff" size={15} fontFamily="Arial" />
+  </Container>
+</Canvas>
+
+<script>
+  import { signal, computed, tick } from "canvasengine";
+
+  const tileSize = 48;
+  const worldX = signal(36);
+  const worldY = signal(52);
+  const playerX = signal(330);
+  const playerY = signal(210);
+  const clock = signal(0);
+  const direction = signal("down");
+  const animation = signal("stand");
+  const speed = 7;
+
+  const ground = { sx: 0, sy: 0 };
+  const path = { sx: 0, sy: 192 };
+  const flowers = { sx: 0, sy: 128 };
+
+  const layout = [
+    "gggggggggggggg",
+    "gggffffggggggg",
+    "gggppppppppggg",
+    "gggppggggppggg",
+    "gggppggggppggg",
+    "gggppppppppggg",
+    "ggggggffgggggg",
+  ];
+
+  const tiles = layout.flatMap((row, y) =>
+    [...row].map((type, x) => {
+      const source = type === "p" ? path : type === "f" ? flowers : ground;
+      return {
+        x: x * tileSize,
+        y: y * tileSize,
+        sx: source.sx,
+        sy: source.sy,
+      };
+    })
+  );
+
+  const props = [
+    { x: 36, y: 18, sx: 0, sy: 0, sw: 32, sh: 64, w: 58, h: 92 },
+    { x: 112, y: 22, sx: 32, sy: 0, sw: 32, sh: 64, w: 58, h: 92 },
+    { x: 580, y: 24, sx: 64, sy: 0, sw: 32, sh: 64, w: 58, h: 92 },
+    { x: 94, y: 270, sx: 96, sy: 192, sw: 32, sh: 32, w: 44, h: 44 },
+    { x: 532, y: 256, sx: 128, sy: 192, sw: 32, sh: 32, w: 44, h: 44 },
+    { x: 478, y: 72, sx: 32, sy: 256, sw: 32, sh: 32, w: 48, h: 48 },
+    { x: 628, y: 202, sx: 0, sy: 320, sw: 32, sh: 32, w: 48, h: 48 },
+  ];
+
+  const heroDefinition = {
+    id: "docs-hero",
+    image: "/hero.png",
+    width: 96,
+    height: 128,
+    framesWidth: 3,
+    framesHeight: 4,
+    rectWidth: 32,
+    rectHeight: 32,
+    scale: [1.55, 1.55],
+    textures: {
+      stand: {
+        animations: ({ direction }) => [
+          [{ time: 0, frameX: 1, frameY: rowFor(direction) }],
+        ],
+      },
+      walk: {
+        animations: ({ direction }) => [
+          [
+            { time: 0, frameX: 0, frameY: rowFor(direction) },
+            { time: 8, frameX: 1, frameY: rowFor(direction) },
+            { time: 16, frameX: 2, frameY: rowFor(direction) },
+            { time: 24, frameX: 1, frameY: rowFor(direction) },
+          ],
+        ],
+      },
+    },
+  };
+
+  function rowFor(value) {
+    return {
+      down: 0,
+      left: 1,
+      right: 2,
+      up: 3,
+    }[value] ?? 0;
+  }
+
+  const markMove = (value) => {
+    direction.set(value);
+    animation.set("walk");
+    clearTimeout(markMove.timer);
+    markMove.timer = setTimeout(() => animation.set("stand"), 130);
+  };
+
+  const controls = signal({
+    left: {
+      repeat: true,
+      bind: "left",
+      keyDown() {
+        markMove("left");
+        playerX.update((x) => Math.max(90, x - speed));
+      },
+    },
+    right: {
+      repeat: true,
+      bind: "right",
+      keyDown(_, payload) {
+        markMove("right");
+        playerX.update((x) => Math.min(560, x + speed * (payload?.power ?? 1)));
+      },
+    },
+    up: {
+      repeat: true,
+      bind: "up",
+      keyDown() {
+        markMove("up");
+        playerY.update((y) => Math.max(86, y - speed));
+      },
+    },
+    down: {
+      repeat: true,
+      bind: "down",
+      keyDown() {
+        markMove("down");
+        playerY.update((y) => Math.min(282, y + speed));
+      },
+    },
+    joystick: {
+      enabled: true,
+      moveInterval: 40,
+      threshold: 0.1,
+    },
+  });
+
+  const drag = {
+    direction: "all",
+    start() {
+      animation.set("walk");
+    },
+    end(event) {
+      animation.set("stand");
+    },
+  };
+
+  const sparkAlpha = computed(() => 0.25 + Math.abs(Math.sin(clock() * 2)) * 0.75);
+  const sparkX = computed(() => playerX() + 42 + Math.sin(clock() * 3) * 16);
+  const sparkY = computed(() => playerY() + 10 + Math.cos(clock() * 2) * 14);
+  const sparkX2 = computed(() => playerX() + 18 + Math.cos(clock() * 4) * 14);
+  const sparkY2 = computed(() => playerY() + 32 + Math.sin(clock() * 3) * 10);
+  const sparkX3 = computed(() => playerX() + 36 + Math.sin(clock() * 5) * 12);
+  const sparkY3 = computed(() => playerY() + 42 + Math.cos(clock() * 5) * 12);
+
+  tick(() => {
+    clock.update((value) => value + 0.07);
+  });
+<\/script>
+
+<style>
+  .hud {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.74);
+    border: 1px solid rgba(18, 50, 74, 0.12);
+    border-radius: 999px;
+    color: #12324a;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 7px 10px;
+    font: 700 12px Arial, sans-serif;
+  }
+
+  .hud span {
+    background: rgba(66, 184, 131, 0.18);
+    border-radius: 999px;
+    padding: 3px 8px;
+  }
+<\/style>
+`,
+}
 </script>
 
 <style scoped>
@@ -249,31 +455,51 @@ import examples from './example'
 
 /* Hero Section */
 .hero {
-  background: linear-gradient(135deg, var(--bg-color) 0%, #f1f5f9 100%);
-  padding: 8rem 2rem 4rem;
-  min-height: 70vh;
+  background:
+    radial-gradient(circle at 78% 18%, rgba(66, 184, 131, 0.22), transparent 28%),
+    radial-gradient(circle at 12% 16%, rgba(100, 108, 255, 0.2), transparent 32%),
+    linear-gradient(135deg, var(--bg-color) 0%, #f1f5f9 100%);
+  padding: 8rem 2rem 5rem;
+  min-height: 82vh;
   display: flex;
   align-items: center;
 }
 
 .dark .hero {
-  background: linear-gradient(135deg, var(--bg-color) 0%, #1e293b 100%);
+  background:
+    radial-gradient(circle at 78% 18%, rgba(66, 184, 131, 0.2), transparent 28%),
+    radial-gradient(circle at 12% 16%, rgba(100, 108, 255, 0.22), transparent 32%),
+    linear-gradient(135deg, var(--bg-color) 0%, #1e293b 100%);
 }
 
 .hero-content {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 0.9fr) minmax(480px, 1.1fr);
   gap: 4rem;
   align-items: center;
 }
 
 .hero-title {
-  font-size: 3.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.25rem;
+  font-size: 4rem;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1;
   margin-bottom: 1.5rem;
+  color: var(--text-color);
+}
+
+.logo {
+  width: min(320px, 100%);
+  height: auto;
+}
+
+.hero-title span {
+  max-width: 720px;
 }
 
 .gradient-text {
@@ -284,17 +510,64 @@ import examples from './example'
 }
 
 .hero-subtitle {
-  font-size: 1.5rem;
+  font-size: 1.45rem;
   color: var(--text-color);
   margin-bottom: 1rem;
   font-weight: 600;
+  line-height: 1.35;
 }
 
 .hero-description {
   font-size: 1.1rem;
   color: var(--text-color-light);
   line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.hero-command {
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.85rem;
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.18);
+  color: #ffffff;
+  margin-bottom: 1rem;
+  max-width: 640px;
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+.command-label {
+  color: #9ca3af;
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.55rem;
+  text-transform: uppercase;
+}
+
+.hero-command code {
+  color: #ffffff;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.96rem;
+  white-space: nowrap;
+}
+
+.hero-prompt {
+  align-items: center;
+  color: var(--text-color-light);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
   margin-bottom: 2rem;
+}
+
+.hero-prompt strong {
+  background: rgba(66, 184, 131, 0.16);
+  border: 1px solid rgba(66, 184, 131, 0.35);
+  border-radius: 999px;
+  color: var(--text-color);
+  padding: 0.45rem 0.75rem;
 }
 
 .hero-actions {
@@ -360,104 +633,40 @@ import examples from './example'
   height: 1.2rem;
 }
 
-/* Canvas Preview */
-.canvas-preview {
-  perspective: 1000px;
+/* Hero Demo */
+.hero-visual {
+  min-width: 0;
 }
 
-.canvas-mock {
-  width: 400px;
-  height: 300px;
-  background: #1a1a1a;
-  border-radius: 1rem;
-  position: relative;
+.hero-playground {
+  border-radius: 1.25rem;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28);
   overflow: hidden;
-  transform: rotateY(-15deg) rotateX(5deg);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  animation: float 6s ease-in-out infinite;
+  transform: rotateY(-5deg) rotateX(2deg);
 }
 
-.canvas-element {
-  position: absolute;
-  border-radius: 0.5rem;
+.hero-playground :deep(.playground-container) {
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  border-radius: 1.25rem;
+  margin: 0;
 }
 
-.sprite {
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(45deg, #ff6b6b, #feca57);
-  top: 50px;
-  left: 50px;
-  animation: bounce 2s ease-in-out infinite;
+.hero-playground :deep(.playground-header) {
+  padding: 1rem;
 }
 
-.container {
-  width: 200px;
-  height: 100px;
-  border: 2px dashed #646cff;
-  top: 100px;
-  left: 150px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+.hero-playground :deep(.header-content h3) {
+  font-size: 1.05rem;
 }
 
-.text {
-  color: white;
-  font-size: 14px;
-  font-weight: bold;
-  position: static;
-  margin-bottom: 10px;
+.hero-playground :deep(.playground-description) {
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
-.graphic {
-  width: 40px;
-  height: 40px;
-  background: #42b883;
-  position: static;
-  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-}
-
-.particle {
-  width: 6px;
-  height: 6px;
-  background: #feca57;
-  border-radius: 50%;
-  animation: particle 3s linear infinite;
-}
-
-.particle:nth-child(4) {
-  top: 200px;
-  left: 100px;
-  animation-delay: 0s;
-}
-
-.particle:nth-child(5) {
-  top: 180px;
-  left: 120px;
-  animation-delay: 1s;
-}
-
-.particle:nth-child(6) {
-  top: 220px;
-  left: 80px;
-  animation-delay: 2s;
-}
-
-@keyframes float {
-  0%, 100% { transform: rotateY(-15deg) rotateX(5deg) translateY(0px); }
-  50% { transform: rotateY(-15deg) rotateX(5deg) translateY(-20px); }
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-}
-
-@keyframes particle {
-  0% { opacity: 1; transform: translateY(0px) scale(1); }
-  100% { opacity: 0; transform: translateY(-50px) scale(0.5); }
+.hero-playground :deep(.preview-header),
+.hero-playground :deep(.console-accordion) {
+  display: none;
 }
 
 /* Features Section */
@@ -540,17 +749,6 @@ import examples from './example'
   flex-grow: 1;
 }
 
-/* Examples Section */
-.examples {
-  padding: 6rem 2rem;
-  background: var(--bg-color);
-}
-
-.examples-container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
 .section-description {
   text-align: center;
   font-size: 1.2rem;
@@ -559,16 +757,6 @@ import examples from './example'
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
-}
-
-.examples-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 4rem;
-}
-
-.example-item {
-  width: 100%;
 }
 
 /* Code Example Section */
@@ -696,19 +884,18 @@ import examples from './example'
   }
   
   .hero-title {
+    align-items: center;
     font-size: 2.5rem;
   }
-  
-  .canvas-mock {
-    width: 300px;
-    height: 225px;
+
+  .hero-playground {
     transform: none;
   }
   
   .code-showcase {
     grid-template-columns: 1fr;
   }
-  
+
   .features-grid {
     grid-template-columns: 1fr;
     gap: 1.5rem;
@@ -761,7 +948,7 @@ import examples from './example'
   .features {
     padding: 4rem 1rem;
   }
-  
+
   .code-example {
     padding: 4rem 1rem;
   }
