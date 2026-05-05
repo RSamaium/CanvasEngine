@@ -109,6 +109,33 @@ describe("loop with array", () => {
     expect(container.componentInstance.children[0].x).toBe(4);
     expect(container.componentInstance.children[1].x).toBe(5);
   });
+
+  test('keeps an initially empty loop before the following loop when it receives items later', async () => {
+    const firstItems = signal<string[]>([]);
+    const secondItems = signal(['second']);
+
+    const value = [
+      loop(firstItems, (item) => h(Text, { text: item })),
+      loop(secondItems, (item) => h(Text, { text: item }))
+    ];
+
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+
+    expect(children.map((child) => child.text)).toEqual(['second']);
+
+    firstItems.set(['first']);
+
+    await vi.waitFor(() => {
+      expect(children.map((child) => child.text)).toEqual(['first', 'second']);
+    });
+
+    firstItems().push('first-2');
+
+    await vi.waitFor(() => {
+      expect(children.map((child) => child.text)).toEqual(['first', 'first-2', 'second']);
+    });
+  });
 });
 
 describe("loop with object", () => {
