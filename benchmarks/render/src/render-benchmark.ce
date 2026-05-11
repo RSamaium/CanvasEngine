@@ -1,0 +1,193 @@
+<Canvas backgroundColor="#101820" width={1280} height={720}>
+  <Container>
+    @for (item of items) {
+      <Sprite
+        image="/bench-sprite.svg"
+        x={item.x}
+        y={item.y}
+        anchor={0.5}
+      />
+    }
+  </Container>
+</Canvas>
+
+<script>
+  import { signal, tick } from "canvasengine";
+
+  const params = new URLSearchParams(window.location.search);
+  const elementCount = Number(params.get("count") ?? 1000);
+  const durationMs = Number(params.get("durationMs") ?? 5000);
+  const warmupMs = Number(params.get("warmupMs") ?? 1500);
+  const seed = Number(params.get("seed") ?? 42);
+  const scenario = params.get("scenario") ?? `canvasengine:sprites:${elementCount}`;
+  const frameBudgetMs = 1000 / 60;
+
+  function mulberry32(seedValue) {
+    return function next() {
+      let value = seedValue += 0x6D2B79F5;
+      value = Math.imul(value ^ value >>> 15, value | 1);
+      value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+      return ((value ^ value >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  const random = mulberry32(seed);
+
+  function generateItems(count) {
+    const columns = Math.ceil(Math.sqrt(count));
+    return Array.from({ length: count }, (_, index) => {
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      return {
+        x: signal((column * 26) % 1260 + 10),
+        y: signal((row * 26) % 700 + 10),
+        baseRotation: random() * Math.PI * 2,
+        rotationSpeed: 0.004 + random() * 0.012,
+        scaleBase: 0.75 + random() * 0.5,
+        scaleSpeed: 0.003 + random() * 0.008,
+      };
+    });
+  }
+
+  const items = signal(generateItems(elementCount));
+  const frameTimes = [];
+  const updateTimes = [];
+  const longTasks = [];
+  let spriteRefs = [];
+  let startedAt = 0;
+  let measureStartedAt = 0;
+  let lastFrameAt = 0;
+  let done = false;
+
+  try {
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        longTasks.push(entry.duration);
+      }
+    });
+    observer.observe({ entryTypes: ["longtask"] });
+  } catch {
+    // Long task instrumentation is unavailable in some browser modes.
+  }
+
+  function getValidity(assetReady, measuredDuration) {
+    const reasons = [];
+    if (!assetReady) reasons.push("assets-not-ready");
+    if (frameTimes.length < 30) reasons.push("sample-count-low");
+    if (measuredDuration < durationMs * 0.9) reasons.push("duration-too-short");
+
+    return {
+      valid: reasons.length === 0,
+      reasons,
+      sampleCount: frameTimes.length,
+      warmupStable: true,
+      assetReady,
+      deterministicSeed: seed,
+    };
+  }
+
+  function percentile(values, percentileValue) {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const index = Math.min(
+      sorted.length - 1,
+      Math.max(0, Math.ceil((percentileValue / 100) * sorted.length) - 1)
+    );
+    return sorted[index];
+  }
+
+  function average(values) {
+    if (values.length === 0) return 0;
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+  }
+
+  function round(value, digits = 4) {
+    const factor = 10 ** digits;
+    return Math.round(value * factor) / factor;
+  }
+
+  function textureReady(sprite) {
+    return Boolean(sprite?.texture && sprite.texture.width > 0 && sprite.texture.height > 0);
+  }
+
+  function finish(now) {
+    const measuredDuration = now - measureStartedAt;
+    const assetReady = spriteRefs.length === elementCount && spriteRefs.every(textureReady);
+    const droppedFrames = frameTimes.filter((value) => value > frameBudgetMs).length;
+
+    window.__CANVASENGINE_BENCHMARK_RESULT__ = {
+      scenario,
+      runner: "canvasengine",
+      config: {
+        elementCount,
+        durationMs,
+        warmupMs,
+        seed,
+        viewport: {
+          width: window.innerWidth,
+          height: window.innerHeight,
+        },
+      },
+      metrics: {
+        averageFps: round(frameTimes.length / (measuredDuration / 1000), 4),
+        frameTimeMeanMs: round(average(frameTimes), 4),
+        frameTimeP50Ms: round(percentile(frameTimes, 50), 4),
+        frameTimeP95Ms: round(percentile(frameTimes, 95), 4),
+        frameTimeP99Ms: round(percentile(frameTimes, 99), 4),
+        droppedFrames,
+        longTasks: longTasks.length,
+        longTaskMaxMs: round(Math.max(0, ...longTasks), 4),
+        updateTimeMeanMs: round(average(updateTimes), 4),
+        updateTimeP95Ms: round(percentile(updateTimes, 95), 4),
+      },
+      validity: getValidity(assetReady, measuredDuration),
+    };
+  }
+
+  tick((tickValue, element) => {
+    if (done) return;
+
+    const now = performance.now();
+    if (!startedAt) {
+      startedAt = now;
+      lastFrameAt = now;
+      return;
+    }
+
+    const elapsed = now - startedAt;
+    const measuring = elapsed >= warmupMs;
+
+    if (measuring && !measureStartedAt) {
+      measureStartedAt = now;
+      lastFrameAt = now;
+    }
+
+    const updateStart = performance.now();
+    const container = element.componentInstance?.children?.[0];
+    if (container && spriteRefs.length !== elementCount) {
+      spriteRefs = container.children ?? [];
+    }
+
+    for (let index = 0; index < spriteRefs.length; index++) {
+      const item = items()[index];
+      const sprite = spriteRefs[index];
+      if (!item || !sprite) continue;
+
+      sprite.rotation = item.baseRotation + tickValue.frame * item.rotationSpeed;
+      const scale = item.scaleBase + Math.sin(tickValue.frame * item.scaleSpeed) * 0.2;
+      sprite.scale.set(scale);
+    }
+    const updateDuration = performance.now() - updateStart;
+
+    if (measuring) {
+      frameTimes.push(now - lastFrameAt);
+      updateTimes.push(updateDuration);
+    }
+    lastFrameAt = now;
+
+    if (measureStartedAt && now - measureStartedAt >= durationMs) {
+      done = true;
+      finish(now);
+    }
+  });
+</script>

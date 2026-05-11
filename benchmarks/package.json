@@ -1,0 +1,6 @@
+{
+  "name": "canvasengine-benchmarks",
+  "private": true,
+  "type": "module",
+  "description": "Internal CanvasEngine performance benchmarks. This package is not published."
+}

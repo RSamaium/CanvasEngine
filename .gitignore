@@ -29,3 +29,4 @@ cache
 .vitepress/cache
 coverage
 sample/public
+benchmarks/results

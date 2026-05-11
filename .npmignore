@@ -6,6 +6,7 @@ docs
 .vitepress
 node_modules
 starter
+benchmarks
 .github
 .cursorrules
 logo.png
