@@ -165,6 +165,33 @@ describe('Lifecycle', () => {
         expect(element.props).toHaveProperty('isRoot', true)
     })
 
+    test('tick function is called when component root is a conditional flow', async () => {
+        const mockTick = vi.fn()
+        const isVisible = signal(true)
+
+        function ConditionalTickComponent() {
+            tick((tickValue, element) => {
+                mockTick(tickValue, element)
+            })
+
+            return cond(isVisible, () => h(Container))
+        }
+
+        function MyComponent() {
+            return h(Canvas, {
+                tickStart: true
+            }, h(ConditionalTickComponent))
+        }
+
+        await bootstrapCanvas(document.getElementById('root'), MyComponent)
+
+        await new Promise(resolve => setTimeout(resolve, 50))
+
+        expect(mockTick).toHaveBeenCalled()
+        const lastCall = mockTick.mock.calls[mockTick.mock.calls.length - 1]
+        expect(lastCall[1]).toHaveProperty('tag', 'Container')
+    })
+
     test('tick function is called and can be cleaned up', async () => {
         const mockTick = vi.fn()
         

@@ -697,6 +697,19 @@ export function createComponent(tag: string, props?: Props): Element {
 
     if (child instanceof Observable) {
       const mountedFlowElements = childGroup.mounted;
+      const flowEffectSubscriptions = ((child as any).effectSubscriptions ?? []) as Subscription[];
+      const flowEffectMounts = ((child as any).effectMounts ?? []) as Array<(element: Element) => any>;
+
+      const applyFlowEffects = (element: Element) => {
+        if (!flowEffectMounts.length) {
+          return;
+        }
+
+        element.effectMounts = [
+          ...flowEffectMounts,
+          ...(element.effectMounts ?? []),
+        ];
+      };
 
       const createFragmentOwner = (): Element => ({
         tag: 'fragment',
@@ -724,6 +737,7 @@ export function createComponent(tag: string, props?: Props): Element {
         }
 
         const routed = routeDomComponent(parent, element);
+        applyFlowEffects(routed);
         mountedFlowElements.set(element, routed);
         onMount(parent, routed, getInsertIndex(sourceIndex, orderedSources));
         propagateContext(routed);
@@ -801,6 +815,7 @@ export function createComponent(tag: string, props?: Props): Element {
           } else if (isElement(value)) {
             // Handle direct Element emission
             const routed = routeDomComponent(parent, value);
+            applyFlowEffects(routed);
             childGroup.mounted.set(value, routed);
             onMount(parent, routed, getInsertIndex(0, [value]));
             propagateContext(routed);
@@ -821,6 +836,7 @@ export function createComponent(tag: string, props?: Props): Element {
           destroyElement(mounted);
         });
         mountedFlowElements.clear();
+        flowEffectSubscriptions.forEach((sub) => sub.unsubscribe());
       });
 
       // Store subscription for cleanup
