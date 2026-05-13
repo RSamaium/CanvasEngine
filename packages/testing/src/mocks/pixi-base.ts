@@ -153,6 +153,10 @@ export class MockTexture {
 export class MockContainer extends MockEventEmitter {
   x: number = 0;
   y: number = 0;
+  position: MockObservablePoint = new MockObservablePoint(0, 0, (point) => {
+    this.x = point.x;
+    this.y = point.y;
+  });
   width: number = 0;
   height: number = 0;
   alpha: number = 1;
@@ -253,6 +257,11 @@ export class MockContainer extends MockEventEmitter {
   getBounds = vi.fn(() => new MockRectangle(this.x, this.y, this.width, this.height));
   toLocal = vi.fn((point: { x: number; y: number }) => ({ x: point.x - this.x, y: point.y - this.y }));
   toGlobal = vi.fn((point: { x: number; y: number }) => ({ x: point.x + this.x, y: point.y + this.y }));
+  setMask = vi.fn(function(this: MockContainer, options: { mask?: any; inverse?: boolean } = {}) {
+    this.mask = options.mask ?? null;
+    (this as any)._maskOptions = { inverse: options.inverse ?? false };
+    return this;
+  });
 }
 
 /**
@@ -275,6 +284,9 @@ export class MockGraphics extends MockContainer {
   drawCircle = vi.fn(() => this);
   drawEllipse = vi.fn(() => this);
   drawPolygon = vi.fn(() => this);
+  roundRect = vi.fn(() => this);
+  fill = vi.fn(() => this);
+  stroke = vi.fn(() => this);
 }
 
 /**

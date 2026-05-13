@@ -1414,6 +1414,12 @@ describe('DOM with special attributes', () => {
     expect(output).toBe('h(DOMElement, { element: "input", attrs: { type: \'password\' }, x: 100, y: 100 })');
   });
 
+  test('should compile DOM with sprite effect special attributes', () => {
+    const input = `<input type="password" outline={outline} clip={clip} occlusion={occlusion} />`;
+    const output = parser.parse(input);
+    expect(output).toBe('h(DOMElement, { element: "input", attrs: { type: \'password\' }, outline: outline, clip: clip, occlusion: occlusion })');
+  });
+
   test('should compile DOM with text object', () => {
     const input = `<p>{{ object.x }}</p>`;
     const output = parser.parse(input);

@@ -22,6 +22,9 @@
 | maskOf         | Element             | Element that this display object masks.                                     |
 | blendMode      | string              | Blend mode for rendering.                                                   |
 | filterArea     | object              | Filter area for rendering.                                                  |
+| outline        | object              | Outline effect following the object's alpha contour.                        |
+| clip           | object              | Rectangular mask used to keep or hide part of the object.                   |
+| occlusion      | object              | Low-alpha redraw of the covered part when this object passes behind obstacles. |
 
 ## Layout Properties
 

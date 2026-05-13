@@ -52,7 +52,8 @@
     'aspectRatio', 'flexGrow', 'flexShrink', 'flexBasis', 'rowGap', 'columnGap', 
     'positionType', 'top', 'right', 'bottom', 'left', 'objectFit', 'objectPosition', 
     'transformOrigin', 'flexDirection', 'justifyContent', 'alignItems', 'alignContent', 
-    'alignSelf', 'margin', 'padding', 'border', 'gap', 'blur', 'shadow'
+    'alignSelf', 'margin', 'padding', 'border', 'gap', 'blur', 'shadow', 'outline',
+    'clip', 'occlusion'
   ]);
 
   function isDOMElement(tagName) {

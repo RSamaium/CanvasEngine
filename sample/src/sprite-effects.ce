@@ -1,0 +1,130 @@
+<Canvas backgroundColor="#111827">
+  <Container sortableChildren={true}>
+    <Text text="Sprite effects" x={24} y={20} color="#f9fafb" size="22" fontFamily="Arial" />
+    <Text text="Outline is always on here; hover it to thicken the contour." x={24} y={52} color="#cbd5e1" size="14" fontFamily="Arial" />
+
+    <Container x={70} y={126}>
+      <Text text="outline" x={0} y={-34} color="#e5e7eb" size="14" fontFamily="Arial" />
+      <Sprite
+        image={heroImage}
+        width={104}
+        height={104}
+        mouseenter={() => outlineHover.set(true)}
+        mouseleave={() => outlineHover.set(false)}
+        outline={{
+          color: 0xffd166,
+          thickness: outlineThickness,
+          quality: 0.45,
+          alpha: 1
+        }}
+      />
+    </Container>
+
+    <Container x={245} y={126}>
+      <Text text="clip hide" x={0} y={-34} color="#e5e7eb" size="14" fontFamily="Arial" />
+      <Rect x={0} y={62} width={104} height={42} color="#14532d" alpha={0.95} />
+      <Sprite
+        image={heroImage}
+        width={104}
+        height={104}
+        clip={{
+          mode: "hide",
+          shape: { type: "rect", x: 0, y: 62, width: 104, height: 42 }
+        }}
+      />
+    </Container>
+
+    <Container x={420} y={126}>
+      <Text text="clip keep" x={0} y={-34} color="#e5e7eb" size="14" fontFamily="Arial" />
+      <Rect x={0} y={56} width={104} height={48} color="#7c2d12" alpha={0.95} />
+      <Sprite
+        image={carrotImage}
+        width={104}
+        height={104}
+        clip={{
+          mode: "keep",
+          shape: { type: "rect", x: 0, y: 0, width: 104, height: 58 }
+        }}
+      />
+    </Container>
+
+    <Container x={70} y={325}>
+      <Text text="occlusion: the hidden part is redrawn above the tree with low opacity" x={0} y={-42} color="#e5e7eb" size="14" fontFamily="Arial" />
+      <Rect x={0} y={28} width={560} height={138} color="#1f2937" />
+      <Sprite
+        image={heroImage}
+        x={walkerX}
+        y={54}
+        width={104}
+        height={104}
+        zIndex={10}
+        occlusion={{
+          obstacles: treeElement,
+          enabled: treeReady,
+          alpha: 0.32,
+          padding: 0
+        }}
+      />
+      <Graphics ref="tree" x={260} y={12} zIndex={20} draw={drawTree} />
+    </Container>
+  </Container>
+</Canvas>
+
+<script>
+  import { computed, mount, signal, tick } from "canvasengine";
+
+  const heroImage = svgUrl(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+      <path d="M48 8 C63 8 74 19 74 34 C74 43 69 51 62 56 L70 86 L26 86 L34 56 C27 51 22 43 22 34 C22 19 33 8 48 8 Z" fill="#60a5fa"/>
+      <circle cx="37" cy="34" r="5" fill="#0f172a"/>
+      <circle cx="59" cy="34" r="5" fill="#0f172a"/>
+      <path d="M38 51 C44 56 52 56 58 51" fill="none" stroke="#0f172a" stroke-width="5" stroke-linecap="round"/>
+      <path d="M29 86 L67 86 L61 96 L35 96 Z" fill="#1d4ed8"/>
+    </svg>
+  `);
+
+  const carrotImage = svgUrl(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+      <path d="M47 8 C51 22 61 25 76 18 C68 30 58 34 48 27 C40 35 29 34 18 24 C34 26 43 21 47 8 Z" fill="#22c55e"/>
+      <path d="M47 24 C66 32 72 52 58 92 C35 74 27 51 39 30 C41 26 43 24 47 24 Z" fill="#f97316"/>
+      <path d="M43 43 L61 39 M39 58 L56 55 M45 72 L52 70" stroke="#c2410c" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+  `);
+
+  const outlineHover = signal(false);
+  const outlineThickness = computed(() => outlineHover() ? 8 : 4);
+  const treeElement = signal(null);
+  const treeReady = computed(() => treeElement() !== null);
+  const walkerX = signal(20);
+  const time = signal(0);
+
+  function svgUrl(markup) {
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(markup);
+  }
+
+  function findByRef(element, ref) {
+    if (element?.props?.ref === ref) return element;
+    const children = element?.props?.children ?? [];
+    for (let i = 0; i < children.length; i++) {
+      const found = findByRef(children[i], ref);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function drawTree(g) {
+    g.rect(50, 58, 46, 86).fill("#7c2d12");
+    g.circle(73, 48, 54).fill("#166534");
+    g.circle(36, 72, 38).fill("#15803d");
+    g.circle(112, 74, 40).fill("#14532d");
+  }
+
+  mount((element) => {
+    treeElement.set(findByRef(element, "tree"));
+  });
+
+  tick(({ deltaTime }) => {
+    time.update((value) => value + (deltaTime ?? 16.67) / 1000);
+    walkerX.set(245 + (Math.sin(time() * 1.35) + 1) * 30);
+  });
+</script>

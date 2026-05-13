@@ -152,6 +152,81 @@ By default, `hitbox.anchorMode` is `"top-left"`, which preserves the legacy beha
 When `spriteRealSize` is provided on a spritesheet definition, CanvasEngine uses it to remove transparent margins from the hitbox anchor calculation. Without `spriteRealSize`, the full frame size is used.
 :::
 
+## Sprite Effects
+
+### Outline on hover
+
+```html
+<script>
+const hovered = signal(false)
+</script>
+
+<Sprite
+    image="path/to/character.png"
+    mouseenter={() => hovered.set(true)}
+    mouseleave={() => hovered.set(false)}
+    outline={{
+        enabled: hovered,
+        color: 0xffcc33,
+        thickness: 3,
+        quality: 0.2
+    }}
+/>
+```
+
+`outline` uses the sprite alpha channel, so the border follows the visible contour instead of the rectangular texture bounds.
+
+### Hide part of a sprite
+
+```html
+<Sprite
+    image="path/to/character.png"
+    clip={{
+        mode: "hide",
+        shape: { type: "rect", x: 0, y: 42, width: 64, height: 22 }
+    }}
+/>
+```
+
+`mode: "hide"` makes the shape transparent. This is useful for a character walking through tall grass.
+
+### Keep only part of a sprite
+
+```html
+<Sprite
+    image="path/to/carrot.png"
+    clip={{
+        mode: "keep",
+        shape: { type: "rect", x: 0, y: 0, width: 32, height: 18 }
+    }}
+/>
+```
+
+`mode: "keep"` renders only the shape. This is useful for an object partly buried in the ground.
+
+### Hide a sprite behind another sprite
+
+```html
+<script>
+let hero
+let grass
+</script>
+
+<Sprite ref={grass} image="path/to/grass.png" />
+<Sprite
+    ref={hero}
+    image="path/to/hero.png"
+    occlusion={{
+        obstacles: grass,
+        bounds: "hitbox",
+        alpha: 0.35,
+        padding: 2
+    }}
+/>
+```
+
+`occlusion` keeps the current sprite behind the obstacle, then redraws only the covered part above the obstacle with low opacity. By default it uses object bounds; `bounds: "hitbox"` uses the sprite hitbox when one is available.
+
 ## DOMSprite: objectFit, width/height, class, style
 
 When a `Sprite` is rendered inside a `DOMContainer`, it is routed to `DOMSprite`. You can use DOM-specific props to control sizing and containment.
