@@ -37,6 +37,7 @@ Useful environment variables:
 - `BENCH_RENDER_WARMUP_MS=2000`
 - `BENCH_RENDER_COUNTS=1000,5000,10000`
 - `BENCH_RENDER_RUNNERS=canvasengine,pixijs`
+- `BENCH_RENDER_PROFILE=1`
 - `BENCH_HEADED=1`
 
 By default render benchmarks run both CanvasEngine and direct PixiJS versions
@@ -44,6 +45,11 @@ of the same sprite scenario. The report includes a comparison section where
 PixiJS direct is the baseline and CanvasEngine is the candidate.
 For `averageFpsRatio`, higher is better. For frame-time and update-time ratios,
 lower is better.
+
+`BENCH_RENDER_PROFILE=1` adds per-frame update breakdown metrics to the JSON
+report: sprite reference refresh, item access, animation math, Pixi mutations,
+and total loop time. Profiling adds measurement overhead and should be used for
+diagnosis rather than official baselines.
 
 If Playwright cannot find a browser, run:
 

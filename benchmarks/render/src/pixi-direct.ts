@@ -26,6 +26,7 @@ export async function runPixiDirectBenchmark(rootElement: HTMLElement | null) {
   const warmupMs = Number(params.get("warmupMs") ?? 1500);
   const seed = Number(params.get("seed") ?? 42);
   const scenario = params.get("scenario") ?? `pixijs:sprites:${elementCount}`;
+  const profile = params.get("profile") === "1";
   const frameBudgetMs = 1000 / 60;
 
   const app = new Application();
@@ -59,6 +60,13 @@ export async function runPixiDirectBenchmark(rootElement: HTMLElement | null) {
   const frameTimes: number[] = [];
   const updateTimes: number[] = [];
   const longTasks: number[] = [];
+  const profileTimes = {
+    spriteRefsRefresh: [] as number[],
+    itemAccess: [] as number[],
+    animationMath: [] as number[],
+    pixiMutation: [] as number[],
+    loopTotal: [] as number[],
+  };
   let startedAt = 0;
   let measureStartedAt = 0;
   let lastFrameAt = 0;
@@ -94,18 +102,50 @@ export async function runPixiDirectBenchmark(rootElement: HTMLElement | null) {
     }
 
     const updateStart = performance.now();
-    for (let index = 0; index < sprites.length; index++) {
-      const item = items[index];
-      const sprite = sprites[index];
-      sprite.rotation = item.baseRotation + ticker.lastTime * item.rotationSpeed;
-      const scale = item.scaleBase + Math.sin(ticker.lastTime * item.scaleSpeed) * 0.2;
-      sprite.scale.set(scale);
+    let itemAccessDuration = 0;
+    let animationMathDuration = 0;
+    let pixiMutationDuration = 0;
+    const loopStart = performance.now();
+
+    if (profile) {
+      for (let index = 0; index < sprites.length; index++) {
+        const itemStart = performance.now();
+        const item = items[index];
+        const sprite = sprites[index];
+        itemAccessDuration += performance.now() - itemStart;
+
+        const mathStart = performance.now();
+        const rotation = item.baseRotation + ticker.lastTime * item.rotationSpeed;
+        const scale = item.scaleBase + Math.sin(ticker.lastTime * item.scaleSpeed) * 0.2;
+        animationMathDuration += performance.now() - mathStart;
+
+        const mutationStart = performance.now();
+        sprite.rotation = rotation;
+        sprite.scale.set(scale);
+        pixiMutationDuration += performance.now() - mutationStart;
+      }
+    } else {
+      for (let index = 0; index < sprites.length; index++) {
+        const item = items[index];
+        const sprite = sprites[index];
+        sprite.rotation = item.baseRotation + ticker.lastTime * item.rotationSpeed;
+        const scale = item.scaleBase + Math.sin(ticker.lastTime * item.scaleSpeed) * 0.2;
+        sprite.scale.set(scale);
+      }
     }
+    const loopDuration = performance.now() - loopStart;
     const updateDuration = performance.now() - updateStart;
 
     if (measuring) {
       frameTimes.push(now - lastFrameAt);
       updateTimes.push(updateDuration);
+      if (profile) {
+        profileTimes.spriteRefsRefresh.push(0);
+        profileTimes.itemAccess.push(itemAccessDuration);
+        profileTimes.animationMath.push(animationMathDuration);
+        profileTimes.pixiMutation.push(pixiMutationDuration);
+        profileTimes.loopTotal.push(loopDuration);
+      }
     }
     lastFrameAt = now;
 
@@ -121,6 +161,8 @@ export async function runPixiDirectBenchmark(rootElement: HTMLElement | null) {
         frameBudgetMs,
         frameTimes,
         updateTimes,
+        profile,
+        profileTimes,
         longTasks,
         assetReady: Boolean(texture.width > 0 && texture.height > 0 && sprites.length === elementCount),
         measuredDuration: now - measureStartedAt,
@@ -163,6 +205,14 @@ function buildResult(input: {
   frameBudgetMs: number;
   frameTimes: number[];
   updateTimes: number[];
+  profile: boolean;
+  profileTimes: {
+    spriteRefsRefresh: number[];
+    itemAccess: number[];
+    animationMath: number[];
+    pixiMutation: number[];
+    loopTotal: number[];
+  };
   longTasks: number[];
   assetReady: boolean;
   measuredDuration: number;
@@ -193,6 +243,18 @@ function buildResult(input: {
       longTaskMaxMs: round(Math.max(0, ...input.longTasks), 4),
       updateTimeMeanMs: round(average(input.updateTimes), 4),
       updateTimeP95Ms: round(percentile(input.updateTimes, 95), 4),
+      ...(input.profile ? {
+        spriteRefsRefreshMeanMs: round(average(input.profileTimes.spriteRefsRefresh), 4),
+        spriteRefsRefreshP95Ms: round(percentile(input.profileTimes.spriteRefsRefresh, 95), 4),
+        itemAccessMeanMs: round(average(input.profileTimes.itemAccess), 4),
+        itemAccessP95Ms: round(percentile(input.profileTimes.itemAccess, 95), 4),
+        animationMathMeanMs: round(average(input.profileTimes.animationMath), 4),
+        animationMathP95Ms: round(percentile(input.profileTimes.animationMath, 95), 4),
+        pixiMutationMeanMs: round(average(input.profileTimes.pixiMutation), 4),
+        pixiMutationP95Ms: round(percentile(input.profileTimes.pixiMutation, 95), 4),
+        loopTotalMeanMs: round(average(input.profileTimes.loopTotal), 4),
+        loopTotalP95Ms: round(percentile(input.profileTimes.loopTotal, 95), 4),
+      } : {}),
     },
     validity: getValidity(input),
   };

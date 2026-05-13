@@ -20,6 +20,7 @@
   const warmupMs = Number(params.get("warmupMs") ?? 1500);
   const seed = Number(params.get("seed") ?? 42);
   const scenario = params.get("scenario") ?? `canvasengine:sprites:${elementCount}`;
+  const profile = params.get("profile") === "1";
   const frameBudgetMs = 1000 / 60;
 
   function mulberry32(seedValue) {
@@ -53,6 +54,13 @@
   const frameTimes = [];
   const updateTimes = [];
   const longTasks = [];
+  const profileTimes = {
+    spriteRefsRefresh: [],
+    itemAccess: [],
+    animationMath: [],
+    pixiMutation: [],
+    loopTotal: [],
+  };
   let spriteRefs = [];
   let startedAt = 0;
   let measureStartedAt = 0;
@@ -139,6 +147,18 @@
         longTaskMaxMs: round(Math.max(0, ...longTasks), 4),
         updateTimeMeanMs: round(average(updateTimes), 4),
         updateTimeP95Ms: round(percentile(updateTimes, 95), 4),
+        ...(profile ? {
+          spriteRefsRefreshMeanMs: round(average(profileTimes.spriteRefsRefresh), 4),
+          spriteRefsRefreshP95Ms: round(percentile(profileTimes.spriteRefsRefresh, 95), 4),
+          itemAccessMeanMs: round(average(profileTimes.itemAccess), 4),
+          itemAccessP95Ms: round(percentile(profileTimes.itemAccess, 95), 4),
+          animationMathMeanMs: round(average(profileTimes.animationMath), 4),
+          animationMathP95Ms: round(percentile(profileTimes.animationMath, 95), 4),
+          pixiMutationMeanMs: round(average(profileTimes.pixiMutation), 4),
+          pixiMutationP95Ms: round(percentile(profileTimes.pixiMutation, 95), 4),
+          loopTotalMeanMs: round(average(profileTimes.loopTotal), 4),
+          loopTotalP95Ms: round(percentile(profileTimes.loopTotal, 95), 4),
+        } : {}),
       },
       validity: getValidity(assetReady, measuredDuration),
     };
@@ -163,25 +183,60 @@
     }
 
     const updateStart = performance.now();
+    const refsStart = updateStart;
     const container = element.componentInstance?.children?.[0];
     if (container && spriteRefs.length !== elementCount) {
       spriteRefs = container.children ?? [];
     }
+    const refsDuration = performance.now() - refsStart;
 
-    for (let index = 0; index < spriteRefs.length; index++) {
-      const item = items()[index];
-      const sprite = spriteRefs[index];
-      if (!item || !sprite) continue;
+    let itemAccessDuration = 0;
+    let animationMathDuration = 0;
+    let pixiMutationDuration = 0;
+    const loopStart = performance.now();
 
-      sprite.rotation = item.baseRotation + tickValue.frame * item.rotationSpeed;
-      const scale = item.scaleBase + Math.sin(tickValue.frame * item.scaleSpeed) * 0.2;
-      sprite.scale.set(scale);
+    if (profile) {
+      for (let index = 0; index < spriteRefs.length; index++) {
+        const itemStart = performance.now();
+        const item = items()[index];
+        const sprite = spriteRefs[index];
+        itemAccessDuration += performance.now() - itemStart;
+        if (!item || !sprite) continue;
+
+        const mathStart = performance.now();
+        const rotation = item.baseRotation + tickValue.frame * item.rotationSpeed;
+        const scale = item.scaleBase + Math.sin(tickValue.frame * item.scaleSpeed) * 0.2;
+        animationMathDuration += performance.now() - mathStart;
+
+        const mutationStart = performance.now();
+        sprite.rotation = rotation;
+        sprite.scale.set(scale);
+        pixiMutationDuration += performance.now() - mutationStart;
+      }
+    } else {
+      for (let index = 0; index < spriteRefs.length; index++) {
+        const item = items()[index];
+        const sprite = spriteRefs[index];
+        if (!item || !sprite) continue;
+
+        sprite.rotation = item.baseRotation + tickValue.frame * item.rotationSpeed;
+        const scale = item.scaleBase + Math.sin(tickValue.frame * item.scaleSpeed) * 0.2;
+        sprite.scale.set(scale);
+      }
     }
+    const loopDuration = performance.now() - loopStart;
     const updateDuration = performance.now() - updateStart;
 
     if (measuring) {
       frameTimes.push(now - lastFrameAt);
       updateTimes.push(updateDuration);
+      if (profile) {
+        profileTimes.spriteRefsRefresh.push(refsDuration);
+        profileTimes.itemAccess.push(itemAccessDuration);
+        profileTimes.animationMath.push(animationMathDuration);
+        profileTimes.pixiMutation.push(pixiMutationDuration);
+        profileTimes.loopTotal.push(loopDuration);
+      }
     }
     lastFrameAt = now;
 

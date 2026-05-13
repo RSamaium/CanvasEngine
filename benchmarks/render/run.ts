@@ -19,6 +19,7 @@ const runners = (process.env.BENCH_RENDER_RUNNERS ?? "canvasengine,pixijs")
   .split(",")
   .map((value) => value.trim())
   .filter((value) => value === "canvasengine" || value === "pixijs");
+const profile = process.env.BENCH_RENDER_PROFILE === "1";
 
 async function startServer(): Promise<ViteDevServer> {
   const server = await createServer({
@@ -74,6 +75,7 @@ try {
       url.searchParams.set("durationMs", String(durationMs));
       url.searchParams.set("warmupMs", String(warmupMs));
       url.searchParams.set("seed", String(seed));
+      url.searchParams.set("profile", profile ? "1" : "0");
 
       await page.goto(url.toString(), { waitUntil: "networkidle" });
       await page.waitForFunction(
@@ -107,6 +109,7 @@ try {
       warmupMs,
       seed,
       runners,
+      profile,
     }),
     benchmarks,
     comparisons: buildRenderComparisons(benchmarks),

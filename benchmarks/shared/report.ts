@@ -137,6 +137,29 @@ function toMarkdown(report: BenchmarkReport): string {
     }
   }
 
+  const profiledBenchmarks = report.benchmarks.filter((benchmark) => {
+    const metrics = benchmark.metrics as Record<string, unknown> | undefined;
+    return typeof metrics?.loopTotalP95Ms === "number";
+  });
+
+  if (profiledBenchmarks.length) {
+    lines.push(
+      "",
+      "## Update Profile",
+      "",
+      "| Benchmark | Refs p95 ms | Item p95 ms | Math p95 ms | Pixi mutation p95 ms | Loop p95 ms |",
+      "| --- | ---: | ---: | ---: | ---: | ---: |"
+    );
+
+    for (const benchmark of profiledBenchmarks) {
+      const name = String(benchmark.name ?? benchmark.scenario ?? "unnamed");
+      const metrics = benchmark.metrics as Record<string, unknown>;
+      lines.push(
+        `| ${name} | ${String(metrics.spriteRefsRefreshP95Ms ?? "")} | ${String(metrics.itemAccessP95Ms ?? "")} | ${String(metrics.animationMathP95Ms ?? "")} | ${String(metrics.pixiMutationP95Ms ?? "")} | ${String(metrics.loopTotalP95Ms ?? "")} |`
+      );
+    }
+  }
+
   lines.push("", "## Environment", "", "```json", JSON.stringify(report.environment, null, 2), "```", "");
   return lines.join("\n");
 }
