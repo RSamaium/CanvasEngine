@@ -584,7 +584,7 @@ describe("Compiler", () => {
             }
         `;
     const output = parser.parse(input);
-    expect(output).toBe(`cond(isVisible(), () => h(Sprite), () => h(Text, { text: 'Hidden' }))`);
+    expect(output).toBe(`cond(computed(() => isVisible()), () => h(Sprite), () => h(Text, { text: 'Hidden' }))`);
   });
 
   test("should compile if/else if with object property conditions", () => {
@@ -610,7 +610,7 @@ describe("Compiler", () => {
             }
         `;
     const output = parser.parse(input);
-    expect(output).toBe(`cond(isSelected(item.id), () => h(Sprite))`);
+    expect(output).toBe(`cond(computed(() => isSelected(item.id)), () => h(Sprite))`);
   });
 
   test("should compile condition with function call and @ literal in dot notation", () => {
@@ -623,7 +623,7 @@ describe("Compiler", () => {
             }
         `;
     const output = parser.parse(input);
-    expect(output).toBe(`cond(isSelected(item.id), () => h(Sprite), () => h(Text, { text: 'Not selected' }))`);
+    expect(output).toBe(`cond(computed(() => isSelected(item.id)), () => h(Sprite), () => h(Text, { text: 'Not selected' }))`);
   });
 
   test("should compile condition with function call and mixed @ literal and signal", () => {
@@ -633,7 +633,7 @@ describe("Compiler", () => {
             }
         `;
     const output = parser.parse(input);
-    expect(output).toBe(`cond(isSelected(item.id()), () => h(Sprite))`);
+    expect(output).toBe(`cond(computed(() => isSelected(item.id())), () => h(Sprite))`);
   });
 
   test("should compile condition with function call and @ literal property", () => {
@@ -643,7 +643,7 @@ describe("Compiler", () => {
             }
         `;
     const output = parser.parse(input);
-    expect(output).toBe(`cond(check(value), () => h(Text, { text: 'Checked' }))`);
+    expect(output).toBe(`cond(computed(() => check(value)), () => h(Text, { text: 'Checked' }))`);
   });
 
   test("should compile condition with function call and multiple @ literal arguments", () => {
@@ -653,7 +653,7 @@ describe("Compiler", () => {
             }
         `;
     const output = parser.parse(input);
-    expect(output).toBe(`cond(compare(item.id, other.id), () => h(Sprite))`);
+    expect(output).toBe(`cond(computed(() => compare(item.id, other.id)), () => h(Sprite))`);
   });
 
   test("should compile condition with comparison and @ literal dot notation", () => {
@@ -1215,24 +1215,24 @@ describe("Condition", () => {
     expect(output).toBe(`cond(sprite.visible, () => h(Sprite))`);
   });
 
-  test("should compile condition when function value", () => {
+  test("should compile condition when function value as computed", () => {
     const input = `
             @if (val()) {
                 <Sprite />
             }
         `;
     const output = parser.parse(input);
-    expect(output).toBe(`cond(val(), () => h(Sprite))`);
+    expect(output).toBe(`cond(computed(() => val()), () => h(Sprite))`);
   });
 
-  test("should compile condition with function call without computed", () => {
+  test("should compile condition with function call as computed", () => {
     const input = `
             @if (isVisible()) {
                 <Sprite />
             }
         `;
     const output = parser.parse(input);
-    expect(output).toBe(`cond(isVisible(), () => h(Sprite))`);
+    expect(output).toBe(`cond(computed(() => isVisible()), () => h(Sprite))`);
   });
 
   test("should compile condition for multiple sprites", () => {

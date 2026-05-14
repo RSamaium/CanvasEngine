@@ -905,7 +905,7 @@ condition "condition expression"
       }
 
       const hasOperator = /[!<>=&|]/.test(originalText);
-      if (hasOperator) {
+      if (hasOperator || hasFunctionCall(originalText)) {
         return `computed(() => ${originalText})`;
       }
 

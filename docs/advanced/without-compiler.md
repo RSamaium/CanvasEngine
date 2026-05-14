@@ -338,7 +338,7 @@ Instead of writing:
 
 Use:
 ```javascript
-cond(isVisible(), () => h('Sprite'))
+cond(computed(() => isVisible()), () => h('Sprite'))
 ```
 
 ### Complex Conditions
