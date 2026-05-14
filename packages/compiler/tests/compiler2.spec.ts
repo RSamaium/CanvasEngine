@@ -1413,6 +1413,24 @@ describe('DOM', () => {
     expect(output).toBe('h(DOMElement, { element: "div", attrs: { class: \'container\' } })');
   });
 
+  test('should escape apostrophes in static DOM attributes', () => {
+    const input = `<div title="can't" />`;
+    const output = parser.parse(input);
+    expect(output).toBe("h(DOMElement, { element: \"div\", attrs: { title: 'can\\'t' } })");
+  });
+
+  test('should preserve backslashes in static DOM attributes', () => {
+    const input = `<div title="C:\\temp" />`;
+    const output = parser.parse(input);
+    expect(output).toBe("h(DOMElement, { element: \"div\", attrs: { title: 'C:\\\\temp' } })");
+  });
+
+  test('should compile custom component with text content', () => {
+    const input = `<MyComponent>Hello</MyComponent>`;
+    const output = parser.parse(input);
+    expect(output).toBe("h(MyComponent, null, 'Hello')");
+  });
+
   test('should merge static and dynamic class attributes', () => {
     const input = `<div class="container" class={className} />`;
     const output = parser.parse(input);

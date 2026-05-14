@@ -301,6 +301,15 @@
     return `{ ${inner} }`;
   }
 
+  function quoteSingleString(value) {
+    return `'${value
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n')
+      .replace(/\t/g, '\\t')}'`;
+  }
+
   function collectMemberRoots(value) {
     const roots = new Set();
     const memberRegex = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\./g;
@@ -363,6 +372,7 @@ element "component or control structure"
   / svgElement
   / domElementWithText
   / domElementWithMixedContent
+  / componentWithText
   / selfClosingElement
   / voidElement
   / openCloseElement
@@ -390,7 +400,7 @@ voidElement "void DOM element tag"
     }
 
 domElementWithText "DOM element with text content"
-  = "<" _ tagName:tagName &{ return !isVoidElement(tagName); } _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTagName:tagName _ ">" _ {
+  = "<" _ tagName:tagName &{ return isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTagName:tagName _ ">" _ {
       if (tagName !== closingTagName) {
         generateError(
           `Mismatched tag: opened <${tagName}> but closed </${closingTagName}>`,
@@ -420,9 +430,6 @@ domElementWithText "DOM element with text content"
 
         return `h(DOMElement, { ${parts.join(', ')} })`;
       }
-      
-      // If not a DOM element, fall back to regular parsing
-      return null;
     }
 
 domElementWithMixedContent "DOM element with mixed content"
@@ -462,6 +469,19 @@ domElementWithMixedContent "DOM element with mixed content"
       } else {
         return `h(DOMElement, { ${parts.join(', ')} })`;
       }
+    }
+
+componentWithText "component with text content"
+  = "<" _ tagName:tagName &{ return !isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTagName:tagName _ ">" _ {
+      if (tagName !== closingTagName) {
+        generateError(
+          `Mismatched tag: opened <${tagName}> but closed </${closingTagName}>`,
+          location()
+        );
+      }
+
+      const attrsString = formatAttributes(attributes);
+      return attrsString ? `h(${tagName}, ${attrsString}, ${text})` : `h(${tagName}, null, ${text})`;
     }
 
 simpleTextContent "simple text content"
@@ -781,7 +801,7 @@ eventAttribute
 staticValue
   = [^"]+ {
       var val = text();
-      return `'${val}'`
+      return quoteSingleString(val)
     }
 
 content "component content"
