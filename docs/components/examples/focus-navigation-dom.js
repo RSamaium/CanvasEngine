@@ -22,7 +22,7 @@ export default {
         <div>
           <div>
             @for (item of items) {
-              <button tabindex={@item.@id}>{@item.@label}</button>
+              <button tabindex={item().id}>{item().label}</button>
             }
           </div>
         </div>

@@ -616,7 +616,7 @@ attributes "component attributes"
 attribute "attribute"
   = staticAttribute
   / dynamicAttribute
-  / eventHandler
+  / unsupportedEventAttribute
   / spreadAttribute
   / unclosedQuote
   / unclosedBrace
@@ -636,15 +636,12 @@ dotNotation "property access"
       return text();
     }
 
-eventHandler "event handler"
-  = "@" eventName:identifier _ "=" _ "{" _ handlerName:attributeValue _ "}" {
-      const needsQuotes = /[^a-zA-Z0-9_$]/.test(eventName);
-      const formattedName = needsQuotes ? `'${eventName}'` : eventName;
-      return `${formattedName}: ${handlerName}`;
-    }
-     / "@" eventName:attributeName _ {
-      const needsQuotes = /[^a-zA-Z0-9_$]/.test(eventName);
-      return needsQuotes ? `'${eventName}'` : eventName;
+unsupportedEventAttribute "unsupported event attribute"
+  = "@" eventName:attributeName (_ "=" _ "{" _ attributeValue _ "}")? {
+      generateError(
+        `@${eventName} is no longer supported. Use ${eventName} or ${eventName}={handler}.`,
+        location()
+      );
     }
 
 dynamicAttribute "dynamic attribute"

@@ -945,6 +945,18 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Sprite, { click: selected() ? onA : onB })`);
   });
 
+  test("should reject legacy prefixed event handler", () => {
+    expect(() => parser.parse(`<Sprite @click />`)).toThrow(
+      "@click is no longer supported. Use click or click={handler}."
+    );
+  });
+
+  test("should reject legacy prefixed event handler with value", () => {
+    expect(() => parser.parse(`<Sprite @pointerdown={onDown} />`)).toThrow(
+      "@pointerdown is no longer supported. Use pointerdown or pointerdown={handler}."
+    );
+  });
+
   test("should compile component with component attribute", () => {
     const input = `<Canvas child={<Sprite />} />`;
     const output = parser.parse(input);

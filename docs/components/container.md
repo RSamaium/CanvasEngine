@@ -21,7 +21,7 @@ const click = () => {
 }
 </script>
 
-<Container x y @click />
+<Container x y click />
 ```
 
 <!-- @include: ./_display-object.md -->

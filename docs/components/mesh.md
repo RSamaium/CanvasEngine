@@ -328,11 +328,11 @@ The `Mesh` component allows you to render custom 3D meshes with shaders and text
   <Container>
     @for (mesh of meshes) {
       <Mesh 
-        geometry={@mesh.geometry}
-        texture={@mesh.texture}
-        x={@mesh.x}
-        y={@mesh.y}
-        tint={@mesh.tint}
+        geometry={mesh().geometry}
+        texture={mesh().texture}
+        x={mesh().x}
+        y={mesh().y}
+        tint={mesh().tint}
       />
     }
   </Container>

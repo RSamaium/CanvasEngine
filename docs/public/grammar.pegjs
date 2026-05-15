@@ -59,7 +59,8 @@
     'aspectRatio', 'flexGrow', 'flexShrink', 'flexBasis', 'rowGap', 'columnGap', 
     'positionType', 'top', 'right', 'bottom', 'left', 'objectFit', 'objectPosition', 
     'transformOrigin', 'flexDirection', 'justifyContent', 'alignItems', 'alignContent', 
-    'alignSelf', 'margin', 'padding', 'border', 'gap', 'blur', 'shadow'
+    'alignSelf', 'margin', 'padding', 'border', 'gap', 'blur', 'shadow', 'outline',
+    'clip', 'occlusion'
   ]);
 
   function isDOMElement(tagName) {
@@ -300,6 +301,15 @@
     return `{ ${inner} }`;
   }
 
+  function quoteSingleString(value) {
+    return `'${value
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n')
+      .replace(/\t/g, '\\t')}'`;
+  }
+
   function collectMemberRoots(value) {
     const roots = new Set();
     const memberRegex = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\./g;
@@ -362,6 +372,7 @@ element "component or control structure"
   / svgElement
   / domElementWithText
   / domElementWithMixedContent
+  / componentWithText
   / selfClosingElement
   / voidElement
   / openCloseElement
@@ -389,7 +400,7 @@ voidElement "void DOM element tag"
     }
 
 domElementWithText "DOM element with text content"
-  = "<" _ tagName:tagName &{ return !isVoidElement(tagName); } _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTagName:tagName _ ">" _ {
+  = "<" _ tagName:tagName &{ return isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTagName:tagName _ ">" _ {
       if (tagName !== closingTagName) {
         generateError(
           `Mismatched tag: opened <${tagName}> but closed </${closingTagName}>`,
@@ -419,9 +430,6 @@ domElementWithText "DOM element with text content"
 
         return `h(DOMElement, { ${parts.join(', ')} })`;
       }
-      
-      // If not a DOM element, fall back to regular parsing
-      return null;
     }
 
 domElementWithMixedContent "DOM element with mixed content"
@@ -461,6 +469,19 @@ domElementWithMixedContent "DOM element with mixed content"
       } else {
         return `h(DOMElement, { ${parts.join(', ')} })`;
       }
+    }
+
+componentWithText "component with text content"
+  = "<" _ tagName:tagName &{ return !isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTagName:tagName _ ">" _ {
+      if (tagName !== closingTagName) {
+        generateError(
+          `Mismatched tag: opened <${tagName}> but closed </${closingTagName}>`,
+          location()
+        );
+      }
+
+      const attrsString = formatAttributes(attributes);
+      return attrsString ? `h(${tagName}, ${attrsString}, ${text})` : `h(${tagName}, null, ${text})`;
     }
 
 simpleTextContent "simple text content"
@@ -595,7 +616,7 @@ attributes "component attributes"
 attribute "attribute"
   = staticAttribute
   / dynamicAttribute
-  / eventHandler
+  / unsupportedEventAttribute
   / spreadAttribute
   / unclosedQuote
   / unclosedBrace
@@ -615,15 +636,12 @@ dotNotation "property access"
       return text();
     }
 
-eventHandler "event handler"
-  = "@" eventName:identifier _ "=" _ "{" _ handlerName:attributeValue _ "}" {
-      const needsQuotes = /[^a-zA-Z0-9_$]/.test(eventName);
-      const formattedName = needsQuotes ? `'${eventName}'` : eventName;
-      return `${formattedName}: ${handlerName}`;
-    }
-     / "@" eventName:attributeName _ {
-      const needsQuotes = /[^a-zA-Z0-9_$]/.test(eventName);
-      return needsQuotes ? `'${eventName}'` : eventName;
+unsupportedEventAttribute "unsupported event attribute"
+  = "@" eventName:attributeName (_ "=" _ "{" _ attributeValue _ "}")? {
+      generateError(
+        `@${eventName} is no longer supported. Use ${eventName} or ${eventName}={handler}.`,
+        location()
+      );
     }
 
 dynamicAttribute "dynamic attribute"
@@ -780,7 +798,7 @@ eventAttribute
 staticValue
   = [^"]+ {
       var val = text();
-      return `'${val}'`
+      return quoteSingleString(val)
     }
 
 content "component content"
@@ -904,7 +922,7 @@ condition "condition expression"
       }
 
       const hasOperator = /[!<>=&|]/.test(originalText);
-      if (hasOperator) {
+      if (hasOperator || hasFunctionCall(originalText)) {
         return `computed(() => ${originalText})`;
       }
 
