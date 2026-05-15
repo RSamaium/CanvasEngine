@@ -35,7 +35,7 @@ CanvasEngine gives you a component-oriented way to describe scenes, entities, HU
 ### Ambience
 
 - [Weather presets](/presets/weather) for rain, snow, fog, clouds, and atmospheric effects.
-- [NightAmbiant](/presets/night-ambiant) for night mood, lighting, and ambience.
+- [NightAmbient](/presets/night-ambiant) for night mood, lighting, and ambience.
 - Fog of war, shadows, footprints, and visual world feedback through presets.
 
 ### Feedback

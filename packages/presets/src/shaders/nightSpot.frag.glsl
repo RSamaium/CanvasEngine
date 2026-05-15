@@ -1,9 +1,9 @@
 /**
- * Night + spot light + fog fragment shader.
+ * Night + spot light + haze fragment shader.
  * - Supports multiple circular spots (uSpots) in screen-pixel space.
  * - Each spot is vec4(xPx, yPx, radiusPx, intensity).
- * - Fog is based on the nearest light source so illuminated areas stay readable.
- * - Dark zones are tinted with uDarkColor for colored night effects.
+ * - Haze is based on the nearest light source so illuminated areas stay readable.
+ * - Dark zones are tinted with uDarknessColor for colored night effects.
  */
 precision highp float;
 precision highp int;
@@ -15,11 +15,12 @@ out vec4 finalColor;
 uniform sampler2D uTexture;
 uniform highp vec4 uInputSize;
 uniform vec4 uSpots[24];
-uniform float uDarkness;
-uniform vec3 uDarkColor;
-uniform vec3 uFogColor;
-uniform float uFogRadius;
-uniform float uFogSoftness;
+uniform float uDarknessOpacity;
+uniform vec3 uDarknessColor;
+uniform vec3 uHazeColor;
+uniform float uHazeRadius;
+uniform float uHazeSoftness;
+uniform float uHazeOpacity;
 
 void main() {
   vec4 color = texture(uTexture, vTextureCoord);
@@ -42,18 +43,15 @@ void main() {
     nearestDist = min(nearestDist, distPx / minInputDim);
   }
 
-  // Night: full brightness where light is strong, darker elsewhere.
-  // Apply dark color tint in unlit areas.
-  float factor = mix(1.0 - uDarkness, 1.0, light);
-  vec3 darkened = color.rgb * factor;
-  // Blend towards dark color in unlit areas (when factor < 1)
-  float darkTint = (1.0 - factor) * uDarkness;
-  color.rgb = mix(darkened, uDarkColor, darkTint);
+  // Darkness is a color overlay outside spots. Spots punch through it.
+  float darkMask = clamp((1.0 - light) * uDarknessOpacity, 0.0, 1.0);
+  color.rgb = mix(color.rgb, uDarknessColor, darkMask);
 
-  // Fog fades in with distance to nearest light, but less inside lit areas.
-  float fogFactor = smoothstep(uFogRadius, uFogRadius + uFogSoftness, nearestDist);
-  fogFactor *= (1.0 - light * 0.7);
-  color.rgb = mix(color.rgb, uFogColor, clamp(fogFactor, 0.0, 1.0));
+  // Haze fades in with distance to nearest light, but less inside lit areas.
+  float hazeFactor = smoothstep(uHazeRadius, uHazeRadius + uHazeSoftness, nearestDist);
+  hazeFactor *= (1.0 - light * 0.7);
+  hazeFactor *= clamp(uHazeOpacity, 0.0, 1.0);
+  color.rgb = mix(color.rgb, uHazeColor, clamp(hazeFactor, 0.0, 1.0));
 
   finalColor = color;
 }

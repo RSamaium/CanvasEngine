@@ -10,6 +10,7 @@ import vertexShader from "./shaders/defaultFilter.vert.glsl?raw";
 
 type ReactiveValue<T> = T | (() => T);
 type PointLike = { x: number; y: number };
+type BoundsLike = { x: number; y: number; width: number; height: number };
 type ColorInput = string | number;
 
 export type ShadowLight = {
@@ -48,13 +49,15 @@ export type ShadowCasterOptions = {
   anchorX?: ReactiveValue<number>;
 };
 
-type ShadowMode = "strongest" | "blend2";
+export type ShadowMode = "strongest" | "blend2";
 
 export type SpriteShadowsProps = {
   lights?: ReactiveValue<Array<ShadowLightInput | ShadowLight>>;
   sources?: ReactiveValue<Array<ShadowLightInput | ShadowLight>>;
   mode?: ReactiveValue<ShadowMode>;
   updateHz?: ReactiveValue<number>;
+  scanHz?: ReactiveValue<number>;
+  cullToViewport?: ReactiveValue<boolean>;
   shadowColor?: ReactiveValue<ColorInput>;
 };
 
@@ -117,6 +120,7 @@ const DEFAULT_LIGHT_RADIUS = 360;
 const DEFAULT_LIGHT_INTENSITY = 1;
 const DEFAULT_MODE: ShadowMode = "strongest";
 const DEFAULT_UPDATE_HZ = 30;
+const DEFAULT_SCAN_HZ = 8;
 const DEFAULT_SHADOW_COLOR = 0x000000;
 const DEFAULT_CASTER: ResolvedCaster = {
   height: 72,
@@ -406,9 +410,97 @@ const hideManagedShadow = (managed: ManagedShadow) => {
 };
 
 const destroyManagedShadow = (managed: ManagedShadow) => {
+  managed.near.filters = [];
+  managed.far.filters = [];
+  managed.contact.filters = [];
+  managed.nearGradient.destroy?.();
+  managed.farGradient.destroy?.();
+  managed.nearBlur.destroy?.();
+  managed.farBlur.destroy?.();
+  managed.contactBlur.destroy?.();
   managed.near.destroy();
   managed.far.destroy();
   managed.contact.destroy();
+};
+
+const getCullBounds = (target: any): BoundsLike | null => {
+  if (!target) return null;
+  if (typeof target.getVisibleBounds === "function") {
+    const bounds = target.getVisibleBounds();
+    if (
+      bounds &&
+      isFiniteNumber(bounds.x) &&
+      isFiniteNumber(bounds.y) &&
+      isFiniteNumber(bounds.width) &&
+      isFiniteNumber(bounds.height)
+    ) {
+      return bounds;
+    }
+  }
+  if (typeof target.getLocalBounds === "function") {
+    const bounds = target.getLocalBounds();
+    if (
+      bounds &&
+      isFiniteNumber(bounds.x) &&
+      isFiniteNumber(bounds.y) &&
+      isFiniteNumber(bounds.width) &&
+      isFiniteNumber(bounds.height)
+    ) {
+      return bounds;
+    }
+  }
+  if (isFiniteNumber(target.width) && isFiniteNumber(target.height)) {
+    return { x: 0, y: 0, width: target.width, height: target.height };
+  }
+  return null;
+};
+
+const boundsIntersects = (a: BoundsLike, b: BoundsLike): boolean =>
+  a.x < b.x + b.width &&
+  a.x + a.width > b.x &&
+  a.y < b.y + b.height &&
+  a.y + a.height > b.y;
+
+const expandBounds = (bounds: BoundsLike, padding: number): BoundsLike => ({
+  x: bounds.x - padding,
+  y: bounds.y - padding,
+  width: bounds.width + padding * 2,
+  height: bounds.height + padding * 2,
+});
+
+const getCasterBoundsInSpace = (
+  caster: any,
+  space: any
+): BoundsLike | null => {
+  const bounds = typeof caster?.getBounds === "function" ? caster.getBounds() : null;
+  if (
+    !bounds ||
+    !isFiniteNumber(bounds.x) ||
+    !isFiniteNumber(bounds.y) ||
+    !isFiniteNumber(bounds.width) ||
+    !isFiniteNumber(bounds.height) ||
+    bounds.width <= 0 ||
+    bounds.height <= 0
+  ) {
+    return null;
+  }
+
+  const topLeft = toLocalPoint(space, { x: bounds.x, y: bounds.y });
+  const bottomRight = toLocalPoint(space, {
+    x: bounds.x + bounds.width,
+    y: bounds.y + bounds.height,
+  });
+  const minX = Math.min(topLeft.x, bottomRight.x);
+  const minY = Math.min(topLeft.y, bottomRight.y);
+  const maxX = Math.max(topLeft.x, bottomRight.x);
+  const maxY = Math.max(topLeft.y, bottomRight.y);
+
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(0, maxX - minX),
+    height: Math.max(0, maxY - minY),
+  };
 };
 
 const createManagedShadow = (
@@ -711,8 +803,11 @@ export function SpriteShadows(options: SpriteShadowsProps = {}) {
     const tickSignal = context?.tick;
 
     const managedByCaster = new Map<any, ManagedShadow>();
+    let cachedCasters: Array<{ instance: any; caster: ResolvedCaster }> = [];
     let accumulatorMs = 0;
+    let scanAccumulatorMs = 0;
     let forceRefresh = true;
+    let forceScan = true;
     let tickSubscription: any = null;
 
     const sync = () => {
@@ -722,7 +817,16 @@ export function SpriteShadows(options: SpriteShadowsProps = {}) {
       const modeRaw = resolveReactiveValue(props.mode as ReactiveValue<ShadowMode> | undefined);
       const mode: ShadowMode = modeRaw === "blend2" ? "blend2" : DEFAULT_MODE;
       const lights = resolveLights(lightsSource(), target);
-      const casters = collectShadowCasters(target);
+      const cullToViewport =
+        resolveReactiveValue(props.cullToViewport as ReactiveValue<boolean> | undefined) === true;
+      const cullBounds = cullToViewport ? getCullBounds(target) : null;
+
+      if (forceScan) {
+        cachedCasters = collectShadowCasters(target);
+        forceScan = false;
+      }
+
+      const casters = cachedCasters;
       const activeCasters = new Set<any>();
 
       for (let i = 0; i < casters.length; i++) {
@@ -735,6 +839,15 @@ export function SpriteShadows(options: SpriteShadowsProps = {}) {
           if (managed) destroyManagedShadow(managed);
           managed = createManagedShadow(casterInstance, casterInstance.parent, shadowColor);
           managedByCaster.set(casterInstance, managed);
+        }
+
+        if (cullBounds) {
+          const casterBounds = getCasterBoundsInSpace(casterInstance, target);
+          const cullPadding = Math.max(caster.maxLength, caster.blur * 8, 16);
+          if (!casterBounds || !boundsIntersects(expandBounds(casterBounds, cullPadding), cullBounds)) {
+            hideManagedShadow(managed);
+            continue;
+          }
         }
 
         updateManagedShadow(managed, caster, lights, mode, shadowColor);
@@ -764,8 +877,23 @@ export function SpriteShadows(options: SpriteShadowsProps = {}) {
         1,
         120
       );
+      const scanHzRaw = Number(
+        resolveReactiveValue(props.scanHz as ReactiveValue<number> | undefined)
+      );
+      const scanHz = clamp(
+        isFiniteNumber(scanHzRaw) ? scanHzRaw : DEFAULT_SCAN_HZ,
+        1,
+        60
+      );
       const intervalMs = 1000 / updateHz;
+      const scanIntervalMs = 1000 / scanHz;
       accumulatorMs += frameMs;
+      scanAccumulatorMs += frameMs;
+
+      if (scanAccumulatorMs >= scanIntervalMs) {
+        scanAccumulatorMs = 0;
+        forceScan = true;
+      }
 
       if (forceRefresh || accumulatorMs >= intervalMs) {
         accumulatorMs = 0;

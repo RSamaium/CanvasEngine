@@ -6,11 +6,11 @@ import { bootstrapCanvas } from 'canvasengine';
 // import App from './loader.ce'
 // Uncomment to test global asset loader (with spritesheets):
 // import App from './fogofwar.ce'
-// import App from './sprite-shadows.ce'
+ import App from './sprite-shadows.ce'
 // import App from './spritesheet.ce'
 // import App from './cond-else-loop.ce'
 // import App from './app.ce'
-import App from './sprite-effects.ce'
+//import App from './sprite-effects.ce'
 // import App from './sprite-moving-custom.ce'
 // import App from './loop-render-order.ce'
 

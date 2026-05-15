@@ -7,15 +7,20 @@ const MAX_SPOTS = 24;
 const SPOT_RADIUS_PX = 180;
 /** Darkness outside the spot (0 = no darkening, 1 = black). */
 const DARKNESS = 0.75;
-/** Fog: distance from player (0-1) where fog starts. */
-const FOG_RADIUS = 0.5;
-/** Fog: width of the fog transition (smoothstep). */
-const FOG_SOFTNESS = 0.35;
-/** Fog color (RGB, linear 0-1). Dark blue-gray for night. */
-const FOG_COLOR = new Float32Array([0.08, 0.08, 0.14]);
+/** Haze: distance from player (0-1) where haze starts. */
+const HAZE_RADIUS = 0.5;
+/** Haze: width of the haze transition (smoothstep). */
+const HAZE_SOFTNESS = 0.35;
+/** Haze overlay opacity when fully outside light spots. */
+const HAZE_OPACITY = 0.35;
+/** Haze color (RGB, linear 0-1). Dark blue-gray for night. */
+const HAZE_COLOR = new Float32Array([0.08, 0.08, 0.14]);
+const DARKNESS_COLOR = new Float32Array([0, 0, 0]);
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const clampDarkness = (value: number) => clamp(value, 0, 1);
+const clampPositive = (value: number, fallback: number) =>
+  Number.isFinite(value) ? Math.max(0, value) : fallback;
 
 type PointLike = { x: number; y: number };
 type BoundsLike = { x: number; y: number; width: number; height: number };
@@ -27,11 +32,12 @@ type ViewportLike = {
 };
 type NightUniformValues = {
   uSpots: Float32Array;
-  uDarkness: number;
-  uDarkColor: Float32Array;
-  uFogColor: Float32Array;
-  uFogRadius: number;
-  uFogSoftness: number;
+  uDarknessOpacity: number;
+  uDarknessColor: Float32Array;
+  uHazeColor: Float32Array;
+  uHazeRadius: number;
+  uHazeSoftness: number;
+  uHazeOpacity: number;
 };
 export type NightSpot = PointLike & {
   radius?: number;
@@ -72,22 +78,45 @@ export type NightSpotInput = {
  */
 export type ColorInput = string | number | [number, number, number];
 
+export type NightDarknessOptions = {
+  /** Overlay opacity outside light spots (0 = no darkening, 1 = full color overlay). Default: 0.75 */
+  opacity?: ReactiveValue<number>;
+  /** Overlay color outside light spots. Default: "#000000" */
+  color?: ReactiveValue<ColorInput>;
+};
+
+export type NightHazeOptions = {
+  /** Haze color around light spots. Default: "#141424" */
+  color?: ReactiveValue<ColorInput>;
+  /** Distance from light center where haze starts (0-1). Default: 0.5 */
+  radius?: ReactiveValue<number>;
+  /** Width of the haze transition. Default: 0.35 */
+  softness?: ReactiveValue<number>;
+  /** Haze overlay opacity when fully outside light spots. Default: 0.35 */
+  opacity?: ReactiveValue<number>;
+};
+
+type NightHazeValues = {
+  color?: ColorInput;
+  radius?: number;
+  softness?: number;
+  opacity?: number;
+};
+
 export type NightAmbiantProps = {
   /** Main reactive list of light spots. */
   lightSpots?: ReactiveValue<Array<NightSpotInput | NightSpot>>;
   /** Alias for `lightSpots` for compatibility. */
   spots?: ReactiveValue<Array<NightSpotInput | NightSpot>>;
-  /** Darkness intensity outside light spots (0 = no darkening, 1 = full black). Default: 0.75 */
-  darkness?: ReactiveValue<number>;
-  /** Tint color applied in dark zones. Default: "#000000" */
+  /** Darkness overlay outside light spots. A number is treated as opacity for compatibility. */
+  darkness?: ReactiveValue<number | NightDarknessOptions>;
+  /** Tint color applied in dark zones. Legacy alias for `darkness.color`. Default: "#000000" */
   darkColor?: ReactiveValue<ColorInput>;
-  /** Fog color around light spots. Default: "#141424" */
-  fogColor?: ReactiveValue<ColorInput>;
-  /** Distance from light center where fog starts (0-1). Default: 0.5 */
-  fogRadius?: ReactiveValue<number>;
-  /** Width of the fog transition. Default: 0.35 */
-  fogSoftness?: ReactiveValue<number>;
+  /** Haze configuration. */
+  haze?: ReactiveValue<NightHazeOptions>;
 };
+
+export type NightAmbientProps = NightAmbiantProps;
 
 export type NightFilter = Filter & {
   setLightWorldPosition: (position: PointLike | null) => void;
@@ -95,11 +124,14 @@ export type NightFilter = Filter & {
   setSpots: (spots: NightSpot[]) => void;
   getSpots: () => NightSpot[];
   syncLightToViewport: () => void;
+  setDarknessOpacity: (value: number) => void;
   setDarkness: (value: number) => void;
+  setDarknessColor: (color: ColorInput) => void;
   setDarkColor: (color: ColorInput) => void;
-  setFogColor: (color: ColorInput) => void;
-  setFogRadius: (value: number) => void;
-  setFogSoftness: (value: number) => void;
+  setHazeColor: (color: ColorInput) => void;
+  setHazeRadius: (value: number) => void;
+  setHazeSoftness: (value: number) => void;
+  setHazeOpacity: (value: number) => void;
 };
 
 /**
@@ -116,12 +148,18 @@ export type NightFilter = Filter & {
  * parseColor([0.5, 0.5, 0.5]); // Float32Array [0.5, 0.5, 0.5]
  * ```
  */
-const parseColor = (color: ColorInput): Float32Array => {
+const parseColor = (
+  color: ColorInput,
+  fallback: Float32Array = DARKNESS_COLOR
+): Float32Array => {
   if (typeof color === "string") {
     // Parse hex string (#RGB, #RRGGBB)
-    let hex = color.replace(/^#/, "");
+    let hex = color.trim().replace(/^#/, "");
     if (hex.length === 3) {
       hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    if (!/^[0-9a-fA-F]{6}$/.test(hex)) {
+      return new Float32Array(fallback);
     }
     const num = parseInt(hex, 16);
     return new Float32Array([
@@ -131,24 +169,24 @@ const parseColor = (color: ColorInput): Float32Array => {
     ]);
   }
   if (typeof color === "number") {
+    const normalized = Math.max(0, Math.floor(color)) & 0xffffff;
     return new Float32Array([
-      ((color >> 16) & 0xff) / 255,
-      ((color >> 8) & 0xff) / 255,
-      (color & 0xff) / 255,
+      ((normalized >> 16) & 0xff) / 255,
+      ((normalized >> 8) & 0xff) / 255,
+      (normalized & 0xff) / 255,
     ]);
   }
   if (Array.isArray(color) && color.length >= 3) {
     // If values are > 1, assume 0-255 range
     const isNormalized = color.every((c) => c <= 1);
-    return new Float32Array(
-      isNormalized ? color : color.map((c) => c / 255)
-    );
+    const values = isNormalized ? color : color.map((c) => c / 255);
+    return new Float32Array(values.map((c) => clamp(c, 0, 1)) as [number, number, number]);
   }
-  return new Float32Array([0, 0, 0]);
+  return new Float32Array(fallback);
 };
 
 /**
- * Creates a night filter with configurable light spots, darkness, and fog effects.
+ * Creates a night filter with configurable light spots, darkness, and haze effects.
  * 
  * The filter renders a dark overlay with circular light spots that illuminate areas.
  * It supports multiple spots with individual intensity, radius, flicker, and pulse effects.
@@ -161,9 +199,9 @@ const parseColor = (color: ColorInput): Float32Array => {
  * ```ts
  * const filter = createNightFilter(viewport, {
  *   spots: [{ x: 100, y: 100, radius: 200, intensity: 1.0 }],
- *   darkness: 0.8,
- *   darkColor: "#0a1020",
- *   fogColor: "#141a2a",
+ *   darknessOpacity: 0.8,
+ *   darknessColor: "#0a1020",
+ *   haze: { color: "#141a2a", opacity: 0.35 },
  * });
  * container.filters = [filter];
  * ```
@@ -174,20 +212,21 @@ export function createNightFilter(
     lightWorldPosition?: PointLike | null;
     spots?: NightSpot[];
     getBounds?: () => BoundsLike | null | undefined;
+    darknessOpacity?: number;
+    darknessColor?: ColorInput;
     darkness?: number;
     darkColor?: ColorInput;
-    fogColor?: ColorInput;
-    fogRadius?: number;
-    fogSoftness?: number;
+    haze?: NightHazeValues;
   }
 ): NightFilter {
   const uSpots = new Float32Array(MAX_SPOTS * 4);
   const uSpotsUniform = { value: uSpots, type: 'vec4<f32>' as const, size: MAX_SPOTS };
-  const uDarkness = { value: clampDarkness(options?.darkness ?? DARKNESS), type: 'f32' as const };
-  const uFogColor = { value: options?.fogColor ? parseColor(options.fogColor) : FOG_COLOR, type: 'vec3<f32>' as const };
-  const uFogRadius = { value: options?.fogRadius ?? FOG_RADIUS, type: 'f32' as const };
-  const uFogSoftness = { value: options?.fogSoftness ?? FOG_SOFTNESS, type: 'f32' as const };
-  const uDarkColor = { value: options?.darkColor ? parseColor(options.darkColor) : new Float32Array([0, 0, 0]), type: 'vec3<f32>' as const };
+  const uDarknessOpacity = { value: clampDarkness(options?.darknessOpacity ?? options?.darkness ?? DARKNESS), type: 'f32' as const };
+  const uDarknessColor = { value: options?.darknessColor ? parseColor(options.darknessColor) : options?.darkColor ? parseColor(options.darkColor) : new Float32Array(DARKNESS_COLOR), type: 'vec3<f32>' as const };
+  const uHazeColor = { value: options?.haze?.color ? parseColor(options.haze.color, HAZE_COLOR) : new Float32Array(HAZE_COLOR), type: 'vec3<f32>' as const };
+  const uHazeRadius = { value: clampPositive(options?.haze?.radius ?? HAZE_RADIUS, HAZE_RADIUS), type: 'f32' as const };
+  const uHazeSoftness = { value: clampPositive(options?.haze?.softness ?? HAZE_SOFTNESS, HAZE_SOFTNESS), type: 'f32' as const };
+  const uHazeOpacity = { value: clampDarkness(options?.haze?.opacity ?? HAZE_OPACITY), type: 'f32' as const };
   
   let customSpots: NightSpot[] = options?.spots ? [...options.spots] : [];
   let lightWorldPosition: PointLike | null = options?.lightWorldPosition ?? null;
@@ -200,18 +239,19 @@ export function createNightFilter(
     resources: {
       nightUniforms: {
         uSpots: uSpotsUniform,
-        uDarkness,
-        uDarkColor,
-        uFogColor,
-        uFogRadius,
-        uFogSoftness,
+        uDarknessOpacity,
+        uDarknessColor,
+        uHazeColor,
+        uHazeRadius,
+        uHazeSoftness,
+        uHazeOpacity,
       },
     },
   });
   const nightUniforms = (nightFilter as any).resources.nightUniforms.uniforms as NightUniformValues;
 
   const nowSeconds = () => Date.now() / 1000;
-  const setColorUniform = (name: "uDarkColor" | "uFogColor", color: Float32Array) => {
+  const setColorUniform = (name: "uDarknessColor" | "uHazeColor", color: Float32Array) => {
     const current = nightUniforms[name];
     if (current instanceof Float32Array && current.length >= color.length) {
       current.set(color);
@@ -246,7 +286,7 @@ export function createNightFilter(
     uSpots.fill(0);
     for (let i = 0; i < spotCount; i++) {
       const spot = activeSpots[i];
-      const radiusPx = spot.radius ?? SPOT_RADIUS_PX;
+      const radiusPx = clampPositive(spot.radius ?? SPOT_RADIUS_PX, SPOT_RADIUS_PX);
       const intensityBase = clamp(spot.intensity ?? 1, 0, 2);
       const phase = spot.phase ?? i * 0.7;
       let intensity = intensityBase;
@@ -262,8 +302,6 @@ export function createNightFilter(
 
       let x = spot.x;
       let y = spot.y;
-      let radius = radiusPx;
-
       if (canUseViewportScreen) {
         const point = toScreen!(spot.x, spot.y);
         x = point.x - viewportOriginX;
@@ -276,7 +314,7 @@ export function createNightFilter(
       const base = i * 4;
       uSpots[base] = x;
       uSpots[base + 1] = y;
-      uSpots[base + 2] = radius;
+      uSpots[base + 2] = radiusPx;
       uSpots[base + 3] = clamp(intensity, 0, 2);
     }
 
@@ -287,7 +325,7 @@ export function createNightFilter(
   nightFilter.apply = ((...args: any[]) => {
     // Keep the spot anchored in world space while the viewport moves/zooms.
     syncLightToViewport();
-    return originalApply(...args);
+    return (originalApply as any)(...args);
   }) as typeof nightFilter.apply;
 
   const extendedFilter = nightFilter as NightFilter;
@@ -302,20 +340,29 @@ export function createNightFilter(
   };
   extendedFilter.getSpots = () => getActiveSpots().map((spot) => ({ ...spot }));
   extendedFilter.syncLightToViewport = syncLightToViewport;
+  extendedFilter.setDarknessOpacity = (value: number) => {
+    nightUniforms.uDarknessOpacity = clampDarkness(value);
+  };
   extendedFilter.setDarkness = (value: number) => {
-    nightUniforms.uDarkness = clampDarkness(value);
+    extendedFilter.setDarknessOpacity(value);
+  };
+  extendedFilter.setDarknessColor = (color: ColorInput) => {
+    setColorUniform("uDarknessColor", parseColor(color));
   };
   extendedFilter.setDarkColor = (color: ColorInput) => {
-    setColorUniform("uDarkColor", parseColor(color));
+    extendedFilter.setDarknessColor(color);
   };
-  extendedFilter.setFogColor = (color: ColorInput) => {
-    setColorUniform("uFogColor", parseColor(color));
+  extendedFilter.setHazeColor = (color: ColorInput) => {
+    setColorUniform("uHazeColor", parseColor(color, HAZE_COLOR));
   };
-  extendedFilter.setFogRadius = (value: number) => {
-    nightUniforms.uFogRadius = value;
+  extendedFilter.setHazeRadius = (value: number) => {
+    nightUniforms.uHazeRadius = clampPositive(value, HAZE_RADIUS);
   };
-  extendedFilter.setFogSoftness = (value: number) => {
-    nightUniforms.uFogSoftness = value;
+  extendedFilter.setHazeSoftness = (value: number) => {
+    nightUniforms.uHazeSoftness = clampPositive(value, HAZE_SOFTNESS);
+  };
+  extendedFilter.setHazeOpacity = (value: number) => {
+    nightUniforms.uHazeOpacity = clampDarkness(value);
   };
 
   syncLightToViewport();
@@ -366,6 +413,69 @@ const resolveSpots = (
   return list.map(resolveSpot).filter((spot): spot is NightSpot => !!spot);
 };
 
+const resolveDarknessSource = (
+  value: ReactiveValue<number | NightDarknessOptions> | undefined
+): number | NightDarknessOptions | undefined => resolveReactiveValue(value);
+
+const resolveDarknessOpacity = (
+  value: ReactiveValue<number | NightDarknessOptions> | undefined
+): number | undefined => {
+  const source = resolveDarknessSource(value);
+  if (isFiniteNumber(source)) return source;
+  if (source && typeof source === "object") {
+    const opacity = resolveReactiveValue(source.opacity);
+    if (isFiniteNumber(opacity)) return opacity;
+  }
+  return undefined;
+};
+
+const resolveDarknessColor = (
+  value: ReactiveValue<number | NightDarknessOptions> | undefined,
+  legacyDarkColor: ReactiveValue<ColorInput> | undefined
+): ColorInput | undefined => {
+  const source = resolveDarknessSource(value);
+  if (source && typeof source === "object") {
+    const color = resolveReactiveValue(source.color);
+    if (color !== undefined) return color;
+  }
+  return resolveReactiveValue(legacyDarkColor);
+};
+
+const resolveHazeSource = (
+  value: ReactiveValue<NightHazeOptions> | undefined
+): NightHazeOptions | undefined => resolveReactiveValue(value);
+
+const resolveHazeColor = (
+  value: ReactiveValue<NightHazeOptions> | undefined
+): ColorInput | undefined => {
+  const source = resolveHazeSource(value);
+  return source ? resolveReactiveValue(source.color) : undefined;
+};
+
+const resolveHazeRadius = (
+  value: ReactiveValue<NightHazeOptions> | undefined
+): number | undefined => {
+  const source = resolveHazeSource(value);
+  const radius = source ? resolveReactiveValue(source.radius) : undefined;
+  return isFiniteNumber(radius) ? radius : undefined;
+};
+
+const resolveHazeSoftness = (
+  value: ReactiveValue<NightHazeOptions> | undefined
+): number | undefined => {
+  const source = resolveHazeSource(value);
+  const softness = source ? resolveReactiveValue(source.softness) : undefined;
+  return isFiniteNumber(softness) ? softness : undefined;
+};
+
+const resolveHazeOpacity = (
+  value: ReactiveValue<NightHazeOptions> | undefined
+): number | undefined => {
+  const source = resolveHazeSource(value);
+  const opacity = source ? resolveReactiveValue(source.opacity) : undefined;
+  return isFiniteNumber(opacity) ? opacity : undefined;
+};
+
 const toBoundsLike = (target: any): BoundsLike | null => {
   if (!target) return null;
   if (typeof target.getVisibleBounds === "function") {
@@ -383,11 +493,13 @@ const toBoundsLike = (target: any): BoundsLike | null => {
 };
 
 /**
- * Night ambiance component that adds a dark overlay with dynamic light spots.
+ * Night ambience component that adds a dark overlay with dynamic light spots.
  * 
  * This component creates a night-time atmosphere with configurable darkness,
- * fog effects, and multiple light sources. It automatically attaches to a
+ * haze effects, and multiple light sources. It automatically attaches to a
  * Viewport if present in context, otherwise to the parent container.
+ *
+ * Prefer `NightAmbient`; `NightAmbiant` is kept for backward compatibility.
  * 
  * All props are reactive and support signal/function values.
  * 
@@ -396,11 +508,10 @@ const toBoundsLike = (target: any): BoundsLike | null => {
  * @example
  * ```html
  * <Viewport worldWidth={2048} worldHeight={2048} screen>
- *   <NightAmbiant
- *     lightSpots={lightSpots}
- *     darkness={0.8}
- *     darkColor="#0a1020"
- *     fogColor="#141a2a"
+ *   <NightAmbient
+ *     spots={lightSpots}
+ *     darkness={{ opacity: 0.8, color: "#0a1020" }}
+ *     haze={{ color: "#141a2a", radius: 0.5, softness: 0.35, opacity: 0.35 }}
  *   />
  * </Viewport>
  * ```
@@ -430,20 +541,35 @@ export function NightAmbiant(options: NightAmbiantProps = {}) {
     };
 
     // Resolve initial values for filter options
-    const initialDarkness = resolveReactiveValue(props.darkness as ReactiveValue<number> | undefined);
-    const initialDarkColor = resolveReactiveValue(props.darkColor as ReactiveValue<ColorInput> | undefined);
-    const initialFogColor = resolveReactiveValue(props.fogColor as ReactiveValue<ColorInput> | undefined);
-    const initialFogRadius = resolveReactiveValue(props.fogRadius as ReactiveValue<number> | undefined);
-    const initialFogSoftness = resolveReactiveValue(props.fogSoftness as ReactiveValue<number> | undefined);
+    const initialDarknessOpacity = resolveDarknessOpacity(props.darkness as ReactiveValue<number | NightDarknessOptions> | undefined);
+    const initialDarknessColor = resolveDarknessColor(
+      props.darkness as ReactiveValue<number | NightDarknessOptions> | undefined,
+      props.darkColor as ReactiveValue<ColorInput> | undefined
+    );
+    const initialHazeColor = resolveHazeColor(
+      props.haze as ReactiveValue<NightHazeOptions> | undefined
+    );
+    const initialHazeRadius = resolveHazeRadius(
+      props.haze as ReactiveValue<NightHazeOptions> | undefined
+    );
+    const initialHazeSoftness = resolveHazeSoftness(
+      props.haze as ReactiveValue<NightHazeOptions> | undefined
+    );
+    const initialHazeOpacity = resolveHazeOpacity(
+      props.haze as ReactiveValue<NightHazeOptions> | undefined
+    );
 
     const nightFilter = createNightFilter(viewport, {
       spots: resolveSpots(spotsSource()),
       getBounds: resolveFilterBounds,
-      darkness: isFiniteNumber(initialDarkness) ? initialDarkness : undefined,
-      darkColor: initialDarkColor ?? undefined,
-      fogColor: initialFogColor ?? undefined,
-      fogRadius: isFiniteNumber(initialFogRadius) ? initialFogRadius : undefined,
-      fogSoftness: isFiniteNumber(initialFogSoftness) ? initialFogSoftness : undefined,
+      darknessOpacity: isFiniteNumber(initialDarknessOpacity) ? initialDarknessOpacity : undefined,
+      darknessColor: initialDarknessColor ?? undefined,
+      haze: {
+        color: initialHazeColor ?? undefined,
+        radius: isFiniteNumber(initialHazeRadius) ? initialHazeRadius : undefined,
+        softness: isFiniteNumber(initialHazeSoftness) ? initialHazeSoftness : undefined,
+        opacity: isFiniteNumber(initialHazeOpacity) ? initialHazeOpacity : undefined,
+      },
     });
 
     const currentFilters = Array.isArray(target.filters) ? target.filters : [];
@@ -456,52 +582,74 @@ export function NightAmbiant(options: NightAmbiantProps = {}) {
       nightFilter.setSpots(resolveSpots(spotsSource()));
     });
 
-    // Reactive effect for darkness
+    // Reactive effect for darkness opacity
     effect(() => {
-      const value = resolveReactiveValue(props.darkness as ReactiveValue<number> | undefined);
+      const value = resolveDarknessOpacity(props.darkness as ReactiveValue<number | NightDarknessOptions> | undefined);
       if (isFiniteNumber(value)) {
-        nightFilter.setDarkness(value);
+        nightFilter.setDarknessOpacity(value);
       }
     });
 
-    // Reactive effect for dark color
+    // Reactive effect for darkness color
     effect(() => {
-      const value = resolveReactiveValue(props.darkColor as ReactiveValue<ColorInput> | undefined);
+      const value = resolveDarknessColor(
+        props.darkness as ReactiveValue<number | NightDarknessOptions> | undefined,
+        props.darkColor as ReactiveValue<ColorInput> | undefined
+      );
       if (value !== undefined) {
-        nightFilter.setDarkColor(value);
+        nightFilter.setDarknessColor(value);
       }
     });
 
-    // Reactive effect for fog color
+    // Reactive effect for haze color
     effect(() => {
-      const value = resolveReactiveValue(props.fogColor as ReactiveValue<ColorInput> | undefined);
+      const value = resolveHazeColor(
+        props.haze as ReactiveValue<NightHazeOptions> | undefined
+      );
       if (value !== undefined) {
-        nightFilter.setFogColor(value);
+        nightFilter.setHazeColor(value);
       }
     });
 
-    // Reactive effect for fog radius
+    // Reactive effect for haze radius
     effect(() => {
-      const value = resolveReactiveValue(props.fogRadius as ReactiveValue<number> | undefined);
+      const value = resolveHazeRadius(
+        props.haze as ReactiveValue<NightHazeOptions> | undefined
+      );
       if (isFiniteNumber(value)) {
-        nightFilter.setFogRadius(value);
+        nightFilter.setHazeRadius(value);
       }
     });
 
-    // Reactive effect for fog softness
+    // Reactive effect for haze softness
     effect(() => {
-      const value = resolveReactiveValue(props.fogSoftness as ReactiveValue<number> | undefined);
+      const value = resolveHazeSoftness(
+        props.haze as ReactiveValue<NightHazeOptions> | undefined
+      );
       if (isFiniteNumber(value)) {
-        nightFilter.setFogSoftness(value);
+        nightFilter.setHazeSoftness(value);
+      }
+    });
+
+    // Reactive effect for haze opacity
+    effect(() => {
+      const value = resolveHazeOpacity(
+        props.haze as ReactiveValue<NightHazeOptions> | undefined
+      );
+      if (isFiniteNumber(value)) {
+        nightFilter.setHazeOpacity(value);
       }
     });
 
     return () => {
       const filters = Array.isArray(target.filters) ? target.filters : [];
-      const nextFilters = filters.filter((filter) => filter !== nightFilter);
+      const nextFilters = filters.filter((filter: unknown) => filter !== nightFilter);
       target.filters = nextFilters.length > 0 ? nextFilters : null;
     };
   });
 
   return h(Container);
 }
+
+/** Preferred spelling. `NightAmbiant` remains exported for backward compatibility. */
+export const NightAmbient = NightAmbiant;

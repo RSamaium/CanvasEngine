@@ -6,20 +6,19 @@
     clamp={viewportClamp}
   >
     <Sprite image="./back.png" width={worldWidth} height={worldHeight} />
-<!-- 
-    <NightAmbiant
-      lightSpots={nightLights}
-      darkness={0.6}
-      darkColor="#080a12"
-      fogColor="#12182a"
-      fogRadius={0.44}
-      fogSoftness={0.3}
-    /> -->
+
+    <NightAmbient
+      spots={nightLights}
+      darkness={nightDarkness}
+      haze={nightHaze}
+    />
 
     <SpriteShadows
       lights={shadowLights}
-      mode="strongest"
+      mode="blend2"
       updateHz={60}
+      scanHz={8}
+      cullToViewport={true}
       shadowColor="#05070d"
     />
 
@@ -46,12 +45,13 @@
     />
 
     <Graphics x={torchX} y={torchY} zIndex={30} draw={drawTorch} />
+    <Graphics x={crystalX} y={crystalY} zIndex={30} draw={drawCrystalLight} />
 
     <Text
       x={26}
       y={24}
       zIndex={100}
-      text="SpriteShadows demo: move with arrows. Shadows are projected opposite to fixed map lights."
+      text="SpriteShadows demo: move with arrows. Two lights blend shadow direction; off-screen casters are culled."
       style={labelStyle}
     />
   </Viewport>
@@ -59,11 +59,21 @@
 
 <script>
   import { computed, signal, tick } from "canvasengine";
-  import { NightAmbiant, SpriteShadows } from "@canvasengine/presets";
+  import { NightAmbient, SpriteShadows } from "@canvasengine/presets";
 
   const worldWidth = 2048;
   const worldHeight = 2048;
   const viewportClamp = { direction: "all" };
+  const nightDarkness = {
+    opacity: 0.68,
+    color: "#070914",
+  };
+  const nightHaze = {
+    color: "#12182a",
+    radius: 0.44,
+    softness: 0.3,
+    opacity: 0.28,
+  };
   const labelStyle = {
     fill: "#f3f4ff",
     fontSize: 18,
@@ -130,6 +140,8 @@
   const enemyY = signal(700);
   const torchX = signal(760);
   const torchY = signal(430);
+  const crystalX = signal(1260);
+  const crystalY = signal(760);
   const time = signal(0);
 
   const moveSpeed = 12;
@@ -182,6 +194,14 @@
       intensity: 1.3,
       shadowWeight: 1.5,
     },
+    {
+      x: crystalX(),
+      y: crystalY(),
+      z: 250,
+      radius: 520,
+      intensity: 0.86,
+      shadowWeight: 0.85,
+    },
   ]);
 
   const nightLights = computed(() =>
@@ -189,9 +209,11 @@
       x: light.x,
       y: light.y,
       radius: light.radius * 0.72,
-      intensity: index === 0 ? 1 : 0.92,
-      flicker: index === 1,
+      intensity: index === 0 ? 1 : 0.78,
+      flicker: index === 0,
       flickerSpeed: 14,
+      pulse: index === 1,
+      pulseSpeed: 1.2,
     }))
   );
 
@@ -201,5 +223,13 @@
     graphics.fill({ color: 0xffcc66, alpha: 1 });
     graphics.circle(0, 0, 20);
     graphics.fill({ color: 0xffcc66, alpha: 0.28 });
+  };
+
+  const drawCrystalLight = (graphics) => {
+    graphics.clear();
+    graphics.circle(0, 0, 10);
+    graphics.fill({ color: 0x8fd7ff, alpha: 1 });
+    graphics.circle(0, 0, 28);
+    graphics.fill({ color: 0x4aa9ff, alpha: 0.22 });
   };
 </script>

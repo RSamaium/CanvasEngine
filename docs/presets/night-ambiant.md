@@ -1,31 +1,40 @@
-# NightAmbiant
+# NightAmbient
 
 <!-- @include: ./_before.md -->
 
 ## Overview
 
-`NightAmbiant` adds a night overlay with dynamic light spots.
+`NightAmbient` adds a night overlay with dynamic light spots.
 
 - If a `Viewport` is present in context, the filter is attached to it automatically.
 - Otherwise, it attaches to the parent container.
 - All props are reactive and support signal/function values.
+- `haze` is an ambient night veil, not a physical fog effect.
+- `NightAmbiant` remains available as a backward-compatible alias.
 
 ## Basic Usage
 
 ```html
 <Canvas backgroundColor="#1a472a">
     <Viewport worldWidth={2048} worldHeight={2048} screen>
-        <NightAmbiant
-            lightSpots={lightSpots}
-            darkness={0.8}
-            darkColor="#0a1020"
-            fogColor="#141a2a"
+        <NightAmbient
+            spots={lightSpots}
+            darkness={{
+                opacity: 0.8,
+                color: "#0a1020",
+            }}
+            haze={{
+                color: "#141a2a",
+                radius: 0.5,
+                softness: 0.35,
+                opacity: 0.35,
+            }}
         />
     </Viewport>
 </Canvas>
 
 <script>
-    import { NightAmbiant } from '@canvasengine/presets'
+    import { NightAmbient } from '@canvasengine/presets'
     import { signal } from 'canvasengine'
 
     const playerX = signal(400)
@@ -50,7 +59,7 @@
 ```html
 <Canvas>
     <Container>
-        <NightAmbiant lightSpots={spots} />
+        <NightAmbient spots={spots} />
         <Sprite image="back.png" />
     </Container>
 </Canvas>
@@ -85,11 +94,25 @@
 |------|------|----------|---------|-------------|
 | lightSpots | `Array<SpotInput>` \| `Signal` \| `() => Array` | No | `[]` | Main reactive list of light spots |
 | spots | Same as `lightSpots` | No | - | Alias for compatibility |
-| darkness | `number` \| `Signal<number>` \| `() => number` | No | `0.75` | Darkness intensity outside light spots (`0` = no darkening, `1` = full black) |
-| darkColor | `Color` \| `Signal<Color>` \| `() => Color` | No | `#000000` | Tint color applied in dark zones (colored night effect) |
-| fogColor | `Color` \| `Signal<Color>` \| `() => Color` | No | `#141424` | Fog color that fades in around light spots |
-| fogRadius | `number` \| `Signal<number>` \| `() => number` | No | `0.5` | Distance from light center where fog starts (`0..1`) |
-| fogSoftness | `number` \| `Signal<number>` \| `() => number` | No | `0.35` | Width of the fog transition (higher = softer edge) |
+| darkness | `number \| { opacity, color }` \| `Signal` \| `() => value` | No | `{ opacity: 0.75, color: "#000000" }` | Darkness overlay outside light spots. A number is treated as `opacity` |
+| darkColor | `Color` \| `Signal<Color>` \| `() => Color` | No | `#000000` | Legacy alias for `darkness.color` |
+| haze | `{ color, radius, softness, opacity }` \| `Signal` \| `() => value` | No | see below | Haze configuration |
+
+### Darkness fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| opacity | `number` \| `Signal<number>` \| `() => number` | `0.75` | Overlay opacity outside light spots (`0` = no darkening, `1` = full color overlay) |
+| color | `Color` \| `Signal<Color>` \| `() => Color` | `#000000` | Overlay color outside light spots |
+
+### Haze fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| color | `Color` \| `Signal<Color>` \| `() => Color` | `#141424` | Haze color |
+| radius | `number` \| `Signal<number>` \| `() => number` | `0.5` | Distance from light center where haze starts (`0..1`) |
+| softness | `number` \| `Signal<number>` \| `() => number` | `0.35` | Width of the haze transition |
+| opacity | `number` \| `Signal<number>` \| `() => number` | `0.35` | Maximum haze overlay opacity outside light spots |
 
 ### SpotInput fields
 

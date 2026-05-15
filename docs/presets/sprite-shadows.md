@@ -23,6 +23,8 @@ To cast a shadow, a sprite must be tagged with `shadowCaster`.
       lights={lights}
       mode="strongest"
       updateHz={60}
+      scanHz={8}
+      cullToViewport={true}
       shadowColor="#05070d"
     />
 
@@ -77,6 +79,8 @@ To cast a shadow, a sprite must be tagged with `shadowCaster`.
 | `sources` | Same as `lights` | `[]` | Alias of `lights` |
 | `mode` | `'strongest' \| 'blend2'` | `'strongest'` | Light selection strategy per caster |
 | `updateHz` | `number \| Signal<number> \| () => number` | `30` | Shadow recompute frequency |
+| `scanHz` | `number \| Signal<number> \| () => number` | `8` | Scene scan frequency used to discover added, removed, or retagged shadow casters |
+| `cullToViewport` | `boolean \| Signal<boolean> \| () => boolean` | `false` | Hide and skip shadow updates for casters outside the visible target bounds |
 | `shadowColor` | `string \| number` | `0x000000` | Base tint color of silhouettes |
 
 ### `LightInput`
@@ -135,3 +139,5 @@ Attach on each sprite that must cast a shadow:
 - For moon/sun style: higher `z`, larger `radius`, lower `intensity`.
 - Keep `mode="strongest"` for readability and lower CPU.
 - Use `blend2` only when multiple nearby lights must affect direction.
+- Increase `updateHz` for very responsive character movement; keep `scanHz` lower because caster discovery is more expensive.
+- Enable `cullToViewport` on large maps with many off-screen casters.
