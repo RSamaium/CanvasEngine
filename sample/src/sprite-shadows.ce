@@ -5,16 +5,19 @@
     sortableChildren={true}
     clamp={viewportClamp}
   >
-    <Sprite image="./back.png" width={worldWidth} height={worldHeight} />
+    <Graphics zIndex={0} draw={drawGround} />
 
-    <NightAmbient
+    <NightAmbiant
       spots={nightLights}
       darkness={nightDarkness}
       haze={nightHaze}
-    />
+    /> 
 
     <SpriteShadows
       lights={shadowLights}
+      ambientLight={ambientShadowLight}
+      minInfluence={0.16}
+      falloffPower={1.2}
       mode="blend2"
       updateHz={60}
       scanHz={8}
@@ -22,25 +25,20 @@
       shadowColor="#05070d"
     />
 
-    <Sprite
+    <Graphics
       x={heroX}
       y={heroY}
-      width={96}
-      height={96}
       zIndex={20}
       controls={heroControls}
-      sheet={heroSheet}
+      draw={drawHero}
       shadowCaster={heroShadowCaster}
     />
 
-    <Sprite
+    <Graphics
       x={enemyX}
       y={enemyY}
-      width={84}
-      height={84}
-      alpha={0.92}
       zIndex={18}
-      sheet={enemySheet}
+      draw={drawEnemy}
       shadowCaster={enemyShadowCaster}
     />
 
@@ -51,7 +49,7 @@
       x={26}
       y={24}
       zIndex={100}
-      text="SpriteShadows demo: move with arrows. Two lights blend shadow direction; off-screen casters are culled."
+      text="SpriteShadows demo: move with arrows. Spots bend nearby shadows; ambient moonlight keeps distant sprites grounded."
       style={labelStyle}
     />
   </Viewport>
@@ -59,7 +57,7 @@
 
 <script>
   import { computed, signal, tick } from "canvasengine";
-  import { NightAmbient, SpriteShadows } from "@canvasengine/presets";
+  import { SpriteShadows, NightAmbiant } from "@canvasengine/presets";
 
   const worldWidth = 2048;
   const worldHeight = 2048;
@@ -81,58 +79,27 @@
   };
   const heroShadowCaster = {
     height: 96,
-    alpha: 0.62,
-    blur: 3.2,
+    alpha: 0.5,
+    blur: 4.6,
     gradientPower: 2.4,
-    hardness: 1,
+    hardness: 0.42,
     footOffset: { x: 0, y: 4 },
     maxLength: 260,
   };
   const enemyShadowCaster = {
     height: 84,
-    alpha: 0.48,
-    blur: 3.2,
+    alpha: 0.42,
+    blur: 4.2,
     gradientPower: 2.4,
-    hardness: 0.55,
+    hardness: 0.38,
     footOffset: { x: 0, y: 3 },
   };
-  const spritesheetDefinition = {
-    id: "exp-shadow-demo",
-    image: "./exp.png",
-    framesWidth: 4,
-    framesHeight: 4,
-    textures: {
-      loop: {
-        animations: () => [
-          [
-            { time: 0, frameX: 0, frameY: 0, anchor: [0.5, 0.86] },
-            { time: 8, frameX: 1, frameY: 0, anchor: [0.5, 0.86] },
-            { time: 16, frameX: 2, frameY: 0, anchor: [0.5, 0.86] },
-            { time: 24, frameX: 3, frameY: 0, anchor: [0.5, 0.86] },
-            { time: 32, frameX: 0, frameY: 1, anchor: [0.5, 0.86] },
-            { time: 40, frameX: 1, frameY: 1, anchor: [0.5, 0.86] },
-            { time: 48, frameX: 2, frameY: 1, anchor: [0.5, 0.86] },
-            { time: 56, frameX: 3, frameY: 1, anchor: [0.5, 0.86] },
-            { time: 64, frameX: 0, frameY: 2, anchor: [0.5, 0.86] },
-            { time: 72, frameX: 1, frameY: 2, anchor: [0.5, 0.86] },
-            { time: 80, frameX: 2, frameY: 2, anchor: [0.5, 0.86] },
-            { time: 88, frameX: 3, frameY: 2, anchor: [0.5, 0.86] },
-            { time: 96, frameX: 0, frameY: 3, anchor: [0.5, 0.86] },
-            { time: 104, frameX: 1, frameY: 3, anchor: [0.5, 0.86] },
-            { time: 112, frameX: 2, frameY: 3, anchor: [0.5, 0.86] },
-            { time: 120, frameX: 3, frameY: 3, anchor: [0.5, 0.86] },
-          ],
-        ],
-      },
-    },
-  };
-  const heroSheet = {
-    definition: spritesheetDefinition,
-    playing: "loop",
-  };
-  const enemySheet = {
-    definition: spritesheetDefinition,
-    playing: "loop",
+  const ambientShadowLight = {
+    x: -0.18,
+    y: -1,
+    z: 420,
+    intensity: 0.18,
+    shadowWeight: 0.75,
   };
   const heroX = signal(620);
   const heroY = signal(540);
@@ -216,6 +183,51 @@
       pulseSpeed: 1.2,
     }))
   );
+
+  const drawGround = (graphics) => {
+    graphics.clear();
+    graphics.rect(0, 0, worldWidth, worldHeight);
+    graphics.fill({ color: 0x334a2b, alpha: 1 });
+
+    graphics.roundRect(875, 0, 130, 2048, 42);
+    graphics.fill({ color: 0x8c7445, alpha: 0.72 });
+    graphics.roundRect(360, 850, 1150, 120, 42);
+    graphics.fill({ color: 0x8c7445, alpha: 0.7 });
+    graphics.roundRect(1220, 360, 660, 120, 42);
+    graphics.fill({ color: 0x8c7445, alpha: 0.58 });
+
+    for (let i = 0; i < 22; i++) {
+      const x = 90 + ((i * 173) % 1840);
+      const y = 140 + ((i * 277) % 1720);
+      graphics.ellipse(x, y, 42 + (i % 3) * 12, 18 + (i % 4) * 5);
+      graphics.fill({ color: i % 2 ? 0x253f25 : 0x42662e, alpha: 0.35 });
+    }
+  };
+
+  const drawHero = (graphics) => {
+    graphics.clear();
+    graphics.ellipse(0, -8, 20, 9);
+    graphics.fill({ color: 0x111827, alpha: 0.2 });
+    graphics.roundRect(-18, -58, 36, 48, 10);
+    graphics.fill({ color: 0x2f80ed, alpha: 1 });
+    graphics.circle(0, -66, 15);
+    graphics.fill({ color: 0xf2c48d, alpha: 1 });
+    graphics.roundRect(-24, -32, 48, 14, 7);
+    graphics.fill({ color: 0x1f4f9a, alpha: 1 });
+  };
+
+  const drawEnemy = (graphics) => {
+    graphics.clear();
+    graphics.ellipse(0, -7, 18, 8);
+    graphics.fill({ color: 0x111827, alpha: 0.18 });
+    graphics.roundRect(-17, -52, 34, 44, 10);
+    graphics.fill({ color: 0x9b2d42, alpha: 1 });
+    graphics.circle(0, -60, 13);
+    graphics.fill({ color: 0xd7a06f, alpha: 1 });
+    graphics.circle(-7, -63, 3);
+    graphics.circle(7, -63, 3);
+    graphics.fill({ color: 0xffe066, alpha: 1 });
+  };
 
   const drawTorch = (graphics) => {
     graphics.clear();

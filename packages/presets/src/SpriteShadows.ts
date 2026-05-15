@@ -2,11 +2,8 @@ import { Container, h, mount, useProps } from "canvasengine";
 import {
   BlurFilter,
   Container as PixiContainer,
-  Filter,
-  Sprite as PixiSprite,
+  Graphics as PixiGraphics,
 } from "pixi.js";
-import fragmentShader from "./shaders/shadowGradient.frag.glsl?raw";
-import vertexShader from "./shaders/defaultFilter.vert.glsl?raw";
 
 type ReactiveValue<T> = T | (() => T);
 type PointLike = { x: number; y: number };
@@ -33,6 +30,26 @@ export type ShadowLightInput = {
   enabled?: ReactiveValue<boolean>;
 };
 
+export type AmbientShadowLight = {
+  x: number;
+  y: number;
+  z?: number;
+  intensity?: number;
+  shadowWeight?: number;
+  length?: number;
+  enabled?: boolean;
+};
+
+export type AmbientShadowLightInput = {
+  x: ReactiveValue<number>;
+  y: ReactiveValue<number>;
+  z?: ReactiveValue<number>;
+  intensity?: ReactiveValue<number>;
+  shadowWeight?: ReactiveValue<number>;
+  length?: ReactiveValue<number>;
+  enabled?: ReactiveValue<boolean>;
+};
+
 export type ShadowCasterOptions = {
   enabled?: ReactiveValue<boolean>;
   height?: ReactiveValue<number>;
@@ -54,6 +71,9 @@ export type ShadowMode = "strongest" | "blend2";
 export type SpriteShadowsProps = {
   lights?: ReactiveValue<Array<ShadowLightInput | ShadowLight>>;
   sources?: ReactiveValue<Array<ShadowLightInput | ShadowLight>>;
+  ambientLight?: ReactiveValue<AmbientShadowLightInput | AmbientShadowLight | null>;
+  minInfluence?: ReactiveValue<number>;
+  falloffPower?: ReactiveValue<number>;
   mode?: ReactiveValue<ShadowMode>;
   updateHz?: ReactiveValue<number>;
   scanHz?: ReactiveValue<number>;
@@ -87,6 +107,15 @@ type ResolvedLight = {
   shadowWeight: number;
 };
 
+type ResolvedAmbientLight = {
+  dirX: number;
+  dirY: number;
+  z: number;
+  intensity: number;
+  shadowWeight: number;
+  length?: number;
+};
+
 type LightCandidate = {
   dirX: number;
   dirY: number;
@@ -94,21 +123,15 @@ type LightCandidate = {
   length: number;
 };
 
-type GradientFilter = Filter & {
-  setGradient: (power: number, floor: number) => void;
-};
-
 type ManagedShadow = {
   caster: any;
   parent: PixiContainer;
-  near: PixiSprite;
-  far: PixiSprite;
-  contact: PixiSprite;
+  near: PixiGraphics;
+  far: PixiGraphics;
+  contact: PixiGraphics;
   nearBlur: BlurFilter;
   farBlur: BlurFilter;
   contactBlur: BlurFilter;
-  nearGradient: GradientFilter;
-  farGradient: GradientFilter;
   dirX: number;
   dirY: number;
   length: number;
@@ -118,9 +141,12 @@ const SHADOW_MANAGED_MARK = "__spriteShadowManaged";
 const DEFAULT_LIGHT_Z = 220;
 const DEFAULT_LIGHT_RADIUS = 360;
 const DEFAULT_LIGHT_INTENSITY = 1;
+const DEFAULT_AMBIENT_LIGHT_Z = 420;
 const DEFAULT_MODE: ShadowMode = "strongest";
 const DEFAULT_UPDATE_HZ = 30;
 const DEFAULT_SCAN_HZ = 8;
+const DEFAULT_MIN_INFLUENCE = 0;
+const DEFAULT_FALLOFF_POWER = 2;
 const DEFAULT_SHADOW_COLOR = 0x000000;
 const DEFAULT_CASTER: ResolvedCaster = {
   height: 72,
@@ -214,33 +240,6 @@ const toLocalPoint = (
     }
   }
   return point;
-};
-
-const createGradientFilter = (
-  power = 2,
-  floor = 0.06
-): GradientFilter => {
-  const uPower = { value: power, type: "f32" as const };
-  const uFloor = { value: floor, type: "f32" as const };
-  const filter = Filter.from({
-    gl: {
-      vertex: vertexShader,
-      fragment: fragmentShader,
-    },
-    resources: {
-      shadowGradientUniforms: {
-        uPower,
-        uFloor,
-      },
-    },
-  }) as GradientFilter;
-
-  filter.setGradient = (nextPower: number, nextFloor: number) => {
-    uPower.value = isFiniteNumber(nextPower) ? Math.max(0.001, nextPower) : 2;
-    uFloor.value = isFiniteNumber(nextFloor) ? clamp(nextFloor, 0, 1) : 0.06;
-  };
-
-  return filter;
 };
 
 const resolveCasterOptions = (rawValue: unknown): ResolvedCaster | null => {
@@ -365,6 +364,35 @@ const resolveLights = (
   return resolved;
 };
 
+const resolveAmbientLight = (
+  source: ReactiveValue<AmbientShadowLightInput | AmbientShadowLight | null> | undefined
+): ResolvedAmbientLight | null => {
+  const raw = resolveReactiveValue(source);
+  if (!raw) return null;
+
+  const enabled = resolveReactiveValue((raw as AmbientShadowLightInput).enabled);
+  if (enabled === false) return null;
+
+  const x = Number(resolveReactiveValue((raw as AmbientShadowLightInput).x));
+  const y = Number(resolveReactiveValue((raw as AmbientShadowLightInput).y));
+  const norm = Math.hypot(x, y);
+  if (!isFiniteNumber(x) || !isFiniteNumber(y) || norm <= 0.0001) return null;
+
+  const z = Number(resolveReactiveValue((raw as AmbientShadowLightInput).z));
+  const intensity = Number(resolveReactiveValue((raw as AmbientShadowLightInput).intensity));
+  const shadowWeight = Number(resolveReactiveValue((raw as AmbientShadowLightInput).shadowWeight));
+  const length = Number(resolveReactiveValue((raw as AmbientShadowLightInput).length));
+
+  return {
+    dirX: -x / norm,
+    dirY: -y / norm,
+    z: isFiniteNumber(z) ? Math.max(2, z) : DEFAULT_AMBIENT_LIGHT_Z,
+    intensity: isFiniteNumber(intensity) ? clamp(intensity, 0, 2) : 0.28,
+    shadowWeight: isFiniteNumber(shadowWeight) ? clamp(shadowWeight, 0, 4) : 1,
+    length: isFiniteNumber(length) ? Math.max(0, length) : undefined,
+  };
+};
+
 const blendCandidates = (
   candidates: LightCandidate[],
   mode: ShadowMode
@@ -413,8 +441,6 @@ const destroyManagedShadow = (managed: ManagedShadow) => {
   managed.near.filters = [];
   managed.far.filters = [];
   managed.contact.filters = [];
-  managed.nearGradient.destroy?.();
-  managed.farGradient.destroy?.();
   managed.nearBlur.destroy?.();
   managed.farBlur.destroy?.();
   managed.contactBlur.destroy?.();
@@ -508,17 +534,15 @@ const createManagedShadow = (
   parent: PixiContainer,
   shadowColor: number
 ): ManagedShadow => {
-  const near = new PixiSprite();
-  const far = new PixiSprite();
-  const contact = new PixiSprite();
-  const nearBlur = new BlurFilter({ strength: 2.5, quality: 2 });
-  const farBlur = new BlurFilter({ strength: 4.2, quality: 3 });
-  const contactBlur = new BlurFilter({ strength: 2.8, quality: 2 });
-  const nearGradient = createGradientFilter(2, 0.08);
-  const farGradient = createGradientFilter(2.8, 0.02);
+  const near = new PixiGraphics();
+  const far = new PixiGraphics();
+  const contact = new PixiGraphics();
+  const nearBlur = new BlurFilter({ strength: 3.2, quality: 3 });
+  const farBlur = new BlurFilter({ strength: 5.4, quality: 3 });
+  const contactBlur = new BlurFilter({ strength: 2.4, quality: 2 });
 
-  near.filters = [nearGradient, nearBlur];
-  far.filters = [farGradient, farBlur];
+  near.filters = [nearBlur];
+  far.filters = [farBlur];
   contact.filters = [contactBlur];
 
   near.tint = shadowColor;
@@ -530,9 +554,6 @@ const createManagedShadow = (
   near.eventMode = "none";
   far.eventMode = "none";
   contact.eventMode = "none";
-  near.roundPixels = true;
-  far.roundPixels = true;
-  contact.roundPixels = true;
   near.visible = false;
   far.visible = false;
   contact.visible = false;
@@ -556,8 +577,6 @@ const createManagedShadow = (
     nearBlur,
     farBlur,
     contactBlur,
-    nearGradient,
-    farGradient,
     dirX: 0,
     dirY: 1,
     length: 0,
@@ -590,10 +609,25 @@ const placeBelowCaster = (managed: ManagedShadow) => {
   setBeforeCaster(near);
 };
 
+const drawShadowEllipse = (
+  graphics: PixiGraphics,
+  width: number,
+  height: number,
+  centerY: number,
+  shadowColor: number
+) => {
+  graphics.clear();
+  graphics.ellipse(0, centerY, Math.max(1, width) * 0.5, Math.max(1, height) * 0.5);
+  graphics.fill({ color: shadowColor, alpha: 1 });
+};
+
 const updateManagedShadow = (
   managed: ManagedShadow,
   casterConfig: ResolvedCaster,
   lights: ResolvedLight[],
+  ambientLight: ResolvedAmbientLight | null,
+  minInfluence: number,
+  falloffPower: number,
   mode: ShadowMode,
   shadowColor: number
 ) => {
@@ -637,10 +671,6 @@ const updateManagedShadow = (
   const casterAnchorX = isFiniteNumber(casterAnchorXRaw) ? clamp(casterAnchorXRaw, 0, 1) : 0.5;
   const casterAnchorY = isFiniteNumber(casterAnchorYRaw) ? clamp(casterAnchorYRaw, 0, 1) : 1;
 
-  const anchorXForShadow = isFiniteNumber(casterConfig.anchorX)
-    ? casterConfig.anchorX
-    : casterAnchorX;
-
   const localFootPoint: PointLike = {
     x:
       (casterConfig.footAnchor.x - casterAnchorX) * casterWidth +
@@ -663,10 +693,10 @@ const updateManagedShadow = (
     const dx = footLocal.x - lightLocal.x;
     const dy = footLocal.y - lightLocal.y;
     const distance = Math.hypot(dx, dy);
-    const falloff = clamp(1 - distance / light.radius, 0, 1);
+    const falloff = Math.pow(clamp(1 - distance / light.radius, 0, 1), falloffPower);
     const zWeight = clamp(DEFAULT_LIGHT_Z / Math.max(12, light.z), 0.35, 2.4);
     const influence = clamp(
-      falloff * falloff * light.intensity * light.shadowWeight * zWeight,
+      falloff * light.intensity * light.shadowWeight * zWeight,
       0,
       2.2
     );
@@ -689,14 +719,32 @@ const updateManagedShadow = (
     });
   }
 
-  const projection = blendCandidates(candidates, mode);
-  if (!projection) {
-    hideManagedShadow(managed);
-    return;
+  if (ambientLight && ambientLight.intensity > 0.001 && ambientLight.shadowWeight > 0.001) {
+    const ambientLength =
+      ambientLight.length ??
+      clamp(
+        (casterConfig.height * DEFAULT_LIGHT_Z) / Math.max(14, ambientLight.z),
+        casterConfig.minLength,
+        casterConfig.maxLength
+      );
+    const ambientInfluence = clamp(
+      Math.max(minInfluence, ambientLight.intensity * ambientLight.shadowWeight),
+      0,
+      2.2
+    );
+
+    if (ambientInfluence > 0.001) {
+      candidates.push({
+        dirX: ambientLight.dirX,
+        dirY: ambientLight.dirY,
+        influence: ambientInfluence,
+        length: clamp(ambientLength, casterConfig.minLength, casterConfig.maxLength),
+      });
+    }
   }
 
-  const casterTexture = caster.texture;
-  if (!casterTexture) {
+  const projection = blendCandidates(candidates, mode);
+  if (!projection) {
     hideManagedShadow(managed);
     return;
   }
@@ -713,67 +761,64 @@ const updateManagedShadow = (
   managed.dirY = dirY;
   managed.length = length;
 
-  const lengthScale = clamp(length / casterHeight, 0.08, 6);
-  const widthScale = clamp(0.62 + lengthScale * 0.08, 0.5, 1.2);
+  const lengthScale = clamp(length / casterHeight, 0.08, 3.2);
   const hardness = clamp(casterConfig.hardness, 0, 1);
-  const influenceNorm = clamp(projection.influence, 0, 1.35);
-  const alphaBase = clamp(casterConfig.alpha * influenceNorm, 0, 1);
-  const blurBase = Math.max(0, casterConfig.blur * (1.15 - hardness * 0.55));
-  const gradientPower = clamp(casterConfig.gradientPower + (1 - hardness) * 0.7, 0.2, 8);
-  // With anchor.y=1, the silhouette extends along local -Y; rotate that axis to shadow direction.
+  const influenceNorm = clamp(projection.influence, 0, 1);
+  const influenceFloor = projection.influence > 0.001 ? 0.12 : 0;
+  const visualInfluence = clamp(Math.max(influenceFloor, influenceNorm), 0, 1);
+  const alphaBase = clamp(casterConfig.alpha * visualInfluence, 0, 1);
+  const blurBase = Math.max(0, casterConfig.blur * (1.28 - hardness * 0.42));
+  const tailFade = clamp(2 / Math.max(0.2, casterConfig.gradientPower), 0.45, 1.35);
+  const tailLength = clamp(length, casterConfig.minLength, casterConfig.maxLength);
+  const nearWidth = casterWidth * clamp(0.5 + lengthScale * 0.08, 0.46, 0.78);
+  const nearHeight = Math.max(casterHeight * 0.16, tailLength * (0.42 + (1 - hardness) * 0.12));
+  const farWidth = casterWidth * clamp(0.34 + lengthScale * 0.07, 0.32, 0.66);
+  const farHeight = Math.max(
+    casterHeight * 0.14,
+    tailLength * (0.72 + (1 - hardness) * 0.16) * (0.82 + tailFade * 0.18)
+  );
+  const contactWidth = Math.max(
+    4,
+    casterWidth * clamp(casterConfig.contactScale * 1.65, 0.25, 1.05)
+  );
+  const contactHeight = Math.max(
+    2,
+    casterHeight * clamp(casterConfig.contactScale * 0.44, 0.08, 0.38)
+  );
+  // Local -Y is aligned to the chosen shadow direction.
   const rotation = Math.atan2(dirY, dirX) + Math.PI / 2;
 
-  managed.near.texture = casterTexture;
-  managed.far.texture = casterTexture;
-  managed.contact.texture = casterTexture;
-  managed.near.tint = shadowColor;
-  managed.far.tint = shadowColor;
-  managed.contact.tint = shadowColor;
-  managed.near.anchor.set(anchorXForShadow, 1);
-  managed.far.anchor.set(anchorXForShadow, 1);
-  managed.contact.anchor.set(anchorXForShadow, 1);
-
-  managed.near.width = casterWidth * widthScale;
-  managed.near.height = casterHeight * Math.max(0.12, lengthScale * 1.06);
-  managed.far.width = managed.near.width * 1.02;
-  managed.far.height = managed.near.height * 1.22;
+  drawShadowEllipse(managed.far, farWidth, farHeight, -tailLength * 0.42, shadowColor);
+  drawShadowEllipse(managed.near, nearWidth, nearHeight, -tailLength * 0.2, shadowColor);
+  drawShadowEllipse(
+    managed.contact,
+    contactWidth * (0.92 + lengthScale * 0.12),
+    contactHeight,
+    0,
+    shadowColor
+  );
 
   managed.near.position.set(footLocal.x, footLocal.y);
-  managed.far.position.set(
-    footLocal.x + dirX * length * 0.34,
-    footLocal.y + dirY * length * 0.34
-  );
+  managed.far.position.set(footLocal.x, footLocal.y);
   managed.contact.position.set(
-    footLocal.x + dirX * Math.min(4, length * 0.06),
-    footLocal.y + dirY * Math.min(4, length * 0.06)
+    footLocal.x + dirX * Math.min(3, tailLength * 0.04),
+    footLocal.y + dirY * Math.min(3, tailLength * 0.04)
   );
   managed.near.rotation = rotation;
   managed.far.rotation = rotation;
   managed.contact.rotation = rotation;
 
-  managed.near.alpha = clamp(alphaBase * (0.74 + hardness * 0.2), 0, 1);
-  managed.far.alpha = clamp(alphaBase * (0.3 + (1 - hardness) * 0.2), 0, 1);
+  managed.near.alpha = clamp(alphaBase * (0.3 + hardness * 0.12), 0, 0.42);
+  managed.far.alpha = clamp(alphaBase * (0.13 + (1 - hardness) * 0.12) * tailFade, 0, 0.24);
   managed.near.visible = managed.near.alpha > 0.001;
   managed.far.visible = managed.far.alpha > 0.001;
 
-  managed.nearBlur.strength = blurBase * (0.72 + (1 - influenceNorm) * 0.45);
-  managed.farBlur.strength = blurBase * (1.45 + (1 - influenceNorm) * 1.1);
-  managed.nearGradient.setGradient(gradientPower, 0.08);
-  managed.farGradient.setGradient(gradientPower + 0.65, 0.03);
+  managed.nearBlur.strength = blurBase * (0.82 + (1 - visualInfluence) * 0.45);
+  managed.farBlur.strength = blurBase * (1.65 + (1 - visualInfluence) * 0.9);
 
-  const contactAlpha = clamp(casterConfig.contactAlpha * influenceNorm * 0.85, 0, 1);
-  const contactWidth = Math.max(
-    4,
-    casterWidth * clamp(casterConfig.contactScale * 1.8, 0.25, 1.3)
-  );
-  const contactHeight = Math.max(
-    2,
-    casterHeight * clamp(casterConfig.contactScale * 0.62, 0.08, 0.56)
-  );
-  managed.contact.width = contactWidth * (0.92 + lengthScale * 0.18);
-  managed.contact.height = contactHeight;
-  managed.contact.alpha = clamp(contactAlpha * (0.6 + hardness * 0.2), 0, 1);
-  managed.contactBlur.strength = blurBase * (0.85 + (1 - hardness) * 0.25);
+  const contactAlpha = clamp(casterConfig.contactAlpha * visualInfluence, 0, 1);
+  managed.contact.alpha = clamp(contactAlpha * (0.54 + hardness * 0.18), 0, 0.34);
+  managed.contactBlur.strength = blurBase * (0.7 + (1 - hardness) * 0.2);
   managed.contact.visible = managed.contact.alpha > 0.001;
 
   placeBelowCaster(managed);
@@ -782,7 +827,7 @@ const updateManagedShadow = (
 /**
  * SpriteShadows preset
  *
- * Adds RPG-style projected shadows for sprites tagged with `shadowCaster`.
+ * Adds RPG-style ground shadows for sprites tagged with `shadowCaster`.
  * The shadow direction is automatically opposite to the dominant light source.
  *
  * Usage:
@@ -817,6 +862,23 @@ export function SpriteShadows(options: SpriteShadowsProps = {}) {
       const modeRaw = resolveReactiveValue(props.mode as ReactiveValue<ShadowMode> | undefined);
       const mode: ShadowMode = modeRaw === "blend2" ? "blend2" : DEFAULT_MODE;
       const lights = resolveLights(lightsSource(), target);
+      const ambientLight = resolveAmbientLight(
+        props.ambientLight as
+          | ReactiveValue<AmbientShadowLightInput | AmbientShadowLight | null>
+          | undefined
+      );
+      const minInfluenceRaw = Number(
+        resolveReactiveValue(props.minInfluence as ReactiveValue<number> | undefined)
+      );
+      const minInfluence = isFiniteNumber(minInfluenceRaw)
+        ? clamp(minInfluenceRaw, 0, 1.5)
+        : DEFAULT_MIN_INFLUENCE;
+      const falloffPowerRaw = Number(
+        resolveReactiveValue(props.falloffPower as ReactiveValue<number> | undefined)
+      );
+      const falloffPower = isFiniteNumber(falloffPowerRaw)
+        ? clamp(falloffPowerRaw, 0.25, 6)
+        : DEFAULT_FALLOFF_POWER;
       const cullToViewport =
         resolveReactiveValue(props.cullToViewport as ReactiveValue<boolean> | undefined) === true;
       const cullBounds = cullToViewport ? getCullBounds(target) : null;
@@ -850,7 +912,16 @@ export function SpriteShadows(options: SpriteShadowsProps = {}) {
           }
         }
 
-        updateManagedShadow(managed, caster, lights, mode, shadowColor);
+        updateManagedShadow(
+          managed,
+          caster,
+          lights,
+          ambientLight,
+          minInfluence,
+          falloffPower,
+          mode,
+          shadowColor
+        );
       }
 
       for (const [casterInstance, managed] of managedByCaster.entries()) {
