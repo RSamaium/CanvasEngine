@@ -1,47 +1,49 @@
-# Use Text component
+# Text Component
 
-Common example:
+Use `Text` for labels, HUD values, menu items, dialogue, debug output, and any canvas-rendered text.
+
+## Minimal example
 
 ```html
-<Text text="Hello World" size="20" />
+<Text text="Hello World" size={20} color="#ffffff" />
 ```
 
 ## Properties
 
-You can use all properties from Display Object 
+You can use all properties from Display Object.
 
 ### style
 
-Style object from [PixiJS Text](https://pixijs.download/release/docs/text.TextStyle.html)
+Style object from [PixiJS Text](https://pixijs.download/release/docs/text.TextStyle.html).
 
 ### text
 
 `text?: string`
 
-Le texte à afficher
+Text to display.
 
 ### color
 
 `color?: string`
 
-La couleur du texte (raccourci pour style.fill)
+Text color. This is a shortcut for `style.fill`.
 
 ### size
 
 `size?: string`
 
-La taille de la police (raccourci pour style.fontSize)
+Font size. This is a shortcut for `style.fontSize`.
 
 ### fontFamily
 
 `fontFamily?: string`
 
-La famille de police à utiliser (raccourci pour style.fontFamily)
+Font family. This is a shortcut for `style.fontFamily`.
 
-## typewriter
+## Typewriter
 
 ```html
-<Text text="Hello World" typewriter="{}" />
+<Text text="Hello World" typewriter={{ speed: 1 }} />
 ```
 
 `typewriter?: {
@@ -56,6 +58,7 @@ La famille de police à utiliser (raccourci pour style.fontFamily)
 }`
 
 Object to configure typewriter effect:
+
 - `speed`: Animation speed of the typewriter effect
 - `onComplete`: Callback function when the animation completes
 - `skip`: Trigger to skip the current animation
@@ -74,7 +77,7 @@ import { trigger } from 'canvasengine'
 
 const skip = trigger()
 
-// skip the typewriter effect
+// Skip the typewriter effect.
 skip.start()
 </script>
 ```

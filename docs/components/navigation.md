@@ -32,7 +32,7 @@ This component is especially useful for creating menu systems, lists, and any in
 | `autoScroll` | `boolean \| ScrollOptions` | Enable automatic scrolling to focused element (default: false) |
 | `viewport` | `Viewport` | Viewport instance to use for scrolling (optional, uses context viewport by default) |
 
-You can also use all properties from [DisplayObject](/components/display-object).
+You can also use the common DisplayObject properties listed at the end of this page.
 
 ## Making Elements Focusable
 

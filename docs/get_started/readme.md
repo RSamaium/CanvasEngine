@@ -1,31 +1,32 @@
 # Get Started
 
-Canvas Engine is a framework for creating 2D games using a reactive programming model. It is built on top of the Canvas API and is designed to be easy to use and understand.
+CanvasEngine is a reactive 2D game framework built on PixiJS, Vite, and `.ce` components.
 
-## Installation
+Start here if you are new to the project:
 
-```bash
-npm install canvasengine
-```
+- [Installation](/get_started/installation)
+- [Start with CanvasEngine](/get_started/start)
+- [Template Syntax](/concepts/template-syntax)
+- [Reactivity](/concepts/reactive)
 
-## Usage
+## First component
 
-1. Create a new file, for example `main.ce`:
+Every CanvasEngine app starts with a root `Canvas` component:
 
 ```html
 <Canvas 
-    backgroundColor="white" 
-    flexDirection="column" 
-    justifyContent="center" 
-    alignItems="center" 
-    width="100%" 
-    height="100%"
+  backgroundColor="white" 
+  flexDirection="column" 
+  justifyContent="center" 
+  alignItems="center" 
+  width="100%" 
+  height="100%"
 >
-    <Text text="Hello World" />
+  <Text text="Hello World" />
 </Canvas>
 ```
 
-2. Create a new file, for example `main.ts`:
+Then bootstrap it from your Vite entry file:
 
 ```typescript
 import { bootstrapCanvas } from "canvasengine";

@@ -1,15 +1,38 @@
-# Use Canvas component
+# Canvas Component
 
-It's the starting point for all the other components.
+`Canvas` is the root component of a CanvasEngine scene. Use it once at the top of your application component to create the PixiJS application and host every canvas-rendered child component.
 
-Common example:
+## Minimal example
 
 ```html
-<Canvas antialias="true">
-    
+<Canvas backgroundColor="#101820">
+  <Text text="Hello World" x={40} y={40} color="#ffffff" />
 </Canvas>
 ```
 
-### options
+The start component passed to `bootstrapCanvas` must begin with `Canvas`.
 
-You can use all properties from [PixiJS Canvas Renderer](https://pixijs.download/release/docs/rendering.html#autoDetectRenderer)
+## Layout example
+
+`Canvas` can also receive layout props, which makes it useful for HUDs, menus, and centered game screens.
+
+```html
+<Canvas
+  backgroundColor="#101820"
+  flexDirection="column"
+  justifyContent="center"
+  alignItems="center"
+  width="100%"
+  height="100%"
+>
+  <Text text="Press Start" size={42} color="#ffffff" />
+</Canvas>
+```
+
+## Options
+
+You can use CanvasEngine display and layout props, plus renderer options supported by PixiJS.
+
+::: tip
+Use `Canvas` for the scene root. Use `Container` to group or lay out content inside the scene.
+:::

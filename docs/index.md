@@ -1,26 +1,29 @@
 # Canvas Engine
 
-A batteries-included framework for 2D games.
+CanvasEngine is a reactive 2D game framework built on PixiJS, Vite, and `.ce` components.
 
-CanvasEngine combines PixiJS rendering, Vite tooling, reactive `.ce` components, and an AI-ready workflow with the systems you usually need to build a game: tilemaps, controls, sound, particles, weather, ambience, DOM overlays, and large-world performance.
+Use it to build platformers, top-down RPGs, arcade games, mobile prototypes, interactive scenes, and game UIs without wiring every low-level rendering and input system yourself.
 
-## Start with AI
+## Start in minutes
 
-Install the CanvasEngine skill so your AI coding assistant understands the framework, its `.ce` component syntax, and the recommended game-building patterns.
+Install CanvasEngine, create a `.ce` component, and bootstrap it in your Vite app.
 
-```bash
-npx skills add https://github.com/RSamaium/CanvasEngine
+- [Installation](/get_started/installation)
+- [Start guide](/get_started/start)
+
+```html
+<Canvas backgroundColor="#101820">
+  <Text
+    text="Hello CanvasEngine"
+    x={40}
+    y={40}
+    size={32}
+    color="#ffffff"
+  />
+</Canvas>
 ```
 
-Then ask your assistant things like:
-
-> create mario style game
-
-The skill gives the assistant CanvasEngine-specific context so it can generate scenes, controls, tilemaps, FX particles, sound, joystick input, weather, DOM overlays, and reactive game logic more accurately.
-
 ## Build the game, not the engine
-
-Create platformers, top-down RPGs, arcade games, mobile prototypes, interactive scenes, and game UIs without wiring every low-level system yourself.
 
 CanvasEngine gives you a component-oriented way to describe scenes, entities, HUDs, menus, effects, and interactions. Start with a simple canvas scene, then add maps, player controls, sound feedback, weather, night ambience, particles, and DOM UI as your game grows.
 
@@ -29,14 +32,8 @@ CanvasEngine gives you a component-oriented way to describe scenes, entities, HU
 ### Worlds
 
 - [Tilemap support](/presets/tilemap) with Tiled Map Editor integration.
-- Viewport pan, zoom, clamping, and culling for large 2D worlds.
+- [Viewport](/components/viewport) pan, zoom, clamping, and culling for large 2D worlds.
 - Object layers, animated tiles, and map-driven scene composition.
-
-### Ambience
-
-- [Weather presets](/presets/weather) for rain, snow, fog, clouds, and atmospheric effects.
-- [NightAmbient](/presets/night-ambiant) for night mood, lighting, and ambience.
-- Fog of war, shadows, footprints, and visual world feedback through presets.
 
 ### Feedback
 
@@ -50,14 +47,22 @@ CanvasEngine gives you a component-oriented way to describe scenes, entities, HU
 - [Virtual joystick](/components/joystick) for mobile-friendly controls.
 - [Drag and drop](/directives/drag) for pointer-driven gameplay and editor-like interactions.
 
-### UI
+### UI and ambience
 
-- Reactive text, buttons, layout, sprites, graphics, and canvas components.
+- Reactive [Text](/components/text), [Button](/components/button), [Sprite](/components/sprite), [Graphics](/components/graphic), and layout components.
 - [DOMContainer](/components/dom-container) for mixing HTML overlays, menus, forms, and UI panels with canvas scenes.
+- [Weather presets](/presets/weather), [NightAmbient](/presets/night-ambiant), fog of war, shadows, and footprints for world atmosphere.
 
-## Start in minutes
+## Use with AI
 
-Install CanvasEngine, create a `.ce` component, and bootstrap it in your Vite app.
+Install the CanvasEngine skill so your AI coding assistant understands the framework, its `.ce` component syntax, and the recommended game-building patterns.
 
-- [Installation](/get_started/installation)
-- [Start guide](/get_started/start)
+```bash
+npx skills add https://github.com/RSamaium/CanvasEngine
+```
+
+Then ask your assistant things like:
+
+> create mario style game
+
+The skill gives the assistant CanvasEngine-specific context so it can generate scenes, controls, tilemaps, FX particles, sound, joystick input, weather, DOM overlays, and reactive game logic more accurately.

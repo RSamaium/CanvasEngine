@@ -1,28 +1,38 @@
 # Start with CanvasEngine
 
-## 1. Add div with id `root` to your HTML
+This guide creates the smallest useful CanvasEngine app: one root DOM node, one `.ce` component, and one TypeScript entry file.
 
-In your `index.html` file, add a `div` with the id `root`:
+## 1. Add the root element
+
+In `index.html`, add a `div` with the id `root`:
 
 ```html
 <div id="root"></div>
 ```
 
-## 2. Create a Canvas Component
+## 2. Create a Canvas component
 
-Create a new file `app.ce` in your project root: 
+Create `app.ce`:
 
 ```html
-<Canvas>
-  <Text text="Hello World" />
+<Canvas backgroundColor="#101820">
+  <Text
+    text="Hello CanvasEngine"
+    x={40}
+    y={40}
+    size={32}
+    color="#ffffff"
+  />
 </Canvas>
 ```
 
 ::: warning
-The start file must always begin with the `<Canvas>` tag.
+The start component passed to `bootstrapCanvas` must begin with the `<Canvas>` tag.
 :::
 
-## 3. Add the `bootstrapCanvas` function to your entry file
+## 3. Bootstrap the app
+
+In your Vite entry file, for example `main.ts`, import the component and call `bootstrapCanvas`:
 
 ```ts
 import App from './app.ce';
@@ -33,10 +43,12 @@ bootstrapCanvas(document.getElementById("root"), App).then(() => {
 });
 ```
 
-## 4. Run your project
+## 4. Run the dev server
 
-Run your project with the following command:
+Run:
 
 ```bash
 npm run dev
 ```
+
+You should see a dark canvas with `Hello CanvasEngine` rendered near the top-left corner.

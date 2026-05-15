@@ -1,17 +1,16 @@
-# CanvasEngine - A reactive HTML5 Canvas management library built on top of PixiJS and Vite
+# CanvasEngine - A reactive 2D game framework built on PixiJS and Vite
 
 ![CanvasEngine](docs/public/logo.png)
 
-CanvasEngine is a reactive HTML5 Canvas management library built on top of PixiJS and Vite. It provides a component-oriented approach to canvas rendering, similar to modern frontend frameworks.
+CanvasEngine is a reactive 2D game framework built on PixiJS, Vite, and `.ce` components. It gives you a component-oriented way to build scenes, entities, HUDs, menus, effects, and interactions.
 
 Features:
-- Reactive components
-- Use flex in Canvas !
-- Easy Animation system 
-- Keyboard, Gamepad et Virtual Joystick
+- Reactive `.ce` components
+- Flex-style layout in canvas scenes
+- Animation helpers
+- Keyboard, gamepad, and virtual joystick input
 - Tiled Map Editor integration
-- Particle Emitter
-- Audio System
+- Particles, audio, weather, ambience, and DOM overlays
 
 ## Installation
 
@@ -26,7 +25,7 @@ npm run dev # and go to localhost:5173
 
 https://canvasengine.net
 
-## Example:
+## Example
 
 ```html
 <Container flexDirection="row" width={500}>
@@ -67,7 +66,7 @@ const onLeave = () => {
 
 ## Contributing
 
-Before, install `pnpm` and run the following command:
+Install `pnpm`, then run:
 
 ```bash
 git clone https://github.com/RSamaium/CanvasEngine.git
@@ -82,9 +81,9 @@ To run the sample project:
 pnpm run dev:sample
 ```
 
-### Build Documentation/Website
+### Build Documentation
 
-```
+```bash
 cd docs
 pnpm install
 pnpm run dev
@@ -103,4 +102,3 @@ Push the release branch to the remote repository
 ```bash
 git push origin v2
 ```
-

@@ -1,23 +1,24 @@
-# Use Graphics component
+# Graphics Component
 
 <script setup>
 import polygonExample from './examples/polygon-example.js'
 </script>
 
-Common example:
+Use `Graphics` when you need to draw custom vector shapes with PixiJS. For common primitive shapes, CanvasEngine also provides the `Rect`, `Circle`, `Triangle`, and `Ellipse` shortcuts.
+
+## Minimal example
 
 ```html
 <script>
-    
 const draw = (g) => {
-    g.rect(0, 0, 100, 100).fill('red')
+  g.rect(0, 0, 100, 100).fill('red')
 }
 </script>
 
 <Graphics draw />
 ```
 
-Example with width and height:
+## Reactive redraw
 
 ```html
 <script>
@@ -27,51 +28,54 @@ const width = signal(100)
 const height = signal(100)
 
 const draw = (g, width, height) => {
-    g.rect(0, 0, width, height).fill('red')
+  g.rect(0, 0, width, height).fill('red')
 }
 
 const click = () => {
-    width.update(w => w + 10)
-    height.update(h => h + 10)
+  width.update(w => w + 10)
+  height.update(h => h + 10)
 }
 </script>
 
 <Graphics draw click width height />
 ```
 
-the drawing is redrawn if width and height change
+The drawing is redrawn when `width` or `height` changes.
 
 ## Polygon Example
 
 <Playground v-bind="polygonExample" />
 
-## Rectangle
+## Shape shortcuts
+
+Use these components when a primitive shape is enough and a custom `draw` function would add noise.
+
+### Rectangle
 
 ```html
 <Rect x={0} y={0} width={100} height={100} color="red" />
 ```
 
-## Circle
+### Circle
 
 ```html
 <Circle x={0} y={0} radius={50} color="red" />
 ```
 
-## Triangle
+### Triangle
 
 ```html
 <Triangle x={0} y={0} width={100} height={100} color="red" />
 ```
 
-## Ellipse
+### Ellipse
 
 ```html
 <Ellipse x={0} y={0} width={100} height={100} color="red" />
 ```
 
-### draw
+## draw
 
 Function that draws on the canvas. It receives the `Graphics` object as argument. It uses [PixiJS Graphics](https://pixijs.download/release/docs/scene.Graphics.html) to draw.
 
 <!-- @include: ./_display-object.md -->
-

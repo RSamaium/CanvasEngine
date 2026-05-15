@@ -175,7 +175,7 @@ const guideMenu = [
         link: "/presets/weather",
       },
       {
-        text: "NightAmbiant",
+        text: "NightAmbient",
         link: "/presets/night-ambiant",
       },
       {
@@ -215,7 +215,6 @@ const guideMenu = [
 export default defineConfig({
   title: "Canvas Engine Documentation",
   description: "Reactive Canvas Framework",
-  ignoreDeadLinks: true,
   themeConfig: {
     search: {
       provider: "local",
@@ -228,14 +227,16 @@ export default defineConfig({
       },
       {
         text: "Guide",
-        link: "/guide/get-started",
+        link: "/get_started/installation",
       },
     ],
     sidebar: {
       "/": guideMenu,
-      "/guide/": guideMenu,
+      "/get_started/": guideMenu,
       "/components/": guideMenu,
       "/directives/": guideMenu,
+      "/presets/": guideMenu,
+      "/api/": guideMenu,
     },
   },
   vite: {

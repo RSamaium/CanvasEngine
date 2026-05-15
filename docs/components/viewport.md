@@ -1,18 +1,22 @@
-# Use Viewport component
+# Viewport Component
 
-Common example:
+Use `Viewport` for worlds larger than the visible screen: maps, camera movement, zoom, drag, culling, and following a player or object.
+
+## Minimal example
 
 ```html
-<Viewport worldWidth="2000" worldHeight="2000" clamp={ {direction: 'all'} } />
+<Viewport worldWidth={2000} worldHeight={2000} clamp={{ direction: 'all' }}>
+  <Sprite image="/assets/player.png" x={100} y={100} />
+</Viewport>
 ```
 
 ## Properties
 
-You can use all properties from Display Object
+You can use all properties from Display Object.
 
 ## Viewport Options
 
-The Viewport component supports several options inherited from pixi-viewport:
+The `Viewport` component supports several options inherited from pixi-viewport:
 
 | Option | Type | Description |
 |--------|------|-------------|
@@ -26,13 +30,13 @@ Example with options:
 
 ```html
 <Viewport 
-  worldWidth="2000" 
-  worldHeight="2000" 
+  worldWidth={2000} 
+  worldHeight={2000} 
   drag={true}
   wheel={true}
   pinch={true}
   decelerate={true}
-  clamp={ {direction: 'all'} } 
+  clamp={{ direction: 'all' }} 
 />
 ```
 
@@ -68,8 +72,9 @@ Example with event:
 
 ```html
 <Viewport 
-  worldWidth="2000" 
-  worldHeight="2000"
+  worldWidth={2000} 
+  worldHeight={2000}
+  moved={() => console.log('viewport moved')}
 />
 ```
 
@@ -82,12 +87,12 @@ This directive must be used within a `Viewport` component context.
 ### Usage
 
 ```html
-<Viewport worldWidth="2000" worldHeight="2000" clamp={ {direction: 'all'} }>
-    <Rect viewportFollow x={0} y={0} width={100} height={100} color="red" />
+<Viewport worldWidth={2000} worldHeight={2000} clamp={{ direction: 'all' }}>
+  <Rect viewportFollow x={0} y={0} width={100} height={100} color="red" />
 </Viewport>
 
 <script>
-    const viewportFollow = true // null to disable
+const viewportFollow = true // null to disable
 </script>
 ```
 
@@ -96,22 +101,22 @@ In this example, the red rectangle will be followed by the viewport, keeping it 
 ### Usage with options
 
 ```html
-<Viewport worldWidth="2000" worldHeight="2000" clamp={ {direction: 'all'} }>
-    <Rect viewportFollow x={0} y={0} width={100} height={100} color="red" />
+<Viewport worldWidth={2000} worldHeight={2000} clamp={{ direction: 'all' }}>
+  <Rect viewportFollow x={0} y={0} width={100} height={100} color="red" />
 </Viewport>
 
 <script>
-    const viewportFollow = {
-        speed: 0.1,
-        acceleration: 0.1,
-        radius: 100
-    }
+const viewportFollow = {
+  speed: 0.1,
+  acceleration: 0.1,
+  radius: 100
+}
 </script>
 ```
 
-- `speed` number 0 optional to follow in pixels/frame (0=teleport to location)
-- `acceleration` number optional set acceleration to accelerate and decelerate at this rate; speed cannot be 0 to use acceleration
-- `radius` number optional radius (in world coordinates) of center circle where movement is allowed without moving the viewport * @returns {Viewport} this
+- `speed`: Follow speed in pixels per frame. Use `0` to teleport to the target.
+- `acceleration`: Acceleration and deceleration rate. `speed` must be greater than `0`.
+- `radius`: Center radius, in world coordinates, where the target can move without moving the viewport.
 
 ### Requirements
 
