@@ -1,9 +1,8 @@
-import { Effect, effect } from "@signe/reactive";
+import { isSignal } from "@signe/reactive";
 import { Mesh as PixiMesh, Geometry, Shader, Texture, Assets, BLEND_MODES } from "pixi.js";
 import { createComponent, Element, registerComponent } from "../engine/reactive";
 import { ComponentInstance, DisplayObject } from "./DisplayObject";
 import { DisplayObjectProps } from "./types/DisplayObject";
-import { useProps } from "../hooks/useProps";
 import { SignalOrPrimitive } from "./types";
 import { ComponentFunction } from "../engine/signal";
 
@@ -13,18 +12,22 @@ import { ComponentFunction } from "../engine/signal";
  */
 interface MeshProps extends DisplayObjectProps {
   /** The geometry defining the mesh structure (vertices, indices, UVs, etc.) */
-  geometry?: Geometry;
+  geometry?: SignalOrPrimitive<Geometry>;
   /** The shader to render the mesh with */
-  shader?: Shader;
+  shader?: SignalOrPrimitive<Shader>;
   /** The texture to apply to the mesh */
-  texture?: Texture | string;
+  texture?: SignalOrPrimitive<Texture | string>;
   /** The image URL to load as texture */
-  image?: string;
+  image?: SignalOrPrimitive<string>;
   /** The tint color to apply to the mesh */
   tint?: SignalOrPrimitive<number>;
   /** Whether to round pixels for sharper rendering */
   roundPixels?: SignalOrPrimitive<boolean>;
 }
+
+const resolveProp = <T>(value: SignalOrPrimitive<T> | undefined): T | undefined => {
+  return isSignal(value as any) ? (value as any)() : value as T | undefined;
+};
 
 /**
  * Canvas Mesh component class that extends DisplayObject with PixiMesh functionality.
@@ -87,17 +90,19 @@ class CanvasMesh extends DisplayObject(PixiMesh) {
     super.onInit(props);
 
     // Set initial geometry if provided
-    if (props.geometry) {
+    const geometry = resolveProp(props.geometry);
+    if (geometry) {
       try {
-        this.geometry = props.geometry;
+        this.geometry = geometry;
       } catch (error) {
         console.warn('Failed to set geometry:', error);
       }
     }
     
     // Set initial shader if provided
-    if (props.shader) {
-      this.shader = props.shader;
+    const shader = resolveProp(props.shader);
+    if (shader) {
+      this.shader = shader;
     }
   }
 
@@ -119,28 +124,32 @@ class CanvasMesh extends DisplayObject(PixiMesh) {
     super.onUpdate(props);
 
     // Handle geometry updates
-    if (props.geometry) {
+    const geometry = resolveProp(props.geometry);
+    if (geometry) {
       try {
-        this.geometry = props.geometry;
+        this.geometry = geometry;
       } catch (error) {
         console.warn('Failed to update geometry:', error);
       }
     }
 
     // Handle shader/material updates
-    if (props.shader) {
-      this.shader = props.shader;
+    const shader = resolveProp(props.shader);
+    if (shader) {
+      this.shader = shader;
     }
 
     // Handle texture updates
-    if (props.texture) {
-      if (typeof props.texture === 'string') {
-        this.texture = await Assets.load(props.texture);
+    const texture = resolveProp(props.texture);
+    const image = resolveProp(props.image);
+    if (texture) {
+      if (typeof texture === 'string') {
+        this.texture = await Assets.load(texture);
       } else {
-        this.texture = props.texture;
+        this.texture = texture;
       }
-    } else if (props.image) {
-      this.texture = await Assets.load(props.image);
+    } else if (image) {
+      this.texture = await Assets.load(image);
     }
 
     // Handle tint updates
