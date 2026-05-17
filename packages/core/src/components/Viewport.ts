@@ -181,10 +181,10 @@ export class CanvasViewport extends DisplayObject(Container) {
 
     private updateMask() {
         if (!this.#mask) return
-        this.#mask.clear()
-        this.#mask.beginFill(0xffffff)
-        this.#mask.drawRect(0, 0, this.viewport.screenWidth, this.viewport.screenHeight)
-        this.#mask.endFill()
+        this.#mask
+            .clear()
+            .rect(0, 0, this.viewport.screenWidth, this.viewport.screenHeight)
+            .fill(0xffffff)
     }
 
     /**
