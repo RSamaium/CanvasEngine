@@ -12,11 +12,11 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "canvasengine": "2.0.0-rc.1",
+    "canvasengine": "2.0.0-rc.2",
     "pixi.js": "^8.18.1"
   },
   "devDependencies": {
     "vite": "^8.0.10",
-    "@canvasengine/compiler": "2.0.0-rc.1"
+    "@canvasengine/compiler": "2.0.0-rc.2"
   }
 }
