@@ -152,7 +152,10 @@
     torchY.set(430 + Math.cos(t * 0.42) * 60);
   });
 
-  const shadowLights = computed(() => [
+  const shadowLights = signal([]);
+
+  setTimeout(() => {
+    shadowLights.set([
     {
       x: torchX(),
       y: torchY(),
@@ -169,7 +172,8 @@
       intensity: 0.86,
       shadowWeight: 0.85,
     },
-  ]);
+  ])
+  }, 2000)
 
   const nightLights = computed(() =>
     shadowLights().map((light, index) => ({
