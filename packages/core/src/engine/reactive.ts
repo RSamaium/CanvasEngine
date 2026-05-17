@@ -65,6 +65,8 @@ export interface LoopOptions<T> {
 }
 
 const components: { [key: string]: any } = {};
+const HOT_COMPONENT_PROPS = "__canvasEngineHotProps";
+const HOT_COMPONENT_UPDATE_PROPS = "__canvasEngineUpdateHotProps";
 
 export const isElement = (value: any): value is Element => {
   return (
@@ -1005,14 +1007,34 @@ export function loop<T>(
       element.effectUnmounts?.forEach((fn) => fn?.());
     };
 
+    const updateTrackedHotChildren = (targetChildren: any, sourceChildren: any) => {
+      const targetList = Array.isArray(targetChildren) ? targetChildren : [targetChildren];
+      const sourceList = Array.isArray(sourceChildren) ? sourceChildren : [sourceChildren];
+      let updated = false;
+
+      targetList.forEach((targetChild, index) => {
+        const sourceChild = sourceList[index];
+        const updateProps = targetChild?.[HOT_COMPONENT_UPDATE_PROPS];
+        const nextProps = sourceChild?.[HOT_COMPONENT_PROPS];
+
+        if (typeof updateProps === "function" && nextProps !== undefined) {
+          updateProps(nextProps);
+          updated = true;
+        }
+      });
+
+      return updated;
+    };
+
     const patchTrackedElement = (target: Element, source: Element) => {
       const nextProps = { ...source.props };
       const nextPropObservables = source.propObservables;
+      const updatedHotChildren = updateTrackedHotChildren(target.props.children, source.props.children);
 
       if (target.props.context) {
         nextProps.context = target.props.context;
       }
-      if (target.props.children && !source.props.children) {
+      if (updatedHotChildren || (target.props.children && !source.props.children)) {
         nextProps.children = target.props.children;
       }
 

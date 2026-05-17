@@ -22,6 +22,9 @@ type HotComponentRecord = {
   wrapper?: ComponentFunction<any>;
 };
 
+const HOT_COMPONENT_PROPS = "__canvasEngineHotProps";
+const HOT_COMPONENT_UPDATE_PROPS = "__canvasEngineUpdateHotProps";
+
 export let currentSubscriptionsTracker: ((subscription: Subscription) => void) | null = null;
 export let mountTracker: MountFunction | null = null;
 
@@ -235,14 +238,55 @@ export function createHotComponent<P>(
 
   if (!record.wrapper) {
     record.wrapper = ((props: P) => {
-      return new Observable<HotFlowResult>((subscriber) => {
+      let currentProps = props;
+
+      const observable = new Observable<HotFlowResult>((subscriber) => {
         let disposed = false;
         let currentElement: Element | null = null;
 
-        const emit = () => {
-          const rendered = createTrackedComponent(record!.component, props);
+        const patchElement = (target: Element, source: Element) => {
+          if (target.tag !== source.tag) {
+            return false;
+          }
+
+          const nextProps = { ...source.props };
+          if (target.props.context) {
+            nextProps.context = target.props.context;
+          }
+          if (target.props.children && !source.props.children) {
+            nextProps.children = target.props.children;
+          }
+
+          target.props = nextProps;
+          target.propObservables = source.propObservables;
+          target.componentInstance.onUpdate?.(nextProps);
+          Object.entries(target.directives).forEach(([name, directive]) => {
+            if (name in nextProps) {
+              directive.onUpdate?.(nextProps[name], target);
+            }
+          });
+
+          source.propSubscriptions?.forEach((sub) => sub.unsubscribe());
+          source.effectSubscriptions?.forEach((sub) => sub.unsubscribe());
+          source.effectUnmounts?.forEach((fn) => fn?.());
+
+          return true;
+        };
+
+        const emit = (preserveCurrentElement = false) => {
+          const rendered = createTrackedComponent(record!.component, currentProps);
           const next = (element: Element | null | undefined) => {
             if (!disposed) {
+              if (
+                preserveCurrentElement &&
+                currentElement &&
+                element &&
+                patchElement(currentElement, element)
+              ) {
+                subscriber.next({ elements: [currentElement] });
+                return;
+              }
+
               subscriber.next({ elements: element ? [element] : [] });
               if (currentElement && currentElement !== element) {
                 destroyElement(currentElement);
@@ -259,7 +303,12 @@ export function createHotComponent<P>(
         };
 
         emit();
-        const subscription = record!.updates.subscribe(emit);
+        (observable as any)[HOT_COMPONENT_UPDATE_PROPS] = (nextProps: P) => {
+          currentProps = nextProps;
+          emit(true);
+        };
+
+        const subscription = record!.updates.subscribe(() => emit());
 
         return () => {
           disposed = true;
@@ -270,6 +319,10 @@ export function createHotComponent<P>(
           subscription.unsubscribe();
         };
       }) as any;
+
+      (observable as any)[HOT_COMPONENT_PROPS] = props;
+
+      return observable;
     }) as ComponentFunction<any>;
   }
 
