@@ -1,6 +1,6 @@
 {
   "name": "@canvasengine/testing",
-  "version": "2.0.0-rc.2",
+  "version": "2.0.0-rc.3",
   "description": "Testing utilities and mocks for CanvasEngine",
   "type": "module",
   "main": "dist/index.js",
