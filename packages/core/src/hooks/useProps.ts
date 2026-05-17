@@ -46,6 +46,16 @@ type PropSchema = {
     [key: string]: PropType | PropType[] | PropConfig;
 }
 
+const toPropSignal = (value: any) => isSignal(value) ? value : signal(value)
+
+const definePropSignals = (props: any): any => {
+    const obj: any = {}
+    for (let key in props) {
+        obj[key] = toPropSignal(props[key])
+    }
+    return obj
+}
+
 /**
  * Validates and defines properties based on a schema.
  * 
@@ -109,13 +119,11 @@ export const useDefineProps = (props: any) => {
                 }
             }
 
-            validatedProps[key] = isSignal(validatedValue) 
-                ? validatedValue 
-                : signal(validatedValue)
+            validatedProps[key] = toPropSignal(validatedValue)
         }
         
         return {
-            ...useProps(rawProps),
+            ...definePropSignals(rawProps),
             ...validatedProps
         }
     }

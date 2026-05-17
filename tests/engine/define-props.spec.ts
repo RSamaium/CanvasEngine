@@ -115,4 +115,25 @@ describe('useDefineProps', () => {
 
         expect(props.speed).toBe(speedSignal)
     })
+
+    it('should expose object props as signals', () => {
+        const params = { color: '#ef4444' }
+        const defineProps = useDefineProps({ params })
+        const props = defineProps()
+
+        expect(isSignal(props.params)).toBe(true)
+        expect(props.params()).toEqual(params)
+    })
+
+    it('should expose object default props as signals', () => {
+        const defineProps = useDefineProps({})
+        const props = defineProps({
+            params: {
+                default: { color: '#ef4444' }
+            }
+        })
+
+        expect(isSignal(props.params)).toBe(true)
+        expect(props.params()).toEqual({ color: '#ef4444' })
+    })
 })
