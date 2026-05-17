@@ -840,8 +840,19 @@ textElement
     }
 
 forLoop "for loop"
-  = _ "@for" _ "(" _ variableName:(tupleDestructuring / identifier) _ "of" _ iterable:iterable _ ")" _ "{" _ content:content _ "}" _ {
-      return `loop(${formatLoopIterable(iterable)}, ${variableName} => ${content})`;
+  = _ "@for" _ "(" _ variableName:(tupleDestructuring / identifier) _ "of" _ iterable:iterable _ track:forTrack? ")" _ "{" _ content:content _ "}" _ {
+      const trackOption = track ? `, { track: ${variableName} => ${track} }` : '';
+      return `loop(${formatLoopIterable(iterable)}, ${variableName} => ${content}${trackOption})`;
+    }
+
+forTrack "for track expression"
+  = _ ";" _ "track" [ \t\n\r]+ expression:trackExpression _ {
+      return expression;
+    }
+
+trackExpression "track expression"
+  = text:$(conditionChunk*) {
+      return text.trim();
     }
 
 tupleDestructuring "destructuring pattern"

@@ -1088,6 +1088,30 @@ describe("Loop", () => {
     );
   });
 
+  test("should compile loop with track expression", () => {
+    const input = `
+        @for (item of items; track item.id) {
+            <Text text={item.name} />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(items,item=>h(Text, { text: item.name }), { track: item => item.id })`.replace(/\s+/g, "")
+    );
+  });
+
+  test("should compile called iterable loop with track expression", () => {
+    const input = `
+        @for ((item, index) of items(); track item.id) {
+            <Text text={index} />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(computed(() => items()),(item,index)=>h(Text, { text: index }), { track: (item,index) => item.id })`.replace(/\s+/g, "")
+    );
+  });
+
   test("should compile compact loop syntax with called iterable", () => {
     const input = `@for(item of items()){<Text text={item} />}`;
     const output = parser.parse(input);

@@ -205,6 +205,27 @@ You can use the `@for` directive to loop over an object.
 
 The `@for` directive supports advanced iteration options:
 
+#### Tracking items
+
+When an array is replaced by a new array, use `track` to preserve children whose identity did not change:
+
+```html
+<Container>
+  @for (item of items; track item.id) {
+    <Text text={item.name} />
+  }
+</Container>
+
+<script>
+  const items = signal([{ id: 1, name: 'Player' }]);
+
+  // The child for id 1 is reused.
+  items.set([{ id: 1, name: 'Player' }]);
+</script>
+```
+
+Without `track`, replacing the whole array keeps the legacy behavior and recreates the loop children.
+
 #### Using method calls
 
 You can iterate over the result of a function call:

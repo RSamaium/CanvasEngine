@@ -131,6 +131,65 @@ describe("loop with array", () => {
     expect(container.componentInstance.children[1].x).toBe(5);
   });
 
+  test(`Test loop preserves tracked item when array reference changes`, async () => {
+    const items = signal([{ id: 1 }]);
+    const value = loop(items, (item) =>
+      h(Container, { x: item.id }),
+      { track: (item) => item.id }
+    );
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    const firstChild = children[0];
+
+    items.set([{ id: 1 }]);
+
+    await vi.waitFor(() => {
+      expect(children.length).toBe(1);
+    });
+
+    expect(children[0] === firstChild).toBe(true);
+  });
+
+  test(`Test loop updates tracked item props without remounting`, async () => {
+    const items = signal([{ id: 1, x: 10 }]);
+    const value = loop(items, (item) =>
+      h(Container, { x: item.x }),
+      { track: (item) => item.id }
+    );
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    const firstChild = children[0];
+
+    items.set([{ id: 1, x: 20 }]);
+
+    await vi.waitFor(() => {
+      expect(children[0].x).toBe(20);
+    });
+
+    expect(children[0] === firstChild).toBe(true);
+  });
+
+  test(`Test loop reorders tracked items without remounting`, async () => {
+    const items = signal([{ id: 1 }, { id: 2 }]);
+    const value = loop(items, (item) =>
+      h(Container, { x: item.id }),
+      { track: (item) => item.id }
+    );
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    const firstChild = children[0];
+    const secondChild = children[1];
+
+    items.set([{ id: 2 }, { id: 1 }]);
+
+    await vi.waitFor(() => {
+      expect(children.map((child) => child.x)).toEqual([2, 1]);
+    });
+
+    expect(children[0] === secondChild).toBe(true);
+    expect(children[1] === firstChild).toBe(true);
+  });
+
   test('keeps an initially empty loop before the following loop when it receives items later', async () => {
     const firstItems = signal<string[]>([]);
     const secondItems = signal(['second']);

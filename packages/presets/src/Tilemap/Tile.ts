@@ -1,5 +1,5 @@
-import { CompositeTilemap } from "@pixi/tilemap";
-import { Tile as TiledTileClass } from '@rpgjs/tiled';
+import { CompositeTilemap } from "@canvasengine/tilemap";
+import { Tile as TiledTileClass } from '@canvasengine/tiled';
 import { AnimatedSprite, Texture, groupD8 } from "pixi.js";
 import { TileSet } from "./TileSet";
 

@@ -100,7 +100,7 @@ export const EVENTS = [
 
 export type OnHook = (() => void) | (() => Promise<void> | void);
 
-export function DisplayObject(extendClass) {
+export function DisplayObject(extendClass): any {
   return class DisplayObject extends extendClass {
     #canvasContext: {
       [key: string]: any;

@@ -55,9 +55,14 @@ type FlowResult = {
   elements: Element[];
   prev?: Element;
   fullElements?: Element[];
+  reorder?: boolean;
 };
 
 type FlowObservable = Observable<FlowResult>;
+
+export interface LoopOptions<T> {
+  track?: (item: T, index: number | string) => string | number;
+}
 
 const components: { [key: string]: any } = {};
 
@@ -698,7 +703,7 @@ export function createComponent(tag: string, props?: Props): Element {
     if (child instanceof Observable) {
       const mountedFlowElements = childGroup.mounted;
       const flowEffectSubscriptions = ((child as any).effectSubscriptions ?? []) as Subscription[];
-      const flowEffectMounts = ((child as any).effectMounts ?? []) as Array<(element: Element) => any>;
+      const flowEffectMounts = ((child as any).effectMounts ?? []) as Array<(element?: Element) => any>;
 
       const applyFlowEffects = (element: Element) => {
         if (!flowEffectMounts.length) {
@@ -730,9 +735,24 @@ export function createComponent(tag: string, props?: Props): Element {
       const mountFlowElement = (
         element: Element,
         sourceIndex: number,
-        orderedSources: any[]
+        orderedSources: any[],
+        shouldReorder = false
       ) => {
-        if (mountedFlowElements.has(element)) {
+        const mounted = mountedFlowElements.get(element);
+        if (mounted) {
+          if (shouldReorder) {
+            const insertIndex = getInsertIndex(sourceIndex, orderedSources);
+            const parentInstance = mounted.parent?.componentInstance as any;
+            const childInstance = mounted.componentInstance as any;
+            if (
+              insertIndex !== undefined &&
+              parentInstance &&
+              typeof parentInstance.addChildAt === "function" &&
+              parentInstance.children?.includes(childInstance)
+            ) {
+              parentInstance.addChildAt(childInstance, insertIndex);
+            }
+          }
           return;
         }
 
@@ -759,7 +779,8 @@ export function createComponent(tag: string, props?: Props): Element {
         component: any,
         nextElements: Set<any>,
         index: number,
-        orderedSources: any[]
+        orderedSources: any[],
+        shouldReorder = false
       ) => {
         if (component instanceof Observable) {
           nextElements.add(component);
@@ -772,7 +793,7 @@ export function createComponent(tag: string, props?: Props): Element {
         }
         if (Array.isArray(component)) {
           component.forEach((comp) =>
-            processFlowComponent(comp, nextElements, index, orderedSources)
+            processFlowComponent(comp, nextElements, index, orderedSources, shouldReorder)
           );
           return;
         }
@@ -781,7 +802,7 @@ export function createComponent(tag: string, props?: Props): Element {
         }
 
         nextElements.add(component);
-        mountFlowElement(component, index, orderedSources);
+        mountFlowElement(component, index, orderedSources, shouldReorder);
       };
 
       // Subscribe to the observable and handle the emitted values
@@ -793,9 +814,11 @@ export function createComponent(tag: string, props?: Props): Element {
             const {
               elements: comp,
               prev,
+              reorder,
             }: {
               elements: Element[];
               prev?: Element;
+              reorder?: boolean;
             } = value;
 
             const components = comp.filter((c) => c !== null);
@@ -809,7 +832,7 @@ export function createComponent(tag: string, props?: Props): Element {
               return;
             }
             components.forEach((component, index) => {
-              processFlowComponent(component, nextElements, index, components);
+              processFlowComponent(component, nextElements, index, components, reorder);
             });
             syncFlowElements(nextElements);
           } else if (isElement(value)) {
@@ -862,7 +885,8 @@ export function createComponent(tag: string, props?: Props): Element {
  */
 export function loop<T>(
   itemsSubject: any,
-  createElementFn: (item: T, index: number | string) => Element | null
+  createElementFn: (item: T, index: number | string) => Element | null,
+  options: LoopOptions<T> = {}
 ): FlowObservable {
 
   if (isComputed(itemsSubject) && itemsSubject.dependencies.size == 0) {
@@ -876,6 +900,8 @@ export function loop<T>(
     let elements: Element[] = [];
     let elementMap = new Map<string | number, Element>();
     let isFirstSubscription = true;
+    const getTrackKey = (item: T, index: number | string) =>
+      options.track ? options.track(item, index) : index;
 
     const ensureElement = (itemResult: any): Element | null => {
       if (!itemResult) return null;
@@ -900,27 +926,111 @@ export function loop<T>(
     const isArraySignal = (signal: any): signal is WritableArraySignal<T[]> =>
       Array.isArray(signal());
 
+    const cleanupUntrackedElement = (element: Element | null) => {
+      if (!element) return;
+      element.propSubscriptions?.forEach((sub) => sub.unsubscribe());
+      element.effectSubscriptions?.forEach((sub) => sub.unsubscribe());
+      element.effectUnmounts?.forEach((fn) => fn?.());
+    };
+
+    const patchTrackedElement = (target: Element, source: Element) => {
+      const nextProps = { ...source.props };
+      const nextPropObservables = source.propObservables;
+
+      if (target.props.context) {
+        nextProps.context = target.props.context;
+      }
+      if (target.props.children && !source.props.children) {
+        nextProps.children = target.props.children;
+      }
+
+      target.props = nextProps;
+      target.propObservables = nextPropObservables;
+      target.componentInstance.onUpdate?.(nextProps);
+      Object.entries(target.directives).forEach(([name, directive]) => {
+        if (name in nextProps) {
+          directive.onUpdate?.(nextProps[name], target);
+        }
+      });
+
+      cleanupUntrackedElement(source);
+    };
+
+    const removeElementFromMap = (element: Element) => {
+      for (const [key, mappedElement] of elementMap.entries()) {
+        if (mappedElement === element) {
+          elementMap.delete(key);
+          return;
+        }
+      }
+    };
+
+    const rebuildArrayElements = (items: T[] | undefined | null) => {
+      if (!options.track) {
+        elements.forEach(el => destroyElement(el));
+        elements = [];
+        elementMap.clear();
+
+        if (items) {
+          items.forEach((item, index) => {
+            const element = ensureElement(createElementFn(item, index));
+            if (element) {
+              elements.push(element);
+              elementMap.set(index, element);
+            }
+          });
+        }
+        return;
+      }
+
+      const previousMap = elementMap;
+      const nextElements: Element[] = [];
+      const nextMap = new Map<string | number, Element>();
+      const usedElements = new Set<Element>();
+
+      if (items) {
+        items.forEach((item, index) => {
+          const key = getTrackKey(item, index);
+          const existing = previousMap.get(key);
+          const nextElement = ensureElement(createElementFn(item, index));
+
+          if (existing) {
+            if (nextElement) {
+              patchTrackedElement(existing, nextElement);
+            }
+            nextElements.push(existing);
+            nextMap.set(key, existing);
+            usedElements.add(existing);
+            return;
+          }
+
+          if (nextElement) {
+            nextElements.push(nextElement);
+            nextMap.set(key, nextElement);
+            usedElements.add(nextElement);
+          }
+        });
+      }
+
+      elements.forEach((element) => {
+        if (!usedElements.has(element)) {
+          destroyElement(element);
+        }
+      });
+
+      elements = nextElements;
+      elementMap = nextMap;
+    };
+
     return new Observable<FlowResult>(subscriber => {
       const subscription = isArraySignal(itemsSubject)
         ? itemsSubject.observable.subscribe(change => {
           if (isFirstSubscription) {
             isFirstSubscription = false;
-            elements.forEach(el => el.destroy());
-            elements = [];
-            elementMap.clear();
-
-            const items = itemsSubject();
-            if (items) {
-              items.forEach((item, index) => {
-                const element = ensureElement(createElementFn(item, index));
-                if (element) {
-                  elements.push(element);
-                  elementMap.set(index, element);
-                }
-              });
-            }
+            rebuildArrayElements(itemsSubject());
             subscriber.next({
-              elements: [...elements]
+              elements: [...elements],
+              reorder: Boolean(options.track)
             });
             return;
           }
@@ -930,25 +1040,13 @@ export function loop<T>(
           const isDirectArrayChange = Array.isArray(change) || (change && typeof change === 'object' && !('type' in change));
 
           if (change.type === 'init' || change.type === 'reset' || isDirectArrayChange) {
-            elements.forEach(el => destroyElement(el));
-            elements = [];
-            elementMap.clear();
-
-            const items = itemsSubject();
-            if (items) {
-              items.forEach((item, index) => {
-                const element = ensureElement(createElementFn(item, index));
-                if (element) {
-                  elements.push(element);
-                  elementMap.set(index, element);
-                }
-              });
-            }
+            rebuildArrayElements(itemsSubject());
           } else if (change.type === 'add' && change.index !== undefined) {
             const newElements = change.items.map((item, i) => {
-              const element = ensureElement(createElementFn(item as T, change.index! + i));
+              const index = change.index! + i;
+              const element = ensureElement(createElementFn(item as T, index));
               if (element) {
-                elementMap.set(change.index! + i, element);
+                elementMap.set(getTrackKey(item as T, index), element);
               }
               return element;
             }).filter((el): el is Element => el !== null);
@@ -958,19 +1056,20 @@ export function loop<T>(
             const removed = elements.splice(change.index, 1);
             removed.forEach(el => {
               destroyElement(el)
-              elementMap.delete(change.index!);
+              removeElementFromMap(el);
             });
           } else if (change.type === 'update' && change.index !== undefined && change.items.length === 1) {
             const index = change.index;
             const newItem = change.items[0];
+            const key = getTrackKey(newItem as T, index);
 
             // Check if the previous item at this index was effectively undefined or non-existent
-            if (index >= elements.length || elements[index] === undefined || !elementMap.has(index)) {
+            if (index >= elements.length || elements[index] === undefined || !elementMap.has(key)) {
               // Treat as add operation
               const newElement = ensureElement(createElementFn(newItem as T, index));
               if (newElement) {
                 elements.splice(index, 0, newElement); // Insert at the correct index
-                elementMap.set(index, newElement);
+                elementMap.set(key, newElement);
                 // Adjust indices in elementMap for subsequent elements might be needed if map relied on exact indices
                 // This simple implementation assumes keys are stable or createElementFn handles context correctly
               } else {
@@ -978,22 +1077,28 @@ export function loop<T>(
               }
             } else {
               // Treat as a standard update operation
-              const oldElement = elements[index];
-              destroyElement(oldElement)
+              const oldElement = elementMap.get(key) ?? elements[index];
               const newElement = ensureElement(createElementFn(newItem as T, index));
-              if (newElement) {
+              if (options.track && oldElement && newElement) {
+                patchTrackedElement(oldElement, newElement);
+                elements[index] = oldElement;
+                elementMap.set(key, oldElement);
+              } else if (newElement) {
+                destroyElement(oldElement)
                 elements[index] = newElement;
-                elementMap.set(index, newElement);
+                elementMap.set(key, newElement);
               } else {
                 // Handle case where new element creation returns null
+                destroyElement(oldElement)
                 elements.splice(index, 1);
-                elementMap.delete(index);
+                elementMap.delete(key);
               }
             }
           }
 
           subscriber.next({
-            elements: [...elements] // Create a new array to ensure change detection
+            elements: [...elements], // Create a new array to ensure change detection
+            reorder: Boolean(options.track)
           });
         })
         : (itemsSubject as WritableObjectSignal<T>).observable.subscribe(change => {
@@ -1007,7 +1112,7 @@ export function loop<T>(
             const items = (itemsSubject as WritableObjectSignal<T>)();
             if (items) {
               Object.entries(items).forEach(([key, value]) => {
-                const element = ensureElement(createElementFn(value, key));
+                const element = ensureElement(createElementFn(value as T, key));
                 if (element) {
                   elements.push(element);
                   elementMap.set(key, element);
@@ -1028,7 +1133,7 @@ export function loop<T>(
             const items = (itemsSubject as WritableObjectSignal<T>)();
             if (items) {
               Object.entries(items).forEach(([key, value]) => {
-                const element = ensureElement(createElementFn(value, key));
+                const element = ensureElement(createElementFn(value as T, key));
                 if (element) {
                   elements.push(element);
                   elementMap.set(key, element);

@@ -5,7 +5,18 @@
     "declaration": true,
     "emitDeclarationOnly": false,
     "declarationMap": true,
-    "rootDir": "src"
+    "rootDir": "src",
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "canvasengine": ["../core/dist/index.d.ts"],
+      "@canvasengine/tiled": ["../tiled/dist/index.d.ts"],
+      "@canvasengine/presets": ["src/index.ts"]
+    },
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictPropertyInitialization": false
   },
   "include": [
     "src/**/*"
@@ -14,4 +25,4 @@
     "dist",
     "node_modules"
   ]
-} 
+}

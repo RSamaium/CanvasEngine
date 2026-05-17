@@ -242,6 +242,25 @@ Use:
 loop(sprites, (sprite, index) => h('Sprite', { key: index }))
 ```
 
+### Loop with Tracking
+Instead of writing:
+```html
+@for (sprite of sprites; track sprite.id) {
+    <Sprite x={sprite.x} />
+}
+```
+
+Use:
+```javascript
+loop(
+    sprites,
+    sprite => h('Sprite', { x: sprite.x }),
+    { track: sprite => sprite.id }
+)
+```
+
+Tracking preserves existing children when the array reference changes but item identities stay the same. Without `track`, replacing the array recreates the loop children.
+
 ### Loop with Object Property
 Instead of writing:
 ```html

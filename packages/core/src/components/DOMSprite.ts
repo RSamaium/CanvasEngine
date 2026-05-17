@@ -515,7 +515,11 @@ export class CanvasDOMSprite extends CanvasDOMElement {
       if (resolvedSheet?.definition !== undefined) {
         const resolvedDefinition = this.resolveSheetDefinition(resolvedSheet.definition);
         if (resolvedDefinition instanceof Promise) {
-          void this.setSheetDefinition(resolvedDefinition);
+          void resolvedDefinition.then((definition) => {
+            if (definition) {
+              void this.setSheetDefinition(definition);
+            }
+          });
         } else if (resolvedDefinition && resolvedDefinition !== this.sheetDefinition) {
           void this.setSheetDefinition(resolvedDefinition);
         }
@@ -570,7 +574,7 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     }
   }
 
-  private resolveValue<T>(value: T | Signal<T> | { value?: T } | undefined): T | undefined {
+  private resolveValue<T = any>(value: any): T | undefined {
     if (value === undefined) return undefined;
     const resolved = isSignal(value as any) ? (value as any)() : value;
     if (resolved && typeof resolved === "object" && "value" in (resolved as any)) {
@@ -687,9 +691,9 @@ export class CanvasDOMSprite extends CanvasDOMElement {
     ].some((value) => value !== undefined);
 
     if (hasTransformProps) {
-      let x = this.resolveValue(props.x) ?? 0;
-      let y = this.resolveValue(props.y) ?? 0;
-      const roundPixels = this.resolveValue(props.roundPixels);
+      let x = this.resolveValue<number>(props.x) ?? 0;
+      let y = this.resolveValue<number>(props.y) ?? 0;
+      const roundPixels = this.resolveValue<boolean>(props.roundPixels);
       if (roundPixels) {
         x = Math.round(x);
         y = Math.round(y);
@@ -698,8 +702,8 @@ export class CanvasDOMSprite extends CanvasDOMElement {
       const scale = this.resolvePoint(props.scale) ?? { x: 1, y: 1 };
       const skew = this.resolvePoint(props.skew);
 
-      const angle = this.resolveValue(props.angle);
-      const rotation = this.resolveValue(props.rotation);
+      const angle = this.resolveValue<number>(props.angle);
+      const rotation = this.resolveValue<number>(props.rotation);
       const rotationDeg = angle !== undefined
         ? angle
         : rotation !== undefined
