@@ -343,6 +343,14 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
   }
 
   async onMount(element: Element<any>, index?: number) {
+    const parentTag = element.parent?.tag;
+    if (parentTag === "DOMContainer" || parentTag === "DOMElement") {
+      this.onUpdate(element.props);
+      this.syncCanvasSizeEffect();
+      this.applyElementSize();
+      return;
+    }
+
     await super.onMount(element, index);
     this.syncCanvasSizeEffect();
     this.applyElementSize();
