@@ -284,6 +284,10 @@
     return /[a-zA-Z_][a-zA-Z0-9_]*\s*\(/.test(value);
   }
 
+  function formatLoopIterable(iterable) {
+    return hasFunctionCall(iterable) ? `computed(() => ${iterable})` : iterable;
+  }
+
   function hasIdentifier(value) {
     return /[a-zA-Z_]/.test(value);
   }
@@ -837,7 +841,7 @@ textElement
 
 forLoop "for loop"
   = _ "@for" _ "(" _ variableName:(tupleDestructuring / identifier) _ "of" _ iterable:iterable _ ")" _ "{" _ content:content _ "}" _ {
-      return `loop(${iterable}, ${variableName} => ${content})`;
+      return `loop(${formatLoopIterable(iterable)}, ${variableName} => ${content})`;
     }
 
 tupleDestructuring "destructuring pattern"

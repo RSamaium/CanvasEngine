@@ -1076,6 +1076,38 @@ describe("Loop", () => {
     );
   });
 
+  test("should compile loop with called iterable as computed source", () => {
+    const input = `
+        @for (item of items()) {
+            <Text text={item} />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(computed(() => items()),item=>h(Text, { text: item }))`.replace(/\s+/g, "")
+    );
+  });
+
+  test("should compile compact loop syntax with called iterable", () => {
+    const input = `@for(item of items()){<Text text={item} />}`;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(computed(() => items()),item=>h(Text, { text: item }))`.replace(/\s+/g, "")
+    );
+  });
+
+  test("should compile loop with destructuring and called iterable", () => {
+    const input = `
+        @for ((item, index) of items()) {
+            <Text text={index} />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(computed(() => items()),(item,index)=>h(Text, { text: index }))`.replace(/\s+/g, "")
+    );
+  });
+
   test("should compile loop with object", () => {
     const input = `
         @for (sprite of sprites.items) {
@@ -1108,7 +1140,7 @@ describe("Loop", () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `loop(sprites(),sprite=>h(Sprite))`.replace(/\s+/g, "")
+      `loop(computed(() => sprites()),sprite=>h(Sprite))`.replace(/\s+/g, "")
     );
   });
 
@@ -1120,7 +1152,7 @@ describe("Loop", () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `loop(sprites(x,y),sprite=>h(Sprite))`.replace(/\s+/g, "")
+      `loop(computed(() => sprites(x,y)),sprite=>h(Sprite))`.replace(/\s+/g, "")
     );
   });
 
@@ -1132,7 +1164,31 @@ describe("Loop", () => {
     `;
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
-      `loop(sprites.items(x,y),sprite=>h(Sprite))`.replace(/\s+/g, "")
+      `loop(computed(() => sprites.items(x,y)),sprite=>h(Sprite))`.replace(/\s+/g, "")
+    );
+  });
+
+  test("should compile loop with object method iterable", () => {
+    const input = `
+        @for (item of store.items()) {
+            <Text text={item} />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(computed(() => store.items()),item=>h(Text, { text: item }))`.replace(/\s+/g, "")
+    );
+  });
+
+  test("should compile loop with chained call iterable", () => {
+    const input = `
+        @for (item of game.getItems().visible) {
+            <Text text={item} />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(computed(() => game.getItems().visible),item=>h(Text, { text: item }))`.replace(/\s+/g, "")
     );
   });
 
@@ -1145,6 +1201,20 @@ describe("Loop", () => {
     const output = parser.parse(input);
     expect(output.replace(/\s+/g, "")).toBe(
       `loop(sprites,(sprite,index)=>h(Sprite, { key: index }))`.replace(/\s+/g, "")
+    );
+  });
+
+  test("should compile DOM loop with called iterable", () => {
+    const input = `
+      <ul>
+        @for (item of items()) {
+          <li>{item}</li>
+        }
+      </ul>
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `h(DOMElement, { element: "ul" }, loop(computed(() => items()), item => h(DOMElement, { element: "li", textContent: item })))`.replace(/\s+/g, "")
     );
   });
 

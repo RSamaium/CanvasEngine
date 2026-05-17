@@ -33,6 +33,27 @@ describe("loop with array", () => {
     expect(container.componentInstance.children.length).toBe(3);
   });
 
+  test(`Test loop with computed signal call dependency updates`, async () => {
+    const items = signal([1, 2]);
+    const value = loop(computed(() => items()), (item) => h(Text, { text: String(item) }));
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+
+    expect(children.map((child) => child.text)).toEqual(['1', '2']);
+
+    items.set([4, 5, 6]);
+
+    await vi.waitFor(() => {
+      expect(children.map((child) => child.text)).toEqual(['4', '5', '6']);
+    });
+
+    items().push(7);
+
+    await vi.waitFor(() => {
+      expect(children.map((child) => child.text)).toEqual(['4', '5', '6', '7']);
+    });
+  });
+
   test(`Test loop with adding items`, async () => {
     const items = signal([1, 2]);
     const value = loop(items, (item) => h(Container, { x: item }));

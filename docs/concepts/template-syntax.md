@@ -35,8 +35,8 @@ If the attribute name is the same as the variable, you can simplify:
 ```
 :::
 
-::: warning Grammar v2
-The compiler now uses grammar v2 by default. Literal `@` prefixes inside expressions are no longer supported (only `@if`, `@else`, `@for` remain). If you need the legacy grammar, set `CANVASENGINE_COMPILER_V1=1`.
+::: warning Grammar
+Literal `@` prefixes inside expressions are no longer supported. Only template directives such as `@if`, `@else`, and `@for` use the `@` prefix.
 :::
 
 ### Expressions and computed

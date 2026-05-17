@@ -507,21 +507,18 @@ export function shaderLoader() {
 
 export default function canvasengine() {
   const filter = createFilter("**/*.ce");
-  const useLegacyGrammar = process.env.CANVASENGINE_COMPILER_V1 === "1";
 
   // Convert import.meta.url to a file path
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
 
-  const grammarFile = useLegacyGrammar ? "grammar.pegjs" : "grammar2.pegjs";
   const grammar = fs.readFileSync(
-    path.join(__dirname, grammarFile),
+    path.join(__dirname, "grammar2.pegjs"),
     "utf8"
   );
   const parser = generate(grammar);
   const isDev = process.env.NODE_ENV === "dev";
   const FLAG_COMMENT = "/*--[TPL]--*/";
-  let warnedAboutGrammar = false;
 
   const PRIMITIVE_COMPONENTS = [
     "Canvas",
@@ -558,15 +555,6 @@ export default function canvasengine() {
     },
     transform(code: string, id: string) {
       if (!filter(id)) return null;
-      if (!warnedAboutGrammar) {
-        warnedAboutGrammar = true;
-        const legacyNote = "Set CANVASENGINE_COMPILER_V1=1 to compile with the legacy grammar (v1).";
-        if (useLegacyGrammar) {
-          console.warn(`[canvasengine] Using legacy grammar v1. ${legacyNote}`);
-        } else {
-          console.warn(`[canvasengine] Breaking change: compiler grammar v2 is now the default. ${legacyNote}`);
-        }
-      }
 
       // Extract the script content
       const scriptMatch = code.match(/<script>([\s\S]*?)<\/script>/);
