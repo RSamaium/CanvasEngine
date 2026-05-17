@@ -1,5 +1,5 @@
 import { cond, Container, h, signal, Text } from "canvasengine";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { TestBed } from "../../packages/core/testing";
 
 test(`Test cond`, async () => {
@@ -221,4 +221,25 @@ test(`Test cond without else - no condition matches`, async () => {
     )
     const container = await TestBed.createComponent(Container, {}, value)
     expect(container.componentInstance.children.length).toBe(0)
+});
+
+test(`Test cond preserves declared order when mounted after a following sibling`, async () => {
+    const showScene = signal(false)
+    const value = [
+        cond(
+            showScene,
+            () => h(Container, { x: 1 })
+        ),
+        h(Container, { x: 2 })
+    ]
+
+    const container = await TestBed.createComponent(Container, {}, value)
+
+    expect(container.componentInstance.children.map((child: any) => child.x)).toEqual([2])
+
+    showScene.set(true)
+
+    await vi.waitFor(() => {
+        expect(container.componentInstance.children.map((child: any) => child.x)).toEqual([1, 2])
+    })
 });

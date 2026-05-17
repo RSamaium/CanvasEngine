@@ -700,6 +700,73 @@ export function createComponent(tag: string, props?: Props): Element {
       return getNextGroupIndex();
     };
 
+    const collectMountedInstances = (
+      element: Element,
+      instances: any[],
+      seen = new Set<Element>()
+    ) => {
+      if (!element || seen.has(element)) return;
+      seen.add(element);
+
+      const children = (parent.componentInstance as any)?.children;
+      const instance = element.componentInstance as any;
+      if (children?.includes(instance)) {
+        instances.push(instance);
+        return;
+      }
+
+      const nestedGroups = ((element as any).__childGroups ?? [])
+        .slice()
+        .sort((a, b) => a.order - b.order);
+      for (const group of nestedGroups) {
+        for (const mounted of group.mounted.values()) {
+          collectMountedInstances(mounted, instances, seen);
+        }
+      }
+    };
+
+    const reorderMountedChildGroups = () => {
+      const parentInstance = parent.componentInstance as any;
+      const children = parentInstance?.children;
+      if (!children || typeof parentInstance.addChildAt !== "function") return;
+
+      const orderedInstances: any[] = [];
+      const orderedGroups = childGroups
+        .slice()
+        .sort((a, b) => a.order - b.order);
+
+      for (const group of orderedGroups) {
+        for (const mounted of group.mounted.values()) {
+          collectMountedInstances(mounted, orderedInstances);
+        }
+      }
+
+      const mountedIndices = orderedInstances
+        .map((instance) => children.indexOf(instance))
+        .filter((index) => index >= 0);
+      if (!mountedIndices.length) return;
+
+      let targetIndex = Math.min(...mountedIndices);
+      for (const instance of orderedInstances) {
+        const currentIndex = children.indexOf(instance);
+        if (currentIndex < 0) continue;
+        if (currentIndex !== targetIndex) {
+          parentInstance.addChildAt(instance, targetIndex);
+        }
+        targetIndex++;
+      }
+    };
+
+    const mountElementAtDeclaredOrder = (
+      element: Element,
+      sourceIndex: number,
+      orderedSources: any[]
+    ) => {
+      const mountResult = onMount(parent, element, getInsertIndex(sourceIndex, orderedSources));
+      void Promise.resolve(mountResult).then(reorderMountedChildGroups);
+      return mountResult;
+    };
+
     if (child instanceof Observable) {
       const mountedFlowElements = childGroup.mounted;
       const flowEffectSubscriptions = ((child as any).effectSubscriptions ?? []) as Subscription[];
@@ -759,7 +826,7 @@ export function createComponent(tag: string, props?: Props): Element {
         const routed = routeDomComponent(parent, element);
         applyFlowEffects(routed);
         mountedFlowElements.set(element, routed);
-        onMount(parent, routed, getInsertIndex(sourceIndex, orderedSources));
+        mountElementAtDeclaredOrder(routed, sourceIndex, orderedSources);
         propagateContext(routed);
       };
 
@@ -840,7 +907,7 @@ export function createComponent(tag: string, props?: Props): Element {
             const routed = routeDomComponent(parent, value);
             applyFlowEffects(routed);
             childGroup.mounted.set(value, routed);
-            onMount(parent, routed, getInsertIndex(0, [value]));
+            mountElementAtDeclaredOrder(routed, 0, [value]);
             propagateContext(routed);
           } else if (Array.isArray(value)) {
             // Handle array of elements (which can also be observables)
@@ -867,7 +934,7 @@ export function createComponent(tag: string, props?: Props): Element {
     } else if (isElement(child)) {
       const routed = routeDomComponent(parent, child);
       childGroup.mounted.set(child, routed);
-      onMount(parent, routed, getInsertIndex(0, [child]));
+      mountElementAtDeclaredOrder(routed, 0, [child]);
       await propagateContext(routed);
     }
   }
