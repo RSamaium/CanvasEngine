@@ -703,14 +703,14 @@ export function createComponent(tag: string, props?: Props): Element {
     const collectMountedInstances = (
       element: Element,
       instances: any[],
+      childIndex: Map<any, number>,
       seen = new Set<Element>()
     ) => {
       if (!element || seen.has(element)) return;
       seen.add(element);
 
-      const children = (parent.componentInstance as any)?.children;
       const instance = element.componentInstance as any;
-      if (children?.includes(instance)) {
+      if (childIndex.has(instance)) {
         instances.push(instance);
         return;
       }
@@ -720,15 +720,22 @@ export function createComponent(tag: string, props?: Props): Element {
         .sort((a, b) => a.order - b.order);
       for (const group of nestedGroups) {
         for (const mounted of group.mounted.values()) {
-          collectMountedInstances(mounted, instances, seen);
+          collectMountedInstances(mounted, instances, childIndex, seen);
         }
       }
     };
 
     const reorderMountedChildGroups = () => {
+      if (childGroups.length < 2) return;
+
       const parentInstance = parent.componentInstance as any;
       const children = parentInstance?.children;
       if (!children || typeof parentInstance.addChildAt !== "function") return;
+
+      const childIndex = new Map<any, number>();
+      children.forEach((child, index) => {
+        childIndex.set(child, index);
+      });
 
       const orderedInstances: any[] = [];
       const orderedGroups = childGroups
@@ -737,20 +744,18 @@ export function createComponent(tag: string, props?: Props): Element {
 
       for (const group of orderedGroups) {
         for (const mounted of group.mounted.values()) {
-          collectMountedInstances(mounted, orderedInstances);
+          collectMountedInstances(mounted, orderedInstances, childIndex);
         }
       }
 
       const mountedIndices = orderedInstances
-        .map((instance) => children.indexOf(instance))
-        .filter((index) => index >= 0);
+        .map((instance) => childIndex.get(instance))
+        .filter((index): index is number => index !== undefined);
       if (!mountedIndices.length) return;
 
       let targetIndex = Math.min(...mountedIndices);
       for (const instance of orderedInstances) {
-        const currentIndex = children.indexOf(instance);
-        if (currentIndex < 0) continue;
-        if (currentIndex !== targetIndex) {
+        if (children[targetIndex] !== instance) {
           parentInstance.addChildAt(instance, targetIndex);
         }
         targetIndex++;
