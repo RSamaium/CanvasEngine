@@ -49,6 +49,26 @@ describe('Graphics', () => {
             // Second call should be with updated width
             expect(mockRect).toHaveBeenLastCalledWith(-0, -0, 200, 100)
         })
+
+        it('should not draw when graphics is destroyed before mount completes', async () => {
+            const mounted = await TestBed.createComponent(Rect, { width: 1, height: 1, color: '#fff' })
+            const GraphicsClass = mounted.componentInstance.constructor as any
+            const graphics = new GraphicsClass()
+            const draw = vi.fn()
+
+            graphics.destroy()
+            await graphics.onMount({
+                props: {
+                    context: {},
+                    draw,
+                    width: 10,
+                    height: 10,
+                },
+                propObservables: {},
+            } as any)
+
+            expect(draw).not.toHaveBeenCalled()
+        })
     })
 
     describe('Circle', () => {

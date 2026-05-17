@@ -88,6 +88,9 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
    */
   async onMount(element: Element<any>, index?: number): Promise<void> {
     await super.onMount(element, index);
+    if (this.destroyed || !this.parent) {
+      return;
+    }
     const { props, propObservables } = element;
     
     // Use original signals from propObservables if available, otherwise create new ones
@@ -109,6 +112,9 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
         const h = height();
         const a = anchor();
         if (typeof w == 'string' || typeof h == 'string') {
+          return
+        }
+        if (this.destroyed || !this.parent) {
           return
         }
         this.clear();
