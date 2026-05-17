@@ -24,8 +24,10 @@ type HotComponentRecord = {
 
 const HOT_COMPONENT_PROPS = "__canvasEngineHotProps";
 const HOT_COMPONENT_UPDATE_PROPS = "__canvasEngineUpdateHotProps";
+const DEFINE_PROPS_SIGNALS = "__canvasEngineDefinePropsSignals";
 
 export let currentSubscriptionsTracker: ((subscription: Subscription) => void) | null = null;
+export let currentDefinePropsTracker: ((signals: Record<string, any>) => void) | null = null;
 export let mountTracker: MountFunction | null = null;
 
 const getHotComponentRegistry = (): Map<string, HotComponentRecord> => {
@@ -166,9 +168,17 @@ function createTrackedComponent<C extends ComponentFunction<any>>(
 ): ReturnType<C> {
   const allSubscriptions = new Set<Subscription>();
   const allMounts = new Set<MountCallback>();
+  let allDefinePropSignals: Record<string, any> | null = null;
 
   currentSubscriptionsTracker = (subscription) => {
     allSubscriptions.add(subscription);
+  };
+
+  currentDefinePropsTracker = (signals) => {
+    allDefinePropSignals = {
+      ...(allDefinePropSignals ?? {}),
+      ...signals,
+    };
   };
 
   mountTracker = (fn: any) => {
@@ -180,6 +190,7 @@ function createTrackedComponent<C extends ComponentFunction<any>>(
     component = componentFunction(props) as ReturnType<C>;
   } finally {
     currentSubscriptionsTracker = null;
+    currentDefinePropsTracker = null;
     mountTracker = null;
   }
 
@@ -193,6 +204,9 @@ function createTrackedComponent<C extends ComponentFunction<any>>(
       ...Array.from(allMounts),
       ...((element as any).effectMounts ?? [])
     ];
+    if (allDefinePropSignals) {
+      (element as any)[DEFINE_PROPS_SIGNALS] = allDefinePropSignals;
+    }
   };
 
   if (component instanceof Promise) {
@@ -211,6 +225,9 @@ function createTrackedComponent<C extends ComponentFunction<any>>(
       ...Array.from(allMounts),
       ...((component as any).effectMounts ?? [])
     ];
+    if (allDefinePropSignals) {
+      (component as any)[DEFINE_PROPS_SIGNALS] = allDefinePropSignals;
+    }
   } else {
     applyTrackedEffects(component as Element);
   }

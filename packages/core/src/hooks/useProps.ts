@@ -1,5 +1,6 @@
 import { isSignal, signal } from "@signe/reactive"
 import { isPrimitive } from "../engine/reactive"
+import { currentDefinePropsTracker } from "../engine/signal"
 
 /**
  * Converts props into reactive signals if they are primitive values.
@@ -122,10 +123,13 @@ export const useDefineProps = (props: any) => {
             validatedProps[key] = toPropSignal(validatedValue)
         }
         
-        return {
+        const definedProps = {
             ...definePropSignals(rawProps),
             ...validatedProps
         }
+        currentDefinePropsTracker?.(definedProps)
+
+        return definedProps
     }
 }
 

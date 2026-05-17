@@ -1,4 +1,4 @@
-import { loop, Container, h, signal, Text, computed, mount, createHotComponent } from "canvasengine";
+import { loop, Container, h, signal, Text, computed, mount, createHotComponent, effect, useDefineProps } from "canvasengine";
 import { describe, expect, test, vi } from "vitest";
 import { TestBed } from "../../packages/core/testing";
 
@@ -167,6 +167,56 @@ describe("loop with array", () => {
     });
 
     expect(children[0] === firstChild).toBe(true);
+  });
+
+  test(`Test loop updates tracked child defineProps signal without remounting`, async () => {
+    const items = signal([{ id: 1, x: 10 }]);
+    const observed = vi.fn();
+    const mounted = vi.fn();
+    const unmounted = vi.fn();
+    let renderCount = 0;
+
+    function Child(props: { x: number }) {
+      const renderId = ++renderCount;
+      const defineProps = useDefineProps(props);
+      const { x } = defineProps({ x: { type: Number } });
+
+      effect(() => {
+        observed(renderId, x());
+      });
+
+      mount(() => {
+        mounted();
+        return () => {
+          unmounted();
+        };
+      });
+
+      return h(Container, { x });
+    }
+
+    const value = loop(items, (item) =>
+      h(Child, { x: item.x }),
+      { track: (item) => item.id }
+    );
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    const firstChild = children[0];
+
+    await vi.waitFor(() => {
+      expect(observed).toHaveBeenCalledWith(1, 10);
+    });
+
+    items.set([{ id: 1, x: 20 }]);
+
+    await vi.waitFor(() => {
+      expect(observed).toHaveBeenCalledWith(1, 20);
+      expect(children[0].x).toBe(20);
+    });
+
+    expect(children[0]).toBe(firstChild);
+    expect(mounted).toHaveBeenCalledTimes(1);
+    expect(unmounted).not.toHaveBeenCalled();
   });
 
   test(`Test loop updates tracked dynamic component spread props without remounting`, async () => {

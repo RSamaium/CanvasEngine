@@ -67,6 +67,7 @@ export interface LoopOptions<T> {
 const components: { [key: string]: any } = {};
 const HOT_COMPONENT_PROPS = "__canvasEngineHotProps";
 const HOT_COMPONENT_UPDATE_PROPS = "__canvasEngineUpdateHotProps";
+const DEFINE_PROPS_SIGNALS = "__canvasEngineDefinePropsSignals";
 
 export const isElement = (value: any): value is Element => {
   return (
@@ -115,6 +116,24 @@ const DOM_UNSUPPORTED_TAGS = new Set([
   "Joystick",
   "FocusContainer",
 ]);
+
+const readSignalValue = (value: any) => isSignal(value) ? value() : value;
+
+const patchDefinePropsSignals = (target: Element, source: Element) => {
+  const targetSignals = (target as any)[DEFINE_PROPS_SIGNALS];
+  const sourceSignals = (source as any)[DEFINE_PROPS_SIGNALS];
+
+  if (!targetSignals || !sourceSignals) {
+    return;
+  }
+
+  Object.entries(sourceSignals as Record<string, any>).forEach(([key, sourceSignal]) => {
+    const targetSignal = targetSignals[key];
+    if (targetSignal && typeof targetSignal.set === "function") {
+      targetSignal.set(readSignalValue(sourceSignal));
+    }
+  });
+};
 
 const hasDomAncestor = (element: Element | null): boolean => {
   let current = element;
@@ -1030,6 +1049,8 @@ export function loop<T>(
       const nextProps = { ...source.props };
       const nextPropObservables = source.propObservables;
       const updatedHotChildren = updateTrackedHotChildren(target.props.children, source.props.children);
+
+      patchDefinePropsSignals(target, source);
 
       if (target.props.context) {
         nextProps.context = target.props.context;
