@@ -29,6 +29,14 @@ const resolveProp = <T>(value: SignalOrPrimitive<T> | undefined): T | undefined 
   return isSignal(value as any) ? (value as any)() : value as T | undefined;
 };
 
+const isValidGeometry = (value: Geometry | undefined): value is Geometry => {
+  if (!value) return false;
+  if (value instanceof Geometry) return true;
+
+  const geometry = value as any;
+  return typeof geometry.on === 'function' && typeof geometry.off === 'function';
+};
+
 /**
  * Canvas Mesh component class that extends DisplayObject with PixiMesh functionality.
  * This component allows rendering of custom 3D meshes with shaders and textures.
@@ -91,7 +99,7 @@ class CanvasMesh extends DisplayObject(PixiMesh) {
 
     // Set initial geometry if provided
     const geometry = resolveProp(props.geometry);
-    if (geometry) {
+    if (isValidGeometry(geometry)) {
       try {
         this.geometry = geometry;
       } catch (error) {
@@ -125,7 +133,7 @@ class CanvasMesh extends DisplayObject(PixiMesh) {
 
     // Handle geometry updates
     const geometry = resolveProp(props.geometry);
-    if (geometry) {
+    if (isValidGeometry(geometry)) {
       try {
         this.geometry = geometry;
       } catch (error) {

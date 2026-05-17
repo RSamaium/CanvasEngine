@@ -83,6 +83,24 @@ describe('Mesh Component', () => {
         expect('geometry' in meshElement.componentInstance).toBe(true)
     })
 
+    test('ignores invalid geometry without warning', async () => {
+        const warnSpy = vi.spyOn(console, 'warn')
+
+        const meshElement = await TestBed.createComponent(Mesh, {
+            geometry: {
+                vertices: new Float32Array([0, 0, 1, 0, 0, 1])
+            } as any
+        })
+
+        expect(meshElement).toBeDefined()
+        expect(warnSpy).not.toHaveBeenCalledWith(
+            expect.stringContaining('Failed to set geometry'),
+            expect.anything()
+        )
+
+        warnSpy.mockRestore()
+    })
+
     test('creates mesh component with shader', async () => {
         const meshElement = await TestBed.createComponent(Mesh, {
             shader: mockShader,
