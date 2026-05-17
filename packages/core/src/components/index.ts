@@ -1,5 +1,5 @@
 export { Canvas } from './Canvas'
-export { Container } from './Container'
+export { Container, type ContainerProps } from './Container'
 export { Graphics, Rect, Circle, Ellipse, Triangle, Svg } from './Graphic'
 export { Mesh } from './Mesh'
 export { Scene } from './Scene'

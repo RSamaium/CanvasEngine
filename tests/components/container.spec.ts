@@ -1,5 +1,6 @@
 import { describe, it, expect, test } from 'vitest';
 import { cond, Container, h, signal } from 'canvasengine';
+import { Container as PixiContainer } from 'pixi.js';
 import { TestBed } from '../../packages/core/testing';
 import { CanvasContainer } from '../../packages/core/src/components/Container';
 
@@ -64,4 +65,14 @@ describe('Container', () => {
             expect((container.componentInstance.children[0] as any).x).toBe(200)
         })
     })
+
+    test('should add native Pixi children', async () => {
+        const child = new PixiContainer();
+        const container = await TestBed.createComponent(Container, {
+            pixiChildren: [child],
+        });
+
+        expect(container.componentInstance.children).toContain(child);
+        expect(child.parent).toBe(container.componentInstance);
+    });
 })

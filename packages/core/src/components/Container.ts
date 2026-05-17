@@ -1,4 +1,4 @@
-import { Container as PixiContainer } from "pixi.js";
+import { Container as PixiContainer, type ContainerChild } from "pixi.js";
 import { createComponent, registerComponent } from "../engine/reactive";
 import { DisplayObject } from "./DisplayObject";
 import { ComponentFunction } from "../engine/signal";
@@ -6,8 +6,16 @@ import { DisplayObjectProps } from "./types/DisplayObject";
 import { setObservablePoint } from "../engine/utils";
 import { isPercent } from "../utils/functions";
 
-interface ContainerProps extends DisplayObjectProps {
+export interface ContainerProps extends DisplayObjectProps {
   sortableChildren?: boolean;
+  /**
+   * Native PixiJS display objects to add to this container when it mounts.
+   *
+   * This is an escape hatch for rendering PixiJS objects directly inside the
+   * CanvasEngine scene graph. CanvasEngine does not manage these children's
+   * props or lifecycle; destroy or update them manually when needed.
+   */
+  pixiChildren?: ContainerChild[];
 }
 
 export class CanvasContainer extends DisplayObject(PixiContainer) {

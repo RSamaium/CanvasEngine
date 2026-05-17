@@ -1,4 +1,4 @@
-import { loop, Container, h, signal, Text, computed, mount } from "canvasengine";
+import { loop, Container, h, signal, Text, computed, mount, createHotComponent } from "canvasengine";
 import { describe, expect, test, vi } from "vitest";
 import { TestBed } from "../../packages/core/testing";
 
@@ -167,6 +167,115 @@ describe("loop with array", () => {
     });
 
     expect(children[0] === firstChild).toBe(true);
+  });
+
+  test(`Test loop updates tracked dynamic component spread props without remounting`, async () => {
+    const mounted = vi.fn();
+    const unmounted = vi.fn();
+
+    function Projectile(props: { id: string; x: number; y: number }) {
+      mount(() => {
+        mounted(props.id);
+        return () => {
+          unmounted(props.id);
+        };
+      });
+
+      return h(Container, { x: props.x, y: props.y });
+    }
+
+    const items = signal([
+      {
+        id: "projectile-1",
+        component: Projectile,
+        props: { id: "projectile-1", x: 10, y: 20 },
+      },
+    ]);
+    const value = loop(
+      items,
+      (item) => h(item.component, item.props),
+      { track: (item) => item.id }
+    );
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    const firstChild = children[0];
+
+    expect(mounted).toHaveBeenCalledTimes(1);
+    expect(unmounted).not.toHaveBeenCalled();
+    expect(firstChild.x).toBe(10);
+    expect(firstChild.y).toBe(20);
+
+    items.set([
+      {
+        id: "projectile-1",
+        component: Projectile,
+        props: { id: "projectile-1", x: 30, y: 40 },
+      },
+    ]);
+
+    await vi.waitFor(() => {
+      expect(children[0].x).toBe(30);
+      expect(children[0].y).toBe(40);
+    });
+
+    expect(children[0]).toBe(firstChild);
+    expect(mounted).toHaveBeenCalledTimes(1);
+    expect(unmounted).not.toHaveBeenCalled();
+  });
+
+  test(`Test loop updates tracked hot dynamic component spread props without remounting`, async () => {
+    const mounted = vi.fn();
+    const unmounted = vi.fn();
+
+    function Projectile(props: { id: string; x: number; y: number }) {
+      mount(() => {
+        mounted(props.id);
+        return () => {
+          unmounted(props.id);
+        };
+      });
+
+      return h(Container, { x: props.x, y: props.y });
+    }
+
+    const HotProjectile = createHotComponent("test-projectile-loop-track", Projectile);
+    const items = signal([
+      {
+        id: "projectile-1",
+        component: HotProjectile,
+        props: { id: "projectile-1", x: 10, y: 20 },
+      },
+    ]);
+    const value = loop(
+      items,
+      (item) => h(item.component, item.props),
+      { track: (item) => item.id }
+    );
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    const firstChild = children[0];
+
+    expect(mounted).toHaveBeenCalledTimes(1);
+    expect(unmounted).not.toHaveBeenCalled();
+    expect(firstChild.x).toBe(10);
+    expect(firstChild.y).toBe(20);
+
+    items.set([
+      {
+        id: "projectile-1",
+        component: HotProjectile,
+        props: { id: "projectile-1", x: 30, y: 40 },
+      },
+    ]);
+
+    await vi.waitFor(() => {
+      expect(children[0].x).toBe(30);
+      expect(children[0].y).toBe(40);
+    });
+
+    expect(children[0]).toBe(firstChild);
+    expect(mounted).toHaveBeenCalledTimes(1);
+    expect(unmounted).not.toHaveBeenCalled();
   });
 
   test(`Test loop reorders tracked items without remounting`, async () => {
