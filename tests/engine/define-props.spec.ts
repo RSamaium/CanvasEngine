@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { useDefineProps, signal, isSignal } from 'canvasengine'
+import { useDefineProps, signal, isSignal, computed, trigger, on } from 'canvasengine'
 
 describe('useDefineProps', () => {
 
@@ -135,5 +135,102 @@ describe('useDefineProps', () => {
 
         expect(isSignal(props.params)).toBe(true)
         expect(props.params()).toEqual({ color: '#ef4444' })
+    })
+
+    it('should expose classic function props as directly callable signal-compatible callbacks', () => {
+        const defineProps = useDefineProps({
+            fn: (left: number, right: number) => left + right
+        })
+        const props = defineProps()
+
+        expect(isSignal(props.fn)).toBe(true)
+        expect(props.fn(2, 3)).toBe(5)
+    })
+
+    it('should update the called classic function prop when its signal value changes', () => {
+        const defineProps = useDefineProps({
+            fn: () => 'initial'
+        })
+        const props = defineProps()
+
+        expect(props.fn()).toBe('initial')
+
+        props.fn.set(() => 'updated')
+
+        expect(props.fn()).toBe('updated')
+    })
+
+    it('should validate classic function props with Function type schema', () => {
+        const defineProps = useDefineProps({
+            fn: () => 'called'
+        })
+        const props = defineProps({
+            fn: { type: Function }
+        })
+
+        expect(isSignal(props.fn)).toBe(true)
+        expect(props.fn()).toBe('called')
+    })
+
+    it('should expose default factory function results as directly callable callbacks', () => {
+        const defineProps = useDefineProps({})
+        const props = defineProps({
+            fn: {
+                default: () => () => 'default'
+            }
+        })
+
+        expect(isSignal(props.fn)).toBe(true)
+        expect(props.fn()).toBe('default')
+    })
+
+    it('should pass the raw classic function value to validators', () => {
+        const callback = () => 'validated'
+        const defineProps = useDefineProps({ callback })
+        const props = defineProps({
+            callback: {
+                validator: (value) => value === callback
+            }
+        })
+
+        expect(props.callback()).toBe('validated')
+    })
+
+    it('should preserve signal function props unchanged', () => {
+        const callback = () => 'from signal'
+        const callbackSignal = signal(callback)
+        const defineProps = useDefineProps({ callback: callbackSignal })
+        const props = defineProps()
+
+        expect(props.callback).toBe(callbackSignal)
+        expect(props.callback()).toBe(callback)
+    })
+
+    it('should preserve computed props unchanged', () => {
+        const count = signal(1)
+        const doubled = computed(() => count() * 2)
+        const defineProps = useDefineProps({ doubled })
+        const props = defineProps()
+
+        expect(props.doubled).toBe(doubled)
+        expect(props.doubled()).toBe(2)
+    })
+
+    it('should preserve trigger props unchanged and compatible with on()', async () => {
+        const myTrigger = trigger<{ message: string }>()
+        const defineProps = useDefineProps({ myTrigger })
+        const props = defineProps()
+        let received: string | undefined
+
+        expect(props.myTrigger).toBe(myTrigger)
+
+        const subscription = on(props.myTrigger, (data) => {
+            received = data.message
+        })
+
+        await props.myTrigger.start({ message: 'ok' })
+        subscription.unsubscribe()
+
+        expect(received).toBe('ok')
     })
 })

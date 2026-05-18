@@ -30,7 +30,11 @@ export let currentSubscriptionsTracker: ((subscription: Subscription) => void) |
 export let currentDefinePropsTracker: ((signals: Record<string, any>) => void) | null = null;
 export let mountTracker: MountFunction | null = null;
 
-const readSignalValue = (value: any) => isSignal(value) ? value() : value;
+const readSignalValue = (value: any) => {
+  const callableValueSignal = value?.__canvasEngineCallableSignalValue;
+  if (callableValueSignal) return callableValueSignal();
+  return isSignal(value) ? value() : value;
+};
 
 const patchDefinePropsSignals = (target: Element, source: Element) => {
   const targetSignals = (target as any)[DEFINE_PROPS_SIGNALS];

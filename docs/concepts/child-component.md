@@ -62,6 +62,20 @@ Note that retrieved properties, **even static ones**, are transformed into signa
 Example: `title()`
 :::
 
+::: tip callbacks
+Classic function props are callable directly for better DX.
+
+```html
+<script>
+  const { onSelect } = defineProps()
+
+  onSelect()
+</script>
+```
+
+Reactive function values passed as signals stay signals and keep their existing behavior.
+:::
+
 ::: tip
 
 If you don't want to set the default values, just do:

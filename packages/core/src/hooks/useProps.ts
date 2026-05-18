@@ -1,6 +1,7 @@
 import { isSignal, signal } from "@signe/reactive"
 import { isPrimitive } from "../engine/reactive"
 import { currentDefinePropsTracker } from "../engine/signal"
+import { isTrigger } from "../engine/trigger"
 
 /**
  * Converts props into reactive signals if they are primitive values.
@@ -47,7 +48,36 @@ type PropSchema = {
     [key: string]: PropType | PropType[] | PropConfig;
 }
 
-const toPropSignal = (value: any) => isSignal(value) ? value : signal(value)
+const DEFINE_PROPS_CALLABLE_SIGNAL_VALUE = "__canvasEngineCallableSignalValue"
+
+const createCallablePropSignal = (value: (...args: any[]) => any) => {
+    const valueSignal: any = signal(value)
+    const callable: any = (...args: any[]) => valueSignal()(...args)
+
+    callable[DEFINE_PROPS_CALLABLE_SIGNAL_VALUE] = valueSignal
+    callable.set = valueSignal.set
+    callable.freeze = valueSignal.freeze
+    callable.unfreeze = valueSignal.unfreeze
+    callable.mutate = valueSignal.mutate
+    callable.update = valueSignal.update
+    callable.observable = valueSignal.observable
+    callable._subject = valueSignal._subject
+
+    Object.defineProperty(callable, "_isFrozen", {
+        get: () => valueSignal._isFrozen,
+        set: (value) => {
+            valueSignal._isFrozen = value
+        }
+    })
+
+    return callable
+}
+
+const toPropSignal = (value: any) => {
+    if (isSignal(value) || isTrigger(value)) return value
+    if (typeof value === 'function') return createCallablePropSignal(value)
+    return signal(value)
+}
 
 const definePropSignals = (props: any): any => {
     const obj: any = {}
