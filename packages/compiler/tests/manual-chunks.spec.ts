@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { canvasengineManualChunks, withCanvasEngineManualChunks } from "../index";
+import canvasengine, { canvasengineManualChunks, withCanvasEngineManualChunks } from "../index";
 
 describe("CanvasEngine Vite production chunks", () => {
   test("groups Pixi modules in a stable Pixi chunk", () => {
@@ -38,5 +38,46 @@ describe("CanvasEngine Vite production chunks", () => {
     expect(manualChunks("/project/node_modules/pixi.js/lib/index.mjs", {})).toBe("pixi");
     expect(manualChunks("/project/node_modules/lodash-es/lodash.js", {})).toBe("vendor");
     expect(manualChunks("/project/src/main.ts", {})).toBeUndefined();
+  });
+});
+
+describe("CanvasEngine Vite HMR option", () => {
+  const source = `<Container />`;
+  const id = "/project/src/App.ce";
+  const restoreNodeEnv = (previousEnv: string | undefined) => {
+    if (previousEnv === undefined) {
+      delete process.env.NODE_ENV;
+      return;
+    }
+    process.env.NODE_ENV = previousEnv;
+  };
+
+  test("wraps compiled components in hot components by default in dev", () => {
+    const previousEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "dev";
+    try {
+      const plugin = canvasengine() as any;
+      const result = plugin.transform(source, id);
+
+      expect(result.code).toContain("createHotComponent");
+      expect(result.code).toContain("import.meta.hot.accept");
+    } finally {
+      restoreNodeEnv(previousEnv);
+    }
+  });
+
+  test("can disable compiled component HMR in dev", () => {
+    const previousEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "dev";
+    try {
+      const plugin = canvasengine({ hmr: false }) as any;
+      const result = plugin.transform(source, id);
+
+      expect(result.code).not.toContain("createHotComponent");
+      expect(result.code).not.toContain("import.meta.hot.accept");
+      expect(result.code).toContain("const __ce_component = component");
+    } finally {
+      restoreNodeEnv(previousEnv);
+    }
   });
 });

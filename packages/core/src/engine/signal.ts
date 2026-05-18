@@ -30,6 +30,24 @@ export let currentSubscriptionsTracker: ((subscription: Subscription) => void) |
 export let currentDefinePropsTracker: ((signals: Record<string, any>) => void) | null = null;
 export let mountTracker: MountFunction | null = null;
 
+const readSignalValue = (value: any) => isSignal(value) ? value() : value;
+
+const patchDefinePropsSignals = (target: Element, source: Element) => {
+  const targetSignals = (target as any)[DEFINE_PROPS_SIGNALS];
+  const sourceSignals = (source as any)[DEFINE_PROPS_SIGNALS];
+
+  if (!targetSignals || !sourceSignals) {
+    return;
+  }
+
+  Object.entries(sourceSignals as Record<string, any>).forEach(([key, sourceSignal]) => {
+    const targetSignal = targetSignals[key];
+    if (targetSignal && typeof targetSignal.set === "function") {
+      targetSignal.set(readSignalValue(sourceSignal));
+    }
+  });
+};
+
 const getHotComponentRegistry = (): Map<string, HotComponentRecord> => {
   const hotGlobal = globalThis as any;
   if (!hotGlobal.__CANVAS_ENGINE_HOT_COMPONENTS__) {
@@ -273,6 +291,8 @@ export function createHotComponent<P>(
           if (target.props.children && !source.props.children) {
             nextProps.children = target.props.children;
           }
+
+          patchDefinePropsSignals(target, source);
 
           target.props = nextProps;
           target.propObservables = source.propObservables;

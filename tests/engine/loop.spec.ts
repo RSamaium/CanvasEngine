@@ -1,4 +1,4 @@
-import { loop, Container, h, signal, Text, computed, mount, createHotComponent, effect, useDefineProps } from "canvasengine";
+import { loop, Container, h, signal, Text, computed, mount, createHotComponent, effect, useDefineProps, cond, Graphics } from "canvasengine";
 import { describe, expect, test, vi } from "vitest";
 import { TestBed } from "../../packages/core/testing";
 
@@ -273,6 +273,149 @@ describe("loop with array", () => {
     expect(unmounted).not.toHaveBeenCalled();
   });
 
+  test(`Test loop updates tracked dynamic component conditional child from defineProps`, async () => {
+    const mounted = vi.fn();
+    const unmounted = vi.fn();
+
+    function Projectile(props: { id: string; x: number; impact?: { x: number } | null }) {
+      const defineProps = useDefineProps(props);
+      const { x, impact } = defineProps({
+        x: Number,
+        impact: {
+          type: Object,
+          default: null,
+        },
+      });
+
+      mount(() => {
+        mounted(props.id);
+        return () => {
+          unmounted(props.id);
+        };
+      });
+
+      return h(
+        Container,
+        { x },
+        cond(
+          computed(() => impact() !== null),
+          () => h(Container, { x: 999 })
+        )
+      );
+    }
+
+    const items = signal([
+      {
+        id: "projectile-1",
+        component: Projectile,
+        props: { id: "projectile-1", x: 10, impact: null },
+      },
+    ]);
+    const value = loop(
+      items,
+      (item) => h(item.component, item.props),
+      { track: (item) => item.id }
+    );
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    const firstChild = children[0];
+
+    expect(firstChild.x).toBe(10);
+    expect(firstChild.children.length).toBe(0);
+    expect(mounted).toHaveBeenCalledTimes(1);
+
+    items.set([
+      {
+        id: "projectile-1",
+        component: Projectile,
+        props: { id: "projectile-1", x: 20, impact: { x: 20 } },
+      },
+    ]);
+
+    await vi.waitFor(() => {
+      expect(children[0].x).toBe(20);
+      expect(children[0].children.length).toBe(1);
+      expect(children[0].children[0].x).toBe(999);
+    });
+
+    expect(children[0]).toBe(firstChild);
+    expect(mounted).toHaveBeenCalledTimes(1);
+    expect(unmounted).not.toHaveBeenCalled();
+
+    items.set([
+      {
+        id: "projectile-1",
+        component: Projectile,
+        props: { id: "projectile-1", x: 30, impact: null },
+      },
+    ]);
+
+    await vi.waitFor(() => {
+      expect(children[0].x).toBe(30);
+      expect(children[0].children.length).toBe(0);
+    });
+  });
+
+  test(`Test loop redraws tracked dynamic component graphics from defineProps`, async () => {
+    const drawCalls: string[] = [];
+
+    function Projectile(props: { id: string; impact?: { x: number } | null }) {
+      const defineProps = useDefineProps(props);
+      const { impact } = defineProps({
+        impact: {
+          type: Object,
+          default: null,
+        },
+      });
+
+      function draw(graphics: any) {
+        if (impact()) {
+          drawCalls.push("impact");
+          graphics.circle(0, 0, 10);
+          return;
+        }
+        drawCalls.push("projectile");
+        graphics.rect(0, 0, 10, 10);
+      }
+
+      return h(Container, {}, h(Graphics, { draw }));
+    }
+
+    const items = signal([
+      {
+        id: "projectile-1",
+        component: Projectile,
+        props: { id: "projectile-1", impact: null },
+      },
+    ]);
+    const value = loop(
+      items,
+      (item) => h(item.component, item.props),
+      { track: (item) => item.id }
+    );
+    const container = await TestBed.createComponent(Container, {}, value);
+    const projectile = container.componentInstance.children[0];
+    const graphics = projectile.children[0] as any;
+
+    await vi.waitFor(() => {
+      expect(drawCalls).toContain("projectile");
+    });
+
+    items.set([
+      {
+        id: "projectile-1",
+        component: Projectile,
+        props: { id: "projectile-1", impact: { x: 20 } },
+      },
+    ]);
+
+    await vi.waitFor(() => {
+      expect(drawCalls).toContain("impact");
+    });
+
+    expect(container.componentInstance.children[0]).toBe(projectile);
+  });
+
   test(`Test loop updates tracked hot dynamic component spread props without remounting`, async () => {
     const mounted = vi.fn();
     const unmounted = vi.fn();
@@ -326,6 +469,61 @@ describe("loop with array", () => {
     expect(children[0]).toBe(firstChild);
     expect(mounted).toHaveBeenCalledTimes(1);
     expect(unmounted).not.toHaveBeenCalled();
+  });
+
+  test(`Test loop updates tracked hot dynamic component conditional child from defineProps`, async () => {
+    function Projectile(props: { id: string; impact?: { x: number } | null }) {
+      const defineProps = useDefineProps(props);
+      const { impact } = defineProps({
+        impact: {
+          type: Object,
+          default: null,
+        },
+      });
+
+      return h(
+        Container,
+        {},
+        cond(
+          computed(() => impact() !== null),
+          () => h(Container, { x: 999 })
+        )
+      );
+    }
+
+    const HotProjectile = createHotComponent("test-projectile-loop-track-conditional", Projectile);
+    const items = signal([
+      {
+        id: "projectile-1",
+        component: HotProjectile,
+        props: { id: "projectile-1", impact: null },
+      },
+    ]);
+    const value = loop(
+      items,
+      (item) => h(item.component, item.props),
+      { track: (item) => item.id }
+    );
+    const container = await TestBed.createComponent(Container, {}, value);
+    const children = container.componentInstance.children;
+    const firstChild = children[0];
+
+    expect(firstChild.children.length).toBe(0);
+
+    items.set([
+      {
+        id: "projectile-1",
+        component: HotProjectile,
+        props: { id: "projectile-1", impact: { x: 20 } },
+      },
+    ]);
+
+    await vi.waitFor(() => {
+      expect(children[0].children.length).toBe(1);
+      expect(children[0].children[0].x).toBe(999);
+    });
+
+    expect(children[0]).toBe(firstChild);
   });
 
   test(`Test loop reorders tracked items without remounting`, async () => {

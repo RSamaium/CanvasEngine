@@ -28,6 +28,19 @@ export default defineConfig({
 });
 ```
 
+In development, compiled `.ce` components are wrapped with CanvasEngine HMR by
+default. If you prefer Vite to reload the module/page instead of patching
+component instances in place, disable it:
+
+```ts
+import { defineConfig } from 'vite';
+import canvasengine from '@canvasengine/compiler';
+
+export default defineConfig({
+  plugins: [canvasengine({ hmr: false })],
+});
+```
+
 For production builds, the CanvasEngine plugin automatically keeps PixiJS and
 CanvasEngine runtime modules in stable chunks. If your project already defines
 custom Rollup chunks, keep them as usual; CanvasEngine chunks are applied first

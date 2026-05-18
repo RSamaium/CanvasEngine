@@ -505,7 +505,17 @@ export function shaderLoader() {
   };
 }
 
-export default function canvasengine() {
+export interface CanvasEnginePluginOptions {
+  /**
+   * Wrap compiled `.ce` components with CanvasEngine hot component support in
+   * dev. Set to false to let Vite reload the module/page instead.
+   *
+   * @default true
+   */
+  hmr?: boolean;
+}
+
+export default function canvasengine(options: CanvasEnginePluginOptions = {}) {
   const filter = createFilter("**/*.ce");
 
   // Convert import.meta.url to a file path
@@ -518,6 +528,7 @@ export default function canvasengine() {
   );
   const parser = generate(grammar);
   const isDev = process.env.NODE_ENV === "dev";
+  const useHmr = isDev && options.hmr !== false;
   const FLAG_COMMENT = "/*--[TPL]--*/";
 
   const PRIMITIVE_COMPONENTS = [
@@ -713,9 +724,22 @@ export default function canvasengine() {
       
 
       // Generate the output
+      const runtimeImports = useHmr
+        ? "createHotComponent, useProps, useDefineProps"
+        : "useProps, useDefineProps";
+      const componentExportCode = useHmr
+        ? `const __ce_component = import.meta.hot
+        ? createHotComponent(${JSON.stringify(id)}, component)
+        : component
+
+      if (import.meta.hot) {
+        import.meta.hot.accept()
+      }`
+        : `const __ce_component = component`;
+
       const output = String.raw`
       ${importsCode}
-      import { createHotComponent, useProps, useDefineProps } from ${isDev ? `'${DEV_SRC}'` : "'canvasengine'"}
+      import { ${runtimeImports} } from ${isDev ? `'${DEV_SRC}'` : "'canvasengine'"}
       ${styleInjectionCode}
       function component($$props) {
         const $props = useProps($$props)
@@ -725,13 +749,7 @@ export default function canvasengine() {
         return $this
       }
 
-      const __ce_component = import.meta.hot
-        ? createHotComponent(${JSON.stringify(id)}, component)
-        : component
-
-      if (import.meta.hot) {
-        import.meta.hot.accept()
-      }
+      ${componentExportCode}
 
       export default __ce_component
       `;
