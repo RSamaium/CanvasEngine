@@ -62,18 +62,44 @@ Note that retrieved properties, **even static ones**, are transformed into signa
 Example: `title()`
 :::
 
-::: tip callbacks
-Classic function props are callable directly for better DX.
+## Emits
+
+Use `defineEmits()` when a child component needs to send an event to its parent.
+
+`child.ce`
 
 ```html
 <script>
-  const { onSelect } = defineProps()
+  const { select } = defineEmits()
 
-  onSelect()
+  const handleClick = () => {
+    select({ id: 1 })
+  }
+</script>
+
+<Rect width={100} height={100} color="red" click={handleClick} />
+```
+
+`parent.ce`
+
+```html
+<Canvas>
+  <Child select={handleSelect} />
+</Canvas>
+
+<script>
+  import Child from './child.ce'
+
+  const handleSelect = (item) => {
+    console.log(item)
+  }
 </script>
 ```
 
-Reactive function values passed as signals stay signals and keep their existing behavior.
+> Not need to import `defineEmits` in the child component.
+
+::: tip callbacks compatibility
+Classic function props in `defineProps()` are still supported for compatibility, but `defineEmits()` is recommended for child-to-parent events.
 :::
 
 ::: tip

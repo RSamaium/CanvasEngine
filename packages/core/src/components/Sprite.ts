@@ -753,7 +753,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     spriteHeight: number,
     realSize?: TextureOptionsMerging["spriteRealSize"]
   ) {
-    if (!this.hitbox || !spriteWidth || !spriteHeight) {
+    if (!this.hitbox || !spriteWidth || !spriteHeight || !this.anchor) {
       return;
     }
 

@@ -240,7 +240,22 @@ export function Circle(props: CircleProps) {
 }
 
 export function Ellipse(props: EllipseProps) {
-  return Circle(props as CircleProps);
+  const { color, border } = useProps(props, {
+    border: null
+  })
+
+  return Graphics({
+    draw: (g, width, height, anchor) => {
+      const { x, y } = graphicsAnchor(anchor, width, height);
+      g.ellipse(x + width / 2, y + height / 2, width / 2, height / 2);
+      const borderValue = propValue(border);
+      if (borderValue) {
+        g.stroke(borderValue);
+      }
+      g.fill(propValue(color));
+    },
+    ...props
+  })
 }
 
 export function Triangle(props: TriangleProps) {

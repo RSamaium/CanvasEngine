@@ -262,6 +262,17 @@ describe('Sprite Component', () => {
         expect(sprite.anchor.y).toBeCloseTo(0)
     })
 
+    test('ignores hitbox alignment when the sprite anchor is unavailable', () => {
+        const sprite = new CanvasSprite()
+        sprite.hitbox = { w: 32, h: 48 }
+        Object.defineProperty(sprite, 'anchor', {
+            configurable: true,
+            value: null
+        })
+
+        expect(() => (sprite as any).applyHitboxAnchor(64, 128)).not.toThrow()
+    })
+
     describe('Global Asset Loader Integration', () => {
         test('globalLoader is available in context', async () => {
             const canvasElement = await TestBed.createComponent(Sprite, {

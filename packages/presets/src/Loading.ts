@@ -121,7 +121,7 @@ export function Loading(opts: LoadingProps = {}) {
     rotation.set(rotation() + rotationIncrement);
   });
 
-  const draw = (graphics: PIXI.Graphics) => {
+  const draw = (graphics: PIXI.Graphics, width: number, height: number) => {
     const sizeValue = typeof size === "function" ? size() : size;
     const colorValue = typeof color === "function" ? color() : color;
     const backgroundColorValue = backgroundColor
@@ -135,10 +135,12 @@ export function Loading(opts: LoadingProps = {}) {
     const inactiveAlphaValue =
       typeof inactiveAlpha === "function" ? inactiveAlpha() : inactiveAlpha;
     const rotationValue = rotation();
+    const centerX = width / 2;
+    const centerY = height / 2;
 
     // Draw background circle if specified
     if (backgroundColorValue) {
-      graphics.circle(0, 0, sizeValue).fill(backgroundColorValue);
+      graphics.circle(centerX, centerY, sizeValue).fill(backgroundColorValue);
     }
 
     // Draw spinner segments with fade effect
@@ -178,8 +180,8 @@ export function Loading(opts: LoadingProps = {}) {
 
       // Draw segment from inner to outer radius
       graphics
-        .arc(0, 0, innerRadius, startAngle, endAngle)
-        .arc(0, 0, outerRadius, endAngle, startAngle, true)
+        .arc(centerX, centerY, innerRadius, startAngle, endAngle)
+        .arc(centerX, centerY, outerRadius, endAngle, startAngle, true)
         .fill({ color: colorValue, alpha: opacity });
     }
   };
@@ -203,8 +205,25 @@ export function Loading(opts: LoadingProps = {}) {
     });
   }
 
-  return h(Container, opts as any, [
+  const {
+    size: _size,
+    color: _color,
+    backgroundColor: _backgroundColor,
+    speed: _speed,
+    segments: _segments,
+    segmentWidth: _segmentWidth,
+    inactiveAlpha: _inactiveAlpha,
+    ...containerProps
+  } = opts as any;
+
+  return h(Container, {
+    ...containerProps,
+    width: widthSignal,
+    height: heightSignal
+  }, [
     h(Graphics, {
+      width: widthSignal,
+      height: heightSignal,
       draw
     }),
   ]);

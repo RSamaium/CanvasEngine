@@ -725,8 +725,8 @@ export default function canvasengine(options: CanvasEnginePluginOptions = {}) {
 
       // Generate the output
       const runtimeImports = useHmr
-        ? "createHotComponent, useProps, useDefineProps"
-        : "useProps, useDefineProps";
+        ? "createHotComponent, useProps, useDefineProps, useDefineEmits"
+        : "useProps, useDefineProps, useDefineEmits";
       const componentExportCode = useHmr
         ? `const __ce_component = import.meta.hot
         ? createHotComponent(${JSON.stringify(id)}, component)
@@ -744,6 +744,7 @@ export default function canvasengine(options: CanvasEnginePluginOptions = {}) {
       function component($$props) {
         const $props = useProps($$props)
         const defineProps = useDefineProps($$props)
+        const defineEmits = useDefineEmits($$props)
         ${nonImportCode}
         let $this = ${parsedTemplate}
         return $this

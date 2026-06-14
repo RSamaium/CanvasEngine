@@ -52,8 +52,8 @@
         <div class="hero-visual">
           <div class="hero-playground">
             <Playground
-              title="Playable CanvasEngine mini project"
-              description="Use arrow keys to move the player, drag it with the pointer, or switch to Code and edit the scene."
+              title="Crystal Rush"
+              description="A playable CanvasEngine mini-game with generated transparent pixel-art assets."
               :files="heroDemoFiles"
               :height="520"
               defaultViewMode="preview"
@@ -148,102 +148,126 @@ import Playground from './Playground.vue'
 
 const heroDemoFiles = {
   'app.ce': `
-<Canvas backgroundColor="#111827" width="100%" height="100%" antialias="true">
-  <Container width="100%" height="100%">
-    <Container x={worldX} y={worldY}>
-      @for (tile of tiles) {
-        <Sprite image="/base.png" rectangle={{ x: tile.sx, y: tile.sy, width: 32, height: 32 }} x={tile.x} y={tile.y} width={48} height={48} />
-      }
+<Canvas backgroundColor="#101820" width="100%" height="100%" antialias="false">
+  <Container width="100%" height="100%" sortableChildren={true}>
+    <Rect x={0} y={0} width={760} height={430} color="#101820" />
+    <Rect x={18} y={18} width={724} height={394} color="#172a2f" borderRadius={18} />
+    <Rect x={42} y={70} width={676} height={306} color="#213d38" borderRadius={14} />
 
-      @for (prop of props) {
-        <Sprite image="/base.png" rectangle={{ x: prop.sx, y: prop.sy, width: prop.sw, height: prop.sh }} x={prop.x} y={prop.y} width={prop.w} height={prop.h} />
-      }
+    @for (patch of grassPatches) {
+      <Circle x={patch.x} y={patch.y} radius={patch.r} color={patch.color} alpha={patch.alpha} />
+    }
 
-      <Sprite x={playerX} y={playerY} sheet={{
-        definition: heroDefinition,
+    @for (star of stars) {
+      <Circle x={star.x} y={star.y} radius={star.r} color="#f8e16c" alpha={twinkleAlpha} />
+    }
+
+    <Sprite image="/hero-portal.png" x={638} y={278} width={92} height={92} alpha={portalAlpha} zIndex={4} />
+
+    @for (crystal of crystals) {
+      <Sprite
+        image="/hero-crystal.png"
+        x={crystal.x}
+        y={crystal.y}
+        width={42}
+        height={42}
+        alpha={crystal.collected() ? 0.18 : crystalPulse}
+        zIndex={5}
+      />
+    }
+
+    @for (enemy of enemies) {
+      <Sprite image="/hero-slime.png" x={enemy.x} y={enemy.y} width={58} height={58} zIndex={6} />
+    }
+
+    <Sprite
+      x={playerX}
+      y={playerY}
+      zIndex={8}
+      sheet={{
+        definition: playerDefinition,
         playing: animation,
         params: { direction }
-      }} controls={controls} drag={drag} />
+      }}
+      controls={controls}
+    />
 
-      <Circle x={sparkX} y={sparkY} radius={3} color="#fff176" alpha={sparkAlpha} />
-      <Circle x={sparkX2} y={sparkY2} radius={3} color="#80deea" alpha={sparkAlpha} />
-      <Circle x={sparkX3} y={sparkY3} radius={4} color="#ff8a65" alpha={sparkAlpha} />
+    <Circle x={playerGlowX} y={playerGlowY} radius={32} color="#93f5d0" alpha={playerGlowAlpha} zIndex={3} />
 
-      <Sprite image="/LightShadow_pipo.png" x={-24} y={-12} width={360} height={260} alpha={0.26} />
-    </Container>
+    <Rect x={34} y={28} width={286} height={38} color="#061014" alpha={0.82} borderRadius={19} zIndex={20} />
+    <Text text="Crystal Rush" x={50} y={38} color="#effff7" size={15} fontFamily="Arial" zIndex={21} />
+    <Text text={scoreText} x={166} y={39} color="#93f5d0" size={14} fontFamily="Arial" zIndex={21} />
+    <Text text={timeText} x={248} y={39} color="#f8e16c" size={14} fontFamily="Arial" zIndex={21} />
 
-    <DOMContainer x={18} y={18}>
-      <div class="hud">
-        <strong>RPG mini scene</strong>
-        <span>hero.png</span>
-        <span>base.png</span>
-        <span>controls + drag</span>
-      </div>
-    </DOMContainer>
-
-    <Text text="Move with arrows, drag the hero, switch to Code to edit" x={20} y={382} color="#ffffff" size={15} fontFamily="Arial" />
+    @if (gameFinished) {
+      <Rect x={0} y={0} width={760} height={430} color="#061014" alpha={0.58} zIndex={40} click={restart} />
+      <Rect x={236} y={146} width={288} height={132} color="#f8fff7" alpha={0.94} borderRadius={14} zIndex={45} />
+      <Text text={resultTitle} x={282} y={172} color="#0f2a26" size={22} fontFamily="Arial" zIndex={46} />
+      <Text text={resultBody} x={292} y={208} color="#236f5a" size={15} fontFamily="Arial" zIndex={46} />
+      <Text text="Click or press Space to restart" x={282} y={244} color="#0f2a26" size={13} fontFamily="Arial" zIndex={46} />
+    }
   </Container>
 </Canvas>
 
 <script>
   import { signal, computed, tick } from "canvasengine";
 
-  const tileSize = 48;
-  const worldX = signal(36);
-  const worldY = signal(52);
-  const playerX = signal(330);
-  const playerY = signal(210);
+  const arena = { left: 54, right: 668, top: 84, bottom: 336 };
+  const targetScore = 7;
+  const duration = 30;
+  const playerX = signal(110);
+  const playerY = signal(205);
   const clock = signal(0);
+  const timeLeft = signal(duration);
+  const state = signal("playing");
   const direction = signal("down");
   const animation = signal("stand");
-  const speed = 7;
+  const speed = 8;
 
-  const ground = { sx: 0, sy: 0 };
-  const path = { sx: 0, sy: 192 };
-  const flowers = { sx: 0, sy: 128 };
-
-  const layout = [
-    "gggggggggggggg",
-    "gggffffggggggg",
-    "gggppppppppggg",
-    "gggppggggppggg",
-    "gggppggggppggg",
-    "gggppppppppggg",
-    "ggggggffgggggg",
+  const grassPatches = [
+    { x: 98, y: 102, r: 36, color: "#2e6b45", alpha: 0.6 },
+    { x: 180, y: 332, r: 44, color: "#315f42", alpha: 0.54 },
+    { x: 348, y: 128, r: 52, color: "#2c7750", alpha: 0.46 },
+    { x: 514, y: 340, r: 60, color: "#345c3d", alpha: 0.5 },
+    { x: 642, y: 138, r: 48, color: "#2b6d60", alpha: 0.44 },
   ];
 
-  const tiles = layout.flatMap((row, y) =>
-    [...row].map((type, x) => {
-      const source = type === "p" ? path : type === "f" ? flowers : ground;
-      return {
-        x: x * tileSize,
-        y: y * tileSize,
-        sx: source.sx,
-        sy: source.sy,
-      };
-    })
-  );
-
-  const props = [
-    { x: 36, y: 18, sx: 0, sy: 0, sw: 32, sh: 64, w: 58, h: 92 },
-    { x: 112, y: 22, sx: 32, sy: 0, sw: 32, sh: 64, w: 58, h: 92 },
-    { x: 580, y: 24, sx: 64, sy: 0, sw: 32, sh: 64, w: 58, h: 92 },
-    { x: 94, y: 270, sx: 96, sy: 192, sw: 32, sh: 32, w: 44, h: 44 },
-    { x: 532, y: 256, sx: 128, sy: 192, sw: 32, sh: 32, w: 44, h: 44 },
-    { x: 478, y: 72, sx: 32, sy: 256, sw: 32, sh: 32, w: 48, h: 48 },
-    { x: 628, y: 202, sx: 0, sy: 320, sw: 32, sh: 32, w: 48, h: 48 },
+  const stars = [
+    { x: 116, y: 126, r: 2 },
+    { x: 214, y: 292, r: 2 },
+    { x: 312, y: 182, r: 3 },
+    { x: 462, y: 112, r: 2 },
+    { x: 580, y: 306, r: 3 },
+    { x: 684, y: 220, r: 2 },
   ];
 
-  const heroDefinition = {
-    id: "docs-hero",
-    image: "/hero.png",
-    width: 96,
-    height: 128,
+  const crystals = [
+    { x: 174, y: 118, collected: signal(false) },
+    { x: 318, y: 96, collected: signal(false) },
+    { x: 498, y: 128, collected: signal(false) },
+    { x: 602, y: 206, collected: signal(false) },
+    { x: 452, y: 292, collected: signal(false) },
+    { x: 268, y: 300, collected: signal(false) },
+    { x: 120, y: 244, collected: signal(false) },
+  ];
+
+  const enemyTime = (offset) => computed(() => clock() + offset);
+  const enemies = [
+    { x: computed(() => 222 + Math.sin(enemyTime(0)()) * 66), y: computed(() => 170 + Math.cos(enemyTime(0.4)()) * 38) },
+    { x: computed(() => 430 + Math.sin(enemyTime(1.5)() * 0.9) * 76), y: computed(() => 238 + Math.cos(enemyTime(0.9)()) * 54) },
+    { x: computed(() => 584 + Math.sin(enemyTime(2.1)()) * 46), y: computed(() => 150 + Math.cos(enemyTime(2.8)() * 0.85) * 42) },
+  ];
+
+  const playerDefinition = {
+    id: "docs-crystal-rush-player",
+    image: "/hero-player-fantasy.png",
+    width: 288,
+    height: 384,
     framesWidth: 3,
     framesHeight: 4,
-    rectWidth: 32,
-    rectHeight: 32,
-    scale: [1.55, 1.55],
+    rectWidth: 96,
+    rectHeight: 96,
+    scale: [0.74, 0.74],
     textures: {
       stand: {
         animations: ({ direction }) => [
@@ -263,6 +287,19 @@ const heroDemoFiles = {
     },
   };
 
+  const score = computed(() => crystals.filter((crystal) => crystal.collected()).length);
+  const scoreText = computed(() => "Score " + score() + "/" + targetScore);
+  const timeText = computed(() => "Time " + Math.max(0, Math.ceil(timeLeft())));
+  const gameFinished = computed(() => state() !== "playing");
+  const resultTitle = computed(() => state() === "won" ? "Portal opened" : "The slimes caught you");
+  const resultBody = computed(() => state() === "won" ? "All crystals are safe." : "Try another crystal route.");
+  const crystalPulse = computed(() => 0.72 + Math.sin(clock() * 5) * 0.22);
+  const portalAlpha = computed(() => score() === targetScore ? 1 : 0.38 + Math.sin(clock() * 2) * 0.08);
+  const twinkleAlpha = computed(() => 0.35 + Math.abs(Math.sin(clock() * 3.4)) * 0.45);
+  const playerGlowX = computed(() => playerX() + 36);
+  const playerGlowY = computed(() => playerY() + 58);
+  const playerGlowAlpha = computed(() => state() === "playing" ? 0.12 + Math.abs(Math.sin(clock() * 3)) * 0.08 : 0.24);
+
   function rowFor(value) {
     return {
       down: 0,
@@ -273,6 +310,7 @@ const heroDemoFiles = {
   }
 
   const markMove = (value) => {
+    if (state() !== "playing") return;
     direction.set(value);
     animation.set("walk");
     clearTimeout(markMove.timer);
@@ -285,7 +323,7 @@ const heroDemoFiles = {
       bind: "left",
       keyDown() {
         markMove("left");
-        playerX.update((x) => Math.max(90, x - speed));
+        playerX.update((x) => clamp(x - speed, arena.left, arena.right));
       },
     },
     right: {
@@ -293,7 +331,7 @@ const heroDemoFiles = {
       bind: "right",
       keyDown(_, payload) {
         markMove("right");
-        playerX.update((x) => Math.min(560, x + speed * (payload?.power ?? 1)));
+        playerX.update((x) => clamp(x + speed * (payload?.power ?? 1), arena.left, arena.right));
       },
     },
     up: {
@@ -301,7 +339,7 @@ const heroDemoFiles = {
       bind: "up",
       keyDown() {
         markMove("up");
-        playerY.update((y) => Math.max(86, y - speed));
+        playerY.update((y) => clamp(y - speed, arena.top, arena.bottom));
       },
     },
     down: {
@@ -309,58 +347,74 @@ const heroDemoFiles = {
       bind: "down",
       keyDown() {
         markMove("down");
-        playerY.update((y) => Math.min(282, y + speed));
+        playerY.update((y) => clamp(y + speed, arena.top, arena.bottom));
       },
     },
-    joystick: {
+    action: {
+      repeat: false,
+      bind: "space",
+      keyDown() {
+        if (state() !== "playing") restart();
+      },
+    },
+    gamepad: {
       enabled: true,
-      moveInterval: 40,
-      threshold: 0.1,
+      moveInterval: 36,
     },
   });
 
-  const drag = {
-    direction: "all",
-    start() {
-      animation.set("walk");
-    },
-    end(event) {
-      animation.set("stand");
-    },
-  };
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
 
-  const sparkAlpha = computed(() => 0.25 + Math.abs(Math.sin(clock() * 2)) * 0.75);
-  const sparkX = computed(() => playerX() + 42 + Math.sin(clock() * 3) * 16);
-  const sparkY = computed(() => playerY() + 10 + Math.cos(clock() * 2) * 14);
-  const sparkX2 = computed(() => playerX() + 18 + Math.cos(clock() * 4) * 14);
-  const sparkY2 = computed(() => playerY() + 32 + Math.sin(clock() * 3) * 10);
-  const sparkX3 = computed(() => playerX() + 36 + Math.sin(clock() * 5) * 12);
-  const sparkY3 = computed(() => playerY() + 42 + Math.cos(clock() * 5) * 12);
+  function overlaps(ax, ay, aw, ah, bx, by, bw, bh) {
+    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  }
 
-  tick(() => {
-    clock.update((value) => value + 0.07);
+  function restart() {
+    playerX.set(110);
+    playerY.set(205);
+    timeLeft.set(duration);
+    state.set("playing");
+    direction.set("down");
+    animation.set("stand");
+    crystals.forEach((crystal) => crystal.collected.set(false));
+  }
+
+  function collectCrystals() {
+    crystals.forEach((crystal) => {
+      if (!crystal.collected() && overlaps(playerX() + 18, playerY() + 22, 34, 42, crystal.x + 8, crystal.y + 8, 28, 28)) {
+        crystal.collected.set(true);
+      }
+    });
+  }
+
+  function checkEnemies() {
+    const hit = enemies.some((enemy) =>
+      overlaps(playerX() + 18, playerY() + 24, 34, 40, enemy.x() + 12, enemy.y() + 16, 34, 32)
+    );
+    if (hit) state.set("lost");
+  }
+
+  tick(({ deltaTime }) => {
+    const delta = (deltaTime ?? 16.67) / 1000;
+    clock.update((value) => value + delta);
+
+    if (state() !== "playing") return;
+
+    timeLeft.update((value) => Math.max(0, value - delta));
+    collectCrystals();
+    checkEnemies();
+
+    if (score() >= targetScore && overlaps(playerX() + 18, playerY() + 24, 34, 40, 662, 306, 42, 54)) {
+      state.set("won");
+    } else if (timeLeft() <= 0) {
+      state.set("lost");
+    }
   });
 <\/script>
 
 <style>
-  .hud {
-    align-items: center;
-    background: rgba(255, 255, 255, 0.74);
-    border: 1px solid rgba(18, 50, 74, 0.12);
-    border-radius: 999px;
-    color: #12324a;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 7px 10px;
-    font: 700 12px Arial, sans-serif;
-  }
-
-  .hud span {
-    background: rgba(66, 184, 131, 0.18);
-    border-radius: 999px;
-    padding: 3px 8px;
-  }
 <\/style>
 `,
 }

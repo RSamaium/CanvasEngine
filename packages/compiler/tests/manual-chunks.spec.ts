@@ -81,3 +81,13 @@ describe("CanvasEngine Vite HMR option", () => {
     }
   });
 });
+
+describe("CanvasEngine Vite component macros", () => {
+  test("injects defineEmits into compiled components", () => {
+    const plugin = canvasengine({ hmr: false }) as any;
+    const result = plugin.transform(`<Container />`, "/project/src/App.ce");
+
+    expect(result.code).toContain("useDefineEmits");
+    expect(result.code).toContain("const defineEmits = useDefineEmits($$props)");
+  });
+});

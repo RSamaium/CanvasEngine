@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Canvas, Circle, ComponentInstance, bootstrapCanvas, Container, Element, h, signal, Rect, mount, computed } from 'canvasengine';
+import { Canvas, Circle, ComponentInstance, bootstrapCanvas, Container, Element, h, signal, Rect, mount, computed, Ellipse } from 'canvasengine';
 import { TestBed } from '../../packages/core/testing';
 
 const mockRect = vi.fn()
+const mockEllipse = vi.fn()
 
 function findPrototypeWithMethod(instance: object, method: string) {
     let proto = Object.getPrototypeOf(instance);
@@ -16,7 +17,9 @@ beforeEach(async () => {
     const rect = await TestBed.createComponent(Rect, { width: 1, height: 1, color: '#fff' })
     const graphicsPrototype = findPrototypeWithMethod(rect.componentInstance, 'rect')
     vi.spyOn(graphicsPrototype, 'rect').mockImplementation(mockRect)
+    vi.spyOn(graphicsPrototype, 'ellipse').mockImplementation(mockEllipse)
     mockRect.mockClear()
+    mockEllipse.mockClear()
 })
 
 afterEach(() => {
@@ -82,6 +85,14 @@ describe('Graphics', () => {
             })
 
             expect(circle.componentInstance).toBeDefined()
+        })
+    })
+
+    describe('Ellipse', () => {
+        it('uses x and y as top-left coordinates and width and height as total size', async () => {
+            await TestBed.createComponent(Ellipse, { width: 100, height: 50, color: '#fff' })
+
+            expect(mockEllipse).toHaveBeenCalledWith(50, 25, 50, 25)
         })
     })
 })

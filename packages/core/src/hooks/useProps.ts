@@ -163,6 +163,49 @@ export const useDefineProps = (props: any) => {
     }
 }
 
+const getRawProps = (props: any) => isSignal(props) ? props() : (props ?? {})
+
+const getEmitHandler = (handler: any) => {
+    if (handler?.[DEFINE_PROPS_CALLABLE_SIGNAL_VALUE]) return handler
+    if (isSignal(handler)) return handler()
+    return handler
+}
+
+/**
+ * Defines event emitters from component props.
+ *
+ * @param {object} props - The raw component props containing event handlers.
+ * @returns {function} A function returning named emit callbacks.
+ *
+ * @example
+ * const { select } = useDefineEmits({ select: (item) => item.id })();
+ * select({ id: 1 });
+ */
+export const useDefineEmits = (props: any) => {
+    return () => new Proxy({}, {
+        get(_target, key) {
+            if (typeof key !== 'string') {
+                return undefined
+            }
+
+            return (...args: any[]) => {
+                const rawProps = getRawProps(props)
+                const handler = getEmitHandler(rawProps[key])
+
+                if (handler === undefined || handler === null) {
+                    return undefined
+                }
+
+                if (typeof handler !== 'function') {
+                    throw new Error(`Invalid emit handler: "${key}" must be a function`)
+                }
+
+                return handler(...args)
+            }
+        }
+    })
+}
+
 /**
  * Validates the type of a property.
  * 
