@@ -5,7 +5,8 @@
  */
 
 import * as PIXI from "pixi.js";
-import { Container, Graphics, Sprite, h, signal, isSignal } from "../";
+import { Container, Graphics, Sprite, h, signal, isSignal, computed } from "../";
+import type { DisplayObjectProps } from "./types/DisplayObject";
 
 export interface JoystickChangeEvent {
   angle: number;
@@ -24,7 +25,7 @@ export enum Direction {
   BOTTOM_RIGHT = "bottom_right",
 }
 
-export interface JoystickSettings {
+export interface JoystickSettings extends DisplayObjectProps {
   outer?: string;
   inner?: string;
   outerScale?: { x: number; y: number };
@@ -59,20 +60,21 @@ export function Joystick(opts: JoystickSettings = {}) {
 
   let outerRadius = 70;
   let innerRadius = 10;
+  const innerVisualRadius = innerRadius * 2.5;
+  const movementRadius = outerRadius - innerVisualRadius;
+  const joystickSize = outerRadius * 2;
+  const centerPosition = { x: outerRadius, y: outerRadius };
   const innerAlphaStandby = 0.5;
 
   let dragging = false;
-  let startPosition: PIXI.PointData | null = null;
   let power = 0;
 
-  const innerPositionX = signal(0);
-  const innerPositionY = signal(0);
+  const innerPositionX = signal(centerPosition.x);
+  const innerPositionY = signal(centerPosition.y);
   const innerAlpha = signal(innerAlphaStandby);
 
-  function getPower(centerPoint: PIXI.Point) {
-    const a = centerPoint.x - 0;
-    const b = centerPoint.y - 0;
-    return Math.min(1, Math.sqrt(a * a + b * b) / outerRadius);
+  function getPowerFromDistance(distance: number) {
+    return Math.min(1, distance / outerRadius);
   }
 
   function getDirection(center: PIXI.Point) {
@@ -100,8 +102,6 @@ export function Joystick(opts: JoystickSettings = {}) {
   }
 
   function handleDragStart(event: any) {
-    const target = event.currentTarget || event.target;
-    startPosition = event.getLocalPosition(target);
     dragging = true;
     innerAlpha.set(1);
     settings.onStart?.();
@@ -122,8 +122,8 @@ export function Joystick(opts: JoystickSettings = {}) {
 
   function handleDragEnd() {
     if (!dragging) return;
-    innerPositionX.set(0);
-    innerPositionY.set(0);
+    innerPositionX.set(centerPosition.x);
+    innerPositionY.set(centerPosition.y);
     dragging = false;
     innerAlpha.set(innerAlphaStandby);
     settings.onEnd?.();
@@ -150,22 +150,12 @@ export function Joystick(opts: JoystickSettings = {}) {
     const target = event.currentTarget || event.target;
     let newPosition = event.getLocalPosition(target);
 
-    let sideX = newPosition.x - (startPosition?.x ?? 0);
-    let sideY = newPosition.y - (startPosition?.y ?? 0);
+    const sideX = newPosition.x - centerPosition.x;
+    const sideY = newPosition.y - centerPosition.y;
+    const distance = Math.sqrt(sideX * sideX + sideY * sideY);
 
-    let centerPoint = new PIXI.Point(0, 0);
-    let angle = 0;
-
-    if (sideX == 0 && sideY == 0) {
+    if (distance == 0) {
       return;
-    }
-
-    let calRadius = 0;
-
-    if (sideX * sideX + sideY * sideY >= outerRadius * outerRadius) {
-      calRadius = outerRadius;
-    } else {
-      calRadius = outerRadius - innerRadius;
     }
 
     /**
@@ -181,120 +171,21 @@ export function Joystick(opts: JoystickSettings = {}) {
      *          |
      */
 
-    let direction = Direction.LEFT;
-
-    if (sideX == 0) {
-      if (sideY > 0) {
-        centerPoint.set(0, sideY > outerRadius ? outerRadius : sideY);
-        angle = 270;
-        direction = Direction.BOTTOM;
-      } else {
-        centerPoint.set(
-          0,
-          -(Math.abs(sideY) > outerRadius ? outerRadius : Math.abs(sideY))
-        );
-        angle = 90;
-        direction = Direction.TOP;
-      }
-      innerPositionX.set(centerPoint.x);
-      innerPositionY.set(centerPoint.y);
-      power = getPower(centerPoint);
-      const changeEvent = { angle, direction, power };
-      settings.onChange?.(changeEvent);
-      
-      // Notify controls if provided
-      const controls = getControls();
-      if (controls) {
-        // Check if it's JoystickControls instance
-        if (controls.handleJoystickChange) {
-          controls.handleJoystickChange(changeEvent);
-        }
-        // Check if it's ControlsDirective with joystick getter
-        else if (controls.joystick && controls.joystick.handleJoystickChange) {
-          controls.joystick.handleJoystickChange(changeEvent);
-        }
-      }
-      return;
+    const visualDistance = Math.min(distance, movementRadius);
+    const visualRatio = visualDistance / distance;
+    const visualX = sideX * visualRatio;
+    const visualY = sideY * visualRatio;
+    const directionPoint = new PIXI.Point(sideX, sideY);
+    let angle = -(Math.atan2(sideY, sideX) * 180) / Math.PI;
+    if (angle < 0) {
+      angle += 360;
     }
 
-    if (sideY == 0) {
-      if (sideX > 0) {
-        centerPoint.set(
-          Math.abs(sideX) > outerRadius ? outerRadius : Math.abs(sideX),
-          0
-        );
-        angle = 0;
-        direction = Direction.RIGHT;
-      } else {
-        centerPoint.set(
-          -(Math.abs(sideX) > outerRadius ? outerRadius : Math.abs(sideX)),
-          0
-        );
-        angle = 180;
-        direction = Direction.LEFT;
-      }
+    innerPositionX.set(centerPosition.x + visualX);
+    innerPositionY.set(centerPosition.y + visualY);
+    power = getPowerFromDistance(distance);
 
-      innerPositionX.set(centerPoint.x);
-      innerPositionY.set(centerPoint.y);
-      power = getPower(centerPoint);
-      const changeEvent = { angle, direction, power };
-      settings.onChange?.(changeEvent);
-      
-      // Notify controls if provided
-      const controls = getControls();
-      if (controls) {
-        // Check if it's JoystickControls instance
-        if (controls.handleJoystickChange) {
-          controls.handleJoystickChange(changeEvent);
-        }
-        // Check if it's ControlsDirective with joystick getter
-        else if (controls.joystick && controls.joystick.handleJoystickChange) {
-          controls.joystick.handleJoystickChange(changeEvent);
-        }
-      }
-      return;
-    }
-
-    let tanVal = Math.abs(sideY / sideX);
-    let radian = Math.atan(tanVal);
-    angle = (radian * 180) / Math.PI;
-
-    let centerX = 0;
-    let centerY = 0;
-
-    if (sideX * sideX + sideY * sideY >= outerRadius * outerRadius) {
-      centerX = outerRadius * Math.cos(radian);
-      centerY = outerRadius * Math.sin(radian);
-    } else {
-      centerX = Math.abs(sideX) > outerRadius ? outerRadius : Math.abs(sideX);
-      centerY = Math.abs(sideY) > outerRadius ? outerRadius : Math.abs(sideY);
-    }
-
-    if (sideY < 0) {
-      centerY = -Math.abs(centerY);
-    }
-    if (sideX < 0) {
-      centerX = -Math.abs(centerX);
-    }
-
-    if (sideX > 0 && sideY < 0) {
-      // < 90
-    } else if (sideX < 0 && sideY < 0) {
-      // 90 ~ 180
-      angle = 180 - angle;
-    } else if (sideX < 0 && sideY > 0) {
-      // 180 ~ 270
-      angle = angle + 180;
-    } else if (sideX > 0 && sideY > 0) {
-      // 270 ~ 369
-      angle = 360 - angle;
-    }
-    centerPoint.set(centerX, centerY);
-    power = getPower(centerPoint);
-
-    direction = getDirection(centerPoint);
-    innerPositionX.set(centerPoint.x);
-    innerPositionY.set(centerPoint.y);
+    const direction = getDirection(directionPoint);
     const changeEvent = { angle, direction, power };
     settings.onChange?.(changeEvent);
     
@@ -318,40 +209,55 @@ export function Joystick(opts: JoystickSettings = {}) {
   if (!settings.outer) {
     outerElement = h(Graphics, {
       draw: (g) => {
-        g.circle(0, 0, outerRadius).fill(settings.outerColor);
+        g.circle(centerPosition.x, centerPosition.y, outerRadius).fill(settings.outerColor);
       },
+      positionType: "absolute",
       alpha: 0.5,
     });
   } else {
     outerElement = h(Sprite, {
       image: settings.outer,
+      x: centerPosition.x,
+      y: centerPosition.y,
       anchor: { x: 0.5, y: 0.5 },
       scale: settings.outerScale,
+      positionType: "absolute",
     });
   }
 
   const innerOptions: any = {
     scale: settings.innerScale,
-    x: innerPositionX,
-    y: innerPositionY,
     alpha: innerAlpha,
+    positionType: "absolute",
   };
 
   if (!settings.inner) {
     innerElement = h(Graphics, {
       draw: (g) => {
-        g.circle(0, 0, innerRadius * 2.5).fill(settings.innerColor);
+        g.circle(innerVisualRadius, innerVisualRadius, innerVisualRadius).fill(settings.innerColor);
       },
+      width: innerVisualRadius * 2,
+      height: innerVisualRadius * 2,
+      x: computed(() => innerPositionX() - innerVisualRadius),
+      y: computed(() => innerPositionY() - innerVisualRadius),
       ...innerOptions,
     });
   } else {
-    innerElement = settings.inner
+    innerElement = h(Sprite, {
+      image: settings.inner,
+      x: innerPositionX,
+      y: innerPositionY,
+      anchor: { x: 0.5, y: 0.5 },
+      ...innerOptions,
+    });
   }
 
   return h(
     Container,
     {
       ...opts,
+      width: opts.width ?? joystickSize,
+      height: opts.height ?? joystickSize,
       pointerdown: handleDragStart,
       pointerup: handleDragEnd,
       pointerupoutside: handleDragEnd,

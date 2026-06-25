@@ -16,6 +16,7 @@ export type ObjectFit = 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
 export type ObjectPosition = string;
 export type TransformOrigin = string;
 export type PositionType = 'relative' | 'absolute' | 'static';
+export type Display = 'flex' | 'none';
 
 export type ObservablePointSignal = [number, number] | SignalOrPrimitive<[number, number]> | { x: number, y: number } | SignalOrPrimitive<{ x: number, y: number }>;
 
@@ -30,6 +31,7 @@ export interface DisplayObjectProps {
     minHeight?: SignalOrPrimitive<Size>;
     maxWidth?: SignalOrPrimitive<Size>;
     maxHeight?: SignalOrPrimitive<Size>;
+    display?: Display;
     aspectRatio?: SignalOrPrimitive<number>;
     flexGrow?: SignalOrPrimitive<number>;
     flexShrink?: SignalOrPrimitive<number>;
@@ -47,6 +49,9 @@ export interface DisplayObjectProps {
     children?: any[];
     flexDirection?: FlexDirection;
     justifyContent?: JustifyContent;
+    alignItems?: AlignContent;
+    alignContent?: AlignContent;
+    alignSelf?: AlignContent;
     alpha?: SignalOrPrimitive<number>;
     margin?: EdgeSize;
     padding?: EdgeSize;

@@ -328,28 +328,35 @@ export function Button(props: ButtonProps) {
       const state = currentState();
       return backgroundColor[state] || backgroundColor[ButtonState.Normal];
     });
+    const bgBorder = computed(() => style().border);
 
     if (currentShape === 'circle') {
       // For circle, use the smaller dimension as radius
       const radius = computed(() => Math.min(width(), height()) / 2);
       return h(Circle, {
         radius: radius,
-        x: computed(() => width() / 2),
-        y: computed(() => height() / 2),
-        color: bgColor
+        x: computed(() => (width() - radius() * 2) / 2),
+        y: computed(() => (height() - radius() * 2) / 2),
+        color: bgColor,
+        border: bgBorder,
+        positionType: "absolute"
       });
     } else if (currentShape === 'ellipse') {
       return h(Ellipse, {
         width: width,
         height: height,
-        color: bgColor
+        color: bgColor,
+        border: bgBorder,
+        positionType: "absolute"
       });
     } else {
       // Default: rect
       return h(Rect, {
         width: width,
         height: height,
-        color: bgColor
+        color: bgColor,
+        border: bgBorder,
+        positionType: "absolute"
       });
     }
   };
@@ -365,9 +372,6 @@ export function Button(props: ButtonProps) {
     return [
       h(Text, {
         text: text,
-        x: computed(() => width() / 2),
-        y: computed(() => height() / 2),
-        anchor: { x: 0.5, y: 0.5 },
         style: computed(() => {
           const currentStyle = style();
           const textStyle = currentStyle.text || {};
@@ -383,6 +387,9 @@ export function Button(props: ButtonProps) {
 
   // Return Container with h() children
   return h(Container, {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
     x: props.x,
     y: props.y,
     width: props.width,
