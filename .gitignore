@@ -28,5 +28,6 @@ cache
 .vitepress/dist
 .vitepress/cache
 coverage
-sample/public
+sample/public/*
+!sample/public/hud-avatar.png
 benchmarks/results

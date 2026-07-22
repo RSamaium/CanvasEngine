@@ -1,0 +1,132 @@
+<Canvas backgroundColor="#07101c">
+  <Container width="100%" height="100%">
+    <Ellipse positionType="absolute" left={-70} top={-90} width={360} height={360} color="#123b55" alpha={0.3} />
+    <Ellipse positionType="absolute" right={-180} bottom={-180} width={520} height={520} color="#1d2351" alpha={0.28} />
+
+    <Container
+      positionType="absolute"
+      left={28}
+      bottom={28}
+      width={700}
+      height={252}
+    >
+      <Container width={700} height={252}>
+      <Rect x={8} y={10} width={700} height={252} color="#02050b" alpha={0.72} borderRadius={18} />
+      <Rect
+        width={700}
+        height={252}
+        color="#101a2a"
+        borderRadius={18}
+        border={{ width: 2, color: "#8d7441" }}
+      />
+      <Rect x={18} y={18} width={5} height={216} color="#d5ad59" borderRadius={3} />
+      <Rect x={24} y={18} width={658} height={1} color="#5f7797" alpha={0.55} />
+
+      <Rect
+        x={39}
+        y={43}
+        width={164}
+        height={164}
+        color="#070b12"
+        borderRadius={12}
+        border={{ width: 3, color: "#d5ad59" }}
+      />
+      <Sprite image="hud-avatar.png" x={45} y={49} width={152} height={152} />
+      <Rect x={45} y={177} width={152} height={24} color="#07101c" alpha={0.82} />
+      <Text x={57} y={181} text="VANGUARD" color="#f0d28c" size={11} fontFamily="Arial" />
+
+      <Text
+        x={228}
+        y={31}
+        text="CAEL ARDENT"
+        color="#fff7df"
+        size={24}
+        fontFamily="Arial"
+        style={{ fontWeight: "700", letterSpacing: 1.4 }}
+      />
+      <Text x={578} y={39} text="LV. 27" color="#e3c578" size={14} fontFamily="Arial" />
+
+      <Text x={228} y={77} text="HP" color="#ff9a91" size={13} fontFamily="Arial" style={{ fontWeight: "700" }} />
+      <Text x={603} y={77} text={hpLabel} color="#ffd8d4" size={12} fontFamily="Arial" />
+      <Bar
+        x={228}
+        y={98}
+        width={420}
+        height={22}
+        value={hp}
+        maxValue={maxHp}
+        backgroundColor="#2a1720"
+        foregroundColor="#ef5b63"
+        innerMargin={3}
+        borderRadius={7}
+        border={{ width: 1, color: "#6f3840" }}
+      />
+
+      <Text x={228} y={131} text="SP" color="#8cecff" size={13} fontFamily="Arial" style={{ fontWeight: "700" }} />
+      <Text x={603} y={131} text={spLabel} color="#d5f8ff" size={12} fontFamily="Arial" />
+      <Bar
+        x={228}
+        y={152}
+        width={420}
+        height={22}
+        value={sp}
+        maxValue={maxSp}
+        backgroundColor="#122530"
+        foregroundColor="#42c6df"
+        innerMargin={3}
+        borderRadius={7}
+        border={{ width: 1, color: "#2d6978" }}
+      />
+
+      <Container x={228} y={194} width={92} height={34} click={damage} cursor="pointer">
+        <Rect width={92} height={34} color="#40232c" borderRadius={7} border={{ width: 1, color: "#81424e" }} />
+        <Text x={21} y={9} text="Damage" color="#ffc3c0" size={12} fontFamily="Arial" />
+      </Container>
+      <Container x={330} y={194} width={82} height={34} click={heal} cursor="pointer">
+        <Rect width={82} height={34} color="#18372f" borderRadius={7} border={{ width: 1, color: "#34705f" }} />
+        <Text x={25} y={9} text="Heal" color="#b7f7d3" size={12} fontFamily="Arial" />
+      </Container>
+      <Container x={422} y={194} width={82} height={34} click={skill} cursor="pointer">
+        <Rect width={82} height={34} color="#17333f" borderRadius={7} border={{ width: 1, color: "#326f80" }} />
+        <Text x={25} y={9} text="Skill" color="#bcefff" size={12} fontFamily="Arial" />
+      </Container>
+      <Container x={514} y={194} width={82} height={34} click={rest} cursor="pointer">
+        <Rect width={82} height={34} color="#342d1d" borderRadius={7} border={{ width: 1, color: "#71613c" }} />
+        <Text x={27} y={9} text="Rest" color="#ffe8ac" size={12} fontFamily="Arial" />
+      </Container>
+      </Container>
+    </Container>
+
+    <Text
+      positionType="absolute"
+      top={24}
+      right={28}
+      text="Interactive party HUD"
+      color="#7f9ab8"
+      size={13}
+      fontFamily="Arial"
+    />
+  </Container>
+</Canvas>
+
+<script>
+  import { computed, signal } from "canvasengine";
+  import { Bar } from "@canvasengine/presets";
+
+  const maxHp = 100;
+  const maxSp = 60;
+  const hp = signal(82);
+  const sp = signal(46);
+
+  const hpLabel = computed(() => `${hp()} / ${maxHp}`);
+  const spLabel = computed(() => `${sp()} / ${maxSp}`);
+
+  const clamp = (value, max) => Math.max(0, Math.min(max, value));
+  const damage = () => hp.update((value) => clamp(value - 18, maxHp));
+  const heal = () => hp.update((value) => clamp(value + 14, maxHp));
+  const skill = () => sp.update((value) => clamp(value - 12, maxSp));
+  const rest = () => {
+    hp.update((value) => clamp(value + 25, maxHp));
+    sp.update((value) => clamp(value + 18, maxSp));
+  };
+</script>

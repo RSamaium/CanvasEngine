@@ -1,28 +1,45 @@
-import { bootstrapCanvas } from 'canvasengine';
-//import App from './test.ce'
-// Uncomment to test shake directive examples:
-// import App from './shake.ce'
-// Uncomment to test global asset loader (simple):
-// import App from './loader.ce'
-// Uncomment to test global asset loader (with spritesheets):
-// import App from './fogofwar.ce'
-import DefaultApp from './sprite-shadows.ce'
-import LayoutCenterGui from './layout-center-gui.ce'
-import LayoutOverlayResizeGui from './layout-overlay-resize-gui.ce'
-// import App from './spritesheet.ce'
-// import App from './cond-else-loop.ce'
-// import App from './app.ce'
-//import App from './sprite-effects.ce'
-// import App from './sprite-moving-custom.ce'
-// import App from './loop-render-order.ce'
+import { bootstrapCanvas } from 'canvasengine'
+import {
+  EXAMPLES,
+  getExample,
+  getExampleUrl,
+} from './examples'
 
-const examples = {
-    'layout-center': LayoutCenterGui,
-    'layout-overlay-resize': LayoutOverlayResizeGui,
+const requestedSlug = new URLSearchParams(window.location.search).get('example')
+const activeExample = getExample(requestedSlug)
+
+if (requestedSlug !== activeExample.slug) {
+  window.history.replaceState(
+    {},
+    '',
+    getExampleUrl(activeExample.slug, window.location.href),
+  )
 }
-const example = new URLSearchParams(window.location.search).get('example')
-const App = examples[example] ?? DefaultApp
 
-bootstrapCanvas(document.getElementById("root"), App).then(() => {
-    console.log("CanvasEngine initialized");
-});
+const list = document.querySelector<HTMLElement>('[data-sample-list]')
+const title = document.querySelector<HTMLElement>('[data-sample-title]')
+
+if (title) title.textContent = activeExample.title
+document.title = `${activeExample.title} · CanvasEngine Samples`
+
+for (const example of EXAMPLES) {
+  const link = document.createElement('a')
+  link.className = 'sample-link'
+  link.href = getExampleUrl(example.slug, window.location.href)
+  link.textContent = example.title
+
+  if (example.slug === activeExample.slug) {
+    link.classList.add('is-active')
+    link.setAttribute('aria-current', 'page')
+  }
+
+  list?.append(link)
+}
+
+activeExample.load().then(({ default: App }) =>
+  bootstrapCanvas(document.getElementById('root'), App),
+).then(() => {
+  console.log(`CanvasEngine sample initialized: ${activeExample.slug}`)
+}).catch((error) => {
+  console.error(`Unable to load CanvasEngine sample: ${activeExample.slug}`, error)
+})
