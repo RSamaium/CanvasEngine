@@ -23,6 +23,10 @@ function rgbToHex(r, g, b) {
 }
 
 export function Bar(opts: BarProps) {
+  const graphicsProps = { ...opts };
+  // Bar.border is a Pixi stroke, not the DisplayObject/Yoga border prop.
+  delete graphicsProps.border;
+
   const {
     width,
     height,
@@ -40,51 +44,48 @@ export function Bar(opts: BarProps) {
     borderRadius: 0,
   });
 
-  return h(
-    Graphics,
-    {
-      ...opts,
-      width,
-      height,
-      draw(graphics: any) {
-        if (borderRadius()) {
-          graphics.roundRect(0, 0, width(), height(), borderRadius());
-        } else {
-          graphics.rect(0, 0, width(), height());
-        }
-        if (border) {
-          graphics.stroke(border);
-        }
-        graphics.fill(backgroundColor());
-      },
+  return h(Graphics, {
+    ...graphicsProps,
+    width,
+    height,
+    draw(graphics: any) {
+      const barWidth = width();
+      const barHeight = height();
+      const radius = borderRadius();
+
+      if (radius) {
+        graphics.roundRect(0, 0, barWidth, barHeight, radius);
+      } else {
+        graphics.rect(0, 0, barWidth, barHeight);
+      }
+      if (border) {
+        graphics.stroke(border);
+      }
+      graphics.fill(backgroundColor());
+
+      const margin = innerMargin();
+      const fillWidth = Math.max(
+        0,
+        Math.min(
+          barWidth - 2 * margin,
+          (value() / maxValue()) * (barWidth - 2 * margin)
+        )
+      );
+      const fillHeight = barHeight - 2 * margin;
+
+      if (radius) {
+        graphics.roundRect(margin, margin, fillWidth, fillHeight, radius);
+      } else {
+        graphics.rect(margin, margin, fillWidth, fillHeight);
+      }
+
+      const color = foregroundColor();
+      if (color.startsWith("rgba")) {
+        const [r, g, b, a] = color.match(/\d+(\.\d+)?/g).map(Number);
+        graphics.fill({ color: rgbToHex(r, g, b), alpha: a });
+      } else {
+        graphics.fill(color);
+      }
     },
-    h(Graphics, {
-      width,
-      height,
-      draw(graphics: any) {
-        const margin = innerMargin();
-        const _borderRadius = borderRadius();
-        const w = Math.max(
-          0,
-          Math.min(
-            width() - 2 * margin,
-            (value() / maxValue()) * (width() - 2 * margin)
-          )
-        );
-        const h = height() - 2 * margin;
-        if (borderRadius) {
-          graphics.roundRect(margin, margin, w, h, _borderRadius);
-        } else {
-          graphics.rect(margin, margin, w, h);
-        }
-        const color = foregroundColor();
-        if (color.startsWith("rgba")) {
-          const [r, g, b, a] = color.match(/\d+(\.\d+)?/g).map(Number);
-          graphics.fill({ color: rgbToHex(r, g, b), alpha: a });
-        } else {
-          graphics.fill(color);
-        }
-      },
-    })
-  );
+  });
 }

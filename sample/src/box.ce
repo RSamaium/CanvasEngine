@@ -1,89 +1,199 @@
-<Canvas>
-  <Container justifyContent="center" alignItems="center" width="100%" height="100%">
-    <Container
-      ref="dialogbox"
-      scale={{ x: scaleX }}
-      anchor={[0.5, 0.5]}
-      width={700}
-      height
+<Canvas backgroundColor="#070b14">
+  <Container
+    width="100%"
+    height="100%"
+    display="flex"
+    justifyContent="center"
+    alignItems="center"
+  >
+    <Ellipse
       positionType="absolute"
-      bottom={10}
+      left={-120}
+      top={-180}
+      width={520}
+      height={520}
+      color="#102b42"
+      alpha={0.38}
+    />
+    <Ellipse
+      positionType="absolute"
+      right={-160}
+      bottom={-240}
+      width={620}
+      height={620}
+      color="#211c49"
+      alpha={0.3}
+    />
+
+    <Text
+      positionType="absolute"
+      top={24}
+      left={28}
+      text="Responsive dialog · resize the window"
+      color="#7890ac"
+      size={13}
+      fontFamily="Arial"
+    />
+
+    <Container
+      positionType="absolute"
+      bottom={28}
+      width={dialogWidth}
+      height={dialogHeight}
+      transformOrigin="center bottom"
+      scale={dialogScale}
+      alpha={dialogAlpha}
+      click={advanceDialog}
+      cursor="pointer"
     >
-    <Rect width={700} height={250} color="#1a1a2e" />
-      <Rect
-        x={0}
-        y={0}
-        width={700}
-        height
-        color="#1a1a2e"
-        alpha={0.9}
-        borderRadius={10}
-        border
-        shadow
-      />
+      <Container width={dialogWidth} height={dialogHeight}>
+        <Rect
+          x={8}
+          y={10}
+          width={dialogWidth}
+          height={dialogHeight}
+          color="#010308"
+          alpha={0.7}
+          borderRadius={16}
+        />
+        <Rect
+          width={dialogWidth}
+          height={dialogHeight}
+          color="#b99955"
+          borderRadius={16}
+        />
+        <Rect
+          x={2}
+          y={2}
+          width={innerWidth}
+          height={innerHeight}
+          color="#111a2b"
+          borderRadius={14}
+        />
+        <Rect
+          x={16}
+          y={18}
+          width={4}
+          height={accentHeight}
+          color="#e2bc66"
+          borderRadius={2}
+        />
+
         <Container
-          flexDirection="row"
-          width={700}
-          height
-          alpha={contentOpacity}
+          positionType="absolute"
+          top={22}
+          right={28}
+          bottom={22}
+          left={34}
+          display="flex"
+          flexDirection="column"
+          gap={10}
         >
-          <Container flexDirection="column">
+          <Container
+            width="100%"
+            height={28}
+            display="flex"
+            flexDirection="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
             <Text
-              text="Hello"
-              color="#fff"
-              fontSize={18}
-              margin={40}
-              style={textStyle}
+              text={speaker}
+              color="#f3d58d"
+              size={15}
+              fontFamily="Arial"
+              style={{ fontWeight: "700", letterSpacing: 1.8 }}
+            />
+            <Text
+              text="DIALOGUE"
+              color="#6f89aa"
+              size={11}
+              fontFamily="Arial"
+              style={{ letterSpacing: 1.4 }}
             />
           </Container>
+
+          <Rect width="100%" height={1} color="#40516b" alpha={0.7} />
+
+          <Text
+            width="100%"
+            text={dialogText}
+            color="#edf3fb"
+            size={18}
+            fontFamily="Arial"
+            style={dialogTextStyle}
+          />
+
+          <Text
+            text={continueLabel}
+            color="#8da7c7"
+            size={11}
+            fontFamily="Arial"
+            style={{ letterSpacing: 1.2 }}
+          />
+        </Container>
       </Container>
-  </Container>  
-  
-    
+    </Container>
   </Container>
-
-
 </Canvas>
-  <script>
 
-    import {
-      animatedSignal,
-      computed,
-      effect,
-      signal,
-      trigger,
-      mount
-    } from "canvasengine";
-    import Child  from "./child.ce";
-  
-    let isDestroyed = false;
-  
-    const texts = ['Hello']
-    const height = signal(250);
-    const isTextCompleted = signal(false);
-    const display1 = signal(false);
-    const display2 = signal(true);
-  
-    const border = signal({ width: 5, color: "#595971" });
-    const shadow = signal({ color: "#000", blur: 10, offsetX: 10, offsetY: 10 });
-  
-    const contentOpacity = animatedSignal(0, {
-      duration: 1000,
-    });
-  
-    const scaleX = animatedSignal(0, {
-      duration: 500,
-    });
-  
-    scaleX.set(1);
-    contentOpacity.set(1);
-    
-    const textStyle = {
-      wordWrap: true,
-      wordWrapWidth: 700 - 256 - 80
-    }
-  
-     setTimeout(() => {
-      display1.set(true);
-     }, 1000);
-  </script>
+<script>
+  import { animatedSignal, computed, effect, mount, signal } from "canvasengine";
+
+  const dialogHeight = 220;
+  const viewportWidth = signal(800);
+  const dialogWidth = computed(() =>
+    Math.max(280, Math.min(720, viewportWidth() - 32))
+  );
+  const innerWidth = computed(() => dialogWidth() - 4);
+  const innerHeight = dialogHeight - 4;
+  const accentHeight = dialogHeight - 36;
+  const textWidth = computed(() => dialogWidth() - 66);
+
+  const messages = [
+    {
+      speaker: "ELARA",
+      text: "The old road is quiet tonight. Stay close—the lanterns will guide us through the pass.",
+    },
+    {
+      speaker: "CAEL",
+      text: "Then we move before dawn. If the mist gets thicker, follow the sound of my steps.",
+    },
+  ];
+  const messageIndex = signal(0);
+  const speaker = computed(() => messages[messageIndex()].speaker);
+  const dialogText = computed(() => messages[messageIndex()].text);
+  const continueLabel = computed(() =>
+    messageIndex() === messages.length - 1
+      ? "CLICK TO RESTART  ↻"
+      : "CLICK TO CONTINUE  ›"
+  );
+
+  const dialogScale = animatedSignal(0.96, { duration: 420 });
+  const dialogAlpha = animatedSignal(0, { duration: 320 });
+
+  const dialogTextStyle = {
+    wordWrap: true,
+    wordWrapWidth: textWidth,
+    lineHeight: 25,
+  };
+
+  dialogScale.set(1);
+  dialogAlpha.set(1);
+
+  const advanceDialog = () => {
+    messageIndex.update((index) => (index + 1) % messages.length);
+  };
+
+  mount((element) => {
+    const canvasSize = element.props.context.canvasSize;
+    const syncWidth = () => {
+      const width = canvasSize().width;
+      if (width > 0 && viewportWidth() !== width) viewportWidth.set(width);
+    };
+
+    syncWidth();
+    const sizeEffect = effect(syncWidth);
+    return () => sizeEffect.subscription.unsubscribe();
+  });
+</script>
