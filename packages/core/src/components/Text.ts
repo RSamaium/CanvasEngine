@@ -2,7 +2,7 @@ import { layout as layoutPretext, prepare as preparePretext, type PreparedText, 
 import { Text as PixiText, TextStyle } from "pixi.js";
 import { createComponent, registerComponent, Element } from "../engine/reactive";
 import { DisplayObject } from "./DisplayObject";
-import { DisplayObjectProps } from "./types/DisplayObject";
+import { DisplayObjectProps, ObjectFit } from "./types/DisplayObject";
 import { Signal } from "@signe/reactive";
 import { on, isTrigger } from "../engine/trigger";
 import { Howl } from "howler";
@@ -48,6 +48,7 @@ const toFiniteNumber = (value: unknown): number | null => {
 };
 
 class CanvasText extends DisplayObject(PixiText) {
+  defaultLayoutObjectFit: ObjectFit = "none";
   private subscriptionTick: any;
   private fullText: string = "";
   private currentIndex: number = 0;

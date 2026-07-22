@@ -4,6 +4,7 @@ import {
   hasLayoutNodeProps,
   isLayoutBorder,
   normalizeLayoutProps,
+  requiresLayoutParent,
 } from "../../packages/core/src/components/layout";
 
 describe("layout prop normalization", () => {
@@ -59,5 +60,21 @@ describe("layout prop normalization", () => {
     expect(hasLayoutNodeProps({ width: 100, height: 100 })).toBe(false);
     expect(hasLayoutNodeProps({ width: "100%" })).toBe(true);
     expect(hasLayoutContainerProps({ gap: 10 })).toBe(true);
+  });
+
+  it("detects values that require a direct parent layout box", () => {
+    expect(requiresLayoutParent({ width: "100%" })).toBe(true);
+    expect(requiresLayoutParent({ positionType: "absolute", right: 20 })).toBe(true);
+    expect(requiresLayoutParent({ flexGrow: 1 })).toBe(true);
+    expect(requiresLayoutParent({ margin: [10, "5%"] })).toBe(true);
+
+    expect(requiresLayoutParent({ width: 200, height: 100 })).toBe(false);
+    expect(requiresLayoutParent({
+      positionType: "absolute",
+      top: 10,
+      left: 20,
+      width: 100,
+      height: 50,
+    })).toBe(false);
   });
 });

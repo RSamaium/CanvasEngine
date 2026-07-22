@@ -71,3 +71,86 @@ for (const viewport of [
     await expectCanvasScreenshot(page, `responsive-${viewport.name}.png`);
   });
 }
+
+test("dialog body text remains readable", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  page.on("pageerror", (error) => errors.push(error.message));
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?example=box");
+  await expect(page.locator("#root canvas")).toBeVisible();
+  await page.waitForTimeout(900);
+
+  const metrics = await page.evaluate(() => {
+    const stack = [(globalThis as any).__PIXI_STAGE__];
+    while (stack.length) {
+      const current = stack.pop();
+      if (
+        typeof current?.text === "string" &&
+        current.text.startsWith("The old road")
+      ) {
+        return {
+          fontSize: current.style.fontSize,
+          layoutWidth: current.layout.computedLayout.width,
+          objectFit: current.layout.style.objectFit,
+          contentWidth: current.parent.layout.computedLayout.width,
+          containingBlockWidth: current.parent.parent.layout.computedLayout.width,
+          worldScaleX: Math.hypot(
+            current.worldTransform.a,
+            current.worldTransform.b,
+          ),
+        };
+      }
+      stack.push(...(current?.children ?? []));
+    }
+    throw new Error("Dialog body text was not found");
+  });
+
+  expect(errors).toEqual([]);
+  expect(metrics.fontSize).toBe(18);
+  expect(metrics.objectFit).toBe("none");
+  expect(metrics.layoutWidth).toBeGreaterThan(600);
+  expect(metrics.contentWidth).toBeGreaterThan(600);
+  expect(metrics.containingBlockWidth).toBe(720);
+  expect(metrics.worldScaleX).toBeCloseTo(1, 4);
+  await expectCanvasScreenshot(page, "dialog-box.png");
+});
+
+test("dialog layout remains readable at a narrow viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 480, height: 720 });
+  await page.goto("/?example=box");
+  await expect(page.locator("#root canvas")).toBeVisible();
+  await page.waitForTimeout(900);
+
+  const metrics = await page.evaluate(() => {
+    const stack = [(globalThis as any).__PIXI_STAGE__];
+    while (stack.length) {
+      const current = stack.pop();
+      if (
+        typeof current?.text === "string" &&
+        current.text.startsWith("The old road")
+      ) {
+        return {
+          layoutWidth: current.layout.computedLayout.width,
+          objectFit: current.layout.style.objectFit,
+          containingBlockWidth: current.parent.parent.layout.computedLayout.width,
+          worldScaleX: Math.hypot(
+            current.worldTransform.a,
+            current.worldTransform.b,
+          ),
+        };
+      }
+      stack.push(...(current?.children ?? []));
+    }
+    throw new Error("Dialog body text was not found");
+  });
+
+  expect(metrics.layoutWidth).toBe(218);
+  expect(metrics.containingBlockWidth).toBe(280);
+  expect(metrics.objectFit).toBe("none");
+  expect(metrics.worldScaleX).toBeCloseTo(1, 4);
+  await expectCanvasScreenshot(page, "dialog-box-narrow.png");
+});

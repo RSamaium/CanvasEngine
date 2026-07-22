@@ -68,6 +68,27 @@ const ITEM_LAYOUT_PROPS = [
   "border",
 ] as const;
 
+const FLEX_ITEM_PROPS = [
+  "flexGrow",
+  "flexShrink",
+  "flexBasis",
+  "alignSelf",
+  "margin",
+] as const;
+
+const PERCENTAGE_DEPENDENT_PROPS = [
+  "width",
+  "height",
+  "minWidth",
+  "minHeight",
+  "maxWidth",
+  "maxHeight",
+  "top",
+  "right",
+  "bottom",
+  "left",
+] as const;
+
 type EdgePrefix = "margin" | "padding";
 
 function expandEdges(prefix: EdgePrefix, value: EdgeSize): LayoutStyle {
@@ -178,6 +199,28 @@ export function hasLayoutNodeProps(props: Props): boolean {
   }
   return ITEM_LAYOUT_PROPS.some((key) =>
     key === "border" ? isLayoutBorder(props.border) : props[key] !== undefined,
+  );
+}
+
+function containsPercentage(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(containsPercentage);
+  return typeof value === "string" && value.endsWith("%");
+}
+
+/**
+ * Returns true when a node uses layout values that cannot be resolved without
+ * a Yoga box on its direct parent.
+ *
+ * A fixed-size flex container can be an independent Yoga root. Percentages,
+ * trailing insets and flex-item properties, however, are relative to a parent.
+ */
+export function requiresLayoutParent(props: Props): boolean {
+  if (props.right !== undefined || props.bottom !== undefined) return true;
+
+  if (FLEX_ITEM_PROPS.some((key) => props[key] !== undefined)) return true;
+
+  return PERCENTAGE_DEPENDENT_PROPS.some((key) =>
+    containsPercentage(props[key]),
   );
 }
 

@@ -40,6 +40,25 @@ Font size. This is a shortcut for `style.fontSize`.
 
 Font family. This is a shortcut for `style.fontFamily`.
 
+### Layout fitting
+
+Text participating in Yoga uses `objectFit="none"` by default, so a constrained
+layout box never makes the authored font silently smaller. Wrapped text should
+be given an appropriate width or `wordWrapWidth`; overflow remains visible and
+can be diagnosed directly.
+
+Use `objectFit="scale-down"` explicitly when shrinking a label to fit its box is
+the intended design:
+
+```html
+<Text
+  width={160}
+  height={24}
+  text="Shrink this label if necessary"
+  objectFit="scale-down"
+/>
+```
+
 ## Typewriter
 
 ```html

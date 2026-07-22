@@ -24,6 +24,7 @@ import {
   hasLayoutNodeProps,
   isLayoutBorder,
   normalizeLayoutProps,
+  requiresLayoutParent,
   withLayoutSize,
 } from "./layout";
 
@@ -120,6 +121,7 @@ export function DisplayObject(extendClass): any {
     } | null = null;
     isFlex: boolean = false;
     isLayoutContainer: boolean = false;
+    isLayoutBoundary: boolean = false;
     fullProps: Props = {};
     isMounted: boolean = false;
     _anchorPoints = new ObservablePoint({ _onUpdate: () => {} }, 0, 0);
@@ -139,6 +141,9 @@ export function DisplayObject(extendClass): any {
     // Store reference to element for freeze checking
     #element: Element<any> | null = null;
     #layoutRootSize: { width: Size; height: Size } | null = null;
+    #layoutDependentChildren = new Set<any>();
+    #layoutParentDependency: any = null;
+    defaultLayoutObjectFit: ObjectFit | undefined = undefined;
 
     /**
      * Get the element reference for freeze checking
@@ -156,8 +161,12 @@ export function DisplayObject(extendClass): any {
 
     get parentIsFlex() {
       if (this.disableLayout) return false;
+      const parentHasExplicitLayoutRole =
+        typeof this.parent?.isLayoutContainer === "boolean";
       return Boolean(
-        this.parent?.isLayoutContainer ?? this.parent?.isFlex,
+        this.parent?.isLayoutContainer ||
+        this.#layoutParentDependency === this.parent ||
+        (!parentHasExplicitLayoutRole && this.parent?.isFlex),
       );
     }
 
@@ -191,10 +200,12 @@ export function DisplayObject(extendClass): any {
 
     #syncLayoutRole(props: Props) {
       this.isLayoutContainer = hasLayoutContainerProps(props);
+      this.isLayoutBoundary =
+        this.isLayoutContainer || this.#layoutDependentChildren.size > 0;
       // Keep the historical flag as a broad "participates in layout" marker
       // for compatibility. New code must use isLayoutContainer when deciding
       // whether this object lays out its own children.
-      this.isFlex = this.isLayoutContainer || hasLayoutNodeProps(props);
+      this.isFlex = this.isLayoutBoundary || hasLayoutNodeProps(props);
     }
 
     #ensureLayoutChildren() {
@@ -203,6 +214,52 @@ export function DisplayObject(extendClass): any {
         child?.ensureLayout?.();
         child?.applyLayoutProps?.();
       }
+    }
+
+    registerLayoutDependentChild(child: any) {
+      if (this.disableLayout || this.#layoutDependentChildren.has(child)) return;
+
+      const wasLayoutBoundary = this.isLayoutBoundary;
+      this.#layoutDependentChildren.add(child);
+      this.#syncLayoutRole(this.fullProps);
+      this.ensureLayout();
+      this.applyLayoutProps();
+
+      if (!wasLayoutBoundary) {
+        for (const dependent of this.#layoutDependentChildren) {
+          dependent?.ensureLayout?.();
+          dependent?.applyLayoutProps?.();
+        }
+      }
+    }
+
+    unregisterLayoutDependentChild(child: any) {
+      if (!this.#layoutDependentChildren.delete(child)) return;
+
+      const wasLayoutBoundary = this.isLayoutBoundary;
+      this.#syncLayoutRole(this.fullProps);
+      if (wasLayoutBoundary && !this.isLayoutBoundary) {
+        this.detachLayoutSubtree();
+        this.rehydrateLayoutSubtree();
+      }
+    }
+
+    #syncLayoutParentDependency(parent: any = this.parent) {
+      const canProvideLayoutParent =
+        !parent?.disableLayout &&
+        typeof parent?.registerLayoutDependentChild === "function";
+      const nextParent =
+        !this.disableLayout &&
+        canProvideLayoutParent &&
+        requiresLayoutParent(this.fullProps)
+          ? parent
+          : null;
+
+      if (this.#layoutParentDependency === nextParent) return;
+
+      this.#layoutParentDependency?.unregisterLayoutDependentChild?.(this);
+      this.#layoutParentDependency = nextParent;
+      this.#layoutParentDependency?.registerLayoutDependentChild?.(this);
     }
 
     detachLayoutSubtree() {
@@ -229,15 +286,20 @@ export function DisplayObject(extendClass): any {
         ? withLayoutSize(props, this.#layoutRootSize.width, this.#layoutRootSize.height)
         : props;
       const shouldHaveLayout =
-        this.isLayoutContainer ||
+        this.isLayoutBoundary ||
         Boolean(this.parent?.isLayoutContainer) ||
+        this.#layoutParentDependency === this.parent ||
         hasLayoutNodeProps(source);
       if (!shouldHaveLayout) return;
 
       this.ensureLayout();
       if (this.layout) {
-        this.layout = normalizeLayoutProps(source, {
-          containerAnchor: this.isCustomAnchor && this.isLayoutContainer,
+        const normalizedSource =
+          source.objectFit === undefined && this.defaultLayoutObjectFit !== undefined
+            ? { ...source, objectFit: this.defaultLayoutObjectFit }
+            : source;
+        this.layout = normalizeLayoutProps(normalizedSource, {
+          containerAnchor: this.isCustomAnchor && this.isLayoutBoundary,
         });
       }
     }
@@ -293,7 +355,7 @@ export function DisplayObject(extendClass): any {
       if (this.destroyed) return
       this.#element = element;
       this.#canvasContext = element.props.context;
-      if (this.isLayoutContainer || hasLayoutNodeProps(this.fullProps)) {
+      if (this.isLayoutBoundary || hasLayoutNodeProps(this.fullProps)) {
         this.ensureLayout();
       }
       if (element.parent) {
@@ -315,7 +377,8 @@ export function DisplayObject(extendClass): any {
             return;
           }
         }
-        if ((instance.isLayoutContainer || this.isLayoutContainer || hasLayoutNodeProps(this.fullProps)) && !this.disableLayout) {
+        this.#syncLayoutParentDependency(instance);
+        if ((instance.isLayoutContainer || this.isLayoutBoundary || hasLayoutNodeProps(this.fullProps)) && !this.disableLayout) {
           try {
             this.ensureLayout();
           } catch (error) {
@@ -363,6 +426,8 @@ export function DisplayObject(extendClass): any {
       if (this.destroyed) return
       if (!this.#canvasContext) return;
 
+      this.#syncLayoutParentDependency();
+
       if (layoutContainerDeactivated) {
         // @pixi/layout merges new styles into the existing Layout instance.
         // Rebuild the affected tree so removed reactive props cannot survive,
@@ -370,8 +435,9 @@ export function DisplayObject(extendClass): any {
         this.detachLayoutSubtree();
         this.rehydrateLayoutSubtree();
       } else if (
-        this.isLayoutContainer ||
+        this.isLayoutBoundary ||
         Boolean(this.parent?.isLayoutContainer) ||
+        this.#layoutParentDependency === this.parent ||
         hasLayoutNodeProps(this.fullProps)
       ) {
         this.ensureLayout();
@@ -485,9 +551,11 @@ export function DisplayObject(extendClass): any {
         await this.onBeforeDestroy();
       }
       if (afterDestroy) afterDestroy();
-      if (this.parent && typeof this.parent.removeChild === "function") {
-        this.parent.removeChild(this);
+      const pixiParent = this.parent;
+      if (pixiParent && typeof pixiParent.removeChild === "function") {
+        pixiParent.removeChild(this);
       }
+      this.#syncLayoutParentDependency(null);
       super.destroy();
     }
 

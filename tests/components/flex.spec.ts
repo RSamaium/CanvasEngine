@@ -452,4 +452,99 @@ describe('Flex Positioning', () => {
         expect(child1.componentInstance.layout === null).toBe(true)
         expect(child2.componentInstance.layout === null).toBe(true)
     })
+
+    it('should create a containing layout box for parent-relative children only', async () => {
+        const parent = await TestBed.createComponent(Container, {
+            width: 400,
+            height: 300,
+        }, [
+            h(Container, { x: 12, y: 18, width: 40, height: 30 }),
+            h(Container, {
+                positionType: 'absolute',
+                top: 10,
+                right: 30,
+                bottom: 40,
+                left: 20,
+                display: 'flex',
+            }),
+        ])
+
+        parent.props.context.app().render()
+
+        const ordinaryChild = parent.props.children?.[0] as Element<ComponentInstance>
+        const relativeChild = parent.props.children?.[1] as Element<ComponentInstance>
+
+        expect(parent.componentInstance.isLayoutContainer).toBe(false)
+        expect(parent.componentInstance.isLayoutBoundary).toBe(true)
+        expect(parent.componentInstance.layout.computedLayout.width).toBe(400)
+        expect(parent.componentInstance.layout.computedLayout.height).toBe(300)
+        expect(ordinaryChild.componentInstance.layout).toBeNull()
+        expect(ordinaryChild.componentInstance.x).toBe(12)
+        expect(ordinaryChild.componentInstance.y).toBe(18)
+        expect(relativeChild.componentInstance.layout.computedLayout.width).toBe(350)
+        expect(relativeChild.componentInstance.layout.computedLayout.height).toBe(250)
+        expect(relativeChild.componentInstance.layout.realX).toBe(20)
+        expect(relativeChild.componentInstance.layout.realY).toBe(10)
+    })
+
+    it('should activate and remove an automatic parent layout reactively', async () => {
+        const right = signal<any>(undefined)
+        const outer = await TestBed.createComponent(Container, {
+            width: 500,
+            height: 300,
+        }, [
+            h(Container, {
+                width: 400,
+                height: 200,
+            }, [
+                h(Container, {
+                    positionType: 'absolute',
+                    top: 0,
+                    right,
+                    width: 100,
+                    height: 50,
+                }),
+            ]),
+        ])
+        const parent = outer.props.children?.[0] as Element<ComponentInstance>
+        const child = parent.props.children?.[0] as Element<ComponentInstance>
+
+        expect(parent.componentInstance.layout).toBeNull()
+
+        right.set(20)
+        outer.props.context.app().render()
+
+        expect(parent.componentInstance.isLayoutBoundary).toBe(true)
+        expect(parent.componentInstance.layout.computedLayout.width).toBe(400)
+        expect(child.componentInstance.layout.realX).toBe(280)
+
+        right.set(undefined)
+        outer.props.context.app().render()
+
+        expect(parent.componentInstance.isLayoutBoundary).toBe(false)
+        expect(parent.componentInstance.layout).toBeNull()
+        expect(child.componentInstance.layout.style.right).toBeUndefined()
+        expect(child.componentInstance.layout.realX).toBe(0)
+    })
+
+    it('should release an automatic parent layout when its dependent child is destroyed', async () => {
+        const outer = await TestBed.createComponent(Container, {
+            width: 500,
+            height: 300,
+        }, [
+            h(Container, { width: 400, height: 200 }, [
+                h(Container, { width: '100%', height: 50 }),
+            ]),
+        ])
+        const parent = outer.props.children?.[0] as Element<ComponentInstance>
+        const child = parent.props.children?.[0] as Element<ComponentInstance>
+
+        expect(parent.componentInstance.isLayoutBoundary).toBe(true)
+        expect(parent.componentInstance.layout).not.toBeNull()
+
+        child.destroy()
+
+        expect(parent.componentInstance.isLayoutBoundary).toBe(false)
+        expect(parent.componentInstance.layout).toBeNull()
+    })
 })

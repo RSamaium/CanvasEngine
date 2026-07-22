@@ -54,6 +54,29 @@ Two-value spacing arrays use `[vertical, horizontal]`; four-value arrays use
 Use `display="none"` to remove an object from Yoga and hide its rendered
 subtree. Switching it back to `flex` restores it at its declared child order.
 
+## Parent-relative layout
+
+CanvasEngine automatically creates a lightweight Yoga containing box when a
+child uses values that need its direct parent, such as percentage dimensions,
+`right`/`bottom` insets, margins, or flex-item properties. The parent does not
+need `display="flex"` for an absolute inset panel to use its numeric dimensions:
+
+```html
+<Container width={720} height={220}>
+  <Container
+    positionType="absolute"
+    top={22}
+    right={28}
+    bottom={22}
+    left={34}
+  />
+</Container>
+```
+
+Only children that depend on this containing box are enrolled. Ordinary PixiJS
+siblings keep their `x`/`y` positioning. The automatic box is removed when its
+last dependent child is removed or stops using parent-relative values.
+
 ## Full-screen centered GUI
 
 Percentage dimensions follow the canvas and are recalculated after a renderer resize. A column flex container can center a complete GUI group on both axes:

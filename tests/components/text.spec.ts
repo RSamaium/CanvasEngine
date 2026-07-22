@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { Text, signal } from 'canvasengine'
+import { Container, Text, h, signal } from 'canvasengine'
 import { TestBed } from '../../packages/core/testing'
 
 describe('Text Component', () => {
@@ -118,6 +118,51 @@ describe('Text Component', () => {
 
         expect((textElement.componentInstance as any).style.wordWrapWidth).toBe(200)
         expect((textElement.componentInstance as any).style.wordWrap).toBe(true)
+    })
+
+    test('keeps layout text at its authored scale by default', async () => {
+        const parent = await TestBed.createComponent(Container, {
+            display: 'flex',
+            width: 100,
+            height: 20,
+        }, [
+            h(Text, {
+                width: '100%',
+                height: 10,
+                text: 'This label is intentionally wider than its box',
+                size: 20,
+            }),
+        ])
+        const text = parent.props.children?.[0]?.componentInstance as any
+
+        parent.props.context.app().render()
+
+        expect(text.layout.style.objectFit).toBe('none')
+        expect(text.layout.computedPixiLayout.scaleX).toBe(1)
+        expect(text.layout.computedPixiLayout.scaleY).toBe(1)
+    })
+
+    test('allows text scale-down when explicitly requested', async () => {
+        const parent = await TestBed.createComponent(Container, {
+            display: 'flex',
+            width: 100,
+            height: 20,
+        }, [
+            h(Text, {
+                width: '100%',
+                height: 10,
+                text: 'This label is intentionally wider than its box',
+                size: 20,
+                objectFit: 'scale-down',
+            }),
+        ])
+        const text = parent.props.children?.[0]?.componentInstance as any
+
+        parent.props.context.app().render()
+
+        expect(text.layout.style.objectFit).toBe('scale-down')
+        expect(text.layout.computedPixiLayout.scaleX).toBeLessThan(1)
+        expect(text.layout.computedPixiLayout.scaleY).toBeLessThan(1)
     })
 
     test('uses Pretext measurement for wrapped text layout dimensions', async () => {
