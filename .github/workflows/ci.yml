@@ -71,14 +71,21 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Update Starter Package Versions
+        if: steps.changesets.outputs.hasChangesets == 'true'
         run: |
           CORE_VERSION=$(jq -r '.version' packages/core/package.json)
           jq --arg version "$CORE_VERSION" '.dependencies.canvasengine = $version | .devDependencies["@canvasengine/compiler"] = $version' starter/package.json > starter/package.tmp.json
           mv starter/package.tmp.json starter/package.json
         shell: bash
       - name: Commit Changes
+        if: steps.changesets.outputs.hasChangesets == 'true'
         run: |
           git add starter/package.json
+          if git diff --cached --quiet; then
+            echo "Starter package versions are already up to date"
+            exit 0
+          fi
+          CORE_VERSION=$(jq -r '.version' packages/core/package.json)
           git commit -m "chore(release): update starter package version to $CORE_VERSION"
-          git push
+          git push origin HEAD:changeset-release/v2
         shell: bash
