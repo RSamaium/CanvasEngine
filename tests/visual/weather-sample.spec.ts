@@ -94,7 +94,7 @@ test("weather sample exposes every built-in preset", async ({ page }) => {
     await expectActivePreset(page, label);
   }
 
-  await emitPixiControl(page, "CLOUD · 8");
+  await emitPixiControl(page, "CLOUD · 9");
   await expectWeatherRenderer(page, "mesh");
   await expectActivePreset(page, "Light Clouds");
   for (const label of [
@@ -105,6 +105,7 @@ test("weather sample exposes every built-in preset", async ({ page }) => {
     "Sunset Twinkle",
     "Crepuscular Rays",
     "Morning Haze",
+    "Natural Clouds",
   ]) {
     await emitPixiControl(page, "NEXT  ›");
     await expectActivePreset(page, label);

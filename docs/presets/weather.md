@@ -14,6 +14,8 @@
 Rain mode combines scrolling streak layers with short ground impact splashes.
 Rain props are read reactively, including `speed`, `windDirection`, `windStrength`, `density`, `maxDrops`, and `topDown`.
 
+Fog mode is designed for top-down RPG scenes. It combines world-space banks, thin drifting tendrils, and animated clearings instead of applying a uniform screen veil.
+
 It supports static values and reactive signals, can be used inside or outside `Viewport`, and forwards display props like `zIndex` to the underlying `Mesh`.
 
 ## What Is Included
@@ -69,7 +71,7 @@ It supports static values and reactive signals, can be used inside or outside `V
 - Rain: `lightRain`, `steadyRain`, `stormRain`
 - Snow: `lightSnow`, `winterSnow`, `blizzardSnow`
 - Fog: `rpgMorningMist`, `rpgForestFog`, `rpgSwampFog`, `rpgNightFog`, `rpgHeavyFog`
-- Cloud: `lightClouds`, `overcastClouds`, `stormClouds`, `goldenHourRays`, `sunnySoftRays`, `sunsetTwinkleRays`, `dramaticCrepuscularRays`, `morningHazeRays`
+- Cloud: `lightClouds`, `overcastClouds`, `stormClouds`, `goldenHourRays`, `sunnySoftRays`, `sunsetTwinkleRays`, `dramaticCrepuscularRays`, `morningHazeRays`, `naturalClouds`
 
 ## Viewport and Layering
 
@@ -97,6 +99,8 @@ Use `sortableChildren` on `Viewport` and a high `zIndex` on `Weather`.
 
 Cloud mode renders broad, moving shadows on the ground instead of a white atmospheric veil. This makes it visually distinct from fog. It also supports optional sun shafts with directional control and twinkle.
 
+Set `cloudOpacity` above `0` to display the overhead cloud itself. The visible layer uses irregular, eroded cloud banks with textured density, directional volume, and a shaded underside. `cloudAltitude` controls its projected separation from the ground shadow. Keep `cloudOpacity={0}` for shadow-only weather.
+
 Important behavior:
 
 - rays do not scroll on X over time
@@ -111,6 +115,8 @@ Important behavior:
   scale={1.55}
   shadowIntensity={0.38}
   shadowSoftness={0.65}
+  cloudOpacity={0.8}
+  cloudAltitude={0.62}
   sunIntensity={1.35}
   sunAngle={0.64}
   raySpread={0.8}
@@ -155,10 +161,14 @@ Important behavior:
 | `density` | `number \| Signal<number>` | `120.0` | all | Particle density or fog/cloud intensity |
 | `maxDrops` | `number \| Signal<number>` | `80.0` | rain/snow | Rain impact cap / snowflake cap |
 | `topDown` | `boolean \| Signal<boolean>` | `true` | rain | Spreads impacts across the visible map. Use `false` to keep impacts near the bottom ground line |
-| `height` | `number \| Signal<number>` | `1.0` | fog/cloud | Vertical concentration |
+| `height` | `number \| Signal<number>` | `1.0` | fog/cloud | Bank fullness (`0` = sparse, `1` = full) |
 | `scale` | `number \| Signal<number>` | `2.0` | fog/cloud | Noise scale |
+| `fogOpacity` | `number \| Signal<number>` | `0.38` | fog | Maximum opacity of dense fog banks (`0` to `0.72`) |
+| `fogSoftness` | `number \| Signal<number>` | `0.7` | fog | Fog-bank edge softness (`0` to `1`) |
 | `shadowIntensity` | `number \| Signal<number>` | `0.38` | cloud | Ground-shadow opacity (`0` to `0.65`) |
 | `shadowSoftness` | `number \| Signal<number>` | `0.65` | cloud | Shadow edge softness (`0` to `1`) |
+| `cloudOpacity` | `number \| Signal<number>` | `0` | cloud | Visible overhead-cloud opacity (`0` keeps shadow-only rendering; maximum `0.95`) |
+| `cloudAltitude` | `number \| Signal<number>` | `0.55` | cloud | Separation between the visible cloud and its projected shadow (`0` to `1`) |
 | `sunIntensity` | `number \| Signal<number>` | `0.85` | cloud | Sun ray intensity |
 | `sunAngle` | `number \| Signal<number>` | `0.85` | cloud | Sun direction angle (radians) |
 | `raySpread` | `number \| Signal<number>` | `1.0` | cloud | Ray spread width |
@@ -173,11 +183,15 @@ Important behavior:
 ## Recommended Ranges
 
 - Rain/Snow `density`: `80` to `320`
-- Fog `density`: `0.7` to `1.7`
-- Fog `height`: `0.45` to `0.9`
+- Fog `density`: `0.6` to `1.5`
+- Fog `height`: `0.4` to `0.7`
+- Fog `fogOpacity`: `0.3` to `0.65`
+- Fog `fogSoftness`: `0.6` to `0.85`
 - Cloud `density`: `0.5` to `1.3`
 - Cloud `shadowIntensity`: `0.3` to `0.6`
 - Cloud `shadowSoftness`: `0.5` to `0.85`
+- Cloud `cloudOpacity`: `0.65` to `0.9` when visible
+- Cloud `cloudAltitude`: `0.35` to `0.75`
 - Cloud `sunIntensity`: `0.1` to `1.5`
 - Cloud `raySpread`: `0.68` to `1.35`
 - Cloud `rayTwinkle`: `0.0` to `1.0` (or more for stylized effects)

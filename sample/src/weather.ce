@@ -38,6 +38,8 @@
         density={weatherDensity}
         height={weatherHeight}
         scale={weatherScale}
+        fogOpacity={weatherFogOpacity}
+        fogSoftness={weatherFogSoftness}
         zIndex={10}
       />
     }
@@ -50,6 +52,8 @@
         scale={weatherScale}
         shadowIntensity={weatherShadowIntensity}
         shadowSoftness={weatherShadowSoftness}
+        cloudOpacity={weatherCloudOpacity}
+        cloudAltitude={weatherCloudAltitude}
         sunIntensity={weatherSunIntensity}
         sunAngle={weatherSunAngle}
         raySpread={weatherRaySpread}
@@ -234,7 +238,7 @@
           @if (cloudActive) {
             <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#59451f" borderRadius={9} />
           }
-          <Text text="CLOUD · 8" color={cloudTextColor} size={12} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.1 }} />
+          <Text text="CLOUD · 9" color={cloudTextColor} size={12} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.1 }} />
         </Container>
       </Container>
 
@@ -318,7 +322,7 @@
     },
     {
       id: "cloud",
-      label: "CLOUD SHADOWS",
+      label: "CLOUDS & SHADOWS",
       accent: "#ffd98b",
       presets: [
         { label: "Light Clouds", description: "Large, soft cloud shadows drifting across the map.", values: CLOUD_PRESETS.lightClouds },
@@ -329,6 +333,7 @@
         { label: "Sunset Twinkle", description: "Low-angle rays flickering between moving shadows.", values: CLOUD_PRESETS.sunsetTwinkleRays },
         { label: "Crepuscular Rays", description: "Dramatic shafts cutting through dense shadows.", values: CLOUD_PRESETS.dramaticCrepuscularRays },
         { label: "Morning Haze", description: "Faint morning light over slow, soft shadows.", values: CLOUD_PRESETS.morningHazeRays },
+        { label: "Natural Clouds", description: "Irregular overhead cloud banks with textured volume and projected shadows.", values: CLOUD_PRESETS.naturalClouds },
       ],
     },
   ];
@@ -347,8 +352,12 @@
   const weatherTopDown = computed(() => activeValues().topDown ?? true);
   const weatherHeight = computed(() => activeValues().height ?? 1);
   const weatherScale = computed(() => activeValues().scale ?? 2);
+  const weatherFogOpacity = computed(() => activeValues().fogOpacity ?? 0.38);
+  const weatherFogSoftness = computed(() => activeValues().fogSoftness ?? 0.7);
   const weatherShadowIntensity = computed(() => activeValues().shadowIntensity ?? 0.38);
   const weatherShadowSoftness = computed(() => activeValues().shadowSoftness ?? 0.65);
+  const weatherCloudOpacity = computed(() => activeValues().cloudOpacity ?? 0);
+  const weatherCloudAltitude = computed(() => activeValues().cloudAltitude ?? 0.55);
   const weatherSunIntensity = computed(() => activeValues().sunIntensity ?? 0.85);
   const weatherSunAngle = computed(() => activeValues().sunAngle ?? 0.85);
   const weatherRaySpread = computed(() => activeValues().raySpread ?? 1);
@@ -369,7 +378,10 @@
       return `SPEED ${values.speed.toFixed(2)}  ·  DENSITY ${values.density}  ·  WIND ${values.windStrength.toFixed(2)}  ·  COUNT ${values.maxDrops}`;
     }
     if (values.effect === "fog") {
-      return `SPEED ${values.speed.toFixed(2)}  ·  DENSITY ${values.density.toFixed(2)}  ·  HEIGHT ${values.height.toFixed(2)}  ·  SCALE ${values.scale.toFixed(2)}`;
+      return `COVER ${values.density.toFixed(2)}  ·  OPACITY ${values.fogOpacity.toFixed(2)}  ·  SOFT ${values.fogSoftness.toFixed(2)}  ·  SPEED ${values.speed.toFixed(2)}`;
+    }
+    if ((values.cloudOpacity ?? 0) > 0) {
+      return `CLOUD ${values.cloudOpacity.toFixed(2)}  ·  ALTITUDE ${values.cloudAltitude.toFixed(2)}  ·  SHADOW ${values.shadowIntensity.toFixed(2)}  ·  SPEED ${values.speed.toFixed(2)}`;
     }
     return `COVER ${values.density.toFixed(2)}  ·  SHADOW ${values.shadowIntensity.toFixed(2)}  ·  SOFT ${values.shadowSoftness.toFixed(2)}  ·  SPEED ${values.speed.toFixed(2)}`;
   });

@@ -333,11 +333,11 @@ export const SNOW_PRESETS = {
 } as const;
 
 export const FOG_PRESETS = {
-  rpgMorningMist: { effect: "fog", speed: 0.16, density: 0.75, height: 0.45, scale: 1.35 },
-  rpgForestFog: { effect: "fog", speed: 0.22, density: 1.0, height: 0.62, scale: 1.75 },
-  rpgSwampFog: { effect: "fog", speed: 0.14, density: 1.3, height: 0.55, scale: 2.1 },
-  rpgNightFog: { effect: "fog", speed: 0.12, density: 1.15, height: 0.58, scale: 1.9 },
-  rpgHeavyFog: { effect: "fog", speed: 0.1, density: 1.7, height: 0.72, scale: 2.3 },
+  rpgMorningMist: { effect: "fog", speed: 0.16, density: 0.62, height: 0.42, scale: 0.9, fogOpacity: 0.34, fogSoftness: 0.82 },
+  rpgForestFog: { effect: "fog", speed: 0.22, density: 0.9, height: 0.58, scale: 1.15, fogOpacity: 0.42, fogSoftness: 0.72 },
+  rpgSwampFog: { effect: "fog", speed: 0.14, density: 1.2, height: 0.5, scale: 1.3, fogOpacity: 0.52, fogSoftness: 0.62 },
+  rpgNightFog: { effect: "fog", speed: 0.12, density: 0.95, height: 0.56, scale: 1.1, fogOpacity: 0.46, fogSoftness: 0.78 },
+  rpgHeavyFog: { effect: "fog", speed: 0.1, density: 1.5, height: 0.68, scale: 1.45, fogOpacity: 0.62, fogSoftness: 0.7 },
 } as const;
 
 export const CLOUD_PRESETS = {
@@ -349,6 +349,7 @@ export const CLOUD_PRESETS = {
   sunsetTwinkleRays: { effect: "cloud", speed: 0.1, density: 0.74, height: 0.84, scale: 0.9, shadowIntensity: 0.42, shadowSoftness: 0.64, sunIntensity: 0.8, sunAngle: 0.64, raySpread: 0.8, rayTwinkle: 1.0, rayTwinkleSpeed: 1.6 },
   dramaticCrepuscularRays: { effect: "cloud", speed: 0.11, density: 0.9, height: 0.9, scale: 1.0, shadowIntensity: 0.52, shadowSoftness: 0.48, sunIntensity: 0.95, sunAngle: 0.7, raySpread: 0.68, rayTwinkle: 0.6, rayTwinkleSpeed: 1.2 },
   morningHazeRays: { effect: "cloud", speed: 0.09, density: 0.55, height: 0.7, scale: 0.74, shadowIntensity: 0.3, shadowSoftness: 0.82, sunIntensity: 0.3, sunAngle: 0.9, raySpread: 1.05, rayTwinkle: 0.42, rayTwinkleSpeed: 0.8 },
+  naturalClouds: { effect: "cloud", speed: 0.11, density: 0.52, height: 0.64, scale: 0.95, shadowIntensity: 0.36, shadowSoftness: 0.7, cloudOpacity: 0.8, cloudAltitude: 0.62, sunIntensity: 0.0, sunAngle: 0.78, raySpread: 0.95, rayTwinkle: 0.2, rayTwinkleSpeed: 0.8 },
 } as const;
 
 export const WEATHER_PRESETS = {
@@ -371,10 +372,14 @@ export const WeatherEffect = (options: any) => {
     density = signal(120.0),  // Reduced default density for better performance
     maxDrops = signal(80.0),  // Reduced default maxDrops for better performance
     topDown = signal(true),  // Full-screen rain tuned for top-down maps by default
-    height = signal(1.0),  // Fog/cloud height parameter (0 = bottom, 1 = full)
+    height = signal(1.0),  // Fog/cloud bank fullness (0 = sparse, 1 = full)
     scale = signal(2.0),  // Fog noise scale parameter
+    fogOpacity = signal(0.38),  // Maximum fog opacity
+    fogSoftness = signal(0.7),  // Fog bank edge softness
     shadowIntensity = signal(0.38),  // Cloud shadow opacity on the ground
     shadowSoftness = signal(0.65),  // Cloud shadow edge softness
+    cloudOpacity = signal(0.0),  // Optional visible overhead cloud layer
+    cloudAltitude = signal(0.55),  // Cloud-to-shadow projection distance
     sunIntensity = signal(0.85),  // Cloud sunlight shaft intensity
     sunAngle = signal(0.85),  // Cloud sunlight direction angle in radians
     raySpread = signal(1.0),  // Cloud sunlight ray spread
@@ -451,10 +456,18 @@ export const WeatherEffect = (options: any) => {
     typeof height === "function" ? height : signal(height);
   const scaleSignal =
     typeof scale === "function" ? scale : signal(scale);
+  const fogOpacitySignal =
+    typeof fogOpacity === "function" ? fogOpacity : signal(fogOpacity);
+  const fogSoftnessSignal =
+    typeof fogSoftness === "function" ? fogSoftness : signal(fogSoftness);
   const shadowIntensitySignal =
     typeof shadowIntensity === "function" ? shadowIntensity : signal(shadowIntensity);
   const shadowSoftnessSignal =
     typeof shadowSoftness === "function" ? shadowSoftness : signal(shadowSoftness);
+  const cloudOpacitySignal =
+    typeof cloudOpacity === "function" ? cloudOpacity : signal(cloudOpacity);
+  const cloudAltitudeSignal =
+    typeof cloudAltitude === "function" ? cloudAltitude : signal(cloudAltitude);
   const sunIntensitySignal =
     typeof sunIntensity === "function" ? sunIntensity : signal(sunIntensity);
   const sunAngleSignal =
@@ -470,10 +483,18 @@ export const WeatherEffect = (options: any) => {
     typeof value === "number" && Number.isFinite(value) ? value : 1.0;
   const normalizeSunIntensityValue = (value: any) =>
     typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0.85;
+  const normalizeFogOpacityValue = (value: any) =>
+    typeof value === "number" && Number.isFinite(value) ? Math.min(Math.max(value, 0), 0.72) : 0.38;
+  const normalizeFogSoftnessValue = (value: any) =>
+    typeof value === "number" && Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0.7;
   const normalizeShadowIntensityValue = (value: any) =>
     typeof value === "number" && Number.isFinite(value) ? Math.min(Math.max(value, 0), 0.65) : 0.38;
   const normalizeShadowSoftnessValue = (value: any) =>
     typeof value === "number" && Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0.65;
+  const normalizeCloudOpacityValue = (value: any) =>
+    typeof value === "number" && Number.isFinite(value) ? Math.min(Math.max(value, 0), 0.95) : 0;
+  const normalizeCloudAltitudeValue = (value: any) =>
+    typeof value === "number" && Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0.55;
   const normalizeSunAngleValue = (value: any) =>
     typeof value === "number" && Number.isFinite(value) ? value : 0.85;
   const normalizeRaySpreadValue = (value: any) =>
@@ -600,6 +621,8 @@ export const WeatherEffect = (options: any) => {
       uScale: { value: scaleSignal(), type: "f32" },
       uDensity: { value: densitySignal(), type: "f32" },
       uHeight: { value: normalizeHeightValue(heightSignal()), type: "f32" },
+      uFogOpacity: { value: normalizeFogOpacityValue(fogOpacitySignal()), type: "f32" },
+      uFogSoftness: { value: normalizeFogSoftnessValue(fogSoftnessSignal()), type: "f32" },
       uViewportOrigin: { value: [originX(), originY()], type: "vec2<f32>" },
     };
   } else if (effectSignal() === 'cloud') {
@@ -615,6 +638,8 @@ export const WeatherEffect = (options: any) => {
       uViewportOrigin: { value: [originX(), originY()], type: "vec2<f32>" },
       uShadowIntensity: { value: normalizeShadowIntensityValue(shadowIntensitySignal()), type: "f32" },
       uShadowSoftness: { value: normalizeShadowSoftnessValue(shadowSoftnessSignal()), type: "f32" },
+      uCloudOpacity: { value: normalizeCloudOpacityValue(cloudOpacitySignal()), type: "f32" },
+      uCloudAltitude: { value: normalizeCloudAltitudeValue(cloudAltitudeSignal()), type: "f32" },
       uSunIntensity: { value: normalizeSunIntensityValue(sunIntensitySignal()), type: "f32" },
       uSunDirection: { value: sunDirectionFromAngle(initialSunAngle), type: "vec2<f32>" },
       uRaySpread: { value: normalizeRaySpreadValue(raySpreadSignal()), type: "f32" },
@@ -653,9 +678,13 @@ export const WeatherEffect = (options: any) => {
   let prevTopDown = normalizeTopDownValue(topDownSignal());
   let prevHeight = heightSignal();
   let prevScale = scaleSignal();
+  let prevFogOpacity = normalizeFogOpacityValue(fogOpacitySignal());
+  let prevFogSoftness = normalizeFogSoftnessValue(fogSoftnessSignal());
   let prevSunIntensity = normalizeSunIntensityValue(sunIntensitySignal());
   let prevShadowIntensity = normalizeShadowIntensityValue(shadowIntensitySignal());
   let prevShadowSoftness = normalizeShadowSoftnessValue(shadowSoftnessSignal());
+  let prevCloudOpacity = normalizeCloudOpacityValue(cloudOpacitySignal());
+  let prevCloudAltitude = normalizeCloudAltitudeValue(cloudAltitudeSignal());
   let prevSunAngle = normalizeSunAngleValue(sunAngleSignal());
   let prevRaySpread = normalizeRaySpreadValue(raySpreadSignal());
   let prevRayTwinkle = normalizeRayTwinkleValue(rayTwinkleSignal());
@@ -789,6 +818,20 @@ export const WeatherEffect = (options: any) => {
         prevHeight = currentHeight;
       }
 
+      if (effectSignal() === 'fog') {
+        const currentFogOpacity = normalizeFogOpacityValue(fogOpacitySignal());
+        if (currentFogOpacity !== prevFogOpacity) {
+          uniformGroup.uniforms.uFogOpacity = currentFogOpacity;
+          prevFogOpacity = currentFogOpacity;
+        }
+
+        const currentFogSoftness = normalizeFogSoftnessValue(fogSoftnessSignal());
+        if (currentFogSoftness !== prevFogSoftness) {
+          uniformGroup.uniforms.uFogSoftness = currentFogSoftness;
+          prevFogSoftness = currentFogSoftness;
+        }
+      }
+
       if (effectSignal() === 'cloud') {
         const currentShadowIntensity = normalizeShadowIntensityValue(shadowIntensitySignal());
         if (currentShadowIntensity !== prevShadowIntensity) {
@@ -800,6 +843,18 @@ export const WeatherEffect = (options: any) => {
         if (currentShadowSoftness !== prevShadowSoftness) {
           uniformGroup.uniforms.uShadowSoftness = currentShadowSoftness;
           prevShadowSoftness = currentShadowSoftness;
+        }
+
+        const currentCloudOpacity = normalizeCloudOpacityValue(cloudOpacitySignal());
+        if (currentCloudOpacity !== prevCloudOpacity) {
+          uniformGroup.uniforms.uCloudOpacity = currentCloudOpacity;
+          prevCloudOpacity = currentCloudOpacity;
+        }
+
+        const currentCloudAltitude = normalizeCloudAltitudeValue(cloudAltitudeSignal());
+        if (currentCloudAltitude !== prevCloudAltitude) {
+          uniformGroup.uniforms.uCloudAltitude = currentCloudAltitude;
+          prevCloudAltitude = currentCloudAltitude;
         }
 
         const currentSunIntensity = normalizeSunIntensityValue(sunIntensitySignal());
