@@ -48,6 +48,8 @@
         density={weatherDensity}
         height={weatherHeight}
         scale={weatherScale}
+        shadowIntensity={weatherShadowIntensity}
+        shadowSoftness={weatherShadowSoftness}
         sunIntensity={weatherSunIntensity}
         sunAngle={weatherSunAngle}
         raySpread={weatherRaySpread}
@@ -316,17 +318,17 @@
     },
     {
       id: "cloud",
-      label: "CLOUD & RAYS",
+      label: "CLOUD SHADOWS",
       accent: "#ffd98b",
       presets: [
-        { label: "Light Clouds", description: "Soft cloud cover with balanced daylight.", values: CLOUD_PRESETS.lightClouds },
-        { label: "Overcast", description: "Muted rays beneath a broad cloud layer.", values: CLOUD_PRESETS.overcastClouds },
-        { label: "Storm Clouds", description: "Dense cloud cover with almost no sunlight.", values: CLOUD_PRESETS.stormClouds },
-        { label: "Golden Hour", description: "Warm, focused rays with lively shimmer.", values: CLOUD_PRESETS.goldenHourRays },
-        { label: "Sunny Soft Rays", description: "Clear ambient light with subtle sun shafts.", values: CLOUD_PRESETS.sunnySoftRays },
-        { label: "Sunset Twinkle", description: "Low-angle rays with strong animated twinkle.", values: CLOUD_PRESETS.sunsetTwinkleRays },
-        { label: "Crepuscular Rays", description: "Dramatic, narrow shafts through dense clouds.", values: CLOUD_PRESETS.dramaticCrepuscularRays },
-        { label: "Morning Haze", description: "Gentle morning rays through a thin haze.", values: CLOUD_PRESETS.morningHazeRays },
+        { label: "Light Clouds", description: "Large, soft cloud shadows drifting across the map.", values: CLOUD_PRESETS.lightClouds },
+        { label: "Overcast", description: "Broad overlapping shadows for muted daylight.", values: CLOUD_PRESETS.overcastClouds },
+        { label: "Storm Clouds", description: "Deep, fast-moving shadows before a storm.", values: CLOUD_PRESETS.stormClouds },
+        { label: "Golden Hour", description: "Warm shafts crossing pronounced ground shadows.", values: CLOUD_PRESETS.goldenHourRays },
+        { label: "Sunny Soft Rays", description: "Gentle shadows broken by soft sunlight.", values: CLOUD_PRESETS.sunnySoftRays },
+        { label: "Sunset Twinkle", description: "Low-angle rays flickering between moving shadows.", values: CLOUD_PRESETS.sunsetTwinkleRays },
+        { label: "Crepuscular Rays", description: "Dramatic shafts cutting through dense shadows.", values: CLOUD_PRESETS.dramaticCrepuscularRays },
+        { label: "Morning Haze", description: "Faint morning light over slow, soft shadows.", values: CLOUD_PRESETS.morningHazeRays },
       ],
     },
   ];
@@ -345,6 +347,8 @@
   const weatherTopDown = computed(() => activeValues().topDown ?? true);
   const weatherHeight = computed(() => activeValues().height ?? 1);
   const weatherScale = computed(() => activeValues().scale ?? 2);
+  const weatherShadowIntensity = computed(() => activeValues().shadowIntensity ?? 0.38);
+  const weatherShadowSoftness = computed(() => activeValues().shadowSoftness ?? 0.65);
   const weatherSunIntensity = computed(() => activeValues().sunIntensity ?? 0.85);
   const weatherSunAngle = computed(() => activeValues().sunAngle ?? 0.85);
   const weatherRaySpread = computed(() => activeValues().raySpread ?? 1);
@@ -367,7 +371,7 @@
     if (values.effect === "fog") {
       return `SPEED ${values.speed.toFixed(2)}  ·  DENSITY ${values.density.toFixed(2)}  ·  HEIGHT ${values.height.toFixed(2)}  ·  SCALE ${values.scale.toFixed(2)}`;
     }
-    return `DENSITY ${values.density.toFixed(2)}  ·  SUN ${values.sunIntensity.toFixed(2)}  ·  SPREAD ${values.raySpread.toFixed(2)}  ·  TWINKLE ${values.rayTwinkle.toFixed(2)}`;
+    return `COVER ${values.density.toFixed(2)}  ·  SHADOW ${values.shadowIntensity.toFixed(2)}  ·  SOFT ${values.shadowSoftness.toFixed(2)}  ·  SPEED ${values.speed.toFixed(2)}`;
   });
 
   const isGroup = (id) => computed(() => activeGroup().id === id);

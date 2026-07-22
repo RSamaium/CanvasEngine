@@ -341,14 +341,14 @@ export const FOG_PRESETS = {
 } as const;
 
 export const CLOUD_PRESETS = {
-  lightClouds: { effect: "cloud", speed: 0.16, density: 0.55, height: 0.72, scale: 1.35, sunIntensity: 1.0, sunAngle: 0.84, raySpread: 0.92, rayTwinkle: 0.25, rayTwinkleSpeed: 0.9 },
-  overcastClouds: { effect: "cloud", speed: 0.12, density: 0.95, height: 0.86, scale: 1.85, sunIntensity: 0.4, sunAngle: 0.95, raySpread: 1.15, rayTwinkle: 0.18, rayTwinkleSpeed: 0.7 },
-  stormClouds: { effect: "cloud", speed: 0.2, density: 1.25, height: 0.94, scale: 2.2, sunIntensity: 0.12, sunAngle: 1.08, raySpread: 1.35, rayTwinkle: 0.12, rayTwinkleSpeed: 0.6 },
-  goldenHourRays: { effect: "cloud", speed: 0.14, density: 0.72, height: 0.82, scale: 1.5, sunIntensity: 1.3, sunAngle: 0.72, raySpread: 0.78, rayTwinkle: 0.78, rayTwinkleSpeed: 1.4 },
-  sunnySoftRays: { effect: "cloud", speed: 0.13, density: 0.62, height: 0.76, scale: 1.4, sunIntensity: 1.05, sunAngle: 0.8, raySpread: 0.95, rayTwinkle: 0.35, rayTwinkleSpeed: 0.95 },
-  sunsetTwinkleRays: { effect: "cloud", speed: 0.1, density: 0.74, height: 0.84, scale: 1.55, sunIntensity: 1.35, sunAngle: 0.64, raySpread: 0.8, rayTwinkle: 1.0, rayTwinkleSpeed: 1.6 },
-  dramaticCrepuscularRays: { effect: "cloud", speed: 0.11, density: 0.9, height: 0.9, scale: 1.9, sunIntensity: 1.5, sunAngle: 0.7, raySpread: 0.68, rayTwinkle: 0.6, rayTwinkleSpeed: 1.2 },
-  morningHazeRays: { effect: "cloud", speed: 0.09, density: 0.52, height: 0.7, scale: 1.3, sunIntensity: 0.9, sunAngle: 0.9, raySpread: 1.05, rayTwinkle: 0.42, rayTwinkleSpeed: 0.8 },
+  lightClouds: { effect: "cloud", speed: 0.16, density: 0.58, height: 0.72, scale: 0.82, shadowIntensity: 0.42, shadowSoftness: 0.68, sunIntensity: 0.0, sunAngle: 0.84, raySpread: 0.92, rayTwinkle: 0.25, rayTwinkleSpeed: 0.9 },
+  overcastClouds: { effect: "cloud", speed: 0.12, density: 0.95, height: 0.86, scale: 0.95, shadowIntensity: 0.48, shadowSoftness: 0.74, sunIntensity: 0.0, sunAngle: 0.95, raySpread: 1.15, rayTwinkle: 0.18, rayTwinkleSpeed: 0.7 },
+  stormClouds: { effect: "cloud", speed: 0.2, density: 1.25, height: 0.94, scale: 1.15, shadowIntensity: 0.6, shadowSoftness: 0.52, sunIntensity: 0.0, sunAngle: 1.08, raySpread: 1.35, rayTwinkle: 0.12, rayTwinkleSpeed: 0.6 },
+  goldenHourRays: { effect: "cloud", speed: 0.14, density: 0.72, height: 0.82, scale: 0.88, shadowIntensity: 0.4, shadowSoftness: 0.62, sunIntensity: 0.75, sunAngle: 0.72, raySpread: 0.78, rayTwinkle: 0.78, rayTwinkleSpeed: 1.4 },
+  sunnySoftRays: { effect: "cloud", speed: 0.13, density: 0.62, height: 0.76, scale: 0.78, shadowIntensity: 0.32, shadowSoftness: 0.76, sunIntensity: 0.45, sunAngle: 0.8, raySpread: 0.95, rayTwinkle: 0.35, rayTwinkleSpeed: 0.95 },
+  sunsetTwinkleRays: { effect: "cloud", speed: 0.1, density: 0.74, height: 0.84, scale: 0.9, shadowIntensity: 0.42, shadowSoftness: 0.64, sunIntensity: 0.8, sunAngle: 0.64, raySpread: 0.8, rayTwinkle: 1.0, rayTwinkleSpeed: 1.6 },
+  dramaticCrepuscularRays: { effect: "cloud", speed: 0.11, density: 0.9, height: 0.9, scale: 1.0, shadowIntensity: 0.52, shadowSoftness: 0.48, sunIntensity: 0.95, sunAngle: 0.7, raySpread: 0.68, rayTwinkle: 0.6, rayTwinkleSpeed: 1.2 },
+  morningHazeRays: { effect: "cloud", speed: 0.09, density: 0.55, height: 0.7, scale: 0.74, shadowIntensity: 0.3, shadowSoftness: 0.82, sunIntensity: 0.3, sunAngle: 0.9, raySpread: 1.05, rayTwinkle: 0.42, rayTwinkleSpeed: 0.8 },
 } as const;
 
 export const WEATHER_PRESETS = {
@@ -373,6 +373,8 @@ export const WeatherEffect = (options: any) => {
     topDown = signal(true),  // Full-screen rain tuned for top-down maps by default
     height = signal(1.0),  // Fog/cloud height parameter (0 = bottom, 1 = full)
     scale = signal(2.0),  // Fog noise scale parameter
+    shadowIntensity = signal(0.38),  // Cloud shadow opacity on the ground
+    shadowSoftness = signal(0.65),  // Cloud shadow edge softness
     sunIntensity = signal(0.85),  // Cloud sunlight shaft intensity
     sunAngle = signal(0.85),  // Cloud sunlight direction angle in radians
     raySpread = signal(1.0),  // Cloud sunlight ray spread
@@ -449,6 +451,10 @@ export const WeatherEffect = (options: any) => {
     typeof height === "function" ? height : signal(height);
   const scaleSignal =
     typeof scale === "function" ? scale : signal(scale);
+  const shadowIntensitySignal =
+    typeof shadowIntensity === "function" ? shadowIntensity : signal(shadowIntensity);
+  const shadowSoftnessSignal =
+    typeof shadowSoftness === "function" ? shadowSoftness : signal(shadowSoftness);
   const sunIntensitySignal =
     typeof sunIntensity === "function" ? sunIntensity : signal(sunIntensity);
   const sunAngleSignal =
@@ -464,6 +470,10 @@ export const WeatherEffect = (options: any) => {
     typeof value === "number" && Number.isFinite(value) ? value : 1.0;
   const normalizeSunIntensityValue = (value: any) =>
     typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0.85;
+  const normalizeShadowIntensityValue = (value: any) =>
+    typeof value === "number" && Number.isFinite(value) ? Math.min(Math.max(value, 0), 0.65) : 0.38;
+  const normalizeShadowSoftnessValue = (value: any) =>
+    typeof value === "number" && Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0.65;
   const normalizeSunAngleValue = (value: any) =>
     typeof value === "number" && Number.isFinite(value) ? value : 0.85;
   const normalizeRaySpreadValue = (value: any) =>
@@ -603,6 +613,8 @@ export const WeatherEffect = (options: any) => {
       uDensity: { value: densitySignal(), type: "f32" },
       uHeight: { value: normalizeHeightValue(heightSignal()), type: "f32" },
       uViewportOrigin: { value: [originX(), originY()], type: "vec2<f32>" },
+      uShadowIntensity: { value: normalizeShadowIntensityValue(shadowIntensitySignal()), type: "f32" },
+      uShadowSoftness: { value: normalizeShadowSoftnessValue(shadowSoftnessSignal()), type: "f32" },
       uSunIntensity: { value: normalizeSunIntensityValue(sunIntensitySignal()), type: "f32" },
       uSunDirection: { value: sunDirectionFromAngle(initialSunAngle), type: "vec2<f32>" },
       uRaySpread: { value: normalizeRaySpreadValue(raySpreadSignal()), type: "f32" },
@@ -642,6 +654,8 @@ export const WeatherEffect = (options: any) => {
   let prevHeight = heightSignal();
   let prevScale = scaleSignal();
   let prevSunIntensity = normalizeSunIntensityValue(sunIntensitySignal());
+  let prevShadowIntensity = normalizeShadowIntensityValue(shadowIntensitySignal());
+  let prevShadowSoftness = normalizeShadowSoftnessValue(shadowSoftnessSignal());
   let prevSunAngle = normalizeSunAngleValue(sunAngleSignal());
   let prevRaySpread = normalizeRaySpreadValue(raySpreadSignal());
   let prevRayTwinkle = normalizeRayTwinkleValue(rayTwinkleSignal());
@@ -776,6 +790,18 @@ export const WeatherEffect = (options: any) => {
       }
 
       if (effectSignal() === 'cloud') {
+        const currentShadowIntensity = normalizeShadowIntensityValue(shadowIntensitySignal());
+        if (currentShadowIntensity !== prevShadowIntensity) {
+          uniformGroup.uniforms.uShadowIntensity = currentShadowIntensity;
+          prevShadowIntensity = currentShadowIntensity;
+        }
+
+        const currentShadowSoftness = normalizeShadowSoftnessValue(shadowSoftnessSignal());
+        if (currentShadowSoftness !== prevShadowSoftness) {
+          uniformGroup.uniforms.uShadowSoftness = currentShadowSoftness;
+          prevShadowSoftness = currentShadowSoftness;
+        }
+
         const currentSunIntensity = normalizeSunIntensityValue(sunIntensitySignal());
         if (currentSunIntensity !== prevSunIntensity) {
           uniformGroup.uniforms.uSunIntensity = currentSunIntensity;

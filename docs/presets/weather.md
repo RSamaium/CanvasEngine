@@ -9,7 +9,7 @@
 - rain
 - snow
 - fog (RPG-style)
-- cloud (with optional sun rays)
+- cloud shadows projected on the ground (with optional sun rays)
 
 Rain mode combines scrolling streak layers with short ground impact splashes.
 Rain props are read reactively, including `speed`, `windDirection`, `windStrength`, `density`, `maxDrops`, and `topDown`.
@@ -93,9 +93,9 @@ Use `sortableChildren` on `Viewport` and a high `zIndex` on `Weather`.
 </Canvas>
 ```
 
-## Cloud Sun Rays
+## Cloud Shadows and Sun Rays
 
-Cloud mode supports sun shafts with directional control and twinkle.
+Cloud mode renders broad, moving shadows on the ground instead of a white atmospheric veil. This makes it visually distinct from fog. It also supports optional sun shafts with directional control and twinkle.
 
 Important behavior:
 
@@ -109,6 +109,8 @@ Important behavior:
   density={0.75}
   height={0.84}
   scale={1.55}
+  shadowIntensity={0.38}
+  shadowSoftness={0.65}
   sunIntensity={1.35}
   sunAngle={0.64}
   raySpread={0.8}
@@ -155,6 +157,8 @@ Important behavior:
 | `topDown` | `boolean \| Signal<boolean>` | `true` | rain | Spreads impacts across the visible map. Use `false` to keep impacts near the bottom ground line |
 | `height` | `number \| Signal<number>` | `1.0` | fog/cloud | Vertical concentration |
 | `scale` | `number \| Signal<number>` | `2.0` | fog/cloud | Noise scale |
+| `shadowIntensity` | `number \| Signal<number>` | `0.38` | cloud | Ground-shadow opacity (`0` to `0.65`) |
+| `shadowSoftness` | `number \| Signal<number>` | `0.65` | cloud | Shadow edge softness (`0` to `1`) |
 | `sunIntensity` | `number \| Signal<number>` | `0.85` | cloud | Sun ray intensity |
 | `sunAngle` | `number \| Signal<number>` | `0.85` | cloud | Sun direction angle (radians) |
 | `raySpread` | `number \| Signal<number>` | `1.0` | cloud | Ray spread width |
@@ -172,6 +176,8 @@ Important behavior:
 - Fog `density`: `0.7` to `1.7`
 - Fog `height`: `0.45` to `0.9`
 - Cloud `density`: `0.5` to `1.3`
+- Cloud `shadowIntensity`: `0.3` to `0.6`
+- Cloud `shadowSoftness`: `0.5` to `0.85`
 - Cloud `sunIntensity`: `0.1` to `1.5`
 - Cloud `raySpread`: `0.68` to `1.35`
 - Cloud `rayTwinkle`: `0.0` to `1.0` (or more for stylized effects)

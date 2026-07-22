@@ -147,6 +147,8 @@ export function createCloudShader(): GlProgram {
     uniform float uDensity;
     uniform float uHeight;
     uniform vec2  uViewportOrigin;
+    uniform float uShadowIntensity;
+    uniform float uShadowSoftness;
     uniform float uSunIntensity;
     uniform vec2  uSunDirection;
     uniform float uRaySpread;
@@ -207,20 +209,24 @@ export function createCloudShader(): GlProgram {
       );
       vec2 flowUv = worldUv + wobble;
 
-      float cloudNoise = fbm(flowUv * scale + driftMain);
-      float detailNoise = fbm(flowUv * (scale * 2.4) + driftDetail);
+      // Cloud mode represents shadows cast on the ground, not white cloud
+      // volumes in front of the scene. Broad masses keep it distinct from fog.
+      float cloudNoise = fbm(flowUv * (scale * 3.2) + driftMain);
+      vec2 shapeWarp = vec2(
+        fbm(flowUv * (scale * 0.9) + driftDetail + 11.7),
+        fbm(flowUv * (scale * 0.95) - driftDetail + 37.1)
+      );
+      float detailNoise = fbm((flowUv + (shapeWarp - 0.6) * 0.38) * (scale * 5.5) + driftDetail);
+      float cloudField = cloudNoise * 0.78 + detailNoise * 0.22;
 
-      float shape = smoothstep(0.4, 0.93, cloudNoise);
-      float detail = smoothstep(0.36, 0.9, detailNoise);
-      float puff = shape * (0.55 + 0.45 * detail);
-
-      float heightControl = clamp(uHeight, 0.0, 1.0);
-      float fullScreen = step(0.99, heightControl);
-      float skyHeight = pow(clamp(1.0 - vUV.y, 0.0, 1.0), 0.68);
-      float heightFactor = mix(skyHeight, 1.0, heightControl);
-      heightFactor = mix(heightFactor, 1.0, fullScreen);
-      float cloud = puff * density * 0.72 * heightFactor;
-      float cloudAlpha = clamp(cloud, 0.0, 0.68);
+      float coverage = clamp(density * mix(0.9, 1.08, clamp(uHeight, 0.0, 1.0)), 0.0, 1.5);
+      float coverageMix = clamp((coverage - 0.3) / 1.05, 0.0, 1.0);
+      float threshold = mix(0.69, 0.48, coverageMix);
+      float edgeWidth = mix(0.035, 0.105, clamp(uShadowSoftness, 0.0, 1.0));
+      float penumbra = smoothstep(threshold - edgeWidth, threshold + edgeWidth, cloudField);
+      float umbra = smoothstep(threshold + edgeWidth * 0.15, threshold + edgeWidth * 1.65, cloudField);
+      float shadowMask = clamp(penumbra * 0.62 + umbra * 0.38, 0.0, 1.0);
+      float shadowAlpha = shadowMask * clamp(uShadowIntensity, 0.0, 0.65);
 
       vec2 sunDir = uSunDirection;
       if (length(sunDir) < 0.0001) {
@@ -232,8 +238,7 @@ export function createCloudShader(): GlProgram {
       float rayCoord = dot(rayUv, sunDir) * (6.5 / spread);
       float rayNoise = fbm(vec2(rayCoord, rayUv.y * 0.55));
       float shafts = smoothstep(0.5, 0.9, rayNoise);
-      float skyFade = pow(clamp(1.0 - vUV.y, 0.0, 1.0), 1.25);
-      float cloudGap = clamp(1.0 - cloudAlpha * 1.05, 0.0, 1.0);
+      float cloudGap = clamp(1.0 - shadowMask, 0.0, 1.0);
       float twinkleAmount = clamp(uRayTwinkle, 0.0, 1.5);
       float twinkleSpeed = max(uRayTwinkleSpeed, 0.01);
       float twinklePulse = 0.5 + 0.5 * sin(uTime * 1.9 * twinkleSpeed + rayCoord * 1.8);
@@ -243,16 +248,14 @@ export function createCloudShader(): GlProgram {
         clamp(0.7 + 0.35 * twinklePulse + 0.25 * twinkleNoise, 0.35, 1.55),
         twinkleAmount
       );
-      float rayAlpha = shafts * skyFade * cloudGap * clamp(uSunIntensity, 0.0, 2.0) * twinkle * 0.58;
+      float rayAlpha = shafts * cloudGap * clamp(uSunIntensity, 0.0, 2.0) * twinkle * 0.22;
 
-      vec3 cloudDark = vec3(0.82, 0.87, 0.94);
-      vec3 cloudBright = vec3(0.98, 0.99, 1.0);
-      vec3 cloudColor = mix(cloudDark, cloudBright, detail * 0.55);
+      vec3 shadowColor = vec3(0.025, 0.045, 0.075);
       vec3 rayColor = vec3(1.0, 0.95, 0.8);
 
-      float totalAlpha = cloudAlpha + rayAlpha;
-      float alpha = clamp(totalAlpha, 0.0, 0.86);
-      vec3 premulColor = cloudColor * cloudAlpha + rayColor * rayAlpha;
+      float totalAlpha = shadowAlpha + rayAlpha;
+      float alpha = clamp(totalAlpha, 0.0, 0.72);
+      vec3 premulColor = shadowColor * shadowAlpha + rayColor * rayAlpha;
       if (totalAlpha > 0.0001) {
         premulColor *= (alpha / totalAlpha);
       }
