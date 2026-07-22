@@ -29,5 +29,6 @@ cache
 .vitepress/cache
 coverage
 sample/public/*
+!sample/public/back.png
 !sample/public/hud-avatar.png
 benchmarks/results
