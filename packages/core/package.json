@@ -9,12 +9,12 @@
     "dev": "vite build --watch"
   },
   "peerDependencies": {
-    "pixi.js": "^8.9.2"
+    "pixi.js": "^8.19.0"
   },
   "dependencies": {
     "@barvynkoa/particle-emitter": "^0.0.1",
     "@chenglou/pretext": "^0.0.6",
-    "@pixi/layout": "^3.2.0",
+    "@pixi/layout": "^3.2.1",
     "@signe/reactive": "^2.9.0",
     "howler": "^2.2.4",
     "joypad.js": "^2.3.5",

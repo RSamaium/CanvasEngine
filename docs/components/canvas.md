@@ -33,6 +33,20 @@ The start component passed to `bootstrapCanvas` must begin with `Canvas`.
 
 You can use CanvasEngine display and layout props, plus renderer options supported by PixiJS.
 
+`Canvas` is itself the root flex container. Properties such as `flexDirection`,
+`gap`, `padding`, `justifyContent`, and `alignItems` apply directly to its
+children. Its Yoga width and height always follow the PixiJS renderer screen and
+are updated on renderer resize.
+
+CanvasEngine recalculates intrinsic layout sizes immediately by default. For a
+very large scene, you can opt into throttling when bootstrapping:
+
+```ts
+bootstrapCanvas(root, App, {
+  layout: { throttle: 50 },
+})
+```
+
 ::: tip
 Use `Canvas` for the scene root. Use `Container` to group or lay out content inside the scene.
 :::

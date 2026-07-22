@@ -10,7 +10,7 @@ import { useProps } from "../hooks/useProps";
 import { ComponentInstance, DisplayObject } from "./DisplayObject";
 import { ComponentFunction } from "../engine/signal";
 import { SignalOrPrimitive } from "./types";
-import { Size } from "./types/DisplayObject";
+import { DisplayObjectProps, Size } from "./types/DisplayObject";
 import { Scheduler, Tick } from "../directives/Scheduler";
 import { GlobalAssetLoader } from "../utils/GlobalAssetLoader";
 
@@ -26,7 +26,7 @@ interface CanvasElement extends Element<ComponentInstance> {
 
 registerComponent("Canvas", class Canvas extends DisplayObject(Container) { });
 
-export interface CanvasProps extends Props {
+export interface CanvasProps extends Props, DisplayObjectProps {
   cursorStyles?: () => any;
   width?: SignalOrPrimitive<Size>;
   height?: SignalOrPrimitive<Size>;
@@ -89,33 +89,22 @@ export const Canvas: ComponentFunction<CanvasProps> = async (props = {}) => {
     (globalThis as any).__PIXI_STAGE__ = canvasElement.componentInstance;
     (globalThis as any).__PIXI_RENDERER__ = renderer;
 
-    if (props.tickStart !== false) canvasElement.directives.tick.start()
+    app.stage = canvasElement.componentInstance as any;
+
+    const stage = app.stage as any;
+    stage.setLayoutRootSize?.(app.screen.width, app.screen.height);
+
+    canvasSize.set({ width: app.screen.width, height: app.screen.height })
 
     const renderEffect = effect(() => {
       canvasElement.propObservables!.tick();
       renderer.render(canvasElement.componentInstance as any);
     });
 
-    app.stage = canvasElement.componentInstance as any;
-
-    app.stage.layout = {
-      width: app.screen.width,
-      height: app.screen.height,
-      justifyContent: props.justifyContent,
-      alignItems: props.alignItems,
-    };
-
-    canvasSize.set({ width: app.screen.width, height: app.screen.height })
-
     const resizeHandler = (width: number, height: number) => {
       canvasSize.set({ width, height });
 
-      if (app.stage.layout) {
-        app.stage.layout = {
-          width,
-          height
-        }
-      }
+      (app.stage as any).setLayoutRootSize?.(width, height);
     };
 
     app.renderer.on('resize', resizeHandler);

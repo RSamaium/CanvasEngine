@@ -308,4 +308,148 @@ describe('Flex Positioning', () => {
         expect(bounds.width).toBe(200)
         expect(bounds.height).toBe(100)
     })
+
+    it('should apply two-value spacing and structural borders', async () => {
+        const parent = await TestBed.createComponent(Container, {
+            display: 'flex',
+            flexDirection: 'row',
+            width: 300,
+            height: 120,
+            padding: [10, 20],
+            border: [2, 4],
+        }, [
+            h(Container, { width: 50, height: 30, margin: [5, 10] }),
+        ])
+
+        const child = parent.props.children?.[0] as Element<ComponentInstance>
+        expect(child.componentInstance.layout.realX).toBe(34)
+        expect(child.componentInstance.layout.realY).toBe(17)
+    })
+
+    it('should reset gap reactively to zero', async () => {
+        const gap = signal(20)
+        const parent = await TestBed.createComponent(Container, {
+            display: 'flex',
+            flexDirection: 'row',
+            width: 300,
+            height: 100,
+            gap,
+        }, [
+            h(Container, { width: 50, height: 50 }),
+            h(Container, { width: 50, height: 50 }),
+        ])
+        const child2 = parent.props.children?.[1] as Element<ComponentInstance>
+        expect(child2.componentInstance.layout.realX).toBe(70)
+
+        gap.set(0)
+        parent.props.context.app().render()
+        expect(child2.componentInstance.layout.realX).toBe(50)
+    })
+
+    it('should remove display none items and restore them', async () => {
+        const display = signal<'flex' | 'none'>('flex')
+        const parent = await TestBed.createComponent(Container, {
+            display: 'flex',
+            flexDirection: 'row',
+            width: 300,
+            height: 100,
+        }, [
+            h(Container, { width: 50, height: 50, display }),
+            h(Container, { width: 50, height: 50 }),
+        ])
+        const child1 = parent.props.children?.[0] as Element<ComponentInstance>
+        const child2 = parent.props.children?.[1] as Element<ComponentInstance>
+
+        display.set('none')
+        parent.props.context.app().render()
+        expect(child1.componentInstance.visible).toBe(false)
+        expect(child2.componentInstance.layout.realX).toBe(0)
+
+        display.set('flex')
+        parent.props.context.app().render()
+        expect(child1.componentInstance.visible).toBe(true)
+        expect(child2.componentInstance.layout.realX).toBe(50)
+    })
+
+    it('should enroll existing children when flex activates after mount', async () => {
+        const flexDirection = signal<any>(undefined)
+        const parent = await TestBed.createComponent(Container, {
+            width: 300,
+            height: 100,
+            flexDirection,
+        }, [
+            h(Container, { width: 50, height: 50 }),
+            h(Container, { width: 50, height: 50 }),
+        ])
+        const child2 = parent.props.children?.[1] as Element<ComponentInstance>
+
+        flexDirection.set('row')
+        parent.props.context.app().render()
+        expect(child2.componentInstance.layout.realX).toBe(50)
+    })
+
+    it('should detach Yoga when the last reactive layout prop is disabled', async () => {
+        const flexDirection = signal<any>(undefined)
+        const outer = await TestBed.createComponent(Container, {
+            width: 400,
+            height: 200,
+        }, [
+            h(Container, {
+                width: 300,
+                height: 100,
+                flexDirection,
+            }, [
+                h(Container, { width: 50, height: 50 }),
+                h(Container, { width: 50, height: 50 }),
+            ]),
+        ])
+        const parent = outer.props.children?.[0] as Element<ComponentInstance>
+        const child1 = parent.props.children?.[0] as Element<ComponentInstance>
+        const child2 = parent.props.children?.[1] as Element<ComponentInstance>
+
+        flexDirection.set('row')
+        outer.props.context.app().render()
+        expect(parent.componentInstance.layout !== null).toBe(true)
+        expect(child1.componentInstance.layout !== null).toBe(true)
+        expect(child2.componentInstance.layout !== null).toBe(true)
+
+        flexDirection.set(undefined)
+        outer.props.context.app().render()
+
+        expect(parent.componentInstance.layout === null).toBe(true)
+        expect(child1.componentInstance.layout === null).toBe(true)
+        expect(child2.componentInstance.layout === null).toBe(true)
+
+        child2.componentInstance.position.set(80, 12)
+        outer.props.context.app().render()
+        expect(child2.componentInstance.x).toBe(80)
+        expect(child2.componentInstance.y).toBe(12)
+    })
+
+    it('should clear obsolete container styles when it remains a layout item', async () => {
+        const flexDirection = signal<any>(undefined)
+        const parent = await TestBed.createComponent(Container, {
+            width: 300,
+            height: 100,
+            flexDirection,
+        }, [
+            h(Container, { width: 50, height: 50 }),
+            h(Container, { width: 50, height: 50 }),
+        ])
+        const child1 = parent.props.children?.[0] as Element<ComponentInstance>
+        const child2 = parent.props.children?.[1] as Element<ComponentInstance>
+
+        flexDirection.set('column')
+        parent.props.context.app().render()
+        expect(parent.componentInstance.layout.style.flexDirection).toBe('column')
+        expect(child2.componentInstance.layout.realY).toBe(50)
+
+        flexDirection.set(undefined)
+        parent.props.context.app().render()
+
+        expect(parent.componentInstance.layout !== null).toBe(true)
+        expect(parent.componentInstance.layout.style.flexDirection).toBe('row')
+        expect(child1.componentInstance.layout === null).toBe(true)
+        expect(child2.componentInstance.layout === null).toBe(true)
+    })
 })

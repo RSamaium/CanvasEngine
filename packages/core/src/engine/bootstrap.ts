@@ -71,6 +71,9 @@ type BootstrapResult = {
 export const bootstrapCanvas = async (rootElement: HTMLElement | null, canvas: ComponentFunction<any>, options?: BootstrapOptions): Promise<BootstrapResult> => {
   // Extract component registration options
   const { components, autoRegister, enableLayout, ...appOptions } = options ?? {};
+  const layoutOptions = (appOptions as ApplicationOptions & {
+    layout?: { throttle?: number };
+  }).layout;
   if (enableLayout !== false) {
     await import('@pixi/layout');
   }
@@ -91,12 +94,17 @@ export const bootstrapCanvas = async (rootElement: HTMLElement | null, canvas: C
   }
   
   const app = new Application();
-  await app.init({
+  const initOptions = {
     resizeTo: rootElement,
     autoStart: false,
     antialias: true,
-    ...appOptions
-  });
+    ...appOptions,
+    layout: {
+      throttle: 0,
+      ...(layoutOptions ?? {}),
+    },
+  } as unknown as Partial<ApplicationOptions>;
+  await app.init(initOptions);
 
   const renderCanvasElement = (canvasElement: any) => {
     if (canvasElement.tag != 'Canvas') {

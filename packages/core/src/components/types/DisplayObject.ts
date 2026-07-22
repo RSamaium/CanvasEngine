@@ -8,10 +8,20 @@ import { FogVisibilityProps } from "../../directives/FogVisibility";
 import type { ClipProps, OcclusionProps, OutlineProps } from "../../directives/SpriteEffects";
 
 export type FlexDirection = 'row' | 'column' | 'row-reverse' | 'column-reverse';
-export type JustifyContent = 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around';
-export type AlignContent = 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around';
+export type FlexWrap = 'wrap' | 'nowrap' | 'wrap-reverse';
+export type JustifyContent = 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'space-evenly';
+export type AlignContent = 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'space-between' | 'space-around' | 'space-evenly';
+export type AlignItems = 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline';
+export type AlignSelf = 'auto' | 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline';
 export type Size = number | `${number}%`
-export type EdgeSize = SignalOrPrimitive<Size | [Size, Size] | [Size, Size, Size, Size]>
+export type EdgeSizeValue = Size | [Size, Size] | [Size, Size, Size, Size];
+export type EdgeSize = EdgeSizeValue;
+export type LayoutBorder = number | [number, number] | [number, number, number, number];
+export type PixiStrokeObject = Extract<
+    NonNullable<Parameters<PIXI.Graphics["stroke"]>[0]>,
+    object
+>;
+export type Border = LayoutBorder | PixiStrokeObject;
 export type ObjectFit = 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
 export type ObjectPosition = string;
 export type TransformOrigin = string;
@@ -31,31 +41,33 @@ export interface DisplayObjectProps {
     minHeight?: SignalOrPrimitive<Size>;
     maxWidth?: SignalOrPrimitive<Size>;
     maxHeight?: SignalOrPrimitive<Size>;
-    display?: Display;
+    display?: SignalOrPrimitive<Display>;
     aspectRatio?: SignalOrPrimitive<number>;
     flexGrow?: SignalOrPrimitive<number>;
     flexShrink?: SignalOrPrimitive<number>;
     flexBasis?: SignalOrPrimitive<Size>;
-    rowGap?: SignalOrPrimitive<number>;
-    columnGap?: SignalOrPrimitive<number>;
-    positionType?: PositionType;
+    flexWrap?: SignalOrPrimitive<FlexWrap>;
+    gap?: SignalOrPrimitive<Size>;
+    rowGap?: SignalOrPrimitive<Size>;
+    columnGap?: SignalOrPrimitive<Size>;
+    positionType?: SignalOrPrimitive<PositionType>;
     top?: SignalOrPrimitive<Size>;
     right?: SignalOrPrimitive<Size>;
     bottom?: SignalOrPrimitive<Size>;
     left?: SignalOrPrimitive<Size>;
-    objectFit?: ObjectFit;
-    objectPosition?: ObjectPosition;
-    transformOrigin?: TransformOrigin;
+    objectFit?: SignalOrPrimitive<ObjectFit>;
+    objectPosition?: SignalOrPrimitive<ObjectPosition>;
+    transformOrigin?: SignalOrPrimitive<TransformOrigin>;
     children?: any[];
-    flexDirection?: FlexDirection;
-    justifyContent?: JustifyContent;
-    alignItems?: AlignContent;
-    alignContent?: AlignContent;
-    alignSelf?: AlignContent;
+    flexDirection?: SignalOrPrimitive<FlexDirection>;
+    justifyContent?: SignalOrPrimitive<JustifyContent>;
+    alignItems?: SignalOrPrimitive<AlignItems>;
+    alignContent?: SignalOrPrimitive<AlignContent>;
+    alignSelf?: SignalOrPrimitive<AlignSelf>;
     alpha?: SignalOrPrimitive<number>;
-    margin?: EdgeSize;
-    padding?: EdgeSize;
-    border?: EdgeSize;
+    margin?: SignalOrPrimitive<EdgeSize>;
+    padding?: SignalOrPrimitive<EdgeSize>;
+    border?: SignalOrPrimitive<Border>;
     absolute?: SignalOrPrimitive<boolean>;
     scale?: ObservablePointSignal | number;
     anchor?: ObservablePointSignal;

@@ -26,6 +26,7 @@ export const EXAMPLES: ExampleDefinition[] = [
   { slug: 'fx', title: 'FX Presets', load: () => import('./fx.ce') },
   { slug: 'layout-center', title: 'Layout · Centered GUI', load: () => import('./layout-center-gui.ce') },
   { slug: 'layout-overlay-resize', title: 'Layout · Overlay & Resize', load: () => import('./layout-overlay-resize-gui.ce') },
+  { slug: 'layout-validation', title: 'Layout · Validation Lab', load: () => import('./layout-validation.ce') },
   { slug: 'light', title: 'Dynamic Light', load: () => import('./light.ce') },
   { slug: 'loader-spritesheet', title: 'Spritesheet Loader', load: () => import('./loader-spritesheet.ce') },
   { slug: 'loop-render-order', title: 'Loop Render Order', load: () => import('./loop-render-order.ce') },

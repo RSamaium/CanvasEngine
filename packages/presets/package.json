@@ -13,9 +13,11 @@
   },
   "peerDependencies": {
     "canvasengine": "^2.0.0-beta.45",
-    "pixi.js": "^8.9.2"
+    "pixi.js": "^8.19.0"
   },
   "devDependencies": {
+    "canvasengine": "workspace:*",
+    "pixi.js": "^8.19.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.10",
     "vite-plugin-dts": "^4.5.4"

@@ -48,14 +48,14 @@ Pour obtenir la documentation complète et détaillée sur toutes les propriét�
 |----------------|---------------------|-----------------------------------------------------------------------------|
 | flexDirection  | string              | Direction of flex items. Values: 'row', 'column', 'row-reverse', 'column-reverse'. |
 | flexWrap       | string              | Whether items wrap. Values: 'wrap', 'nowrap', 'wrap-reverse'.               |
-| justifyContent | string              | Alignment along main axis. Values: 'flex-start', 'flex-end', 'center', 'space-between', 'space-around'. |
-| alignItems     | string              | Alignment along cross axis. Values: 'flex-start', 'flex-end', 'center', 'stretch', 'baseline'. |
-| alignContent   | string              | Alignment of lines with multiple items. Values: 'flex-start', 'flex-end', 'center', 'stretch', 'space-between', 'space-around'. |
-| alignSelf      | string              | Override of parent's alignItems for specific item.                          |
+| justifyContent | string              | Main-axis alignment: 'flex-start', 'flex-end', 'center', 'space-between', 'space-around', 'space-evenly'. |
+| alignItems     | string              | Cross-axis alignment: 'flex-start', 'flex-end', 'center', 'stretch', 'baseline'. |
+| alignContent   | string              | Multi-line alignment, including 'stretch', 'space-between', 'space-around', and 'space-evenly'. |
+| alignSelf      | string              | Item override: 'auto', 'flex-start', 'flex-end', 'center', 'stretch', or 'baseline'. |
 | flexGrow       | number              | Grow factor of item relative to other items.                                |
 | flexShrink     | number              | Shrink factor of item relative to other items.                              |
 | flexBasis      | number/string       | Initial size of item before flex growing/shrinking.                         |
-| gap            | number/object       | Gap between items.                                                          |
+| gap            | number/string       | Gap between rows and columns, in pixels or percent.                         |
 | rowGap         | number              | Gap between rows.                                                           |
 | columnGap      | number              | Gap between columns.                                                        |
 
@@ -75,7 +75,12 @@ Pour obtenir la documentation complète et détaillée sur toutes les propriét�
 |----------------|---------------------|-----------------------------------------------------------------------------|
 | margin         | number/array        | Space outside border box. Can be single value or array for different sides. |
 | padding        | number/array        | Space inside border box. Can be single value or array for different sides.  |
-| border         | number/array        | Border width. Can be single value or array for different sides.             |
+| border         | number/array/object | Number/array: Yoga border width. Object on Graphics primitives: visual Pixi stroke. |
+
+Spacing arrays follow CSS shorthand ordering: `[vertical, horizontal]` or
+`[top, right, bottom, left]`. A visual Pixi border object is never included in
+Yoga sizing. `display="none"` removes the item from layout and hides its
+rendered subtree.
 
 ### Object Fitting and Alignment
 

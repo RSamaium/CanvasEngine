@@ -15,6 +15,7 @@ export default defineConfig(async () => {
             setupFiles: ['./tests/setup/canvas.ts'],
             exclude: [
                 '**/sample/**',
+                '**/tests/visual/**',
                 '**/node_modules/**'
             ],
             coverage: {

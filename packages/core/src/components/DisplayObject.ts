@@ -2,10 +2,16 @@ import { Element, isElement, Props, isElementFrozen } from "../engine/reactive";
 import { setObservablePoint } from "../engine/utils";
 import type {
   AlignContent,
+  AlignItems,
+  AlignSelf,
   EdgeSize,
   FlexDirection,
+  FlexWrap,
+  JustifyContent,
+  LayoutBorder,
   ObjectFit,
   ObjectPosition,
+  Size,
   TransformOrigin,
 } from "./types/DisplayObject";
 import { signal } from "@signe/reactive";
@@ -13,6 +19,13 @@ import { BlurFilter, ObservablePoint, type Point, type Rectangle } from "pixi.js
 import * as FILTERS from "pixi-filters";
 import { isPercent } from "../utils/functions";
 import { BehaviorSubject, filter, Subject } from "rxjs";
+import {
+  hasLayoutContainerProps,
+  hasLayoutNodeProps,
+  isLayoutBorder,
+  normalizeLayoutProps,
+  withLayoutSize,
+} from "./layout";
 
 export interface ComponentInstance extends PixiMixins.ContainerOptions {
   id?: string;
@@ -106,12 +119,13 @@ export function DisplayObject(extendClass): any {
       [key: string]: any;
     } | null = null;
     isFlex: boolean = false;
+    isLayoutContainer: boolean = false;
     fullProps: Props = {};
     isMounted: boolean = false;
     _anchorPoints = new ObservablePoint({ _onUpdate: () => {} }, 0, 0);
     isCustomAnchor: boolean = false;
-    displayWidth = signal(0);
-    displayHeight = signal(0);
+    displayWidth = signal<Size>(0);
+    displayHeight = signal<Size>(0);
     overrideProps: string[] = [];
     layout = null;
     onBeforeDestroy: OnHook | null = null;
@@ -124,6 +138,7 @@ export function DisplayObject(extendClass): any {
     #computedLayoutBox: { width?: number; height?: number } | null = null;
     // Store reference to element for freeze checking
     #element: Element<any> | null = null;
+    #layoutRootSize: { width: Size; height: Size } | null = null;
 
     /**
      * Get the element reference for freeze checking
@@ -141,7 +156,9 @@ export function DisplayObject(extendClass): any {
 
     get parentIsFlex() {
       if (this.disableLayout) return false;
-      return this.parent?.isFlex;
+      return Boolean(
+        this.parent?.isLayoutContainer ?? this.parent?.isFlex,
+      );
     }
 
     #hasLayoutSetter() {
@@ -154,7 +171,7 @@ export function DisplayObject(extendClass): any {
       return false;
     }
 
-    #ensureLayout() {
+    ensureLayout() {
       if (this.disableLayout) return;
 
       const currentLayout = this.layout as any;
@@ -170,6 +187,64 @@ export function DisplayObject(extendClass): any {
       if (this.#hasLayoutSetter()) {
         this.layout = {};
       }
+    }
+
+    #syncLayoutRole(props: Props) {
+      this.isLayoutContainer = hasLayoutContainerProps(props);
+      // Keep the historical flag as a broad "participates in layout" marker
+      // for compatibility. New code must use isLayoutContainer when deciding
+      // whether this object lays out its own children.
+      this.isFlex = this.isLayoutContainer || hasLayoutNodeProps(props);
+    }
+
+    #ensureLayoutChildren() {
+      if (!this.isLayoutContainer || !Array.isArray(this.children)) return;
+      for (const child of this.children) {
+        child?.ensureLayout?.();
+        child?.applyLayoutProps?.();
+      }
+    }
+
+    detachLayoutSubtree() {
+      if (Array.isArray(this.children)) {
+        for (const child of this.children) {
+          child?.detachLayoutSubtree?.();
+        }
+      }
+      if (this.layout) this.layout = null;
+      this.#computedLayoutBox = null;
+    }
+
+    rehydrateLayoutSubtree() {
+      this.applyLayoutProps();
+      if (!Array.isArray(this.children)) return;
+      for (const child of this.children) {
+        child?.rehydrateLayoutSubtree?.();
+      }
+    }
+
+    applyLayoutProps(props: Props = this.fullProps) {
+      if (this.disableLayout) return;
+      const source = this.#layoutRootSize
+        ? withLayoutSize(props, this.#layoutRootSize.width, this.#layoutRootSize.height)
+        : props;
+      const shouldHaveLayout =
+        this.isLayoutContainer ||
+        Boolean(this.parent?.isLayoutContainer) ||
+        hasLayoutNodeProps(source);
+      if (!shouldHaveLayout) return;
+
+      this.ensureLayout();
+      if (this.layout) {
+        this.layout = normalizeLayoutProps(source, {
+          containerAnchor: this.isCustomAnchor && this.isLayoutContainer,
+        });
+      }
+    }
+
+    setLayoutRootSize(width: Size, height: Size) {
+      this.#layoutRootSize = { width, height };
+      this.applyLayoutProps();
     }
 
     onInit(props: Props) {
@@ -208,28 +283,8 @@ export function DisplayObject(extendClass): any {
       if (props.onAfterMount || props['on-after-mount']) {
         this.onAfterMount = props.onAfterMount || props['on-after-mount'];
       }
-      if (
-        props.justifyContent ||
-        props.alignItems ||
-        props.flexDirection ||
-        props.flexWrap ||
-        props.alignContent ||
-        props.alignSelf ||
-        props.display == "flex" ||
-        props.positionType ||
-        props.top !== undefined ||
-        props.right !== undefined ||
-        props.bottom !== undefined ||
-        props.left !== undefined ||
-        props.flexGrow !== undefined ||
-        props.flexShrink !== undefined ||
-        props.flexBasis !== undefined ||
-        isPercent(props.width) ||
-        isPercent(props.height) ||
-        props.isRoot
-      ) {
-        this.isFlex = true;
-      }
+      this.fullProps = { ...props };
+      this.#syncLayoutRole(this.fullProps);
 
       this.subjectInit.next(this);
     }
@@ -238,8 +293,8 @@ export function DisplayObject(extendClass): any {
       if (this.destroyed) return
       this.#element = element;
       this.#canvasContext = element.props.context;
-      if (this.isFlex) {
-        this.#ensureLayout();
+      if (this.isLayoutContainer || hasLayoutNodeProps(this.fullProps)) {
+        this.ensureLayout();
       }
       if (element.parent) {
         let parentElement = element.parent;
@@ -260,9 +315,9 @@ export function DisplayObject(extendClass): any {
             return;
           }
         }
-        if ((instance.isFlex || this.isFlex) && !this.disableLayout) {
+        if ((instance.isLayoutContainer || this.isLayoutContainer || hasLayoutNodeProps(this.fullProps)) && !this.disableLayout) {
           try {
-            this.#ensureLayout();
+            this.ensureLayout();
           } catch (error) {
             console.warn('Failed to set layout:', error);
           }
@@ -274,6 +329,7 @@ export function DisplayObject(extendClass): any {
         }
         this.isMounted = true;
         this.onUpdate(element.props);
+        this.#ensureLayoutChildren();
         
         // Listen to layout events to store computed layout dimensions
         const layoutHandler = (event: any) => {
@@ -300,8 +356,29 @@ export function DisplayObject(extendClass): any {
         ...props,
       };
 
+      const wasLayoutContainer = this.isLayoutContainer;
+      this.#syncLayoutRole(this.fullProps);
+      const layoutContainerDeactivated = wasLayoutContainer && !this.isLayoutContainer;
+
       if (this.destroyed) return
-      if (!this.#canvasContext || !this.parent) return;
+      if (!this.#canvasContext) return;
+
+      if (layoutContainerDeactivated) {
+        // @pixi/layout merges new styles into the existing Layout instance.
+        // Rebuild the affected tree so removed reactive props cannot survive,
+        // and only nodes that still independently need Yoga are reattached.
+        this.detachLayoutSubtree();
+        this.rehydrateLayoutSubtree();
+      } else if (
+        this.isLayoutContainer ||
+        Boolean(this.parent?.isLayoutContainer) ||
+        hasLayoutNodeProps(this.fullProps)
+      ) {
+        this.ensureLayout();
+      }
+      if (!wasLayoutContainer && this.isLayoutContainer) {
+        this.#ensureLayoutChildren();
+      }
 
       if (props.x !== undefined) this.setX(props.x);
       if (props.y !== undefined) this.setY(props.y);
@@ -312,26 +389,6 @@ export function DisplayObject(extendClass): any {
       }
       if (props.width !== undefined) this.setWidth(props.width);
       if (props.height !== undefined) this.setHeight(props.height);
-      if (props.minWidth !== undefined) this.setMinWidth(props.minWidth);
-      if (props.minHeight !== undefined) this.setMinHeight(props.minHeight);
-      if (props.maxWidth !== undefined) this.setMaxWidth(props.maxWidth);
-      if (props.maxHeight !== undefined) this.setMaxHeight(props.maxHeight);
-      if (props.aspectRatio !== undefined)
-        this.setAspectRatio(props.aspectRatio);
-      if (props.flexGrow !== undefined) this.setFlexGrow(props.flexGrow);
-      if (props.flexShrink !== undefined) this.setFlexShrink(props.flexShrink);
-      if (props.flexBasis !== undefined) this.setFlexBasis(props.flexBasis);
-      if (props.rowGap !== undefined) this.setRowGap(props.rowGap);
-      if (props.columnGap !== undefined) this.setColumnGap(props.columnGap);
-      if (props.top !== undefined) this.setTop(props.top);
-      if (props.left !== undefined) this.setLeft(props.left);
-      if (props.right !== undefined) this.setRight(props.right);
-      if (props.bottom !== undefined) this.setBottom(props.bottom);
-      if (props.objectFit !== undefined) this.setObjectFit(props.objectFit);
-      if (props.objectPosition !== undefined)
-        this.setObjectPosition(props.objectPosition);
-      if (props.transformOrigin !== undefined)
-        this.setTransformOrigin(props.transformOrigin);
       if (props.skew !== undefined) setObservablePoint(this.skew, props.skew);
       if (props.tint) this.tint = props.tint;
       if (props.rotation !== undefined) this.rotation = props.rotation;
@@ -339,20 +396,14 @@ export function DisplayObject(extendClass): any {
       if (props.zIndex !== undefined) this.zIndex = props.zIndex;
       if (props.roundPixels !== undefined) this.roundPixels = props.roundPixels;
       if (props.cursor) this.cursor = props.cursor;
-      if (props.visible !== undefined) this.visible = props.visible;
+      if (props.visible !== undefined || props.display !== undefined) {
+        this.visible = this.fullProps.display === "none"
+          ? false
+          : this.fullProps.visible ?? true;
+      }
       if (props.alpha !== undefined) this.alpha = props.alpha;
       if (props.pivot) setObservablePoint(this.pivot, props.pivot);
-      if (props.flexDirection) this.setFlexDirection(props.flexDirection);
-      if (props.flexWrap) this.setFlexWrap(props.flexWrap);
-      if (props.justifyContent) this.setJustifyContent(props.justifyContent);
-      if (props.alignItems) this.setAlignItems(props.alignItems);
-      if (props.alignContent) this.setAlignContent(props.alignContent);
-      if (props.alignSelf) this.setAlignSelf(props.alignSelf);
-      if (props.margin) this.setMargin(props.margin);
-      if (props.padding) this.setPadding(props.padding);
-      if (props.gap) this.setGap(props.gap);
-      if (props.border) this.setBorder(props.border);
-      if (props.positionType) this.setPositionType(props.positionType);
+      this.applyLayoutProps();
       if (props.filters) this.filters = props.filters;
       if (props.maskOf) {
         if (isElement(props.maskOf)) {
@@ -444,7 +495,7 @@ export function DisplayObject(extendClass): any {
       this.layout = { flexDirection: direction };
     }
 
-    setFlexWrap(wrap: "wrap" | "nowrap" | "wrap-reverse") {
+    setFlexWrap(wrap: FlexWrap) {
       this.layout = { flexWrap: wrap };
     }
 
@@ -452,22 +503,15 @@ export function DisplayObject(extendClass): any {
       this.layout = { alignContent: align };
     }
 
-    setAlignSelf(align: AlignContent) {
+    setAlignSelf(align: AlignSelf) {
       this.layout = { alignSelf: align };
     }
 
-    setAlignItems(align: AlignContent) {
+    setAlignItems(align: AlignItems) {
       this.layout = { alignItems: align };
     }
 
-    setJustifyContent(
-      justifyContent:
-        | "flex-start"
-        | "flex-end"
-        | "center"
-        | "space-between"
-        | "space-around"
-    ) {
+    setJustifyContent(justifyContent: JustifyContent) {
       this.layout = { justifyContent };
     }
 
@@ -512,86 +556,38 @@ export function DisplayObject(extendClass): any {
     }
 
     setPadding(padding: EdgeSize) {
-      if (padding instanceof Array) {
-        if (padding.length === 2) {
-          this.layout = {
-            paddingVertical: padding[0],
-            paddingHorizontal: padding[1],
-          };
-        } else if (padding.length === 4) {
-          this.layout = {
-            paddingTop: padding[0],
-            paddingRight: padding[1],
-            paddingBottom: padding[2],
-            paddingLeft: padding[3],
-          };
-        }
-      } else {
-        this.layout = { padding };
-      }
+      this.layout = normalizeLayoutProps({ padding });
     }
 
     setMargin(margin: EdgeSize) {
-      if (margin instanceof Array) {
-        if (margin.length === 2) {
-          this.layout = {
-            marginVertical: margin[0],
-            marginHorizontal: margin[1],
-          };
-        } else if (margin.length === 4) {
-          this.layout = {
-            marginTop: margin[0],
-            marginRight: margin[1],
-            marginBottom: margin[2],
-            marginLeft: margin[3],
-          };
-        }
-      } else {
-        this.layout = { margin };
-      }
+      this.layout = normalizeLayoutProps({ margin });
     }
 
-    setGap(gap: EdgeSize) {
+    setGap(gap: Size) {
       this.layout = { gap };
     }
 
-    setBorder(border: EdgeSize) {
-      if (border instanceof Array) {
-        if (border.length === 2) {
-          this.layout = {
-            borderVertical: border[0],
-            borderHorizontal: border[1],
-          };
-        } else if (border.length === 4) {
-          this.layout = {
-            borderTop: border[0],
-            borderRight: border[1],
-            borderBottom: border[2],
-            borderLeft: border[3],
-          };
-        }
-      } else {
-        this.layout = { border };
-      }
+    setBorder(border: LayoutBorder) {
+      if (isLayoutBorder(border)) this.layout = normalizeLayoutProps({ border });
     }
 
-    setPositionType(positionType: "relative" | "absolute") {
+    setPositionType(positionType: "relative" | "absolute" | "static") {
       this.layout = { position: positionType };
     }
 
-    setWidth(width: number) {
+    setWidth(width: Size) {
       this.displayWidth.set(width);
       if (!this.parentIsFlex && !this.layout) {
-        this.width = width;
+        if (!isPercent(width)) this.width = width;
       } else {
         this.layout = { width };
       }
     }
 
-    setHeight(height: number) {
+    setHeight(height: Size) {
       this.displayHeight.set(height);
       if (!this.parentIsFlex && !this.layout) {
-        this.height = height;
+        if (!isPercent(height)) this.height = height;
       } else {
         this.layout = { height };
       }
@@ -607,9 +603,10 @@ export function DisplayObject(extendClass): any {
         return typeof this.width === 'number' ? this.width : 0;
       }
       // For static values, use native PixiJS width or displayWidth signal
+      const requestedWidth = this.displayWidth();
       const staticWidth = typeof this.width === 'number' && this.width > 0 
         ? this.width 
-        : (typeof this.displayWidth() === 'number' ? this.displayWidth() : 0);
+        : (typeof requestedWidth === 'number' ? requestedWidth : 0);
       return staticWidth;
     }
 
@@ -623,9 +620,10 @@ export function DisplayObject(extendClass): any {
         return typeof this.height === 'number' ? this.height : 0;
       }
       // For static values, use native PixiJS height or displayHeight signal
+      const requestedHeight = this.displayHeight();
       const staticHeight = typeof this.height === 'number' && this.height > 0 
         ? this.height 
-        : (typeof this.displayHeight() === 'number' ? this.displayHeight() : 0);
+        : (typeof requestedHeight === 'number' ? requestedHeight : 0);
       return staticHeight;
     }
 
@@ -665,11 +663,11 @@ export function DisplayObject(extendClass): any {
     }
 
     // Gap properties
-    setRowGap(rowGap: number) {
+    setRowGap(rowGap: Size) {
       this.layout = { rowGap };
     }
 
-    setColumnGap(columnGap: number) {
+    setColumnGap(columnGap: Size) {
       this.layout = { columnGap };
     }
 

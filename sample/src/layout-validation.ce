@@ -1,0 +1,245 @@
+<Canvas
+  backgroundColor="#07111f"
+  flexDirection="column"
+  width="100%"
+  height="100%"
+  padding={[18, 22]}
+  gap={14}
+>
+  <Container width="100%" height={58} display="flex" flexDirection="column" gap={4}>
+    <Text text={title} color="#f8fafc" size={22} fontFamily="monospace" />
+    <Text text={subtitle} color="#7dd3fc" size={12} fontFamily="monospace" />
+  </Container>
+
+  <Container
+    width="100%"
+    flexGrow={1}
+    display="flex"
+    justifyContent="center"
+    alignItems="center"
+    positionType="relative"
+  >
+    <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#0f1c2e" border={{ width: 1, color: "#29415f" }} />
+
+    @if (canvasRootCase) {
+      <Container width="92%" height="82%" display="flex" flexDirection="column" justifyContent="center" alignItems="center" gap={22} border={2} padding={[14, 24]}>
+        <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#10243a" border={{ width: 2, color: "#38bdf8" }} />
+        <Rect width={180} height={54} color="#0ea5e9" border={{ width: 2, color: "#bae6fd" }} />
+        <Rect width={260} height={70} color="#2563eb" border={{ width: 2, color: "#bfdbfe" }} />
+        <Rect width={120} height={42} color="#7c3aed" border={{ width: 2, color: "#ddd6fe" }} />
+      </Container>
+    }
+
+    @if (alignmentsCase) {
+      <Container width="94%" height="82%" display="flex" flexDirection="column" gap={18}>
+        <Container width="100%" height="44%" display="flex" flexDirection="row" justifyContent="space-evenly" alignItems="center" border={2}>
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#15243a" />
+          <Rect width={70} height={54} color="#22c55e" />
+          <Rect width={70} height={82} color="#14b8a6" />
+          <Rect width={70} height={38} color="#06b6d4" />
+        </Container>
+        <Container width="100%" flexGrow={1} display="flex" flexDirection="row" alignItems="stretch" gap={18} border={2} padding={10}>
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#172033" />
+          <Rect flexGrow={1} color="#f97316" />
+          <Rect flexGrow={2} alignSelf="center" height={72} color="#eab308" />
+          <Rect flexGrow={1} color="#ef4444" />
+        </Container>
+      </Container>
+    }
+
+    @if (spacingCase) {
+      <Container width="92%" height="82%" display="flex" flexDirection="row" justifyContent="space-evenly" alignItems="center" padding={[28, 42]} border={[6, 10]}>
+        <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#1b2638" border={{ width: 2, color: "#64748b" }} />
+        <Container width={180} height={150} display="flex" justifyContent="center" alignItems="center" padding={[14, 24]} border={[3, 7]}>
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#3b1d4a" border={{ width: 2, color: "#d946ef" }} />
+          <Rect width={72} height={58} color="#c026d3" border={{ width: 4, color: "#f5d0fe" }} />
+        </Container>
+        <Container width={180} height={150} display="flex" justifyContent="center" alignItems="center" margin={[18, 30]} padding={[8, 16, 24, 32]} border={[2, 4, 6, 8]}>
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#14312d" border={{ width: 2, color: "#2dd4bf" }} />
+          <Rect width={58} height={58} color="#0f766e" />
+        </Container>
+      </Container>
+    }
+
+    @if (responsiveCase) {
+      <Container width="88%" height="78%" display="flex" flexDirection="column" justifyContent="center" alignItems="center" gap={16} border={2}>
+        <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#132238" border={{ width: 2, color: "#60a5fa" }} />
+        <Container width="75%" height="62%" display="flex" flexDirection="row" justifyContent="space-evenly" alignItems="center" border={2}>
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#172554" border={{ width: 2, color: "#818cf8" }} />
+          <Rect width="22%" height="60%" color="#4f46e5" />
+          <Rect width="32%" height="42%" color="#7c3aed" />
+          <Rect width="18%" height="72%" color="#2563eb" />
+        </Container>
+        <Text text={viewportLabel} color="#bfdbfe" size={14} fontFamily="monospace" />
+      </Container>
+    }
+
+    @if (absoluteCase) {
+      <Container width="90%" height="80%" display="flex" flexDirection="column" justifyContent="center" alignItems="center" border={2}>
+        <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#111827" border={{ width: 2, color: "#94a3b8" }} />
+        <Rect positionType="absolute" top={18} left={18} width={80} height={48} color="#16a34a" />
+        <Rect positionType="absolute" top={18} right={18} width={80} height={48} color="#0284c7" />
+        <Rect positionType="absolute" bottom={18} left={18} width={80} height={48} color="#ea580c" />
+        <Rect positionType="absolute" bottom={18} right={18} width={80} height={48} color="#dc2626" />
+        <Container width="46%" height="38%" display="flex" justifyContent="center" alignItems="center" border={4}>
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#312e81" border={{ width: 2, color: "#a5b4fc" }} />
+          <Rect width="54%" height="46%" color="#6366f1" />
+        </Container>
+      </Container>
+    }
+
+    @if (reactiveCase) {
+      <Container width="92%" height="80%" display="flex" flexDirection="column" justifyContent="center" alignItems="center" gap={reactiveGap} padding={reactivePadding} border={2}>
+        <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#272033" border={{ width: 2, color: "#c084fc" }} />
+        <Container display="flex" flexDirection="row" gap={reactiveGap}>
+          <Rect width={110} height={70} color="#9333ea" />
+          <Rect width={110} height={70} color="#c026d3" display={middleDisplay} />
+          <Rect width={110} height={70} color="#db2777" />
+        </Container>
+        <Text text={reactiveLabel} color="#f5d0fe" size={14} fontFamily="monospace" />
+      </Container>
+    }
+
+    @if (dynamicCase) {
+      <Container width="92%" height="80%" display="flex" flexDirection={dynamicDirection} justifyContent="center" alignItems="center" gap={18} padding={18} border={2}>
+        <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#102b2a" border={{ width: 2, color: "#5eead4" }} />
+        @for (item of items) {
+          <Container width={item.width} height={item.height} display="flex" justifyContent="center" alignItems="center">
+            <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color={item.color} border={{ width: 2, color: "#ccfbf1" }} />
+            <Text text={item.label} color="#ffffff" size={16} fontFamily="monospace" />
+          </Container>
+        }
+      </Container>
+    }
+
+    @if (transformsCase) {
+      <Container width="92%" height="80%" display="flex" flexDirection="row" justifyContent="space-evenly" alignItems="center" border={2}>
+        <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#251c2c" border={{ width: 2, color: "#f0abfc" }} />
+        <Container width={150} height={150} display="flex" justifyContent="center" alignItems="center" anchor={[0, 0]} rotation={0.12}>
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#be185d" border={{ width: 3, color: "#fbcfe8" }} />
+          <Rect width={24} height={24} color="#ffffff" />
+        </Container>
+        <Container width={150} height={150} display="flex" justifyContent="center" alignItems="center" anchor={[0.5, 0.5]} scale={1.08}>
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#7e22ce" border={{ width: 3, color: "#e9d5ff" }} />
+          <Rect width={24} height={24} color="#ffffff" />
+        </Container>
+        <Container width={150} height={150} display="flex" justifyContent="center" alignItems="center" transformOrigin="100% 100%" rotation={-0.12}>
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#4338ca" border={{ width: 3, color: "#c7d2fe" }} />
+          <Rect width={24} height={24} color="#ffffff" />
+        </Container>
+      </Container>
+    }
+  </Container>
+
+  @if (showControls) {
+    <Container width="100%" height={48} display="flex" flexDirection="row" justifyContent="space-between" alignItems="center">
+      <Container width={132} height={38} display="flex" justifyContent="center" alignItems="center" click={previousCase} cursor="pointer">
+        <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#1e3a5f" border={{ width: 1, color: "#38bdf8" }} />
+        <Text text="PREVIOUS" color="#e0f2fe" size={13} fontFamily="monospace" />
+      </Container>
+      <Container width={190} height={38} display="flex" justifyContent="center" alignItems="center" click={toggleState} cursor="pointer">
+        <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#4c1d5f" border={{ width: 1, color: "#e879f9" }} />
+        <Text text="TOGGLE SCENARIO" color="#fae8ff" size={13} fontFamily="monospace" />
+      </Container>
+      <Container width={132} height={38} display="flex" justifyContent="center" alignItems="center" click={nextCase} cursor="pointer">
+        <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#1e3a5f" border={{ width: 1, color: "#38bdf8" }} />
+        <Text text="NEXT" color="#e0f2fe" size={13} fontFamily="monospace" />
+      </Container>
+    </Container>
+  }
+</Canvas>
+
+<script>
+  import { computed, effect, mount, signal } from 'canvasengine'
+
+  const cases = [
+    { id: 'canvas-root', title: '01 · Canvas root layout', subtitle: 'Column flow · center alignment · gap · structural border' },
+    { id: 'alignments', title: '02 · Flex alignments', subtitle: 'space-evenly · stretch · alignSelf · flexGrow' },
+    { id: 'spacing-border', title: '03 · Spacing & borders', subtitle: 'Two/four-value margin, padding and Yoga borders · Pixi strokes' },
+    { id: 'responsive', title: '04 · Responsive percentages', subtitle: 'Nested percentage dimensions must remain centered at every viewport size' },
+    { id: 'absolute-overlay', title: '05 · Absolute overlays', subtitle: 'Four-corner insets · full-size background · nested percentage panel' },
+    { id: 'reactive', title: '06 · Reactive layout', subtitle: 'Toggle gap/padding to zero and remove/restore the middle item' },
+    { id: 'dynamic-tree', title: '07 · Dynamic tree', subtitle: 'Reorder children and switch the live container between row and column' },
+    { id: 'transforms', title: '08 · Layout transforms', subtitle: 'Container anchors and explicit transform origins under scale/rotation' },
+  ]
+
+  const params = new URLSearchParams(window.location.search)
+  const requestedCase = params.get('case')
+  const initialIndex = Math.max(0, cases.findIndex((entry) => entry.id === requestedCase))
+  const activeIndex = signal(initialIndex)
+  const compact = signal(params.get('state') === 'compact')
+  const visualOnly = signal(params.get('visual') === '1')
+  const viewportWidth = signal(0)
+  const viewportHeight = signal(0)
+
+  const active = computed(() => cases[activeIndex()])
+  const title = computed(() => active().title)
+  const subtitle = computed(() => active().subtitle)
+  const showControls = computed(() => !visualOnly())
+  const canvasRootCase = computed(() => active().id === 'canvas-root')
+  const alignmentsCase = computed(() => active().id === 'alignments')
+  const spacingCase = computed(() => active().id === 'spacing-border')
+  const responsiveCase = computed(() => active().id === 'responsive')
+  const absoluteCase = computed(() => active().id === 'absolute-overlay')
+  const reactiveCase = computed(() => active().id === 'reactive')
+  const dynamicCase = computed(() => active().id === 'dynamic-tree')
+  const transformsCase = computed(() => active().id === 'transforms')
+  const viewportLabel = computed(() => `${viewportWidth()} × ${viewportHeight()}`)
+  const reactiveGap = computed(() => compact() ? 0 : 24)
+  const reactivePadding = computed(() => compact() ? 0 : 28)
+  const middleDisplay = computed(() => compact() ? 'none' : 'flex')
+  const reactiveLabel = computed(() => compact() ? 'ZERO SPACING · MIDDLE HIDDEN' : '24PX GAP · 28PX PADDING · ALL ITEMS')
+  const dynamicDirection = computed(() => compact() ? 'column' : 'row')
+  const items = computed(() => compact()
+    ? [
+        { label: 'C', width: 110, height: 62, color: '#0f766e' },
+        { label: 'A', width: 150, height: 72, color: '#0d9488' },
+      ]
+    : [
+        { label: 'A', width: 150, height: 72, color: '#0d9488' },
+        { label: 'B', width: 100, height: 92, color: '#14b8a6' },
+        { label: 'C', width: 110, height: 62, color: '#0f766e' },
+      ]
+  )
+
+  const updateUrl = () => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('case', active().id)
+    url.searchParams.set('state', compact() ? 'compact' : 'default')
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+  }
+
+  const previousCase = () => {
+    activeIndex.update((index) => (index - 1 + cases.length) % cases.length)
+    compact.set(false)
+    updateUrl()
+  }
+  const nextCase = () => {
+    activeIndex.update((index) => (index + 1) % cases.length)
+    compact.set(false)
+    updateUrl()
+  }
+  const toggleState = () => {
+    compact.set(!compact())
+    updateUrl()
+  }
+
+  mount((element) => {
+    const canvasSize = element.props.context.canvasSize
+    const syncViewport = () => {
+      const size = canvasSize()
+      viewportWidth.set(size.width)
+      viewportHeight.set(size.height)
+    }
+    syncViewport()
+    const sizeEffect = effect(syncViewport)
+    globalThis.__CANVASENGINE_LAYOUT_SAMPLE_READY__ = false
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      globalThis.__CANVASENGINE_LAYOUT_SAMPLE_READY__ = true
+    }))
+    return () => {
+      sizeEffect.subscription.unsubscribe()
+      delete globalThis.__CANVASENGINE_LAYOUT_SAMPLE_READY__
+    }
+  })
+</script>

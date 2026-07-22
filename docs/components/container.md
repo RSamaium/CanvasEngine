@@ -24,6 +24,36 @@ const click = () => {
 <Container x y click />
 ```
 
+## Flex layout
+
+`display="flex"` or any container layout property such as `flexDirection`,
+`justifyContent`, `alignItems`, `gap`, or `padding` makes the container manage
+its direct children through Yoga. Children already mounted are enrolled if the
+container becomes flex reactively. If its last layout property returns to
+`undefined`, Yoga is detached again and ordinary PixiJS positioning resumes.
+
+```html
+<Container
+  width={480}
+  height={240}
+  display="flex"
+  flexDirection="row"
+  justifyContent="space-evenly"
+  alignItems="center"
+  padding={[16, 24]}
+  gap={12}
+>
+  <Rect width={80} height={80} color="#38bdf8" />
+  <Rect width={80} height={120} color="#8b5cf6" />
+</Container>
+```
+
+Two-value spacing arrays use `[vertical, horizontal]`; four-value arrays use
+`[top, right, bottom, left]`. Zero is a valid reactive value.
+
+Use `display="none"` to remove an object from Yoga and hide its rendered
+subtree. Switching it back to `flex` restores it at its declared child order.
+
 ## Full-screen centered GUI
 
 Percentage dimensions follow the canvas and are recalculated after a renderer resize. A column flex container can center a complete GUI group on both axes:

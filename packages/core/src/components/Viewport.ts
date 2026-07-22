@@ -3,7 +3,7 @@ import { Subscription } from 'rxjs';
 import { createComponent, registerComponent, Element, Props } from '../engine/reactive';
 import { DisplayObject, ComponentInstance } from './DisplayObject';
 import { effect, Signal } from '@signe/reactive';
-import { Graphics, Container, ContainerChild, IRenderLayer } from 'pixi.js';
+import { Graphics, Container, ContainerChild } from 'pixi.js';
 
 const EVENTS = [
     'bounce-x-end',
@@ -74,7 +74,7 @@ export class CanvasViewport extends DisplayObject(Container) {
         return this.viewport.addChild(...children)
     }
 
-    addChildAt<T extends ContainerChild | IRenderLayer>(child: T, index: number): T {
+    addChildAt<T extends ContainerChild>(child: T, index: number): T {
         return this.viewport.addChildAt(child, index) as T
     }
 
