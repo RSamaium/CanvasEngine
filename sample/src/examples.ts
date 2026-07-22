@@ -40,7 +40,7 @@ export const EXAMPLES: ExampleDefinition[] = [
   { slug: 'spritesheet-2', title: 'Spritesheet · Reactive', load: () => import('./spritesheet2.ce') },
   { slug: 'dom-sprite', title: 'DOM Sprite', load: () => import('./test.ce') },
   { slug: 'tiled', title: 'Tiled Map', load: () => import('./tiled.ce') },
-  { slug: 'weather', title: 'Weather', load: () => import('./weather.ce') },
+  { slug: 'weather', title: 'Weather · Preset Lab', load: () => import('./weather.ce') },
 ]
 
 export function getExample(slug: string | null | undefined): ExampleDefinition {

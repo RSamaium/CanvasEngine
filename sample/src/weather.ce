@@ -1,26 +1,404 @@
 <Canvas backgroundColor="#07111f">
-   <Container>
-        <Sprite image="./back.png" width={2048} height={2048} />
-        <Weather
+  <Container width="100%" height="100%" sortableChildren={true}>
+    <Sprite
+      image="./back.png"
+      width="100%"
+      height="100%"
+      objectFit="cover"
+      zIndex={0}
+    />
+
+    @if (rainActive) {
+      <Weather
         effect="rain"
-        speed={2}
-        windDirection={0.38}
-        windStrength={0.44}
-        density
-        maxDrops={100}
-        topDown={true}
-        />
-   </Container>
+        speed={weatherSpeed}
+        windDirection={weatherWindDirection}
+        windStrength={weatherWindStrength}
+        density={weatherDensity}
+        maxDrops={weatherMaxDrops}
+        topDown={weatherTopDown}
+        zIndex={10}
+      />
+    }
+    @else if (snowActive) {
+      <Weather
+        effect="snow"
+        speed={weatherSpeed}
+        windDirection={weatherWindDirection}
+        windStrength={weatherWindStrength}
+        density={weatherDensity}
+        maxDrops={weatherMaxDrops}
+        zIndex={10}
+      />
+    }
+    @else if (fogActive) {
+      <Weather
+        effect="fog"
+        speed={weatherSpeed}
+        density={weatherDensity}
+        height={weatherHeight}
+        scale={weatherScale}
+        zIndex={10}
+      />
+    }
+    @else {
+      <Weather
+        effect="cloud"
+        speed={weatherSpeed}
+        density={weatherDensity}
+        height={weatherHeight}
+        scale={weatherScale}
+        sunIntensity={weatherSunIntensity}
+        sunAngle={weatherSunAngle}
+        raySpread={weatherRaySpread}
+        rayTwinkle={weatherRayTwinkle}
+        rayTwinkleSpeed={weatherRayTwinkleSpeed}
+        zIndex={10}
+      />
+    }
+
+    @if (rainActive) {
+      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#071827" alpha={0.2} zIndex={20} />
+    }
+    @else if (snowActive) {
+      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#183047" alpha={0.16} zIndex={20} />
+    }
+    @else if (fogActive) {
+      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#0b241f" alpha={0.18} zIndex={20} />
+    }
+    @else {
+      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#422d13" alpha={0.1} zIndex={20} />
+    }
+
+    <Container
+      positionType="absolute"
+      top={24}
+      left={24}
+      width={520}
+      height={132}
+      display="flex"
+      flexDirection="column"
+      justifyContent="center"
+      padding={[12, 22]}
+      gap={4}
+      zIndex={30}
+    >
+      <Rect
+        positionType="absolute"
+        top={0}
+        right={0}
+        bottom={0}
+        left={0}
+        width="100%"
+        height="100%"
+        color="#07101c"
+        alpha={0.88}
+        borderRadius={14}
+        border={{ width: 1, color: "#52677f" }}
+      />
+      @if (rainActive) {
+        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#67d4ff" borderRadius={3} />
+      }
+      @else if (snowActive) {
+        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#d7efff" borderRadius={3} />
+      }
+      @else if (fogActive) {
+        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#8fe0d1" borderRadius={3} />
+      }
+      @else {
+        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#ffd98b" borderRadius={3} />
+      }
+      <Text
+        width="100%"
+        height={14}
+        text="WEATHER PRESET LAB"
+        color="#8fa7c1"
+        size={11}
+        fontFamily="Arial"
+        style={{ fontWeight: "700", letterSpacing: 1.8 }}
+      />
+      <Text
+        width="100%"
+        height={30}
+        text={activePresetLabel}
+        color="#f8fbff"
+        size={25}
+        fontFamily="Arial"
+        style={{ fontWeight: "700" }}
+      />
+      <Text
+        width="100%"
+        height={17}
+        text={activeDescription}
+        color="#c7d5e5"
+        size={13}
+        fontFamily="Arial"
+      />
+      <Text
+        width="100%"
+        height={14}
+        text={activeSettings}
+        color={activeAccent}
+        size={11}
+        fontFamily="monospace"
+      />
+    </Container>
+
+    <Container
+      positionType="absolute"
+      right={24}
+      bottom={24}
+      left={24}
+      height={174}
+      display="flex"
+      flexDirection="column"
+      padding={[14, 16]}
+      gap={12}
+      zIndex={30}
+    >
+      <Rect
+        positionType="absolute"
+        top={0}
+        right={0}
+        bottom={0}
+        left={0}
+        width="100%"
+        height="100%"
+        color="#07101c"
+        alpha={0.92}
+        borderRadius={16}
+        border={{ width: 1, color: "#52677f" }}
+      />
+
+      <Container width="100%" height={44} display="flex" flexDirection="row" gap={10}>
+        <Container
+          height={44}
+          flexGrow={1}
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          click={selectRain}
+          cursor="pointer"
+        >
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#111c2b" borderRadius={9} border={{ width: 1, color: "#36748e" }} />
+          @if (rainActive) {
+            <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#164e63" borderRadius={9} />
+          }
+          <Text text="RAIN · 3" color={rainTextColor} size={12} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.1 }} />
+        </Container>
+
+        <Container
+          height={44}
+          flexGrow={1}
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          click={selectSnow}
+          cursor="pointer"
+        >
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#111c2b" borderRadius={9} border={{ width: 1, color: "#7893ad" }} />
+          @if (snowActive) {
+            <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#344b63" borderRadius={9} />
+          }
+          <Text text="SNOW · 3" color={snowTextColor} size={12} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.1 }} />
+        </Container>
+
+        <Container
+          height={44}
+          flexGrow={1}
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          click={selectFog}
+          cursor="pointer"
+        >
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#111c2b" borderRadius={9} border={{ width: 1, color: "#417e76" }} />
+          @if (fogActive) {
+            <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#194b45" borderRadius={9} />
+          }
+          <Text text="FOG · 5" color={fogTextColor} size={12} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.1 }} />
+        </Container>
+
+        <Container
+          height={44}
+          flexGrow={1}
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          click={selectCloud}
+          cursor="pointer"
+        >
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#111c2b" borderRadius={9} border={{ width: 1, color: "#8f7440" }} />
+          @if (cloudActive) {
+            <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#59451f" borderRadius={9} />
+          }
+          <Text text="CLOUD · 8" color={cloudTextColor} size={12} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.1 }} />
+        </Container>
+      </Container>
+
+      <Container width="100%" flexGrow={1} display="flex" flexDirection="row" gap={12} alignItems="stretch">
+        <Container
+          width={124}
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          click={previousPreset}
+          cursor="pointer"
+        >
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#172437" borderRadius={9} border={{ width: 1, color: "#425a73" }} />
+          <Text text="‹  PREVIOUS" color="#c6d6e7" size={11} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 0.8 }} />
+        </Container>
+
+        <Container flexGrow={1} display="flex" flexDirection="column" justifyContent="center" alignItems="center" gap={5}>
+          <Text text={activeCategoryLabel} color={activeAccent} size={11} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.5 }} />
+          <Text text={activePresetLabel} color="#f3f7fb" size={18} fontFamily="Arial" style={{ fontWeight: "700" }} />
+          <Text text={presetCounter} color="#7890aa" size={10} fontFamily="monospace" />
+        </Container>
+
+        <Container
+          width={124}
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          click={nextPreset}
+          cursor="pointer"
+        >
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#172437" borderRadius={9} border={{ width: 1, color: "#425a73" }} />
+          <Text text="NEXT  ›" color="#c6d6e7" size={11} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 0.8 }} />
+        </Container>
+      </Container>
+    </Container>
+  </Container>
 </Canvas>
 
 <script>
-    import { signal } from 'canvasengine'
-  import { Weather } from '@canvasengine/presets'
+  import { computed, signal } from "canvasengine";
+  import {
+    CLOUD_PRESETS,
+    FOG_PRESETS,
+    RAIN_PRESETS,
+    SNOW_PRESETS,
+    Weather,
+  } from "@canvasengine/presets";
 
+  const weatherGroups = [
+    {
+      id: "rain",
+      label: "RAIN",
+      accent: "#67d4ff",
+      presets: [
+        { label: "Light Rain", description: "Fine rain with a gentle breeze.", values: RAIN_PRESETS.lightRain },
+        { label: "Steady Rain", description: "Balanced rainfall for exploration scenes.", values: RAIN_PRESETS.steadyRain },
+        { label: "Storm Rain", description: "Dense, fast rain driven by strong wind.", values: RAIN_PRESETS.stormRain },
+      ],
+    },
+    {
+      id: "snow",
+      label: "SNOW",
+      accent: "#d7efff",
+      presets: [
+        { label: "Light Snow", description: "Sparse flakes drifting slowly across the map.", values: SNOW_PRESETS.lightSnow },
+        { label: "Winter Snow", description: "A calm and continuous winter snowfall.", values: SNOW_PRESETS.winterSnow },
+        { label: "Blizzard", description: "Fast, dense snow with powerful lateral wind.", values: SNOW_PRESETS.blizzardSnow },
+      ],
+    },
+    {
+      id: "fog",
+      label: "FOG",
+      accent: "#8fe0d1",
+      presets: [
+        { label: "Morning Mist", description: "Low, delicate mist for an early RPG morning.", values: FOG_PRESETS.rpgMorningMist },
+        { label: "Forest Fog", description: "Layered woodland fog with moderate movement.", values: FOG_PRESETS.rpgForestFog },
+        { label: "Swamp Fog", description: "Thick, low fog with a heavy organic feel.", values: FOG_PRESETS.rpgSwampFog },
+        { label: "Night Fog", description: "Slow, subdued fog for dark environments.", values: FOG_PRESETS.rpgNightFog },
+        { label: "Heavy Fog", description: "Maximum coverage for obscured exploration.", values: FOG_PRESETS.rpgHeavyFog },
+      ],
+    },
+    {
+      id: "cloud",
+      label: "CLOUD & RAYS",
+      accent: "#ffd98b",
+      presets: [
+        { label: "Light Clouds", description: "Soft cloud cover with balanced daylight.", values: CLOUD_PRESETS.lightClouds },
+        { label: "Overcast", description: "Muted rays beneath a broad cloud layer.", values: CLOUD_PRESETS.overcastClouds },
+        { label: "Storm Clouds", description: "Dense cloud cover with almost no sunlight.", values: CLOUD_PRESETS.stormClouds },
+        { label: "Golden Hour", description: "Warm, focused rays with lively shimmer.", values: CLOUD_PRESETS.goldenHourRays },
+        { label: "Sunny Soft Rays", description: "Clear ambient light with subtle sun shafts.", values: CLOUD_PRESETS.sunnySoftRays },
+        { label: "Sunset Twinkle", description: "Low-angle rays with strong animated twinkle.", values: CLOUD_PRESETS.sunsetTwinkleRays },
+        { label: "Crepuscular Rays", description: "Dramatic, narrow shafts through dense clouds.", values: CLOUD_PRESETS.dramaticCrepuscularRays },
+        { label: "Morning Haze", description: "Gentle morning rays through a thin haze.", values: CLOUD_PRESETS.morningHazeRays },
+      ],
+    },
+  ];
 
-  const density = signal(1)
+  const groupIndex = signal(0);
+  const presetIndex = signal(1);
+  const activeGroup = computed(() => weatherGroups[groupIndex()]);
+  const activePreset = computed(() => activeGroup().presets[presetIndex()]);
+  const activeValues = computed(() => activePreset().values);
 
-  setInterval(() => {
-    density.update(n => n + 10)
-  }, 1000)
+  const weatherSpeed = computed(() => activeValues().speed ?? 0.5);
+  const weatherWindDirection = computed(() => activeValues().windDirection ?? 0);
+  const weatherWindStrength = computed(() => activeValues().windStrength ?? 0.2);
+  const weatherDensity = computed(() => activeValues().density ?? 1);
+  const weatherMaxDrops = computed(() => activeValues().maxDrops ?? 80);
+  const weatherTopDown = computed(() => activeValues().topDown ?? true);
+  const weatherHeight = computed(() => activeValues().height ?? 1);
+  const weatherScale = computed(() => activeValues().scale ?? 2);
+  const weatherSunIntensity = computed(() => activeValues().sunIntensity ?? 0.85);
+  const weatherSunAngle = computed(() => activeValues().sunAngle ?? 0.85);
+  const weatherRaySpread = computed(() => activeValues().raySpread ?? 1);
+  const weatherRayTwinkle = computed(() => activeValues().rayTwinkle ?? 0.45);
+  const weatherRayTwinkleSpeed = computed(() => activeValues().rayTwinkleSpeed ?? 1);
+
+  const activeAccent = computed(() => activeGroup().accent);
+  const activeCategoryLabel = computed(() => activeGroup().label);
+  const activePresetLabel = computed(() => activePreset().label);
+  const activeDescription = computed(() => activePreset().description);
+  const presetCounter = computed(() =>
+    `PRESET ${presetIndex() + 1} / ${activeGroup().presets.length}`
+  );
+
+  const activeSettings = computed(() => {
+    const values = activeValues();
+    if (values.effect === "rain" || values.effect === "snow") {
+      return `SPEED ${values.speed.toFixed(2)}  ·  DENSITY ${values.density}  ·  WIND ${values.windStrength.toFixed(2)}  ·  COUNT ${values.maxDrops}`;
+    }
+    if (values.effect === "fog") {
+      return `SPEED ${values.speed.toFixed(2)}  ·  DENSITY ${values.density.toFixed(2)}  ·  HEIGHT ${values.height.toFixed(2)}  ·  SCALE ${values.scale.toFixed(2)}`;
+    }
+    return `DENSITY ${values.density.toFixed(2)}  ·  SUN ${values.sunIntensity.toFixed(2)}  ·  SPREAD ${values.raySpread.toFixed(2)}  ·  TWINKLE ${values.rayTwinkle.toFixed(2)}`;
+  });
+
+  const isGroup = (id) => computed(() => activeGroup().id === id);
+  const rainActive = isGroup("rain");
+  const snowActive = isGroup("snow");
+  const fogActive = isGroup("fog");
+  const cloudActive = isGroup("cloud");
+
+  const textColor = (active, selected) => computed(() => active() ? selected : "#8da2b8");
+  const rainTextColor = textColor(rainActive, "#9ee7ff");
+  const snowTextColor = textColor(snowActive, "#e8f6ff");
+  const fogTextColor = textColor(fogActive, "#b6f5e7");
+  const cloudTextColor = textColor(cloudActive, "#ffe6ad");
+
+  const selectGroup = (index) => {
+    if (groupIndex() === index) return;
+    groupIndex.set(index);
+    presetIndex.set(0);
+  };
+  const selectRain = () => selectGroup(0);
+  const selectSnow = () => selectGroup(1);
+  const selectFog = () => selectGroup(2);
+  const selectCloud = () => selectGroup(3);
+
+  const previousPreset = () => {
+    const count = activeGroup().presets.length;
+    presetIndex.update((index) => (index - 1 + count) % count);
+  };
+
+  const nextPreset = () => {
+    const count = activeGroup().presets.length;
+    presetIndex.update((index) => (index + 1) % count);
+  };
 </script>
