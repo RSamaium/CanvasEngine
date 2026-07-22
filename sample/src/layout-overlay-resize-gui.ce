@@ -1,0 +1,86 @@
+<Canvas backgroundColor="#020617">
+  <Container
+    width={viewportWidth}
+    height={viewportHeight}
+    display="flex"
+    flexDirection="column"
+    justifyContent="center"
+    alignItems="center"
+  >
+    <Rect
+      positionType="absolute"
+      top={0}
+      right={0}
+      bottom={0}
+      left={0}
+      width="100%"
+      height="100%"
+      color="#111827"
+    />
+
+    <Container
+      width={420}
+      height={210}
+      display="flex"
+      flexDirection="column"
+      justifyContent="center"
+      alignItems="center"
+      gap={14}
+    >
+      <Rect
+        positionType="absolute"
+        top={0}
+        right={0}
+        bottom={0}
+        left={0}
+        width="100%"
+        height="100%"
+        color="#1e293b"
+      />
+      <Loading size={32} color="#a78bfa" />
+      <Text text="Absolute overlay + nested flex" color="#ffffff" size={20} fontFamily="Arial" />
+      <Text text={viewportLabel} color="#a5b4fc" size={14} fontFamily="Arial" />
+    </Container>
+
+    <Text
+      positionType="absolute"
+      top={20}
+      left={24}
+      text="TOP / LEFT"
+      color="#34d399"
+      size={14}
+      fontFamily="Arial"
+    />
+    <Text
+      positionType="absolute"
+      right={24}
+      bottom={20}
+      text="RIGHT / BOTTOM"
+      color="#fbbf24"
+      size={14}
+      fontFamily="Arial"
+    />
+  </Container>
+</Canvas>
+
+<script>
+  import { computed, effect, mount, signal } from "canvasengine";
+  import { Loading } from "@canvasengine/presets";
+
+  const viewportWidth = signal(0);
+  const viewportHeight = signal(0);
+  const viewportLabel = computed(() => `${viewportWidth()} x ${viewportHeight()}`);
+
+  mount((element) => {
+    const canvasSize = element.props.context.canvasSize;
+    const syncViewport = () => {
+      const size = canvasSize();
+      if (viewportWidth() !== size.width) viewportWidth.set(size.width);
+      if (viewportHeight() !== size.height) viewportHeight.set(size.height);
+    };
+    syncViewport();
+    const sizeEffect = effect(syncViewport);
+
+    return () => sizeEffect.subscription.unsubscribe();
+  });
+</script>

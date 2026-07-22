@@ -24,6 +24,29 @@ const click = () => {
 <Container x y click />
 ```
 
+## Full-screen centered GUI
+
+Percentage dimensions follow the canvas and are recalculated after a renderer resize. A column flex container can center a complete GUI group on both axes:
+
+```html
+<Canvas backgroundColor="#08111f">
+  <Container
+    width="100%"
+    height="100%"
+    display="flex"
+    flexDirection="column"
+    justifyContent="center"
+    alignItems="center"
+    gap={16}
+  >
+    <Loading size={40} />
+    <Text text="Loading area..." color="white" size={18} />
+  </Container>
+</Canvas>
+```
+
+Numeric dimensions supplied by signals can start at zero and update after mount; nested flex containers will use the new dimensions for their next layout calculation.
+
 ## Native PixiJS children
 
 Use `pixiChildren` when you need to mount PixiJS objects directly inside a

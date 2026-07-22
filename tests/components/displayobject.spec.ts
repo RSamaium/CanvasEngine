@@ -113,7 +113,7 @@ describe('DisplayObject Component', () => {
         instance.onInit(props)
         
         expect(instance.isFlex).toBe(true)
-        expect(instance.layout).toBeDefined()
+        expect(instance.layout).toBeUndefined()
     })
 
     test('handles percentage width and height', () => {
@@ -572,4 +572,4 @@ describe('DisplayObject Component', () => {
         expect(instance.getWidth()).toBe(300)
         expect(instance.getHeight()).toBe(600)
     })
-}) 
+})

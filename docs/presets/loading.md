@@ -93,12 +93,19 @@ The Loading component creates an animated circular loading spinner with customiz
 
 ```html
 <Canvas>
-    <!-- Centered loader -->
-    <Loading 
-        x={400}
-        y={300}
-        size={40}
-    />
+    <!-- Centered loader and label -->
+    <Container
+        width="100%"
+        height="100%"
+        display="flex"
+        flexDirection="column"
+        justifyContent="center"
+        alignItems="center"
+        gap={16}
+    >
+        <Loading size={40} />
+        <Text text="Loading..." />
+    </Container>
     
     <!-- Multiple loaders at different positions -->
     <Loading x={100} y={100} size={25} color="#e74c3c" />
@@ -106,6 +113,8 @@ The Loading component creates an animated circular loading spinner with customiz
     <Loading x={400} y={500} size={25} color="#f39c12" />
 </Canvas>
 ```
+
+As with `Container`, explicit `x` and `y` coordinates position the loader's bounding box. Prefer flex alignment when the spinner must stay centered across canvas resizes.
 
 ## Props
 
@@ -252,4 +261,3 @@ The Loading component:
 5. **Forces redraw** on each frame to ensure smooth animation
 
 The spinner draws segments as arcs arranged in a circle, with each segment's opacity varying based on its position relative to the rotation angle, creating a smooth visual effect.
-

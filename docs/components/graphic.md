@@ -42,6 +42,26 @@ const click = () => {
 
 The drawing is redrawn when `width` or `height` changes.
 
+## Absolute layout backgrounds
+
+Graphics update their layout bounds after drawing. This makes percentage-based primitives suitable for backgrounds inside positioned flex containers:
+
+```html
+<Container width={420} height={210} display="flex" justifyContent="center" alignItems="center">
+  <Rect
+    positionType="absolute"
+    top={0}
+    right={0}
+    bottom={0}
+    left={0}
+    width="100%"
+    height="100%"
+    color="#1e293b"
+  />
+  <Text text="Centered content" color="white" />
+</Container>
+```
+
 ## Polygon Example
 
 <Playground v-bind="polygonExample" />

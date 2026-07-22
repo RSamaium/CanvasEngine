@@ -43,6 +43,7 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
   clearEffect: Effect;
   _width: WritableSignal<number>;
   _height: WritableSignal<number>;
+  #layoutBounds: { x: number; y: number; width: number; height: number } | null = null;
 
   isCustomAnchor = true;
   
@@ -75,9 +76,8 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
    * Graphics({ width, height: 50, draw: (g, w, h) => g.rect(0, 0, w(), h()) });
    * ```
    */
-  async onInit(props) {
-    await super.onInit(props);
-    this.setObjectFit('none');
+  onInit(props) {
+    super.onInit(props);
   }
 
   /**
@@ -90,6 +90,14 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
     await super.onMount(element, index);
     if (this.destroyed || !this.parent) {
       return;
+    }
+    if (this.layout) {
+      this.layout = {
+        isLeaf: true,
+        objectFit: 'none',
+        objectPosition: 'top left',
+        transformOrigin: '0% 0%',
+      };
     }
     const { props, propObservables } = element;
     
@@ -119,6 +127,25 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
         }
         this.clear();
         props.draw?.(this, w, h, a);
+        const bounds = this.getLocalBounds();
+        const nextBounds = {
+          x: bounds.x,
+          y: bounds.y,
+          width: bounds.width,
+          height: bounds.height,
+        };
+        const forceLayoutUpdate = (this.layout as any)?.forceUpdate;
+        if (
+          typeof forceLayoutUpdate === 'function' &&
+          (!this.#layoutBounds ||
+            this.#layoutBounds.x !== nextBounds.x ||
+            this.#layoutBounds.y !== nextBounds.y ||
+            this.#layoutBounds.width !== nextBounds.width ||
+            this.#layoutBounds.height !== nextBounds.height)
+        ) {
+          this.#layoutBounds = nextBounds;
+          forceLayoutUpdate.call(this.layout);
+        }
         this.subjectInit.next(this)
       });
     }

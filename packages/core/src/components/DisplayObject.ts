@@ -144,6 +144,34 @@ export function DisplayObject(extendClass): any {
       return this.parent?.isFlex;
     }
 
+    #hasLayoutSetter() {
+      let prototype = Object.getPrototypeOf(this);
+      while (prototype) {
+        const descriptor = Object.getOwnPropertyDescriptor(prototype, "layout");
+        if (typeof descriptor?.set === "function") return true;
+        prototype = Object.getPrototypeOf(prototype);
+      }
+      return false;
+    }
+
+    #ensureLayout() {
+      if (this.disableLayout) return;
+
+      const currentLayout = this.layout as any;
+      if (currentLayout?.yoga) return;
+
+      // Elements can be created before bootstrapCanvas() has loaded @pixi/layout.
+      // Discard any plain object written before the Pixi layout setter existed,
+      // then let the setter create the actual Layout instance at mount time.
+      if (Object.prototype.hasOwnProperty.call(this, "layout")) {
+        delete (this as any).layout;
+      }
+
+      if (this.#hasLayoutSetter()) {
+        this.layout = {};
+      }
+    }
+
     onInit(props: Props) {
       // Ensure layout setter from @pixi/layout is used when available.
       if (Object.prototype.hasOwnProperty.call(this, "layout")) {
@@ -186,12 +214,20 @@ export function DisplayObject(extendClass): any {
         props.flexDirection ||
         props.flexWrap ||
         props.alignContent ||
+        props.alignSelf ||
         props.display == "flex" ||
+        props.positionType ||
+        props.top !== undefined ||
+        props.right !== undefined ||
+        props.bottom !== undefined ||
+        props.left !== undefined ||
+        props.flexGrow !== undefined ||
+        props.flexShrink !== undefined ||
+        props.flexBasis !== undefined ||
         isPercent(props.width) ||
         isPercent(props.height) ||
         props.isRoot
       ) {
-        this.layout = {};
         this.isFlex = true;
       }
 
@@ -202,6 +238,9 @@ export function DisplayObject(extendClass): any {
       if (this.destroyed) return
       this.#element = element;
       this.#canvasContext = element.props.context;
+      if (this.isFlex) {
+        this.#ensureLayout();
+      }
       if (element.parent) {
         let parentElement = element.parent;
         let instance = parentElement.componentInstance as DisplayObject;
@@ -221,9 +260,9 @@ export function DisplayObject(extendClass): any {
             return;
           }
         }
-        if (instance.isFlex && !this.layout && !this.disableLayout) {
+        if ((instance.isFlex || this.isFlex) && !this.disableLayout) {
           try {
-            this.layout = {};
+            this.#ensureLayout();
           } catch (error) {
             console.warn('Failed to set layout:', error);
           }
@@ -542,7 +581,7 @@ export function DisplayObject(extendClass): any {
 
     setWidth(width: number) {
       this.displayWidth.set(width);
-      if (!this.parentIsFlex) {
+      if (!this.parentIsFlex && !this.layout) {
         this.width = width;
       } else {
         this.layout = { width };
@@ -551,7 +590,7 @@ export function DisplayObject(extendClass): any {
 
     setHeight(height: number) {
       this.displayHeight.set(height);
-      if (!this.parentIsFlex) {
+      if (!this.parentIsFlex && !this.layout) {
         this.height = height;
       } else {
         this.layout = { height };
