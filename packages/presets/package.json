@@ -12,7 +12,7 @@
     "dev": "vite build --watch"
   },
   "peerDependencies": {
-    "canvasengine": "^2.0.0-beta.45",
+    "canvasengine": "^2.1.1",
     "pixi.js": "^8.19.0"
   },
   "devDependencies": {
