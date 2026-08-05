@@ -10,7 +10,12 @@ You can use static properties in your components.
 
 ```html
 <Text text="Hello World" />
+<Text text='Single quotes are supported' />
+<Text text="" />
 ```
+
+Static values must be quoted. Use braces for JavaScript values, for example
+`size={14}` rather than `size=14`.
 
 ## Binding properties
 
@@ -38,6 +43,33 @@ If the attribute name is the same as the variable, you can simplify:
 ::: warning Grammar
 Literal `@` prefixes inside expressions are no longer supported. Only template directives such as `@if`, `@else`, and `@for` use the `@` prefix.
 :::
+
+Literal `@` characters are supported in text content, such as
+`<p>contact@example.com</p>`.
+
+### Spread properties
+
+Both CanvasEngine's concise spread syntax and the JSX-style form are accepted:
+
+```html
+<Container ...props />
+<Container {...props} />
+<Container {...getProps()?.container} />
+```
+
+Use the form with braces for complex JavaScript expressions.
+
+### Comments
+
+HTML and JSX-style comments can be used between template children and between
+conditional branches:
+
+```html
+<Container>
+  <!-- HTML comment -->
+  {/* JSX-style comment */}
+</Container>
+```
 
 ### Expressions and computed
 
@@ -125,7 +157,7 @@ You can use the `@if` directive to conditionally render a component.
 </script>
 ```
 
-> `@if` cannot be used in the root, so we put it in `Container`
+`@if` can also be used as the root template structure.
 
 ### @if/@else if/@else
 
@@ -177,7 +209,7 @@ You can use the `@for` directive to loop over an array or an object.
 </script>
 ```
 
-> `@for` cannot be used in the root, so we put it in `Container`
+`@for` can also be used as the root template structure.
 
 ::: warning With objects array
 

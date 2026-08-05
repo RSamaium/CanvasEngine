@@ -54,6 +54,12 @@
     return voidElements.has(tagName.toLowerCase());
   }
 
+  function tagNamesMatch(openingTag, closingTag) {
+    return isDOMElement(openingTag)
+      ? openingTag.toLowerCase() === closingTag.toLowerCase()
+      : openingTag === closingTag;
+  }
+
   function formatAttributes(attributes) {
     if (attributes.length === 0) {
       return null;
@@ -376,7 +382,9 @@ start
   }
 
 element "component or control structure"
-  = forLoop
+  = unsupportedFragment
+  / orphanElseDirective
+  / forLoop
   / invalidForDirective
   / ifCondition
   / invalidIfDirective
@@ -389,6 +397,8 @@ element "component or control structure"
   / openCloseElement
   / invalidAttributeQuoteElement
   / invalidAttributeExpressionElement
+  / invalidSpreadElement
+  / unquotedAttributeElement
   / openUnclosedTag
   / comment
 
@@ -414,7 +424,7 @@ voidElement "void DOM element tag"
 
 domElementWithText "DOM element with text content"
   = "<" _ tagName:tagName &{ return isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTag:locatedTagName _ ">" _ {
-      if (tagName !== closingTag.name) {
+      if (!tagNamesMatch(tagName, closingTag.name)) {
         generateError(
           'CE_TEMPLATE_MISMATCHED_TAG',
           `Mismatched tag: opened <${tagName}> but closed </${closingTag.name}>.`,
@@ -449,7 +459,7 @@ domElementWithText "DOM element with text content"
 
 domElementWithMixedContent "DOM element with mixed content"
   = "<" _ tagName:tagName &{ return isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ children:domContent _ "</" _ closingTag:locatedTagName _ ">" _ {
-      if (tagName !== closingTag.name) {
+      if (!tagNamesMatch(tagName, closingTag.name)) {
         generateError(
           'CE_TEMPLATE_MISMATCHED_TAG',
           `Mismatched tag: opened <${tagName}> but closed </${closingTag.name}>.`,
@@ -490,7 +500,7 @@ domElementWithMixedContent "DOM element with mixed content"
 
 componentWithText "component with text content"
   = "<" _ tagName:tagName &{ return !isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTag:locatedTagName _ ">" _ {
-      if (tagName !== closingTag.name) {
+      if (!tagNamesMatch(tagName, closingTag.name)) {
         generateError(
           'CE_TEMPLATE_MISMATCHED_TAG',
           `Mismatched tag: opened <${tagName}> but closed </${closingTag.name}>.`,
@@ -524,7 +534,7 @@ simpleTextContent "simple text content"
     }
 
 simpleTextPart "simple text part"
-  = !("@for" / "@if") text:$([^<{@]+) {
+  = text:$((!("<" / "{" / directiveStart) .)+) {
       const trimmed = text.trim();
       if (!trimmed) return null;
       const escaped = text
@@ -547,7 +557,7 @@ simpleDynamicPart "simple dynamic part"
       }
       return trimmedExpr;
     }
-  / "{" _ expr:attributeValue _ "}" {
+  / "{" !([ \t\n\r]* "/*") _ expr:attributeValue _ "}" {
       const trimmedExpr = expr.trim();
       if (!trimmedExpr) {
         return trimmedExpr;
@@ -560,7 +570,7 @@ simpleDynamicPart "simple dynamic part"
 
 openCloseElement "component with content"
   = "<" _ tagName:tagName _ attributes:attributes _ ">" _ content:content _ "</" _ closingTag:locatedTagName _ ">" _ {
-      if (tagName !== closingTag.name) {
+      if (!tagNamesMatch(tagName, closingTag.name)) {
         generateError(
           'CE_TEMPLATE_MISMATCHED_TAG',
           `Mismatched tag: opened <${tagName}> but closed </${closingTag.name}>.`,
@@ -638,9 +648,20 @@ attribute "attribute"
   = staticAttribute
   / dynamicAttribute
   / unsupportedEventAttribute
+  / unsupportedBindingAttribute
+  / jsxSpreadAttribute
   / spreadAttribute
   / unclosedQuote
   / unclosedBrace
+  / invalidSpreadAttribute
+  / unquotedAttribute
+
+jsxSpreadAttribute "JSX-style spread attribute"
+  = "{" _ "..." _ expression:attributeExpression _ "}" {
+      const trimmedExpression = expression.trim();
+      validateAttributeExpression('spread', trimmedExpression, location());
+      return `...${trimmedExpression}`;
+    }
 
 spreadAttribute "spread attribute"
   = "..." expr:(functionCallExpr / dotNotation) {
@@ -664,6 +685,16 @@ unsupportedEventAttribute "unsupported event attribute"
         `@${eventName} is no longer supported. Use ${eventName} or ${eventName}={handler}.`,
         location(),
         `Remove the @ prefix from '${eventName}'.`
+      );
+    }
+
+unsupportedBindingAttribute "unsupported Vue-style binding"
+  = ":" attributeName:attributeName {
+      generateError(
+        'CE_TEMPLATE_UNSUPPORTED_BINDING_PREFIX',
+        `Vue-style ':${attributeName}' binding is not supported.`,
+        location(),
+        `Use ${attributeName}={label} for a JavaScript binding.`
       );
     }
 
@@ -855,21 +886,25 @@ simpleParams
     }
 
 staticAttribute "static attribute"
-  = attributeName:attributeName _ "=" _ "\"" attributeValue:staticValue "\"" {
+  = attributeName:attributeName _ "=" _ attributeValue:(doubleQuotedStaticValue / singleQuotedStaticValue) {
       const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
       const formattedName = needsQuotes ? `'${attributeName}'` : attributeName;
       return `${formattedName}: ${attributeValue}`;
     }
 
+doubleQuotedStaticValue
+  = "\"" chars:[^\"]* "\"" {
+      return quoteSingleString(chars.join(''));
+    }
+
+singleQuotedStaticValue
+  = "'" chars:[^']* "'" {
+      return quoteSingleString(chars.join(''));
+    }
+
 eventAttribute
   = "(" _ eventName:eventName _ ")" _ "=" _ "\"" eventAction:eventAction "\"" {
       return `${eventName}: () => { ${eventAction} }`;
-    }
-
-staticValue
-  = [^"]+ {
-      var val = text();
-      return quoteSingleString(val)
     }
 
 content "component content"
@@ -941,7 +976,7 @@ tupleDestructuring "destructuring pattern"
     }
 
 ifCondition "if condition"
-  = _ ifLocation:ifToken _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" _ elseIfs:elseIfClause* elseClause:elseClause? _ {
+  = _ ifLocation:ifToken _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" elseIfs:elseIfClause* elseClause:elseClause? _ {
       if (!condition.trim()) {
         generateError(
           'CE_TEMPLATE_INVALID_IF',
@@ -980,14 +1015,22 @@ invalidIfDirective "invalid @if directive"
     }
 
 elseIfClause "else if clause"
-  = _ "@else" _ "if" _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" _ {
+  = branchTrivia "@else" _ "if" _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" _ {
       return { condition, content };
     }
 
 elseClause "else clause"
-  = _ "@else" _ "{" _ content:content _ "}" _ {
+  = branchTrivia "@else" _ "{" _ content:content _ "}" _ {
       return content;
     }
+
+branchTrivia
+  = (_ comment)* _
+
+directiveStart
+  = "@if" [ \t\n\r]* "("
+  / "@for" [ \t\n\r]* "("
+  / "@else" ([ \t\n\r]+ "if" / [ \t\n\r]* "{")
 
 tagName "tag name"
   = tagExpression
@@ -1006,7 +1049,7 @@ tagPart "tag part"
     }
 
 attributeName "attribute name"
-  = [a-zA-Z][a-zA-Z0-9-]* { return text(); }
+  = [a-zA-Z_$][a-zA-Z0-9_$:-]* { return text(); }
 
 eventName
   = [a-zA-Z][a-zA-Z0-9-]* { return text(); }
@@ -1098,13 +1141,59 @@ identifier
   = [a-zA-Z_][a-zA-Z0-9_]* { return text(); }
 
 comment
-  = singleComment+ {
+  = (singleComment / jsxComment)+ {
     return null
   }
 
 singleComment
   = "<!--" _ content:((!("-->") .)* "-->") _ {
       return null;
+    }
+
+jsxComment
+  = "{" _ "/*" (!"*/" .)* "*/" _ "}" _ {
+      return null;
+    }
+
+unsupportedFragment "unsupported JSX fragment"
+  = _ "<>" {
+      generateError(
+        'CE_TEMPLATE_UNSUPPORTED_FRAGMENT',
+        'JSX fragments are not supported.',
+        location(),
+        'Use sibling root elements directly or wrap them in <Container>.'
+      );
+    }
+
+orphanElseDirective "orphan @else directive"
+  = _ "@else" {
+      generateError(
+        'CE_TEMPLATE_ORPHAN_ELSE',
+        '@else has no matching @if.',
+        location(),
+        'Place @else immediately after an @if or @else if block.'
+      );
+    }
+
+invalidSpreadAttribute "invalid spread attribute"
+  = "..." expression:$((!([ \t\n\r] / "/>" / ">") .)+) {
+      const trimmedExpression = expression.trim();
+      generateError(
+        'CE_TEMPLATE_INVALID_SPREAD',
+        'Invalid spread attribute.',
+        location(),
+        `Wrap the spread expression in braces: {...${trimmedExpression}}.`
+      );
+    }
+
+unquotedAttribute "unquoted attribute"
+  = attributeName:attributeName _ "=" _ ![\"'{] value:$((!([ \t\n\r] / "/>" / ">") .)+) {
+      generateError(
+        'CE_TEMPLATE_UNQUOTED_ATTRIBUTE',
+        `Attribute '${attributeName}' must be quoted or bound.`,
+        location(),
+        `Use ${attributeName}=\"${value}\" for text or ${attributeName}={${value}} for a JavaScript value.`
+      );
     }
 
 directiveExpressionPart
@@ -1163,6 +1252,12 @@ unclosedBraceMatch
 
 invalidAttributeExpressionElement "element with an unclosed attribute expression"
   = _ "<" _ tagName _ ((!unclosedBraceMatch !('/>') .)*) unclosedBrace
+
+invalidSpreadElement "element with an invalid spread attribute"
+  = _ "<" _ tagName _ ((!invalidSpreadAttribute !('/>') .)*) invalidSpreadAttribute
+
+unquotedAttributeElement "element with an unquoted attribute"
+  = _ "<" _ tagName _ ((!unquotedAttribute !('/>') .)*) unquotedAttribute
 
 svgElement "SVG element"
   = "<svg" attrs:([^>]*) ">" content:svgInnerContent "</svg>" _ {

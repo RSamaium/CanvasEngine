@@ -84,4 +84,49 @@ describe("CanvasEngine template diagnostics", () => {
     expect(error.message).toContain("1 | <Container>");
     expect(error.message).toContain("Hint: Add the missing </Container> closing tag.");
   });
+
+  test("reports a complex bare spread and suggests JSX-style braces", () => {
+    const error = compileInvalid(`<Container ...getProps()?.value />`);
+
+    expect(error.message).toContain("[CE_TEMPLATE_INVALID_SPREAD] Invalid spread attribute.");
+    expect(error.message).toContain("(line 1, column 12)");
+    expect(error.message).toContain("1 | <Container ...getProps()?.value />");
+    expect(error.message).toContain("Hint: Wrap the spread expression in braces: {...getProps()?.value}.");
+  });
+
+  test("reports an unquoted attribute with string and binding alternatives", () => {
+    const error = compileInvalid(`<Text size=14 />`);
+
+    expect(error.message).toContain("[CE_TEMPLATE_UNQUOTED_ATTRIBUTE] Attribute 'size' must be quoted or bound.");
+    expect(error.message).toContain("(line 1, column 7)");
+    expect(error.message).toContain("1 | <Text size=14 />");
+    expect(error.message).toContain('Hint: Use size="14" for text or size={14} for a JavaScript value.');
+  });
+
+  test("reports an orphan @else directive", () => {
+    const error = compileInvalid(`@else { <Text /> }`);
+
+    expect(error.message).toContain("[CE_TEMPLATE_ORPHAN_ELSE] @else has no matching @if.");
+    expect(error.message).toContain("(line 1, column 1)");
+    expect(error.message).toContain("1 | @else { <Text /> }");
+    expect(error.message).toContain("Hint: Place @else immediately after an @if or @else if block.");
+  });
+
+  test("reports Vue-style binding prefixes", () => {
+    const error = compileInvalid(`<Text :text="label" />`);
+
+    expect(error.message).toContain("[CE_TEMPLATE_UNSUPPORTED_BINDING_PREFIX] Vue-style ':text' binding is not supported.");
+    expect(error.message).toContain("(line 1, column 7)");
+    expect(error.message).toContain('1 | <Text :text="label" />');
+    expect(error.message).toContain("Hint: Use text={label} for a JavaScript binding.");
+  });
+
+  test("reports unsupported JSX fragments", () => {
+    const error = compileInvalid(`<><Text /><Sprite /></>`);
+
+    expect(error.message).toContain("[CE_TEMPLATE_UNSUPPORTED_FRAGMENT] JSX fragments are not supported.");
+    expect(error.message).toContain("(line 1, column 1)");
+    expect(error.message).toContain("1 | <><Text /><Sprite /></>");
+    expect(error.message).toContain("Hint: Use sibling root elements directly or wrap them in <Container>.");
+  });
 });
