@@ -18,8 +18,8 @@
       @for (item of items) {
         <Sprite 
           image="https://pixijs.com/assets/flowerTop.png"
-          x={@item.x}
-          y={@item.y}
+          x={item.x}
+          y={item.y}
         />
       }
     </Container>

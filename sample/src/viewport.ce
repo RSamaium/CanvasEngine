@@ -2,9 +2,9 @@
   <Viewport worldWidth={2048} worldHeight={2048} clamp={clamp}>
     <Sprite image="back.png" />
     @for (sprite of sprites) {
-      <Container  x={@sprite.x} y={@sprite.@y} viewportFollow={true}>
-        <Text text={@sprite.x} />
-        <Sprite image={@sprite.@image} controls={@sprite.controls}   />
+      <Container  x={sprite.x} y={sprite.y} viewportFollow={true}>
+        <Text text={sprite.x} />
+        <Sprite image={sprite.image} controls={sprite.controls}   />
       </Container>
     }
 </Viewport>

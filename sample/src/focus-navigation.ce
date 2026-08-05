@@ -38,18 +38,18 @@
         viewportFollow={true}
       />
         @for (item of items) {
-          <Container y={@item.@id * 80}  tabindex={@item.@id}>
+          <Container y={item.id * 80}  tabindex={item.id}>
             <Rect
              
               width={300}
               height={60}
               x={0}
               y={0}
-              color={@item.@color}
+              color={item.color}
               alpha={0.5}
             />
             <Text
-              text={@item.@label}
+              text={item.label}
               x={0}
               y={0}
               style={{ fontSize: 24, fill: "#ffffff" }}
