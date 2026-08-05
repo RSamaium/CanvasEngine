@@ -20,6 +20,8 @@
   "license": "MIT",
   "dependencies": {
     "acorn": "^8.16.0",
+    "lightningcss": "^1.32.0",
+    "magic-string": "^0.30.21",
     "peggy": "^5.1.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.10"

@@ -260,6 +260,9 @@
   }
 
   function hasFunctionCall(value) {
+    if (typeof options.hasFunctionCall === 'function') {
+      return options.hasFunctionCall(value);
+    }
     return /[a-zA-Z_][a-zA-Z0-9_]*\s*\(/.test(value);
   }
 
@@ -682,6 +685,13 @@ dynamicAttribute "dynamic attribute"
       }
 
       const trimmedValue = attributeValue.trim();
+      if (
+        (trimmedValue.startsWith('"') && trimmedValue.endsWith('"')) ||
+        (trimmedValue.startsWith("'") && trimmedValue.endsWith("'"))
+      ) {
+        return `${formattedName}: ${attributeValue}`;
+      }
+
       const isObjectLiteral = trimmedValue.startsWith('{') && trimmedValue.endsWith('}');
       const isArrayLiteral = trimmedValue.startsWith('[') && trimmedValue.endsWith(']');
 

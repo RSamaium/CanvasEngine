@@ -5,10 +5,27 @@ import pkg from "peggy";
 import path from "path";
 import * as ts from "typescript";
 import { fileURLToPath } from 'url';
+import MagicString from "magic-string";
+import { analyzeTemplateAst } from "./src/analyze";
+import { parseSfc } from "./src/sfc";
+import { scopeStyles } from "./src/style";
+import { parseTemplate } from "./src/template";
+import type { CompileResult } from "./src/types";
 
 const { generate } = pkg;
 
 const DEV_SRC = "../../src"
+let cachedTemplateParser: any;
+
+function getTemplateParser(): any {
+  if (cachedTemplateParser) return cachedTemplateParser;
+
+  const filename = fileURLToPath(import.meta.url);
+  const dirname = path.dirname(filename);
+  const grammar = fs.readFileSync(path.join(dirname, "grammar2.pegjs"), "utf8");
+  cachedTemplateParser = generate(grammar);
+  return cachedTemplateParser;
+}
 
 type ManualChunksFunction = (id: string, meta: any) => string | void;
 type ManualChunksOption = ManualChunksFunction | Record<string, string[]>;
@@ -149,119 +166,6 @@ function showErrorMessage(template: string, error: any): string {
 
   return `[${code}] ${message} (line ${line}, column ${column})\n\n` +
          `${source}\n${pointer}${hint}`;
-}
-
-/**
- * Scopes CSS selectors by prefixing them with a class selector
- * 
- * This function prefixes all CSS rule selectors (not @rules) with a class
- * selector to scope the styles to a specific component instance.
- * 
- * @param {string} css - The CSS content to scope
- * @param {string} scopeClass - The unique scope class to use (without the dot)
- * @returns {string} - The scoped CSS content
- * 
- * @example
- * ```
- * const scoped = scopeCSS('.my-class { color: red; }', 'ce-scope-abc123');
- * // Returns: '.ce-scope-abc123 .my-class { color: red; }'
- * ```
- */
-function scopeCSS(css: string, scopeClass: string): string {
-  const scopeSelector = `.${scopeClass}`;
-  
-  // Process CSS by finding rule blocks while skipping @rules
-  let result = '';
-  let i = 0;
-  let depth = 0;
-  let inRule = false;
-  let selectorBuffer = '';
-  
-  while (i < css.length) {
-    const char = css[i];
-    
-    if (char === '@' && !inRule && selectorBuffer === '') {
-      // Found @rule - copy it as-is until matching closing brace
-      const atRuleStart = i;
-      i++; // Skip '@'
-      
-      // Find the opening brace
-      while (i < css.length && css[i] !== '{') {
-        i++;
-      }
-      
-      if (i < css.length) {
-        // Found opening brace, now find matching closing brace
-        depth = 1;
-        i++; // Skip '{'
-        
-        while (i < css.length && depth > 0) {
-          if (css[i] === '{') depth++;
-          else if (css[i] === '}') depth--;
-          i++;
-        }
-        
-        // Copy entire @rule as-is
-        result += css.substring(atRuleStart, i);
-      }
-      continue;
-    }
-    
-    if (char === '{' && !inRule) {
-      // Start of a rule block - scope the selector we just collected
-      const selectorText = selectorBuffer.trim();
-      
-      if (selectorText) {
-        // Split selectors by comma and scope each one
-        const scopedSelectors = selectorText
-          .split(',')
-          .map(sel => {
-            const trimmed = sel.trim();
-            return trimmed ? `${scopeSelector} ${trimmed}` : trimmed;
-          })
-          .join(', ');
-        
-        result += scopedSelectors;
-      }
-      result += ' {';
-      inRule = true;
-      depth = 1;
-      selectorBuffer = '';
-    } else if (char === '{' && inRule) {
-      // Nested brace
-      result += char;
-      depth++;
-    } else if (char === '}' && inRule) {
-      result += char;
-      depth--;
-      if (depth === 0) {
-        inRule = false;
-      }
-    } else if (!inRule) {
-      // Collecting selector
-      selectorBuffer += char;
-    } else {
-      // Inside rule block
-      result += char;
-      if (char === '{') depth++;
-    }
-    
-    i++;
-  }
-  
-  // Add any remaining selector (shouldn't happen in valid CSS, but handle it)
-  if (selectorBuffer.trim()) {
-    const scopedSelectors = selectorBuffer.trim()
-      .split(',')
-      .map(sel => {
-        const trimmed = sel.trim();
-        return trimmed ? `${scopeSelector} ${trimmed}` : trimmed;
-      })
-      .join(', ');
-    result += scopedSelectors;
-  }
-  
-  return result;
 }
 
 function splitCallArguments(argsText: string): string[] {
@@ -525,45 +429,10 @@ export interface CanvasEnginePluginOptions {
 
 export default function canvasengine(options: CanvasEnginePluginOptions = {}) {
   const filter = createFilter("**/*.ce");
-
-  // Convert import.meta.url to a file path
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-
-  const grammar = fs.readFileSync(
-    path.join(__dirname, "grammar2.pegjs"),
-    "utf8"
-  );
-  const parser = generate(grammar);
+  const parser = getTemplateParser();
   const isDev = process.env.NODE_ENV === "dev";
   const useHmr = isDev && options.hmr !== false;
   const FLAG_COMMENT = "/*--[TPL]--*/";
-
-  const PRIMITIVE_COMPONENTS = [
-    "Canvas",
-    "Sprite",
-    "Text",
-    "Viewport",
-    "Graphics",
-    "Container",
-    "Navigation",
-    "ImageMap",
-    "NineSliceSprite",
-    "Rect",
-    "Circle",
-    "Ellipse",
-    "Triangle",
-    "TilingSprite",
-    "svg",
-    "Video",
-    "Mesh",
-    "Svg",
-    "DOMContainer",
-    "DOMElement",
-    "DOMSprite",
-    "Button",
-    "Joystick"
-  ];
 
   return {
     name: "vite-plugin-ce",
@@ -575,39 +444,17 @@ export default function canvasengine(options: CanvasEnginePluginOptions = {}) {
     transform(code: string, id: string) {
       if (!filter(id)) return null;
 
-      // Extract the script content
-      const scriptMatch = code.match(/<script>([\s\S]*?)<\/script>/);
-      let scriptContent = scriptMatch ? scriptMatch[1].trim() : "";
-      
-      // Extract the style tag with attributes and content
-      const styleTagMatch = code.match(/<style([^>]*)>([\s\S]*?)<\/style>/);
-      let styleContent = "";
-      let isScoped = false;
-      
-      if (styleTagMatch) {
-        const styleAttributes = styleTagMatch[1].trim();
-        styleContent = styleTagMatch[2].trim();
-        
-        // Check if scoped attribute is present
-        isScoped = /scoped(?:\s|>|$)/.test(styleAttributes);
-      }
-      
-      // Remove script and style tags from template before parsing
-      let template = code
-        .replace(/<script>[\s\S]*?<\/script>/, "")
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/, "")
-        .replace(/^\s+|\s+$/g, '');
+      const descriptor = parseSfc(code, id);
+      let scriptContent = descriptor.script?.content ?? "";
+      const styleContent = descriptor.style?.content ?? "";
+      const isScoped = descriptor.style?.attributes.scoped === true;
+      const template = descriptor.template.content;
 
       let parsedTemplate;
+      let templateProgram;
       try {
-        parsedTemplate = parser.parse(template, {
-          validateExpression(expression: string) {
-            parse(`(${expression})`, {
-              sourceType: "module",
-              ecmaVersion: 2020,
-            });
-          },
-        });
+        templateProgram = parseTemplate(template, parser);
+        parsedTemplate = templateProgram.expression;
       } catch (error) {
         const errorMsg = showErrorMessage(template, error);
         throw new Error(`Error parsing template in ${id}\n${errorMsg}`);
@@ -655,8 +502,8 @@ export default function canvasengine(options: CanvasEnginePluginOptions = {}) {
         })
         .join("\n");
 
-      // Define an array for required imports
-      const requiredImports = ["h", "computed", "cond", "loop"];
+      const templateMetadata = analyzeTemplateAst(templateProgram.ast);
+      const requiredImports = templateMetadata.runtimeHelpers;
 
       // Check for missing imports
       const missingImports = requiredImports.filter(
@@ -682,10 +529,7 @@ export default function canvasengine(options: CanvasEnginePluginOptions = {}) {
         importsCode = `${additionalImportCode}\n${importsCode}`;
       }
 
-      // Check for primitive components in parsedTemplate
-      const primitiveImports = PRIMITIVE_COMPONENTS.filter((component) =>
-        parsedTemplate.includes(`h(${component}`)
-      );
+      const primitiveImports = templateMetadata.primitiveComponents;
 
       // Add missing imports for primitive components
       primitiveImports.forEach((component) => {
@@ -705,7 +549,7 @@ export default function canvasengine(options: CanvasEnginePluginOptions = {}) {
         // Generate short hash (8 characters) based on file path
         const fileHash = generateHash(id);
         scopeClass = fileHash;
-        processedStyleContent = scopeCSS(styleContent, scopeClass);
+        processedStyleContent = scopeStyles(styleContent, scopeClass, id);
         
         // Add _scopeClass prop to all DOMContainer in the template
         parsedTemplate = addScopeClassToDOMContainer(parsedTemplate, scopeClass);
@@ -770,10 +614,23 @@ export default function canvasengine(options: CanvasEnginePluginOptions = {}) {
       export default __ce_component
       `;
 
+      const mappedOutput = new MagicString(code, { filename: id });
+      mappedOutput.overwrite(0, code.length, output);
+      const sourceMap = mappedOutput.generateMap({
+        source: id,
+        includeContent: true,
+        hires: true,
+      });
+
       return {
         code: output,
-        map: null,
-      };
+        map: sourceMap,
+        diagnostics: [],
+        metadata: templateMetadata,
+        meta: {
+          canvasengine: templateMetadata,
+        },
+      } satisfies CompileResult & { meta: { canvasengine: typeof templateMetadata } };
     },
   };
 }
