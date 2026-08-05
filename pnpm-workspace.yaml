@@ -1,3 +1,5 @@
 packages:
   - 'packages/**'
   - 'sample'
+allowBuilds:
+  esbuild: set this to true or false
