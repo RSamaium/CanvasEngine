@@ -1,32 +1,11 @@
 {
-  function generateError(message, location) {
-    const { start, end } = location;
-    const errorMessage = `${message}\n` +
-      `at line ${start.line}, column ${start.column} to line ${end.line}, column ${end.column}`;
-    throw new Error(errorMessage);
-  }
-
-  /*——— Custom error handler for syntax errors ———*/
-  function parseError(error) {
-    // error.expected : array of { type, description }
-    // error.found    : string | null
-    // error.location : { start, end }
-    const { expected, found, location } = error;
-
-    // Group expected items by description to avoid duplicates
-    const uniqueExpected = [...new Set(expected.map(e => e.description))];
-    
-    // Format the expected values in a more readable way
-    const expectedDesc = uniqueExpected
-      .map(desc => `'${desc}'`)
-      .join(' or ');
-
-    const foundDesc = found === null ? 'end of input' : `'${found}'`;
-
-    generateError(
-      `Syntax error: expected ${expectedDesc} but found ${foundDesc}`,
-      location
-    );
+  function generateError(code, message, location, hint) {
+    const templateError = new Error(message);
+    templateError.name = 'CanvasEngineTemplateError';
+    templateError.code = code;
+    templateError.location = location;
+    templateError.hint = hint;
+    throw templateError;
   }
 
   // List of standard HTML DOM elements
@@ -360,6 +339,29 @@
       return `${name}()`;
     });
   }
+
+  function isCompleteForHeader(header) {
+    return /^\s*\(\s*(?:\([^)]+\)|[a-zA-Z_][a-zA-Z0-9_]*)\s+of\s+.+(?:;\s*track\s+.+)?\)\s*$/s.test(header);
+  }
+
+  function isCompleteIfHeader(header) {
+    return /^\s*\(\s*.+\s*\)\s*$/s.test(header);
+  }
+
+  function validateAttributeExpression(attributeName, value, expressionLocation) {
+    if (typeof options.validateExpression !== 'function') return;
+
+    try {
+      options.validateExpression(value);
+    } catch {
+      generateError(
+        'CE_TEMPLATE_INVALID_EXPRESSION',
+        `Invalid expression for attribute '${attributeName}'.`,
+        expressionLocation,
+        `Check the JavaScript expression inside ${attributeName}={...}.`
+      );
+    }
+  }
 }
 
 start
@@ -372,7 +374,9 @@ start
 
 element "component or control structure"
   = forLoop
+  / invalidForDirective
   / ifCondition
+  / invalidIfDirective
   / svgElement
   / domElementWithText
   / domElementWithMixedContent
@@ -380,6 +384,8 @@ element "component or control structure"
   / selfClosingElement
   / voidElement
   / openCloseElement
+  / invalidAttributeQuoteElement
+  / invalidAttributeExpressionElement
   / openUnclosedTag
   / comment
 
@@ -404,11 +410,13 @@ voidElement "void DOM element tag"
     }
 
 domElementWithText "DOM element with text content"
-  = "<" _ tagName:tagName &{ return isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTagName:tagName _ ">" _ {
-      if (tagName !== closingTagName) {
+  = "<" _ tagName:tagName &{ return isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTag:locatedTagName _ ">" _ {
+      if (tagName !== closingTag.name) {
         generateError(
-          `Mismatched tag: opened <${tagName}> but closed </${closingTagName}>`,
-          location()
+          'CE_TEMPLATE_MISMATCHED_TAG',
+          `Mismatched tag: opened <${tagName}> but closed </${closingTag.name}>.`,
+          closingTag.location,
+          `Replace </${closingTag.name}> with </${tagName}>.`
         );
       }
       
@@ -437,11 +445,13 @@ domElementWithText "DOM element with text content"
     }
 
 domElementWithMixedContent "DOM element with mixed content"
-  = "<" _ tagName:tagName &{ return isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ children:domContent _ "</" _ closingTagName:tagName _ ">" _ {
-      if (tagName !== closingTagName) {
+  = "<" _ tagName:tagName &{ return isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ children:domContent _ "</" _ closingTag:locatedTagName _ ">" _ {
+      if (tagName !== closingTag.name) {
         generateError(
-          `Mismatched tag: opened <${tagName}> but closed </${closingTagName}>`,
-          location()
+          'CE_TEMPLATE_MISMATCHED_TAG',
+          `Mismatched tag: opened <${tagName}> but closed </${closingTag.name}>.`,
+          closingTag.location,
+          `Replace </${closingTag.name}> with </${tagName}>.`
         );
       }
 
@@ -476,11 +486,13 @@ domElementWithMixedContent "DOM element with mixed content"
     }
 
 componentWithText "component with text content"
-  = "<" _ tagName:tagName &{ return !isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTagName:tagName _ ">" _ {
-      if (tagName !== closingTagName) {
+  = "<" _ tagName:tagName &{ return !isDOMElement(tagName) && !isVoidElement(tagName); } _ attributes:attributes _ ">" _ text:simpleTextContent _ "</" _ closingTag:locatedTagName _ ">" _ {
+      if (tagName !== closingTag.name) {
         generateError(
-          `Mismatched tag: opened <${tagName}> but closed </${closingTagName}>`,
-          location()
+          'CE_TEMPLATE_MISMATCHED_TAG',
+          `Mismatched tag: opened <${tagName}> but closed </${closingTag.name}>.`,
+          closingTag.location,
+          `Replace </${closingTag.name}> with </${tagName}>.`
         );
       }
 
@@ -544,11 +556,13 @@ simpleDynamicPart "simple dynamic part"
     }
 
 openCloseElement "component with content"
-  = "<" _ tagName:tagName _ attributes:attributes _ ">" _ content:content _ "</" _ closingTagName:tagName _ ">" _ {
-      if (tagName !== closingTagName) {
+  = "<" _ tagName:tagName _ attributes:attributes _ ">" _ content:content _ "</" _ closingTag:locatedTagName _ ">" _ {
+      if (tagName !== closingTag.name) {
         generateError(
-          `Mismatched tag: opened <${tagName}> but closed </${closingTagName}>`,
-          location()
+          'CE_TEMPLATE_MISMATCHED_TAG',
+          `Mismatched tag: opened <${tagName}> but closed </${closingTag.name}>.`,
+          closingTag.location,
+          `Replace </${closingTag.name}> with </${tagName}>.`
         );
       }
       
@@ -643,13 +657,17 @@ dotNotation "property access"
 unsupportedEventAttribute "unsupported event attribute"
   = "@" eventName:attributeName (_ "=" _ "{" _ attributeValue _ "}")? {
       generateError(
+        'CE_TEMPLATE_UNSUPPORTED_EVENT_PREFIX',
         `@${eventName} is no longer supported. Use ${eventName} or ${eventName}={handler}.`,
-        location()
+        location(),
+        `Remove the @ prefix from '${eventName}'.`
       );
     }
 
 dynamicAttribute "dynamic attribute"
   = attributeName:attributeName _ "=" _ "{" _ attributeValue:attributeValue _ "}" {
+      validateAttributeExpression(attributeName, attributeValue, location());
+
       // Check if attributeName needs to be quoted (contains dash or other invalid JS identifier chars)
       const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
       const formattedName = needsQuotes ? `'${attributeName}'` : attributeName;
@@ -658,23 +676,20 @@ dynamicAttribute "dynamic attribute"
           return `${formattedName}: ${attributeValue}`;
         }
       
-        // If it's a complex object with strings, preserve it as is
-        if (attributeValue.trim().startsWith('{') && attributeValue.trim().endsWith('}') && 
-            (attributeValue.includes('"') || attributeValue.includes("'"))) {
-          return `${formattedName}: ${attributeValue}`;
-        }
-        
-        // If it's a template string, keep it as-is
+      // If it's a template string, keep it as-is
       if (attributeValue.trim().startsWith('`') && attributeValue.trim().endsWith('`')) {
         return formattedName + ': ' + attributeValue;
       }
-      
-      // Handle other types of values
-      if (attributeValue.startsWith('h(') || attributeValue.includes('=>')) {
+
+      const trimmedValue = attributeValue.trim();
+      const isObjectLiteral = trimmedValue.startsWith('{') && trimmedValue.endsWith('}');
+      const isArrayLiteral = trimmedValue.startsWith('[') && trimmedValue.endsWith(']');
+
+      // Handle component and standalone function values without making event-like callbacks reactive.
+      if (attributeValue.startsWith('h(') || (!isObjectLiteral && attributeValue.includes('=>'))) {
         return `${formattedName}: ${attributeValue}`;
       }
 
-      const trimmedValue = attributeValue.trim();
       if (trimmedValue.match(/^[a-zA-Z_]\w*$/)) {
         return `${formattedName}: ${attributeValue}`;
       }
@@ -687,8 +702,6 @@ dynamicAttribute "dynamic attribute"
         return `${formattedName}: ${attributeValue}`;
       }
 
-      const isObjectLiteral = trimmedValue.startsWith('{') && trimmedValue.endsWith('}');
-      const isArrayLiteral = trimmedValue.startsWith('[') && trimmedValue.endsWith(']');
       const isTernaryExpression = trimmedValue.includes('?') && trimmedValue.includes(':');
       if (isObjectLiteral) {
         const formattedObject = formatObjectLiteralSpacing(attributeValue);
@@ -728,9 +741,53 @@ attributeValue "attribute value"
   = element
   / functionWithElement
   / objectLiteral
-  / $([^{}]* ("{" [^{}]* "}" [^{}]*)*) {
+  / expression:attributeExpression {
+    return expression.trim()
+  }
+
+attributeExpression "JavaScript attribute expression"
+  = $((quotedString / templateString / balancedParentheses / balancedBrackets / balancedBraces / attributeExpressionCharacter)+)
+
+attributeExpressionCharacter
+  = ![{}()[\]"'`] .
+
+propertyExpression "JavaScript object property expression"
+  = $((quotedString / templateString / balancedParentheses / balancedBrackets / balancedBraces / propertyExpressionCharacter)+) {
     return text().trim()
   }
+
+propertyExpressionCharacter
+  = ![,{}()[\]"'`] .
+
+quotedString
+  = singleQuotedString
+  / doubleQuotedString
+
+singleQuotedString
+  = "'" ("\\" . / !"'" .)* "'"
+
+doubleQuotedString
+  = '"' ("\\" . / !'"' .)* '"'
+
+templateString
+  = "`" ("\\" . / "${" expressionPart* "}" / !"`" .)* "`"
+
+balancedParentheses
+  = "(" expressionPart* ")"
+
+balancedBrackets
+  = "[" expressionPart* "]"
+
+balancedBraces
+  = "{" expressionPart* "}"
+
+expressionPart
+  = quotedString
+  / templateString
+  / balancedParentheses
+  / balancedBrackets
+  / balancedBraces
+  / ![{}()[\]"'`] .
 
 objectLiteral "object literal"
   = "{" _ objContent:objectContent _ "}" {
@@ -757,7 +814,7 @@ propertyValue
   / functionWithElement
   / stringLiteral
   / number
-  / identifier
+  / value:propertyExpression { return value.trim(); }
 
 nestedObject
   = "{" _ objContent:objectContent _ "}" {
@@ -840,9 +897,22 @@ textElement
     }
 
 forLoop "for loop"
-  = _ "@for" _ "(" _ variableName:(tupleDestructuring / identifier) _ "of" _ iterable:iterable _ track:forTrack? ")" _ "{" _ content:content _ "}" _ {
+  = _ forLocation:forToken _ "(" _ variableName:(tupleDestructuring / identifier) _ "of" _ iterable:iterable _ track:forTrack? ")" _ "{" _ content:content _ "}" _ {
       const trackOption = track ? `, { track: ${variableName} => ${track} }` : '';
       return `loop(${formatLoopIterable(iterable)}, ${variableName} => ${content}${trackOption})`;
+    }
+
+forToken
+  = "@for" { return location(); }
+
+invalidForDirective "invalid @for directive"
+  = _ forLocation:forToken header:$((!"{" .)*) "{" &{ return !isCompleteForHeader(header); } {
+      generateError(
+        'CE_TEMPLATE_INVALID_FOR',
+        'Invalid @for directive.',
+        forLocation,
+        'Expected "@for (item of items) { ... }".'
+      );
     }
 
 forTrack "for track expression"
@@ -851,7 +921,7 @@ forTrack "for track expression"
     }
 
 trackExpression "track expression"
-  = text:$(conditionChunk*) {
+  = text:$(directiveExpressionPart*) {
       return text.trim();
     }
 
@@ -861,7 +931,15 @@ tupleDestructuring "destructuring pattern"
     }
 
 ifCondition "if condition"
-  = _ "@if" _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" _ elseIfs:elseIfClause* elseClause:elseClause? _ {
+  = _ ifLocation:ifToken _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" _ elseIfs:elseIfClause* elseClause:elseClause? _ {
+      if (!condition.trim()) {
+        generateError(
+          'CE_TEMPLATE_INVALID_IF',
+          'Invalid @if directive.',
+          ifLocation,
+          'Expected "@if (condition) { ... }" with a non-empty condition.'
+        );
+      }
       let result = `cond(${condition}, () => ${content}`;
       
       // Add else if clauses
@@ -878,6 +956,19 @@ ifCondition "if condition"
       return result;
     }
 
+ifToken
+  = "@if" { return location(); }
+
+invalidIfDirective "invalid @if directive"
+  = _ ifLocation:ifToken header:$((!"{" .)*) "{" &{ return !isCompleteIfHeader(header); } {
+      generateError(
+        'CE_TEMPLATE_INVALID_IF',
+        'Invalid @if directive.',
+        ifLocation,
+        'Expected "@if (condition) { ... }" with a non-empty condition.'
+      );
+    }
+
 elseIfClause "else if clause"
   = _ "@else" _ "if" _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" _ {
       return { condition, content };
@@ -890,6 +981,9 @@ elseClause "else clause"
 
 tagName "tag name"
   = tagExpression
+
+locatedTagName
+  = name:tagName { return { name, location: location() }; }
 
 tagExpression "tag expression"
   = first:tagPart rest:("." tagPart)* {
@@ -911,13 +1005,7 @@ variableName
   = [a-zA-Z_][a-zA-Z0-9_]* { return text(); }
 
 iterable "iterable expression"
-  = id:identifier "(" _ args:functionArgs? _ ")" { // Direct function call
-      return `${id}(${args || ''})`;
-    }
-  / first:identifier "." rest:dotFunctionChain { // Dot notation possibly with function call
-      return `${first}.${rest}`;
-    }
-  / id:identifier { return id; }
+  = expression:$(directiveExpressionPart+) { return expression.trim(); }
 
 dotFunctionChain
   = segment:identifier "(" _ args:functionArgs? _ ")" rest:("." dotFunctionChain)? {
@@ -930,7 +1018,7 @@ dotFunctionChain
     }
 
 condition "condition expression"
-  = text:$(conditionChunk*) {
+  = text:$(directiveExpressionPart*) {
       const originalText = text.trim();
       if (!originalText) {
         return originalText;
@@ -1009,32 +1097,62 @@ singleComment
       return null;
     }
 
+directiveExpressionPart
+  = quotedString
+  / templateString
+  / balancedParentheses
+  / balancedBrackets
+  / balancedBraces
+  / ![;)] .
+
 // Add a special error detection rule for unclosed tags
 openUnclosedTag "unclosed tag"
-  = "<" _ tagName:tagName &{ return !isVoidElement(tagName); } _ attributes:attributes _ ">" _ content:content _ !("</" _ closingTagName:tagName _ ">") {
+  = "<" _ openingTag:locatedTagName &{ return !isVoidElement(openingTag.name); } _ attributes:attributes _ ">" _ content:content _ !("</" _ closingTagName:tagName _ ">") {
       generateError(
-        `Unclosed tag: <${tagName}> is missing its closing tag`,
-        location()
+        'CE_TEMPLATE_UNCLOSED_TAG',
+        `Unclosed tag <${openingTag.name}>.`,
+        openingTag.location,
+        `Add the missing </${openingTag.name}> closing tag.`
       );
     }
 
 // Add error detection for unclosed quotes in static attributes
 unclosedQuote "unclosed string"
-  = attributeName:attributeName _ "=" _ "\"" [^"]* !("\"") {
+  = match:unclosedQuoteMatch {
       generateError(
-        `Missing closing quote in attribute '${attributeName}'`,
-        location()
+        'CE_TEMPLATE_UNCLOSED_QUOTE',
+        `Unclosed quoted value for attribute '${match.attributeName}'.`,
+        match.location,
+        'Add the missing closing quote before the end of the attribute.'
       );
     }
 
+unclosedQuoteMatch
+  = attributeName:attributeName _ "=" _ "\"" ((!('"' / '/>') .)*) &('/>') {
+      return { attributeName, location: location() };
+    }
+
+invalidAttributeQuoteElement "element with an unclosed quoted attribute"
+  = _ "<" _ tagName _ ((!unclosedQuoteMatch !('/>') .)*) unclosedQuote
+
 // Add error detection for unclosed braces in dynamic attributes
 unclosedBrace "unclosed brace"
-  = attributeName:attributeName _ "=" _ "{" !("}" / _ "}") [^{}]* {
+  = match:unclosedBraceMatch {
       generateError(
-        `Missing closing brace in dynamic attribute '${attributeName}'`,
-        location()
+        'CE_TEMPLATE_UNCLOSED_EXPRESSION',
+        `Unclosed expression for attribute '${match.attributeName}'.`,
+        match.location,
+        'Add the missing closing brace before the end of the attribute.'
       );
     }
+
+unclosedBraceMatch
+  = attributeName:attributeName _ "=" _ "{" ((!('/>' / '}') .)*) &('/>') {
+      return { attributeName, location: location() };
+    }
+
+invalidAttributeExpressionElement "element with an unclosed attribute expression"
+  = _ "<" _ tagName _ ((!unclosedBraceMatch !('/>') .)*) unclosedBrace
 
 svgElement "SVG element"
   = "<svg" attrs:([^>]*) ">" content:svgInnerContent "</svg>" _ {

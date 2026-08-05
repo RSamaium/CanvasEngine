@@ -783,6 +783,23 @@ describe("Compiler", () => {
     expect(output).toBe(`h(Button, { style: { backgroundColor: { normal: "#6c757d", hover: "#5a6268", pressed: "#545b62" }, text: { fontSize: 16, color: "#ffffff" } } })`);
   });
 
+  test('should compile reactive expressions in a nested inline object', () => {
+    const input = `<Button
+      style={{
+        backgroundColor: {
+          normal: selected() ? '#3f3f46' : '#27272a',
+          hover: '#52525b'
+        },
+        text: { color: statusColor() },
+        border: { radius: 6 }
+      }}
+    />`;
+    const output = parser.parse(input);
+    expect(output).toBe(
+      `h(Button, { style: computed(() => ({ backgroundColor: { normal: selected() ? '#3f3f46' : '#27272a', hover: '#52525b' }, text: { color: statusColor() }, border: { radius: 6 } })) })`
+    );
+  });
+
   test('should compile component with deep object attribute and shorthand', () => {
     const input = `<Canvas>
   <Container>
@@ -1214,6 +1231,48 @@ describe("Loop", () => {
     expect(output.replace(/\s+/g, "")).toBe(
       `loop(computed(() => game.getItems().visible),item=>h(Text, { text: item }))`.replace(/\s+/g, "")
     );
+  });
+
+  test("should compile a root call followed by member access as a loop source", () => {
+    const input = `
+        @for (obj of selectedQuest().objectives; track obj.id) {
+            <Text text={obj.label} />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(computed(() => selectedQuest().objectives),obj=>h(Text, { text: obj.label }), { track: obj => obj.id })`.replace(/\s+/g, "")
+    );
+  });
+
+  test("should compile optional member access and array fallback as a loop source", () => {
+    const input = `
+        @for (obj of selectedQuest()?.objectives ?? []; track obj.id) {
+            <Text text={obj.label} />
+        }
+    `;
+    const output = parser.parse(input);
+    expect(output.replace(/\s+/g, "")).toBe(
+      `loop(computed(() => selectedQuest()?.objectives ?? []),obj=>h(Text, { text: obj.label }), { track: obj => obj.id })`.replace(/\s+/g, "")
+    );
+  });
+
+  test("should compile nested if and loop expressions without reporting an unclosed parent", () => {
+    const input = `
+      <Container>
+        @if (selectedQuest().objectives?.length) {
+          <Container>
+            @for (obj of selectedQuest().objectives; track obj.id) {
+              <Text
+                text={obj.completed ? "✓" : "○"}
+                color={obj.completed ? "#4ade80" : "#a1a1aa"}
+              />
+            }
+          </Container>
+        }
+      </Container>
+    `;
+    expect(() => parser.parse(input)).not.toThrow();
   });
 
   test("should compile loop with destructuring", () => {

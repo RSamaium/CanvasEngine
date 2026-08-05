@@ -128,19 +128,27 @@ function generateHash(str: string): string {
  * ```
  */
 function showErrorMessage(template: string, error: any): string {
+  const code = error.code || "CE_TEMPLATE_UNEXPECTED_TOKEN";
+  const message = String(error.message || "Unexpected template syntax.")
+    .replace(/^Syntax error:\s*/i, "")
+    .replace(/\s+at line \d+, column \d+(?: to line \d+, column \d+)?$/i, "");
+
   if (!error.location) {
-    return `Syntax error: ${error.message}`;
+    return `[${code}] ${message}`;
   }
 
   const lines = template.split('\n');
   const { line, column } = error.location.start;
   const errorLine = lines[line - 1] || '';
-  
-  // Create a visual pointer with an arrow
-  const pointer = ' '.repeat(column - 1) + '^';
-  
-  return `Syntax error at line ${line}, column ${column}: ${error.message}\n\n` +
-         `${errorLine}\n${pointer}\n`;
+  const lineNumberWidth = String(line).length;
+  const source = `${line} | ${errorLine}`;
+  const pointer = `${' '.repeat(lineNumberWidth)} | ${' '.repeat(Math.max(column - 1, 0))}^`;
+  const hint = error.hint
+    ? `\n\nHint: ${error.hint}`
+    : "\n\nHint: Check the highlighted template syntax.";
+
+  return `[${code}] ${message} (line ${line}, column ${column})\n\n` +
+         `${source}\n${pointer}${hint}`;
 }
 
 /**
@@ -592,10 +600,17 @@ export default function canvasengine(options: CanvasEnginePluginOptions = {}) {
 
       let parsedTemplate;
       try {
-        parsedTemplate = parser.parse(template);
+        parsedTemplate = parser.parse(template, {
+          validateExpression(expression: string) {
+            parse(`(${expression})`, {
+              sourceType: "module",
+              ecmaVersion: 2020,
+            });
+          },
+        });
       } catch (error) {
         const errorMsg = showErrorMessage(template, error);
-        throw new Error(`Error parsing template in file ${id}:\n${errorMsg}`);
+        throw new Error(`Error parsing template in ${id}\n${errorMsg}`);
       }
 
       // trick to avoid typescript remove imports in scriptContent

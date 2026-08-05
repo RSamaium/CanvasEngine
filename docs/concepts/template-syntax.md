@@ -55,6 +55,22 @@ h(Text, { text: 1 + 1 })
 h(Text, { text: computed(() => nb() + 1) })
 ```
 
+Nested object and array values support the same JavaScript expressions. Call signals explicitly when a nested value must be reactive:
+
+```html
+<Button
+  style={{
+    backgroundColor: {
+      normal: selected() ? '#3f3f46' : '#27272a',
+      hover: '#52525b'
+    },
+    text: { color: statusColor() }
+  }}
+/>
+```
+
+Because this object contains function calls, the compiler wraps the complete object in `computed`. An object containing only static values stays unchanged.
+
 ## Event listeners
 
 You can use event listeners in your components
@@ -302,3 +318,31 @@ Or combine object properties with method calls:
   };
 </script>
 ```
+
+The iterable can also use a root function call followed by property access, optional chaining, or a fallback expression:
+
+```html
+<Container>
+  @for (objective of selectedQuest()?.objectives ?? []; track objective.id) {
+    <Text text={objective.label} />
+  }
+</Container>
+```
+
+An iterable containing a function call is compiled as a reactive `computed` source.
+
+## Template errors
+
+Compiler errors include a stable diagnostic code, the source location, the offending line, a pointer, and a suggested correction:
+
+```text
+Error parsing template in /app/quest-menu.ce
+[CE_TEMPLATE_INVALID_FOR] Invalid @for directive. (line 12, column 3)
+
+12 |   @for (item items) {
+   |   ^
+
+Hint: Expected "@for (item of items) { ... }".
+```
+
+Dedicated diagnostics cover malformed control directives, invalid dynamic expressions, mismatched or unclosed tags, and unclosed attribute quotes or braces.
