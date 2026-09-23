@@ -159,13 +159,18 @@ export function DisplayObject(extendClass): any {
       return this.#canvasContext?.scheduler?.tick.value.deltaRatio;
     }
 
+    /** True when the current parent lays this object out. A detached object (parent `null`) never is. */
+    #hasLayoutParentDependency() {
+      return Boolean(this.parent) && this.#layoutParentDependency === this.parent;
+    }
+
     get parentIsFlex() {
       if (this.disableLayout) return false;
       const parentHasExplicitLayoutRole =
         typeof this.parent?.isLayoutContainer === "boolean";
       return Boolean(
         this.parent?.isLayoutContainer ||
-        this.#layoutParentDependency === this.parent ||
+        this.#hasLayoutParentDependency() ||
         (!parentHasExplicitLayoutRole && this.parent?.isFlex),
       );
     }
@@ -288,7 +293,7 @@ export function DisplayObject(extendClass): any {
       const shouldHaveLayout =
         this.isLayoutBoundary ||
         Boolean(this.parent?.isLayoutContainer) ||
-        this.#layoutParentDependency === this.parent ||
+        this.#hasLayoutParentDependency() ||
         hasLayoutNodeProps(source);
       if (!shouldHaveLayout) return;
 
@@ -437,7 +442,7 @@ export function DisplayObject(extendClass): any {
       } else if (
         this.isLayoutBoundary ||
         Boolean(this.parent?.isLayoutContainer) ||
-        this.#layoutParentDependency === this.parent ||
+        this.#hasLayoutParentDependency() ||
         hasLayoutNodeProps(this.fullProps)
       ) {
         this.ensureLayout();

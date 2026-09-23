@@ -27,6 +27,22 @@ describe('Text Component', () => {
         vi.unstubAllGlobals()
     })
 
+    test('a reactive text in a plain container keeps its x/y (no layout box)', async () => {
+        const label = signal('Before')
+        const element = await TestBed.createComponent(() =>
+            h(Container, { x: 16, y: 16 }, [h(Text, { text: label, x: 30, y: 70 })])
+        )
+        const text = (element.componentInstance as any).children[0]
+
+        label.set('After a much longer label')
+
+        // A detached parent (null) must not be mistaken for a layout parent,
+        // otherwise the text gets a centered layout box and drifts.
+        expect(text.layout).toBeFalsy()
+        expect(text.x).toBe(30)
+        expect(text.y).toBe(70)
+    })
+
     test('creates text component with basic properties', async () => {
         const textElement = await TestBed.createComponent(Text, {
             text: 'Hello World',
