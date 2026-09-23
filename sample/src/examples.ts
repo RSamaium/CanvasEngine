@@ -43,6 +43,7 @@ export const EXAMPLES: ExampleDefinition[] = [
   { slug: 'dom-sprite', title: 'DOM Sprite', load: () => import('./test.ce') },
   { slug: 'tiled', title: 'Tiled Map', load: () => import('./tiled.ce') },
   { slug: 'weather', title: 'Weather · Preset Lab', load: () => import('./weather.ce') },
+  { slug: 'night-town', title: 'Day & Night · Town', load: () => import('./night-town.ce') },
 ]
 
 export function getExample(slug: string | null | undefined): ExampleDefinition {

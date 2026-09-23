@@ -179,6 +179,10 @@ const guideMenu = [
         link: "/presets/night-ambiant",
       },
       {
+        text: "DayNightCycle",
+        link: "/presets/day-night",
+      },
+      {
         text: "Footprints",
         link: "/presets/footprints",
       },

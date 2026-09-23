@@ -1,0 +1,202 @@
+<Canvas backgroundColor="#05070d">
+  <Container sortableChildren={true}>
+  <Viewport worldWidth={1920} worldHeight={1440} drag={true} wheel={true} clamp={clampOptions} sortableChildren={true}>
+    <Sprite image="./night-town.webp" />
+    <DayNightCycle time={clock.time} lights={lights} />
+  </Viewport>
+
+  <Weather effect="fireflies" density={90} maxDrops={60} speed={0.35} alpha={nightFactor} />
+
+  <Container x={16} y={16} zIndex={50}>
+    <Rect x={0} y={0} width={340} height={292} color="#0a0f1a" alpha={0.86} borderRadius={16} border={{ width: 1, color: "#3a4a63" }} />
+
+    @if (isNight) {
+      <Circle x={40} y={44} radius={17} color="#e8ecff" />
+      <Circle x={48} y={38} radius={15} color="#0a0f1a" />
+    }
+    @else if (isDay) {
+      <Circle x={40} y={44} radius={17} color="#ffd75a" />
+    }
+    @else {
+      <Circle x={40} y={44} radius={17} color="#ff8f4a" />
+      <Rect x={20} y={44} width={40} height={20} color="#0a0f1a" />
+    }
+
+    <Text text={clock.label} x={72} y={18} color="#ffffff" size={36} fontFamily="Arial" style={{ fontWeight: "700" }} />
+    <Text text={dayLabel} x={74} y={60} color={phaseColor} size={12} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.4 }} />
+    <Text text={lampsLabel} x={200} y={32} color="#ffcf7a" size={12} fontFamily="Arial" />
+
+    @for (segment of hourSegments) {
+      <Rect x={segment.x} y={92} width={segment.width} height={18} color={segment.color} click={segment.select} cursor="pointer" />
+    }
+    <Rect x={cursorX} y={86} width={3} height={30} color="#ffffff" />
+    @for (mark of hourMarks) {
+      <Text text={mark.label} x={mark.x} y={116} color="#7f8da3" size={10} fontFamily="Arial" />
+    }
+
+    @for (button of speedButtons) {
+      <Rect x={button.x} y={144} width={56} height={30} color="#16213a" borderRadius={8} />
+    }
+    <Rect x={activeSpeedX} y={144} width={56} height={30} color="#3a3216" borderRadius={8} />
+    <!-- Clickable containers wrap the labels so a click on the text reaches the handler -->
+    @for (button of speedButtons) {
+      <Container x={button.x} y={144} click={button.select} cursor="pointer">
+        <Rect x={0} y={0} width={56} height={30} color="#16213a" alpha={0.01} />
+        <Text text={button.label} x={button.textOffset} y={7} color="#dbe4f0" size={13} fontFamily="Arial" style={{ fontWeight: "700" }} />
+      </Container>
+    }
+
+    @for (jump of jumps) {
+      <Container x={jump.x} y={188} click={jump.select} cursor="pointer">
+        <Rect x={0} y={0} width={72} height={28} color="#1b1830" borderRadius={8} />
+        <Text text={jump.label} x={10} y={7} color="#c9c2ff" size={11} fontFamily="Arial" />
+      </Container>
+    }
+
+    <Text text="Drag to explore · wheel to zoom · click the bar to set the hour" x={20} y={234} width={300} color="#7f8da3" size={11} fontFamily="Arial" />
+    <Text text={speedLabel} x={20} y={258} color="#9fb3cc" size={11} fontFamily="monospace" />
+  </Container>
+  </Container>
+</Canvas>
+
+<script>
+  import { computed } from 'canvasengine'
+  import {
+    DayNightCycle,
+    Weather,
+    lightLevel,
+    sampleDayLighting,
+    useGameClock,
+  } from '@canvasengine/presets'
+
+  const clock = useGameClock({ time: 17.5, speed: 10 })
+  const clampOptions = { direction: 'all' }
+
+  // Positions detected on the generated map (lantern glass and window panes).
+  const lampPositions = [
+    [875, 61], [1045, 61], [875, 372], [1045, 372], [480, 389], [1435, 388],
+    [756, 494], [1165, 494], [746, 785], [1173, 785], [348, 837],
+    [875, 931], [1045, 932], [876, 1217], [1045, 1217],
+  ]
+  const windowPositions = [
+    [169, 306], [338, 302], [588, 280], [745, 277], [1225, 221], [1308, 216], [1404, 224],
+    [1217, 323], [1405, 322], [1806, 329], [152, 724], [290, 728], [436, 732], [553, 733],
+    [1512, 739], [1666, 749], [1799, 745], [637, 1189], [774, 1185], [1168, 1228],
+    [1240, 1214], [1309, 1203], [1650, 1206], [1798, 1202],
+  ]
+
+  const random = (seed) => {
+    const x = Math.sin(seed * 91.7) * 43758.5453
+    return x - Math.floor(x)
+  }
+
+  const lamps = lampPositions.map(([x, y]) => ({
+    x, y,
+    radius: 230,
+    color: '#ffc070',
+    intensity: 1,
+    halo: 0.95,
+    haloSize: 0.12,
+    flicker: 0.1,
+  }))
+
+  // Every household lives its own evening: lights on after sunset, off at bedtime.
+  const windows = windowPositions.map(([x, y], index) => {
+    const on = 18.2 + random(index + 1) * 1.6
+    const off = 22 + random(index + 40) * 3.5
+    return {
+      x, y,
+      radius: 62,
+      color: random(index + 80) > 0.3 ? '#ffcf7a' : '#ffe6b0',
+      intensity: 0.9,
+      halo: 0.45,
+      haloSize: 0.32,
+      schedule: [on, off % 24],
+    }
+  })
+
+  const fountain = { x: 960, y: 700, radius: 150, color: '#7fd4ff', intensity: 0.55, halo: 0.25, haloSize: 0.3, threshold: 0.55 }
+
+  const lights = [...lamps, fountain, ...windows]
+
+  const lighting = computed(() => sampleDayLighting(clock.time()))
+  const nightFactor = computed(() => lighting().lights)
+
+  const litCount = computed(() => {
+    const time = clock.time()
+    const darkness = lighting().lights
+    return lamps.filter((lamp, index) => lightLevel({ ...lamp, flicker: 0 }, index, time, darkness, 0) > 0.5).length
+  })
+  const lampsLabel = computed(() => `Lamps ${litCount()}/${lamps.length}`)
+
+  const PHASE_COLORS = { night: '#8fa8ff', dawn: '#ffb08a', day: '#ffd75a', dusk: '#ff8f4a' }
+  const phaseColor = computed(() => PHASE_COLORS[clock.phase()])
+  const dayLabel = computed(() => `DAY ${clock.day()} · ${clock.phase().toUpperCase()}`)
+  const isNight = computed(() => clock.phase() === 'night')
+  const isDay = computed(() => clock.phase() === 'day')
+
+  // 24h bar, colored with the sky of each hour
+  const BAR_X = 20
+  const BAR_WIDTH = 300
+  const toHex = (value) => Math.round(Math.min(1, Math.max(0, value)) * 255).toString(16).padStart(2, '0')
+  const skyColor = (hour) => {
+    const { ambient, lights: dark } = sampleDayLighting(hour)
+    const lift = 0.25 * (1 - dark)
+    return `#${toHex(ambient[0] * 0.55 + lift)}${toHex(ambient[1] * 0.6 + lift)}${toHex(ambient[2] * 0.75 + lift)}`
+  }
+  const hourSegments = Array.from({ length: 24 }, (_, hour) => ({
+    x: BAR_X + (hour * BAR_WIDTH) / 24,
+    width: BAR_WIDTH / 24 + 0.5,
+    color: skyColor(hour + 0.5),
+    select: () => clock.setTime(hour),
+  }))
+  const hourMarks = [0, 6, 12, 18, 24].map((hour) => ({
+    label: String(hour).padStart(2, '0'),
+    x: BAR_X + (hour * BAR_WIDTH) / 24 - (hour === 24 ? 12 : hour === 0 ? 0 : 6),
+  }))
+  const cursorX = computed(() => BAR_X + clock.progress() * BAR_WIDTH - 1)
+
+  const SPEEDS = [
+    { label: 'II', speed: 0 },
+    { label: '1×', speed: 1 },
+    { label: '10×', speed: 10 },
+    { label: '60×', speed: 60 },
+    { label: '240×', speed: 240 },
+  ]
+  const speedButtons = SPEEDS.map((entry, index) => ({
+    label: entry.label,
+    x: BAR_X + index * 61,
+    textOffset: entry.label.length > 3 ? 10 : entry.label.length > 2 ? 14 : 19,
+    select: () => {
+      if (entry.speed === 0) {
+        clock.togglePause()
+        return
+      }
+      clock.resume()
+      clock.setSpeed(entry.speed)
+    },
+  }))
+
+  const activeSpeedX = computed(() => {
+    const index = clock.paused() ? 0 : SPEEDS.findIndex((entry) => entry.speed === clock.speed())
+    return index < 0 ? -1000 : BAR_X + index * 61
+  })
+
+  const jumps = [
+    { label: 'Dawn 05:30', hour: 5.5 },
+    { label: 'Noon 12:00', hour: 12 },
+    { label: 'Dusk 18:00', hour: 18 },
+    { label: 'Night 22:00', hour: 22 },
+  ].map((jump, index) => ({
+    ...jump,
+    x: BAR_X + index * 76,
+    select: () => clock.setTime(jump.hour),
+  }))
+
+  const speedLabel = computed(() => {
+    if (clock.paused()) return 'Time paused'
+    const minutesPerSecond = clock.speed()
+    const realMinutesPerDay = (24 * 60) / minutesPerSecond / 60
+    return `${minutesPerSecond} game min / s · a day lasts ${realMinutesPerDay < 1 ? Math.round(realMinutesPerDay * 60) + ' s' : Math.round(realMinutesPerDay) + ' min'}`
+  })
+</script>
