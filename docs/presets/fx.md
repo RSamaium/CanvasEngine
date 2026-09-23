@@ -37,21 +37,88 @@
 import { FX_PRESETS } from '@canvasengine/presets'
 ```
 
-Available preset names:
+`FX_PRESETS` contains every built-in preset. They are also grouped:
 
-- `hitSpark`
-- `slashSpark`
-- `impactBurst`
-- `smokePuff`
-- `dustStep`
-- `dashDust`
-- `magicBurst`
-- `healPulse`
-- `campfire`
-- `torchFire`
-- `pickup`
-- `levelUp`
-- `explosionSmall`
+| Group | Presets |
+|------|---------|
+| `COMBAT_FX_PRESETS` | `hitSpark`, `slashSpark`, `impactBurst`, `smokePuff`, `dustStep`, `dashDust`, `magicBurst`, `healPulse`, `campfire`, `torchFire`, `pickup`, `levelUp`, `explosionSmall` |
+| `ATTACK_FX_PRESETS` (strike toward the right) | `swordSlash`, `heavySlash`, `crossSlash`, `spinSlash`, `pierce`, `clawStrike`, `groundSlam`, `comboHits` |
+| `EPIC_FX_PRESETS` (limit breaks, ultimates) | `limitBurst`, `holyPillar`, `crystalBurst`, `chargeOrb`, `summonSigil`, `shockwave` |
+| `MAGIC_FX_PRESETS` (one-shot spells) | `fireball`, `frostNova`, `iceSpikes`, `thunderStrike`, `holyLight`, `shadowCurse`, `arcaneCharge`, `arcaneBurst`, `teleport`, `poisonCloud`, `windCyclone`, `earthShatter`, `waterSplash`, `criticalHit`, `manaRestore`, `revive`, `meteorImpact` |
+| `AURA_FX_PRESETS` (use `loop`) | `magicCircle`, `powerAura`, `shieldBarrier`, `summonPortal`, `magicTrail`, `fireTrail` |
+| `STATUS_FX_PRESETS` (use `loop`) | `statusStun`, `statusPoison`, `statusBurn`, `statusFreeze`, `statusCurse` |
+
+```html
+<Fx name="fireball" trigger={cast} x={enemyX} y={enemyY} />
+<Fx name="statusPoison" x={0} y={-40} loop />
+<Fx name="magicCircle" loop scale={1.5} />
+```
+
+Attack presets strike toward the right. Aim them with `rotation` (radians) or mirror them with `scale={[-1, 1]}`:
+
+```html
+<Fx name="heavySlash" trigger={attack} x={enemyX} y={enemyY} rotation={Math.PI} />
+```
+
+Epic presets cover a large area (flash, speed lines, prismatic rings, light pillars). One `Fx` can play any of them through its trigger:
+
+```js
+play.start({ name: 'limitBurst' })
+play.start({ name: 'holyPillar', color: '#8fd0ff' })
+```
+
+`magicTrail` and `fireTrail` emit in world space: move the `Fx` (for example with a projectile) and the particles stay behind as a trail.
+
+## Customizing a Preset
+
+Every preset can be adapted without copying it:
+
+```html
+<!-- Same fireball, but green, denser and bigger -->
+<Fx name="fireball" trigger={cast} color="#5dff6a" intensity={1.5} sizeScale={1.3} />
+
+<!-- Ice aura turned into a golden one -->
+<Fx name="shieldBarrier" loop hueShift={-150} />
+```
+
+| Prop | Description |
+|------|-------------|
+| `color` | Recolors the effect toward this color. White cores, grey smoke and near-black shadows keep their tone, so one preset gives every element |
+| `hueShift` | Rotates every color hue, in degrees |
+| `intensity` | Multiplies particle counts (`burst` and `rate`) |
+| `speedScale` | Multiplies particle speeds (and gravity) |
+| `sizeScale` | Multiplies particle sizes |
+| `lifetimeScale` | Multiplies particle lifetimes and the preset duration |
+
+A looping effect restarts automatically when one of these props (or `name` / `preset`) changes.
+
+### Per-trigger options
+
+A single `Fx` can cast different variations. Everything passed to `trigger.start()` overrides the props for that cast:
+
+```js
+const cast = trigger()
+
+cast.start({ name: 'thunderStrike' })
+cast.start({ name: 'fireball', color: '#4aa8ff', x: 40, y: -10 }) // blue fireball, 40px to the right
+```
+
+Supported keys: `name`, `preset`, `x`, `y`, and the customization keys above.
+
+### In code
+
+```js
+import { FX_PRESETS, customizeFx, registerFxPreset } from '@canvasengine/presets'
+
+const acidBall = customizeFx(FX_PRESETS.fireball, { color: '#8be04a', lifetimeScale: 1.4 })
+registerFxPreset('acidBall', acidBall)
+```
+
+```html
+<Fx name="acidBall" trigger={cast} />
+```
+
+`registerFxPreset(name, preset)` makes any preset usable with `name`. A registered name overrides a built-in preset with the same name.
 
 ## Custom Preset
 
@@ -119,6 +186,48 @@ Use it with a trigger:
 ```html
 <Fx preset={hit} trigger={hitTrigger} x={enemyX} y={enemyY} />
 ```
+
+### Magic shapes
+
+Spells usually need particles that gather, spin or form rings. Emitters support circular zones and radial movement:
+
+```js
+const darkOrb = {
+  duration: 700,
+  emitters: [
+    {
+      // particles spiral toward the center (charge)
+      burst: 30,
+      radius: [60, 95],
+      direction: 'inward',
+      speed: [60, 110],
+      orbit: 140,
+      particle: { shape: 'softCircle', lifetime: [480, 760], color: ['#c58bff', '#5a1e99'], alpha: [0, 0.85, 0], scale: [0.5, 0.15], blendMode: 'add' },
+    },
+    {
+      // then burst outward
+      delay: 400,
+      burst: 20,
+      radius: 4,
+      direction: 'outward',
+      speed: [160, 300],
+      drag: 3,
+      particle: { shape: 'spark', align: 'velocity', lifetime: [320, 620], color: ['#e8c4ff', '#7a2cff'], scale: [0.2, 0], blendMode: 'add' },
+    },
+  ],
+}
+```
+
+- `radius` / `innerRadius` spawn particles in a disc or a ring.
+- `ellipse` squashes that circle (and `orbit`) vertically, e.g. `0.4` for a circle drawn on the ground.
+- `direction: 'outward' | 'inward' | 'tangent'` aims particles relative to the center.
+- `orbit` (deg/s) makes particles turn around the center.
+- `drag` slows particles down: fast bursts that stop sharply feel much more impactful.
+- `align: 'velocity'` orients `spark` and `diamond` particles along their movement.
+- `alpha`, `scale` and `color` accept more than two stops: `alpha: [0, 1, 0]` fades in then out.
+- `burstCount` + `burstInterval` repeat a burst (thunder flashes, pulses).
+- `scaleX` / `scaleY` stretch a particle over its lifetime: a `beam` growing into a pillar, a `streak` extending into a speed line.
+- `perspective` squashes a particle *after* its rotation, so a spinning `sigil` or `ring` looks laid on the ground (`scaleY` would squash before rotating and make the ellipse wobble).
 
 For a looped effect, use `rate` and `loop`:
 
@@ -337,6 +446,12 @@ Recommended export:
 | `maxParticles` | `number` | `600` | Particle cap |
 | `preload` | `boolean` | `true` | Loads image/spritesheet assets before spawning |
 | `missingTexture` | `'shape' \| 'skip' \| 'error'` | `'shape'` | Behavior when an image texture is unavailable |
+| `color` | `string \| number` | - | Recolors the preset (see [Customizing a Preset](#customizing-a-preset)) |
+| `hueShift` | `number` | - | Rotates color hues, in degrees |
+| `intensity` | `number` | `1` | Particle count multiplier |
+| `speedScale` | `number` | `1` | Particle speed multiplier |
+| `sizeScale` | `number` | `1` | Particle size multiplier |
+| `lifetimeScale` | `number` | `1` | Particle lifetime multiplier |
 | `onStart` | `(instance) => void` | - | Called when an effect starts |
 | `onComplete` | `(instance) => void` | - | Called when all particles are done |
 | `onParticleSpawn` | `(particle) => void` | - | Called for each spawned particle |
@@ -359,21 +474,30 @@ Extra display props such as `zIndex` are forwarded to the underlying `Container`
 | `duration` | `number` | Emitter duration |
 | `loop` | `boolean` | Keeps this emitter active |
 | `burst` | `number` | Number of particles emitted immediately |
+| `burstCount` | `number` | Number of bursts (default `1`, infinite when looping with `burstInterval`) |
+| `burstInterval` | `number` | Delay between bursts, in ms |
 | `rate` | `number` | Particles emitted per second |
 | `maxParticles` | `number` | Emitter particle cap |
 | `x`, `y` | `number` | Local emitter offset |
 | `spreadX`, `spreadY` | `number` | Random spawn spread |
+| `radius` | `number \| [number, number]` | Spawns particles in a circle around the emitter |
+| `innerRadius` | `number` | Turns the circle into a ring |
+| `ellipse` | `number` | Vertical squash of `radius` and `orbit` (`1` = circle) |
+| `direction` | `'angle' \| 'outward' \| 'inward' \| 'tangent'` | Velocity direction (default `'angle'`) |
 | `angle` | `number \| [number, number]` | Direction in degrees |
 | `speed` | `number \| [number, number]` | Initial speed in px/s |
 | `accelerationX`, `accelerationY` | `number` | Acceleration in px/s |
 | `gravity` | `number` | Vertical acceleration in px/s |
+| `drag` | `number` | Velocity damping per second |
+| `orbit` | `number \| [number, number]` | Rotation around the emitter center, in deg/s |
+| `space` | `'local' \| 'world'` | `world` leaves particles behind when the `Fx` moves |
 | `particle` | `FxParticleConfig` | Particle appearance and lifetime |
 
 ## `FxParticleConfig`
 
 | Field | Type | Description |
 |------|------|-------------|
-| `shape` | `'circle' \| 'softCircle' \| 'spark' \| 'square' \| 'star'` | Procedural fallback shape |
+| `shape` | `'circle' \| 'softCircle' \| 'spark' \| 'square' \| 'star' \| 'ring' \| 'diamond' \| 'flare' \| 'flame' \| 'bubble' \| 'slash' \| 'streak' \| 'beam' \| 'sigil' \| 'prism'` | Procedural shape. `slash` is a blade crescent facing right, `streak` a speed line, `beam` a light column (use `anchor: { x: 0.5, y: 1 }`), `sigil` a magic circle, `prism` a chromatic ring (keep `color` white) |
 | `image` | `string` | Single image URL |
 | `texture` | `Texture` | Existing Pixi texture |
 | `spritesheet` | `string` | Pixi spritesheet JSON URL |
@@ -382,11 +506,14 @@ Extra display props such as `zIndex` are forwarded to the underlying `Container`
 | `frameMode` | `'first' \| 'random' \| 'animated'` | Frame selection mode |
 | `frameRate` | `number` | Animated frame rate |
 | `lifetime` | `number \| [number, number]` | Lifetime in ms |
-| `color`, `tint` | `string \| number \| [start, end]` | Particle tint |
-| `alpha` | `number \| [number, number]` | Alpha over lifetime |
-| `scale` | `number \| [number, number]` | Scale over lifetime |
+| `color`, `tint` | `string \| number \| string[]` | Particle tint, or color stops over the lifetime |
+| `alpha` | `number \| number[]` | Alpha over lifetime (`[start, end]` or more keyframes) |
+| `scale` | `number \| number[]` | Scale over lifetime (`[start, end]` or more keyframes) |
+| `scaleX`, `scaleY` | `number \| number[]` | Horizontal / vertical stretch over lifetime, multiplied with `scale` |
+| `perspective` | `number` | Vertical squash applied after rotation (ground-plane effects) |
 | `rotation` | `number \| [number, number]` | Initial rotation in degrees |
 | `rotationSpeed` | `number \| [number, number]` | Rotation speed in degrees/s |
+| `align` | `'velocity'` | Orients the particle along its movement |
 | `blendMode` | `string` | Pixi blend mode |
 | `anchor` | `{ x, y }` | Sprite anchor |
 | `ease` | `'linear' \| 'outQuad' \| 'outCubic' \| 'inQuad'` | Lifetime interpolation |

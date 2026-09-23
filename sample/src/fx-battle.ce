@@ -1,0 +1,59 @@
+<Canvas backgroundColor="#0b0e15">
+  <Container sortableChildren={true}>
+    <Sprite image="./back.png" x={200} y={0} width={760} height={620} alpha={0.55} zIndex={0} />
+    <Rect x={0} y={0} width={200} height={620} color="#0e121b" zIndex={1} />
+    <Text text="ATTACKS" x={18} y={16} color="#8fa7c1" size={11} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.6 }} zIndex={2} />
+    <Text text="EPIC" x={18} y={296} color="#ffd98b" size={11} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.6 }} zIndex={2} />
+
+    @for (entry of entries) {
+      <Text text={entry.name} x={26} y={entry.y} color="#d7e0ec" size={14} fontFamily="Arial" click={entry.play} cursor="pointer" zIndex={2} />
+    }
+
+    <Text text={currentLabel} x={230} y={20} color="#ffffff" size={22} fontFamily="Arial" style={{ fontWeight: "700" }} zIndex={5} />
+    <Text text="Click a name to replay it" x={230} y={52} color="#9aa6b8" size={13} zIndex={5} />
+
+    <Circle x={660} y={380} radius={34} color="#3a1f2b" zIndex={3} />
+    <Circle x={660} y={372} radius={24} color="#6b2f45" zIndex={3} />
+    <Circle x={400} y={400} radius={20} color="#2f4a6b" zIndex={3} />
+
+    <Fx name="swordSlash" trigger={play} x={660} y={380} zIndex={4} />
+  </Container>
+</Canvas>
+
+<script>
+  import { ATTACK_FX_PRESETS, EPIC_FX_PRESETS, Fx } from '@canvasengine/presets'
+  import { signal, trigger } from 'canvasengine'
+
+  const play = trigger()
+  const currentLabel = signal('swordSlash')
+  const names = [...Object.keys(ATTACK_FX_PRESETS), ...Object.keys(EPIC_FX_PRESETS)]
+  const attackCount = Object.keys(ATTACK_FX_PRESETS).length
+
+  const cast = (name) => {
+    currentLabel.set(name)
+    play.start({ name })
+  }
+
+  const entries = names.map((name, index) => ({
+    name,
+    y: index < attackCount ? 40 + index * 28 : 320 + (index - attackCount) * 28,
+    play: () => {
+      restartCycle(index)
+    },
+  }))
+
+  let cursor = 0
+  let timer
+  const next = () => {
+    cast(names[cursor % names.length])
+    const isEpic = cursor % names.length >= attackCount
+    cursor++
+    timer = setTimeout(next, isEpic ? 2200 : 1100)
+  }
+  const restartCycle = (index) => {
+    clearTimeout(timer)
+    cursor = index
+    next()
+  }
+  timer = setTimeout(next, 500)
+</script>

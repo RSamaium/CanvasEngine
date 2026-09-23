@@ -1,6 +1,11 @@
 import type { FxPreset } from "./types";
+import { AURA_FX_PRESETS, MAGIC_FX_PRESETS, STATUS_FX_PRESETS } from "./magic";
+import { ATTACK_FX_PRESETS, EPIC_FX_PRESETS } from "./attacks";
 
-export const FX_PRESETS = {
+export { ATTACK_FX_PRESETS, AURA_FX_PRESETS, EPIC_FX_PRESETS, MAGIC_FX_PRESETS, STATUS_FX_PRESETS };
+
+/** Combat, movement and environment effects. */
+export const COMBAT_FX_PRESETS = {
   hitSpark: {
     duration: 180,
     emitters: [
@@ -8,8 +13,10 @@ export const FX_PRESETS = {
         burst: 18,
         angle: [0, 360],
         speed: [120, 340],
+        drag: 3,
         particle: {
           shape: "spark",
+          align: "velocity",
           lifetime: [160, 340],
           color: ["#fff4a8", "#ff7a2f"],
           alpha: [1, 0],
@@ -30,8 +37,10 @@ export const FX_PRESETS = {
         speed: [180, 430],
         spreadX: 10,
         spreadY: 3,
+        drag: 2.5,
         particle: {
           shape: "spark",
+          align: "velocity",
           lifetime: [110, 260],
           color: ["#ffffff", "#ffcf5a"],
           alpha: [1, 0],
@@ -65,8 +74,10 @@ export const FX_PRESETS = {
         burst: 24,
         angle: [0, 360],
         speed: [130, 280],
+        drag: 2.5,
         particle: {
           shape: "spark",
+          align: "velocity",
           lifetime: [180, 420],
           color: ["#fff3ba", "#d64d27"],
           alpha: [1, 0],
@@ -158,6 +169,7 @@ export const FX_PRESETS = {
         spreadX: 10,
         particle: {
           shape: "spark",
+          align: "velocity",
           lifetime: [120, 280],
           color: "#d9c08a",
           alpha: [0.42, 0],
@@ -345,6 +357,7 @@ export const FX_PRESETS = {
         spreadX: 26,
         particle: {
           shape: "spark",
+          align: "velocity",
           lifetime: [420, 840],
           color: ["#fff8c8", "#66d9ff"],
           alpha: [0.75, 0],
@@ -375,3 +388,28 @@ export const FX_PRESETS = {
     ],
   },
 } satisfies Record<string, FxPreset>;
+
+export const FX_PRESETS = {
+  ...COMBAT_FX_PRESETS,
+  ...ATTACK_FX_PRESETS,
+  ...EPIC_FX_PRESETS,
+  ...MAGIC_FX_PRESETS,
+  ...AURA_FX_PRESETS,
+  ...STATUS_FX_PRESETS,
+};
+
+export type FxPresetName = keyof typeof FX_PRESETS;
+
+const customPresets = new Map<string, FxPreset>();
+
+/**
+ * Registers a preset so it can be used by name: `<Fx name="myPreset" />`.
+ * A registered preset overrides a built-in preset with the same name.
+ */
+export function registerFxPreset(name: string, preset: FxPreset) {
+  customPresets.set(name, preset);
+}
+
+export function getFxPreset(name: string): FxPreset | undefined {
+  return customPresets.get(name) ?? (FX_PRESETS as Record<string, FxPreset>)[name];
+}

@@ -1,4 +1,4 @@
-import type { FxColor, FxRange } from "./types";
+import type { FxColor, FxColorRange, FxCurve, FxRange } from "./types";
 
 export function resolveValue<T>(value: T | (() => T)): T {
   return typeof value === "function" ? (value as () => T)() : value;
@@ -59,3 +59,78 @@ export function easeValue(name: string | undefined, progress: number): number {
   return t;
 }
 
+
+/**
+ * Resolves a lifetime curve into numeric stops.
+ * A single value gives one stop; an array gives one stop per entry.
+ */
+export function curveStops(value: FxCurve | undefined, random: () => number, fallback: number[]): number[] {
+  if (value === undefined) return fallback;
+  if (Array.isArray(value)) {
+    return (value as FxRange[]).map((stop) => rangeValue(stop, random, 0));
+  }
+  return [value];
+}
+
+export function colorStops(value: FxColorRange | undefined, fallback = 0xffffff): number[] {
+  if (value === undefined) return [fallback];
+  if (Array.isArray(value)) return value.map((color) => colorToNumber(color, fallback));
+  return [colorToNumber(value, fallback)];
+}
+
+function stopSegment(count: number, progress: number) {
+  const position = Math.max(0, Math.min(1, progress)) * (count - 1);
+  const index = Math.min(count - 2, Math.floor(position));
+  return { index, local: position - index };
+}
+
+export function sampleStops(stops: number[], progress: number): number {
+  if (stops.length === 1) return stops[0];
+  const { index, local } = stopSegment(stops.length, progress);
+  return lerp(stops[index], stops[index + 1], local);
+}
+
+export function sampleColorStops(stops: number[], progress: number): number {
+  if (stops.length === 1) return stops[0];
+  const { index, local } = stopSegment(stops.length, progress);
+  return lerpColor(stops[index], stops[index + 1], local);
+}
+
+export function rgbToHsl(color: number): [number, number, number] {
+  const r = ((color >> 16) & 255) / 255;
+  const g = ((color >> 8) & 255) / 255;
+  const b = (color & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  return [h * 60, s, l];
+}
+
+export function hslToRgb(h: number, s: number, l: number): number {
+  const hue = (((h % 360) + 360) % 360) / 360;
+  if (s === 0) {
+    const v = Math.round(l * 255);
+    return (v << 16) + (v << 8) + v;
+  }
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const channel = (t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  const r = Math.round(channel(hue + 1 / 3) * 255);
+  const g = Math.round(channel(hue) * 255);
+  const b = Math.round(channel(hue - 1 / 3) * 255);
+  return (r << 16) + (g << 8) + b;
+}
