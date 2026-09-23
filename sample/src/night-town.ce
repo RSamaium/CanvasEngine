@@ -35,22 +35,16 @@
     }
 
     @for (button of speedButtons) {
-      <Rect x={button.x} y={144} width={56} height={30} color="#16213a" borderRadius={8} />
+      <Rect x={button.x} y={144} width={56} height={30} color="#16213a" borderRadius={8} click={button.select} cursor="pointer" />
     }
-    <Rect x={activeSpeedX} y={144} width={56} height={30} color="#3a3216" borderRadius={8} />
-    <!-- Clickable containers wrap the labels so a click on the text reaches the handler -->
+    <Rect x={activeSpeedX} y={144} width={56} height={30} color="#3a3216" borderRadius={8} click={toggleActiveSpeed} cursor="pointer" />
     @for (button of speedButtons) {
-      <Container x={button.x} y={144} click={button.select} cursor="pointer">
-        <Rect x={0} y={0} width={56} height={30} color="#16213a" alpha={0.01} />
-        <Text text={button.label} x={button.textOffset} y={7} color="#dbe4f0" size={13} fontFamily="Arial" style={{ fontWeight: "700" }} />
-      </Container>
+      <Text text={button.label} x={button.x + button.textOffset} y={151} color="#dbe4f0" size={13} fontFamily="Arial" style={{ fontWeight: "700" }} />
     }
 
     @for (jump of jumps) {
-      <Container x={jump.x} y={188} click={jump.select} cursor="pointer">
-        <Rect x={0} y={0} width={72} height={28} color="#1b1830" borderRadius={8} />
-        <Text text={jump.label} x={10} y={7} color="#c9c2ff" size={11} fontFamily="Arial" />
-      </Container>
+      <Rect x={jump.x} y={188} width={72} height={28} color="#1b1830" borderRadius={8} click={jump.select} cursor="pointer" />
+      <Text text={jump.label} x={jump.x + 10} y={195} color="#c9c2ff" size={11} fontFamily="Arial" />
     }
 
     <Text text="Drag to explore · wheel to zoom · click the bar to set the hour" x={20} y={234} width={300} color="#7f8da3" size={11} fontFamily="Arial" />
@@ -181,6 +175,11 @@
     const index = clock.paused() ? 0 : SPEEDS.findIndex((entry) => entry.speed === clock.speed())
     return index < 0 ? -1000 : BAR_X + index * 61
   })
+
+  // The highlight sits on top of the active button: a click on it acts on that button.
+  const toggleActiveSpeed = () => {
+    if (clock.paused()) clock.resume()
+  }
 
   const jumps = [
     { label: 'Dawn 05:30', hour: 5.5 },

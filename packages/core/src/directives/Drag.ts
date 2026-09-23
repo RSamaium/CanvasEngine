@@ -1,5 +1,5 @@
-import { effect, isComputed, isSignal, signal } from '@signe/reactive';
-import { Container, Rectangle, Point, FederatedPointerEvent } from 'pixi.js';
+import { isComputed, isSignal, signal } from '@signe/reactive';
+import { Container, Point, FederatedPointerEvent } from 'pixi.js';
 import { Directive, registerDirective } from '../engine/directive';
 import { Element } from '../engine/reactive';
 import { snap } from 'popmotion';
@@ -41,7 +41,7 @@ export class Drop extends Directive {
 
 export class Drag extends Directive {
     private elementRef: Element<Container> | null = null;
-    private stageRef: Container | null = null;
+    private instanceRef: Container | null = null;
     private offsetInParent = new Point();
     private isDragging = false;
     private viewport: any | null = null;
@@ -68,7 +68,7 @@ export class Drag extends Directive {
     }
 
     onMount(element: Element<Container>) {
-        const { rootElement, canvasSize, viewport, tick } = element.props.context;
+        const { viewport, tick } = element.props.context;
         const instance = element.componentInstance;
         const dragProps = this.dragProps;
         const haveNotProps = Object.keys(dragProps).length === 0;
@@ -79,22 +79,19 @@ export class Drag extends Directive {
         }
         
         if (!instance) return;
-        this.stageRef = rootElement.componentInstance;
-        if (!this.stageRef) return;
+        // Components handling `drag` themselves (e.g. Viewport) opt out of the directive.
+        if ((instance as any).overrideProps?.includes('drag')) return;
+        this.instanceRef = instance;
         this.viewport = viewport;
 
+        // Only the dragged element becomes interactive. Global moves and releases outside
+        // are tracked with `globalpointermove` / `pointerupoutside` instead of making the
+        // whole stage interactive, which would let any passive child (a Text over a button)
+        // swallow clicks meant for its interactive siblings.
         instance.eventMode = 'static';
-        this.stageRef.eventMode = 'static';
-
-        const _effect = effect(() => {
-            if (this.stageRef) {
-                this.stageRef.hitArea = new Rectangle(0, 0, canvasSize().width, canvasSize().height);
-            }
-        });
-
         instance.on('pointerdown', this.onDragStartHandler);
-        this.stageRef.on('pointerup', this.onDragEndHandler);
-        this.stageRef.on('pointerupoutside', this.onDragEndHandler);
+        instance.on('pointerup', this.onDragEndHandler);
+        instance.on('pointerupoutside', this.onDragEndHandler);
 
         const keysToPress = dragProps.keyToPress ? dragProps.keyToPress : [];
         
@@ -108,7 +105,6 @@ export class Drag extends Directive {
                     this.updateViewportPosition(this.lastPointerPosition);
                 }
             }),
-            _effect.subscription
         ]
     }
 
@@ -266,9 +262,7 @@ export class Drag extends Directive {
         
         dragProps?.end?.();
         
-        if (this.stageRef) {
-            this.stageRef.off('pointermove', this.onDragMoveHandler);
-        }
+        this.instanceRef?.off('globalpointermove', this.onDragMoveHandler);
     }
 
     onKeyDown(event: KeyboardEvent) {
@@ -326,7 +320,7 @@ export class Drag extends Directive {
     }
 
     private onPointerDown(event: FederatedPointerEvent) {
-        if (!this.elementRef?.componentInstance || !this.stageRef || !this.elementRef.componentInstance.parent) return;
+        if (!this.elementRef?.componentInstance || !this.instanceRef || !this.elementRef.componentInstance.parent) return;
         
         this.pointerIsDown = true;
 
@@ -347,12 +341,12 @@ export class Drag extends Directive {
     }
 
     private startDrag() {
-        if (this.isDragging || !this.stageRef) return;
+        if (this.isDragging || !this.instanceRef) return;
 
         this.isDragging = true;
         const dragProps = this.dragProps;
         dragProps?.start?.();
-        this.stageRef.on('pointermove', this.onDragMoveHandler);
+        this.instanceRef.on('globalpointermove', this.onDragMoveHandler);
     }
 
     onUpdate(props) {
@@ -364,21 +358,19 @@ export class Drag extends Directive {
 
     onDestroy() {
         this.subscriptions.forEach(subscription => subscription.unsubscribe());
-        const instance = this.elementRef?.componentInstance;
+        const instance = this.instanceRef ?? this.elementRef?.componentInstance;
         if (instance) {
             instance.off('pointerdown', this.onDragStartHandler);
-        }
-        if (this.stageRef) {
-            this.stageRef.off('pointermove', this.onDragMoveHandler);
-            this.stageRef.off('pointerup', this.onDragEndHandler);
-            this.stageRef.off('pointerupoutside', this.onDragEndHandler);
+            instance.off('pointerup', this.onDragEndHandler);
+            instance.off('pointerupoutside', this.onDragEndHandler);
+            instance.off('globalpointermove', this.onDragMoveHandler);
         }
         
         // Remove keyboard event listeners
         window.removeEventListener('keydown', this.onKeyDownHandler);
         window.removeEventListener('keyup', this.onKeyUpHandler);
         
-        this.stageRef = null;
+        this.instanceRef = null;
         this.viewport = null;
         this.pressedKeys.clear();
         this.pointerIsDown = false;

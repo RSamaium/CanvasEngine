@@ -47,7 +47,8 @@ export interface ViewportProps extends Props {
 
 export class CanvasViewport extends DisplayObject(Container) {
     private tickSubscription: Subscription
-    overrideProps = ['wheel']
+    // `drag` is handled by pixi-viewport, not by the Drag directive
+    overrideProps = ['wheel', 'drag']
     #mask: Graphics
     public viewport: PixiViewport
 

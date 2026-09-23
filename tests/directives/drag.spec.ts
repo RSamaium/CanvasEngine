@@ -134,6 +134,47 @@ describe('Drag', () => {
             });
             expect(container.componentInstance.eventMode).toBe('static');
         });
+
+        test('should not make the whole stage interactive', async () => {
+            const container = await TestBed.createComponent(Container, {
+                drag: { direction: 'all' }
+            });
+            const stage = container.props.context.rootElement.componentInstance;
+
+            // A static stage would make passive children (a Text over a button) block clicks.
+            expect(stage.eventMode).not.toBe('static');
+            expect(mockOn).not.toHaveBeenCalledWith('pointermove', expect.any(Function));
+            expect(mockOn).toHaveBeenCalledWith('pointerup', expect.any(Function));
+            expect(mockOn).toHaveBeenCalledWith('pointerupoutside', expect.any(Function));
+        });
+
+        test('should follow the pointer with globalpointermove while dragging', async () => {
+            const onStart = vi.fn();
+            await TestBed.createComponent(Container, {
+                drag: { direction: 'all', start: onStart }
+            });
+            const pointerDown = mockOn.mock.calls.find(([event]) => event === 'pointerdown')?.[1];
+
+            pointerDown({ global: new Point(20, 20) } as FederatedPointerEvent);
+
+            expect(onStart).toHaveBeenCalled();
+            expect(mockOn).toHaveBeenCalledWith('globalpointermove', expect.any(Function));
+        });
+
+        test('should not attach to components handling drag themselves', async () => {
+            const container = await TestBed.createComponent(Container, {
+                drag: { direction: 'all' }
+            });
+            mockOn.mockClear();
+            const instance = container.componentInstance as any;
+            instance.overrideProps = ['drag'];
+            const directive = container.directives.drag;
+            directive.onDestroy();
+            directive.onInit(container);
+            directive.onMount(container);
+
+            expect(mockOn).not.toHaveBeenCalledWith('pointerdown', expect.any(Function));
+        });
     });
 
     describe('drag directive with keyToPress', () => {
