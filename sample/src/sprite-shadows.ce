@@ -1,251 +1,149 @@
 <Canvas backgroundColor="#0f1220">
-  <Viewport
-    worldWidth={worldWidth}
-    worldHeight={worldHeight}
-    sortableChildren={true}
-    clamp={viewportClamp}
-  >
-    <Graphics zIndex={0} draw={drawGround} />
+  <Container sortableChildren={true}>
+    <Viewport worldWidth={2048} worldHeight={2048} clamp={viewportClamp} wheel={true} sortableChildren={true}>
+      <Sprite image="./back.png" zIndex={0} pointermove={moveTorch} />
 
-    <NightAmbiant
-      spots={nightLights}
-      darkness={nightDarkness}
-      haze={nightHaze}
-    /> 
+      <SpriteShadows
+        lights={shadowLights}
+        ambientLight={sun}
+        mode={shadowMode}
+        maxShadows={3}
+        shadowColor="#0b1020"
+      />
 
-    <SpriteShadows
-      lights={shadowLights}
-      ambientLight={ambientShadowLight}
-      minInfluence={0.16}
-      falloffPower={1.2}
-      mode="blend2"
-      updateHz={60}
-      scanHz={8}
-      cullToViewport={true}
-      shadowColor="#05070d"
-    />
+      @for (npc of npcs) {
+        <Sprite image={npc.image} x={npc.x} y={npc.y} anchor={[0.5, 1]} zIndex={npc.y} shadowCaster={casterOptions} />
+      }
 
-    <Graphics
-      x={heroX}
-      y={heroY}
-      zIndex={20}
-      controls={heroControls}
-      draw={drawHero}
-      shadowCaster={heroShadowCaster}
-    />
+      <Sprite
+        image="./characters/knight.png"
+        x={heroX}
+        y={heroY}
+        anchor={[0.5, 1]}
+        zIndex={heroY}
+        controls={heroControls}
+        viewportFollow={true}
+        shadowCaster={casterOptions}
+      />
 
-    <Graphics
-      x={enemyX}
-      y={enemyY}
-      zIndex={18}
-      draw={drawEnemy}
-      shadowCaster={enemyShadowCaster}
-    />
+      <Fx name="campfire" x={CAMPFIRE.x} y={CAMPFIRE.y} loop enabled={campfireOn} zIndex={CAMPFIRE.y} />
+      <Graphics x={torchX} y={torchY} zIndex={5000} draw={drawTorch} visible={torchOn} />
+    </Viewport>
 
-    <Graphics x={torchX} y={torchY} zIndex={30} draw={drawTorch} />
-    <Graphics x={crystalX} y={crystalY} zIndex={30} draw={drawCrystalLight} />
+    <Container x={16} y={16} zIndex={100}>
+      <Rect x={0} y={0} width={300} height={246} color="#0a0f1a" alpha={0.86} borderRadius={14} border={{ width: 1, color: "#3a4a63" }} />
+      <Text text="SPRITE SHADOWS" x={18} y={14} color="#8fa7c1" size={11} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.6 }} />
+      <Text text="Arrows: walk · mouse: move the torch" x={18} y={34} color="#c7d5e5" size={12} fontFamily="Arial" />
 
-    <Text
-      x={26}
-      y={24}
-      zIndex={100}
-      text="SpriteShadows demo: move with arrows. Spots bend nearby shadows; ambient moonlight keeps distant sprites grounded."
-      style={labelStyle}
-    />
-  </Viewport>
+      <Rect x={18} y={62} width={264} height={30} color="#16213a" borderRadius={8} click={cycleSun} cursor="pointer" />
+      <Text text={sunLabel} x={30} y={70} color="#ffd98b" size={12} fontFamily="Arial" />
+
+      <Rect x={18} y={98} width={264} height={30} color="#16213a" borderRadius={8} click={toggleTorch} cursor="pointer" />
+      <Text text={torchLabel} x={30} y={106} color="#ffc070" size={12} fontFamily="Arial" />
+
+      <Rect x={18} y={134} width={264} height={30} color="#16213a" borderRadius={8} click={toggleCampfire} cursor="pointer" />
+      <Text text={campfireLabel} x={30} y={142} color="#ff9d5a" size={12} fontFamily="Arial" />
+
+      <Rect x={18} y={170} width={264} height={30} color="#16213a" borderRadius={8} click={toggleMode} cursor="pointer" />
+      <Text text={modeLabel} x={30} y={178} color="#b8d4ff" size={12} fontFamily="Arial" />
+
+      <Rect x={18} y={206} width={264} height={30} color="#16213a" borderRadius={8} click={toggleShape} cursor="pointer" />
+      <Text text={shapeLabel} x={30} y={214} color="#c9c2ff" size={12} fontFamily="Arial" />
+    </Container>
+  </Container>
 </Canvas>
 
 <script>
   import { computed, signal, tick } from "canvasengine";
-  import { SpriteShadows, NightAmbiant } from "@canvasengine/presets";
+  import { Fx, SpriteShadows, formatClock, sunShadowAt } from "@canvasengine/presets";
 
-  const worldWidth = 2048;
-  const worldHeight = 2048;
   const viewportClamp = { direction: "all" };
-  const nightDarkness = {
-    opacity: 0.68,
-    color: "#070914",
-  };
-  const nightHaze = {
-    color: "#12182a",
-    radius: 0.44,
-    softness: 0.3,
-    opacity: 0.28,
-  };
-  const labelStyle = {
-    fill: "#f3f4ff",
-    fontSize: 18,
-    fontFamily: "Courier New",
-  };
-  const heroShadowCaster = {
-    height: 96,
-    alpha: 0.5,
-    blur: 4.6,
-    gradientPower: 2.4,
-    hardness: 0.42,
-    footOffset: { x: 0, y: 4 },
-    maxLength: 260,
-  };
-  const enemyShadowCaster = {
-    height: 84,
-    alpha: 0.42,
-    blur: 4.2,
-    gradientPower: 2.4,
-    hardness: 0.38,
-    footOffset: { x: 0, y: 3 },
-  };
-  const ambientShadowLight = {
-    x: -0.18,
-    y: -1,
-    z: 420,
-    intensity: 0.18,
-    shadowWeight: 0.75,
-  };
-  const heroX = signal(620);
-  const heroY = signal(540);
-  const enemyX = signal(1000);
-  const enemyY = signal(700);
-  const torchX = signal(760);
-  const torchY = signal(430);
-  const crystalX = signal(1260);
-  const crystalY = signal(760);
-  const time = signal(0);
+  const CAMPFIRE = { x: 1030, y: 1250 };
 
-  const moveSpeed = 12;
-  const heroControls = signal({
-    right: {
-      repeat: true,
-      bind: "right",
-      keyDown() {
-        heroX.update((x) => Math.min(x + moveSpeed, worldWidth - 40));
-      },
-    },
-    left: {
-      repeat: true,
-      bind: "left",
-      keyDown() {
-        heroX.update((x) => Math.max(x - moveSpeed, 40));
-      },
-    },
-    up: {
-      repeat: true,
-      bind: "up",
-      keyDown() {
-        heroY.update((y) => Math.max(y - moveSpeed, 40));
-      },
-    },
-    down: {
-      repeat: true,
-      bind: "down",
-      keyDown() {
-        heroY.update((y) => Math.min(y + moveSpeed, worldHeight - 40));
-      },
-    },
-  });
+  const npcs = [
+    { image: "./characters/villager.png", x: 880, y: 1150 },
+    { image: "./characters/merchant.png", x: 1180, y: 1215 },
+    { image: "./characters/mage.png", x: 1100, y: 1350 },
+    { image: "./characters/cat.png", x: 930, y: 1320 },
+  ];
 
+  const silhouette = signal(true);
+  const casterOptions = computed(() => ({
+    height: 90,
+    blur: 3,
+    hardness: 0.55,
+    perspective: 0.7,
+    silhouette: silhouette(),
+  }));
+
+  // Hero
+  const heroX = signal(1000);
+  const heroY = signal(1170);
+  const step = 6;
+  const move = (dx, dy) => () => {
+    heroX.update((x) => Math.min(2000, Math.max(40, x + dx)));
+    heroY.update((y) => Math.min(2020, Math.max(120, y + dy)));
+  };
+  const heroControls = {
+    left: { repeat: true, bind: "left", keyDown: move(-step, 0) },
+    right: { repeat: true, bind: "right", keyDown: move(step, 0) },
+    up: { repeat: true, bind: "up", keyDown: move(0, -step) },
+    down: { repeat: true, bind: "down", keyDown: move(0, step) },
+  };
+
+  // Sun: animated through the day, fixed at noon, or off
+  const SUN_MODES = ["cycle", "noon", "off"];
+  const sunMode = signal("cycle");
+  const sunHour = signal(9);
   tick(({ deltaTime }) => {
-    time.update((t) => t + deltaTime / 1000);
-    const t = time();
-    enemyX.set(980 + Math.cos(t * 0.8) * 240);
-    enemyY.set(680 + Math.sin(t * 0.65) * 170);
-    torchX.set(760 + Math.sin(t * 0.35) * 120);
-    torchY.set(430 + Math.cos(t * 0.42) * 60);
+    if (sunMode() !== "cycle") return;
+    sunHour.update((hour) => (hour + deltaTime / 1000 * 0.5 > 17.8 ? 6.8 : hour + deltaTime / 1000 * 0.5));
+  });
+  const sun = computed(() => {
+    if (sunMode() === "off") return null;
+    return sunShadowAt(sunMode() === "noon" ? 12 : sunHour(), { intensity: 0.85, moonlight: 0 });
+  });
+  const sunLabel = computed(() =>
+    sunMode() === "off" ? "Sun: off" : sunMode() === "noon" ? "Sun: noon (short shadows)" : `Sun: day cycle · ${formatClock(sunHour())}`
+  );
+  const cycleSun = () => sunMode.set(SUN_MODES[(SUN_MODES.indexOf(sunMode()) + 1) % SUN_MODES.length]);
+
+  // Torch following the mouse
+  const torchOn = signal(true);
+  const torchX = signal(1180);
+  const torchY = signal(1080);
+  const moveTorch = (event) => {
+    const point = event.getLocalPosition(event.currentTarget);
+    torchX.set(point.x);
+    torchY.set(point.y);
+  };
+  const toggleTorch = () => torchOn.update((value) => !value);
+  const torchLabel = computed(() => `Torch (follows the mouse): ${torchOn() ? "on" : "off"}`);
+
+  const campfireOn = signal(true);
+  const toggleCampfire = () => campfireOn.update((value) => !value);
+  const campfireLabel = computed(() => `Campfire: ${campfireOn() ? "on" : "off"}`);
+
+  const shadowLights = computed(() => {
+    const lights = [];
+    if (torchOn()) lights.push({ x: torchX(), y: torchY(), z: 110, radius: 520, intensity: 1.2 });
+    if (campfireOn()) lights.push({ x: CAMPFIRE.x, y: CAMPFIRE.y, z: 60, radius: 420, intensity: 1.1 });
+    return lights;
   });
 
-  const shadowLights = signal([]);
-
-  setTimeout(() => {
-    shadowLights.set([
-    {
-      x: torchX(),
-      y: torchY(),
-      z: 170,
-      radius: 420,
-      intensity: 1.3,
-      shadowWeight: 1.5,
-    },
-    {
-      x: crystalX(),
-      y: crystalY(),
-      z: 250,
-      radius: 520,
-      intensity: 0.86,
-      shadowWeight: 0.85,
-    },
-  ])
-  }, 2000)
-
-  const nightLights = computed(() =>
-    shadowLights().map((light, index) => ({
-      x: light.x,
-      y: light.y,
-      radius: light.radius * 0.72,
-      intensity: index === 0 ? 1 : 0.78,
-      flicker: index === 0,
-      flickerSpeed: 14,
-      pulse: index === 1,
-      pulseSpeed: 1.2,
-    }))
+  const shadowMode = signal("multi");
+  const toggleMode = () => shadowMode.update((mode) => (mode === "multi" ? "strongest" : "multi"));
+  const modeLabel = computed(() =>
+    shadowMode() === "multi" ? "Mode: multi (one shadow per light)" : "Mode: strongest light only"
   );
 
-  const drawGround = (graphics) => {
-    graphics.clear();
-    graphics.rect(0, 0, worldWidth, worldHeight);
-    graphics.fill({ color: 0x334a2b, alpha: 1 });
-
-    graphics.roundRect(875, 0, 130, 2048, 42);
-    graphics.fill({ color: 0x8c7445, alpha: 0.72 });
-    graphics.roundRect(360, 850, 1150, 120, 42);
-    graphics.fill({ color: 0x8c7445, alpha: 0.7 });
-    graphics.roundRect(1220, 360, 660, 120, 42);
-    graphics.fill({ color: 0x8c7445, alpha: 0.58 });
-
-    for (let i = 0; i < 22; i++) {
-      const x = 90 + ((i * 173) % 1840);
-      const y = 140 + ((i * 277) % 1720);
-      graphics.ellipse(x, y, 42 + (i % 3) * 12, 18 + (i % 4) * 5);
-      graphics.fill({ color: i % 2 ? 0x253f25 : 0x42662e, alpha: 0.35 });
-    }
-  };
-
-  const drawHero = (graphics) => {
-    graphics.clear();
-    graphics.ellipse(0, -8, 20, 9);
-    graphics.fill({ color: 0x111827, alpha: 0.2 });
-    graphics.roundRect(-18, -58, 36, 48, 10);
-    graphics.fill({ color: 0x2f80ed, alpha: 1 });
-    graphics.circle(0, -66, 15);
-    graphics.fill({ color: 0xf2c48d, alpha: 1 });
-    graphics.roundRect(-24, -32, 48, 14, 7);
-    graphics.fill({ color: 0x1f4f9a, alpha: 1 });
-  };
-
-  const drawEnemy = (graphics) => {
-    graphics.clear();
-    graphics.ellipse(0, -7, 18, 8);
-    graphics.fill({ color: 0x111827, alpha: 0.18 });
-    graphics.roundRect(-17, -52, 34, 44, 10);
-    graphics.fill({ color: 0x9b2d42, alpha: 1 });
-    graphics.circle(0, -60, 13);
-    graphics.fill({ color: 0xd7a06f, alpha: 1 });
-    graphics.circle(-7, -63, 3);
-    graphics.circle(7, -63, 3);
-    graphics.fill({ color: 0xffe066, alpha: 1 });
-  };
+  const toggleShape = () => silhouette.update((value) => !value);
+  const shapeLabel = computed(() => `Shape: ${silhouette() ? "projected silhouette" : "soft blob"}`);
 
   const drawTorch = (graphics) => {
     graphics.clear();
-    graphics.circle(0, 0, 8);
-    graphics.fill({ color: 0xffcc66, alpha: 1 });
-    graphics.circle(0, 0, 20);
-    graphics.fill({ color: 0xffcc66, alpha: 0.28 });
-  };
-
-  const drawCrystalLight = (graphics) => {
-    graphics.clear();
-    graphics.circle(0, 0, 10);
-    graphics.fill({ color: 0x8fd7ff, alpha: 1 });
-    graphics.circle(0, 0, 28);
-    graphics.fill({ color: 0x4aa9ff, alpha: 0.22 });
+    graphics.circle(0, 0, 26).fill({ color: 0xffc070, alpha: 0.18 });
+    graphics.circle(0, 0, 12).fill({ color: 0xffd98b, alpha: 0.5 });
+    graphics.circle(0, 0, 5).fill({ color: 0xffffff, alpha: 1 });
   };
 </script>

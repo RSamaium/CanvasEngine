@@ -14,23 +14,37 @@
       maxFootprints={320}
     />
 
+    <SpriteShadows ambientLight={sun} shadowColor="#1a1410" />
+
+    @for (walker of walkers) {
+      <Sprite
+        image={walker.image}
+        x={walker.x}
+        y={walker.y}
+        anchor={[0.5, 1]}
+        zIndex={walker.y}
+        footprintCaster={walker.prints}
+        shadowCaster={shadowOptions}
+      />
+    }
+
     <Sprite
+      image="./characters/knight.png"
       x={heroX}
       y={heroY}
-      width={88}
-      height={88}
-      zIndex={30}
+      anchor={[0.5, 1]}
+      zIndex={heroY}
       viewportFollow={true}
       controls={heroControls}
-      sheet={heroSheet}
       footprintCaster={heroFootprintCaster}
+      shadowCaster={shadowOptions}
     />
 
     <Text
       x={26}
       y={24}
       zIndex={100}
-      text="Footprints demo: move with arrows. Rules change by terrain zone (snow/sand/mud/rock)."
+      text="Footprints demo: move with arrows. Boots, shoes, bare feet and paws; each terrain keeps prints differently (snow/sand/mud/rock)."
       style={labelStyle}
     />
 
@@ -45,8 +59,8 @@
 </Canvas>
 
 <script>
-  import { computed, signal } from "canvasengine";
-  import { Footprints } from "@canvasengine/presets";
+  import { computed, signal, tick } from "canvasengine";
+  import { Footprints, SpriteShadows, sunShadowAt } from "@canvasengine/presets";
 
   const worldWidth = 2048;
   const worldHeight = 1280;
@@ -68,7 +82,7 @@
   };
 
   const heroX = signal(420);
-  const heroY = signal(840);
+  const heroY = signal(760);
 
   const zones = [
     {
@@ -81,7 +95,7 @@
       enabled: true,
       minStepDistance: 13,
       minSpeed: 28,
-      alpha: 0.46,
+      alpha: 1.1,
       blur: 0.25,
       size: 0.78,
     },
@@ -109,7 +123,7 @@
       enabled: true,
       minStepDistance: 14,
       minSpeed: 36,
-      alpha: 0.28,
+      alpha: 1,
       blur: 0.2,
       size: 0.72,
     },
@@ -123,7 +137,7 @@
       enabled: true,
       minStepDistance: 18,
       minSpeed: 44,
-      alpha: 0.34,
+      alpha: 1,
       blur: 0.1,
       size: 0.7,
     },
@@ -175,34 +189,6 @@
     },
   });
 
-  const heroSheetDefinition = {
-    id: "footprints-hero",
-    image: "./exp.png",
-    framesWidth: 4,
-    framesHeight: 4,
-    textures: {
-      loop: {
-        animations: () => [
-          [
-            { time: 0, frameX: 0, frameY: 0, anchor: [0.5, 0.86] },
-            { time: 8, frameX: 1, frameY: 0, anchor: [0.5, 0.86] },
-            { time: 16, frameX: 2, frameY: 0, anchor: [0.5, 0.86] },
-            { time: 24, frameX: 3, frameY: 0, anchor: [0.5, 0.86] },
-            { time: 32, frameX: 0, frameY: 1, anchor: [0.5, 0.86] },
-            { time: 40, frameX: 1, frameY: 1, anchor: [0.5, 0.86] },
-            { time: 48, frameX: 2, frameY: 1, anchor: [0.5, 0.86] },
-            { time: 56, frameX: 3, frameY: 1, anchor: [0.5, 0.86] },
-          ],
-        ],
-      },
-    },
-  };
-
-  const heroSheet = {
-    definition: heroSheetDefinition,
-    playing: "loop",
-  };
-
   const heroFootprintCaster = {
     enabled: () => currentZone().enabled,
     surface: () => currentZone().surface,
@@ -212,11 +198,51 @@
     blur: () => currentZone().blur,
     size: () => currentZone().size,
     stepIntervalMs: 70,
-    leftOffset: { x: -8, y: 1 },
-    rightOffset: { x: 8, y: 1 },
-    angleOffset: 180,
-    jitter: 11,
+    leftOffset: { x: -8, y: -2 },
+    rightOffset: { x: 8, y: -2 },
+    print: "boot",
+    jitter: 6,
   };
+
+  const sun = sunShadowAt(10.5, { intensity: 0.8 });
+  const shadowOptions = { height: 90, blur: 3, hardness: 0.55 };
+
+  // Companions walking loops across the terrains, each with its own prints
+  const ellipsePath = (cx, cy, rx, ry, speed, phase) => (t) => [
+    cx + Math.cos(t * speed + phase) * rx,
+    cy + Math.sin(t * speed + phase) * ry,
+  ];
+  const companionDefs = [
+    { image: "./characters/cat.png", print: "paw", size: 0.55, gap: 10, path: ellipsePath(700, 330, 260, 120, 0.45, 0) },
+    { image: "./characters/mage.png", print: "bare", size: 0.8, gap: 7, path: ellipsePath(560, 980, 220, 110, 0.32, 1.5) },
+    { image: "./characters/villager.png", print: "shoe", size: 0.75, gap: 7, path: ellipsePath(1060, 870, 150, 70, 0.4, 3) },
+  ];
+  const walkers = companionDefs.map((def) => {
+    const [x, y] = def.path(0);
+    const walker = { image: def.image, x: signal(x), y: signal(y) };
+    const zone = computed(() => zoneAt(walker.x(), walker.y()));
+    walker.prints = {
+      enabled: () => zone().enabled,
+      surface: () => zone().surface,
+      alpha: () => zone().alpha,
+      print: def.print,
+      size: def.size,
+      minStepDistance: 12,
+      minSpeed: 10,
+      leftOffset: { x: -def.gap, y: -2 },
+      rightOffset: { x: def.gap, y: -2 },
+    };
+    return walker;
+  });
+  let elapsed = 0;
+  tick(({ deltaTime }) => {
+    elapsed += Math.min(deltaTime, 100) / 1000;
+    companionDefs.forEach((def, index) => {
+      const [x, y] = def.path(elapsed);
+      walkers[index].x.set(x);
+      walkers[index].y.set(y);
+    });
+  });
 
   const surfaceLabel = computed(() => {
     const zone = currentZone();
@@ -227,9 +253,9 @@
   const surfaceProfiles = {
     sand: {
       tint: "#7f5d34",
-      startAlpha: 0.34,
+      startAlpha: 0.5,
       endAlpha: 0,
-      lifetimeMs: 1800,
+      lifetimeMs: 3200,
       blurStart: 0.35,
       blurEnd: 1.6,
       erosionStart: 0.62,
@@ -239,9 +265,9 @@
     },
     snow: {
       tint: "#889db6",
-      startAlpha: 0.26,
+      startAlpha: 0.4,
       endAlpha: 0,
-      lifetimeMs: 2600,
+      lifetimeMs: 4200,
       blurStart: 0.62,
       blurEnd: 2.35,
       erosionStart: 0.43,

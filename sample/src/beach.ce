@@ -1,0 +1,162 @@
+<Canvas backgroundColor="#0b3a5c">
+  <Container sortableChildren={true}>
+    <Viewport worldWidth={1920} worldHeight={1280} wheel={true} clamp={clampOptions} sortableChildren={true}>
+      <Sprite image="./beach.webp" zIndex={0} />
+
+      <Footprints profiles={printProfiles} defaultSurface="sand" maxFootprints={400} />
+      <SpriteShadows ambientLight={sun} opacity={0.42} />
+      <GroundEffects />
+
+      @for (npc of npcs) {
+        <Sprite
+          image={npc.image}
+          x={npc.x}
+          y={npc.y}
+          anchor={[0.5, 1]}
+          zIndex={npc.y}
+          shadowCaster={shadowOptions}
+          groundCaster={npc.ground}
+          footprintCaster={npc.prints}
+        />
+      }
+
+      <Sprite
+        image="./characters/knight.png"
+        x={heroX}
+        y={heroY}
+        anchor={[0.5, 1]}
+        zIndex={heroY}
+        controls={heroControls}
+        viewportFollow={true}
+        shadowCaster={shadowOptions}
+        groundCaster={heroGround}
+        footprintCaster={heroPrints}
+      />
+    </Viewport>
+
+    <Container x={16} y={16} zIndex={100}>
+      <Rect x={0} y={0} width={290} height={86} color="#0a0f1a" alpha={0.82} borderRadius={12} />
+      <Text text="GROUND EFFECTS" x={16} y={12} color="#8fa7c1" size={11} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.6 }} />
+      <Text text="Arrows: walk from the grass into the sea" x={16} y={32} color="#c7d5e5" size={12} fontFamily="Arial" />
+      <Text text={heroSurfaceLabel} x={16} y={54} color="#ffd98b" size={12} fontFamily="monospace" />
+    </Container>
+  </Container>
+</Canvas>
+
+<script>
+  import { computed, signal, tick } from "canvasengine";
+  import { Footprints, GroundEffects, SpriteShadows, createSurfaceSampler, sunShadowAt } from "@canvasengine/presets";
+
+  const clampOptions = { direction: "all" };
+  const sun = sunShadowAt(15.2, { intensity: 0.9 });
+  const shadowOptions = { height: 90, blur: 2.5, hardness: 0.6 };
+
+  // Terrain read from the map image: grass / sand / water (+ depth) and ground color
+  const terrain = signal(null);
+  createSurfaceSampler("./beach.webp").then((sampler) => terrain.set(sampler));
+  const SURFACE_NAMES = { grass: "tallGrass", water: "water", sand: "sand" };
+  const sampleAt = (x, y) => {
+    const sampler = terrain();
+    if (!sampler) return { surface: "ground", depth: 0, color: undefined };
+    const sample = sampler.sample(x, y);
+    return { ...sample, surface: SURFACE_NAMES[sample.surface] ?? sample.surface };
+  };
+
+  const makeActor = (image, x0, y0, print, printSize) => {
+    const x = signal(x0);
+    const y = signal(y0);
+    const under = computed(() => sampleAt(x(), y()));
+    return {
+      image,
+      x,
+      y,
+      under,
+      ground: {
+        surface: () => under().surface,
+        depth: () => under().depth,
+        groundColor: () => (under().surface === "tallGrass" ? under().color : undefined),
+      },
+      prints: {
+        enabled: () => under().surface === "sand",
+        surface: "sand",
+        print,
+        size: printSize,
+        minStepDistance: 20,
+        leftOffset: { x: -6, y: -2 },
+        rightOffset: { x: 6, y: -2 },
+      },
+    };
+  };
+
+  // Player
+  const hero = makeActor("./characters/knight.png", 820, 700, "boot", 0.85);
+  const heroGround = hero.ground;
+  const heroPrints = hero.prints;
+  const heroX = hero.x;
+  const heroY = hero.y;
+  const step = 5;
+  const move = (dx, dy) => () => {
+    heroX.update((value) => Math.min(1890, Math.max(30, value + dx)));
+    heroY.update((value) => Math.min(1270, Math.max(110, value + dy)));
+  };
+  const heroControls = {
+    left: { repeat: true, bind: "left", keyDown: move(-step, 0) },
+    right: { repeat: true, bind: "right", keyDown: move(step, 0) },
+    up: { repeat: true, bind: "up", keyDown: move(0, -step) },
+    down: { repeat: true, bind: "down", keyDown: move(0, step) },
+  };
+  const heroSurfaceLabel = computed(() => {
+    const under = hero.under();
+    return under.surface === "water"
+      ? `Surface: water · depth ${Math.round(under.depth * 100)}%`
+      : `Surface: ${under.surface}`;
+  });
+
+  // Villagers with simple routes
+  const pathBetween = (points, speed) => (t) => {
+    const total = points.length;
+    const position = (t * speed) % total;
+    const index = Math.floor(position);
+    const local = position - index;
+    const [x0, y0] = points[index];
+    const [x1, y1] = points[(index + 1) % total];
+    const ease = local * local * (3 - 2 * local);
+    return [x0 + (x1 - x0) * ease, y0 + (y1 - y0) * ease];
+  };
+  const npcDefs = [
+    // Wades from the beach into deeper water and back
+    { actor: makeActor("./characters/villager.png", 1000, 520, "shoe", 0.75), path: pathBetween([[1000, 520], [1580, 560]], 0.09) },
+    // Stands in the sea, surrounded by ripples
+    { actor: makeActor("./characters/mage.png", 1480, 900, "bare", 0.8), path: () => [1480, 900] },
+    // Wanders through the tall grass
+    { actor: makeActor("./characters/cat.png", 250, 600, "paw", 0.55), path: pathBetween([[250, 600], [470, 760], [300, 980], [180, 820]], 0.12) },
+    // Crosses from the meadow onto the sand
+    { actor: makeActor("./characters/merchant.png", 360, 380, "boot", 0.85), path: pathBetween([[360, 380], [900, 330]], 0.08) },
+  ];
+  const npcs = npcDefs.map((def) => def.actor);
+  let elapsed = 0;
+  tick(({ deltaTime }) => {
+    elapsed += Math.min(deltaTime, 100) / 1000;
+    npcDefs.forEach((def) => {
+      const [x, y] = def.path(elapsed);
+      def.actor.x.set(x);
+      def.actor.y.set(y);
+    });
+  });
+
+  // Footprints like classic 2D RPGs: small, crisp soles that stay a while on wet sand
+  const printProfiles = {
+    sand: {
+      tint: "#8a6a3e",
+      startAlpha: 0.55,
+      endAlpha: 0,
+      lifetimeMs: 9000,
+      blurStart: 0.2,
+      blurEnd: 1.2,
+      erosionStart: 0.7,
+      blendMode: "multiply",
+      depth: 0.7,
+      rimStrength: 0.2,
+    },
+  };
+</script>

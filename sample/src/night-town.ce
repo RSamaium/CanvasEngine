@@ -1,7 +1,23 @@
 <Canvas backgroundColor="#05070d">
   <Container sortableChildren={true}>
-  <Viewport worldWidth={1920} worldHeight={1440} drag={true} wheel={true} clamp={clampOptions} sortableChildren={true}>
-    <Sprite image="./night-town.webp" />
+  <Viewport worldWidth={1920} worldHeight={1440} wheel={true} clamp={clampOptions} sortableChildren={true}>
+    <Sprite image="./night-town.webp" zIndex={0} />
+    <SpriteShadows lights={lampShadows} ambientLight={sun} maxShadows={2} falloffPower={1.2} shadowColor="#070a14" />
+
+    @for (walker of walkers) {
+      <Sprite image={walker.image} x={walker.x} y={walker.y} anchor={[0.5, 1]} zIndex={walker.y} shadowCaster={casterOptions} />
+    }
+    <Sprite
+      image="./characters/knight.png"
+      x={heroX}
+      y={heroY}
+      anchor={[0.5, 1]}
+      zIndex={heroY}
+      controls={heroControls}
+      viewportFollow={true}
+      shadowCaster={casterOptions}
+    />
+
     <DayNightCycle time={clock.time} lights={lights} />
   </Viewport>
 
@@ -47,16 +63,18 @@
       <Text text={jump.label} x={jump.x + 10} y={195} color="#c9c2ff" size={11} fontFamily="Arial" />
     }
 
-    <Text text="Drag to explore · wheel to zoom · click the bar to set the hour" x={20} y={234} width={300} color="#7f8da3" size={11} fontFamily="Arial" />
+    <Text text="Arrows: walk · wheel: zoom · click the bar to set the hour" x={20} y={234} width={300} color="#7f8da3" size={11} fontFamily="Arial" />
     <Text text={speedLabel} x={20} y={258} color="#9fb3cc" size={11} fontFamily="monospace" />
   </Container>
   </Container>
 </Canvas>
 
 <script>
-  import { computed } from 'canvasengine'
+  import { computed, signal, tick } from 'canvasengine'
   import {
     DayNightCycle,
+    SpriteShadows,
+    sunShadowAt,
     Weather,
     lightLevel,
     sampleDayLighting,
@@ -114,6 +132,76 @@
   const lights = [...lamps, fountain, ...windows]
 
   const lighting = computed(() => sampleDayLighting(clock.time()))
+
+  // Shadows: the sun during the day, lit street lamps at night.
+  // A lamp lights the ground from its lantern, about 100px above the post base.
+  const LANTERN_HEIGHT = 105
+  const sun = computed(() => sunShadowAt(clock.time(), { intensity: 0.9, moonlight: 0.25 }))
+  const lampShadows = computed(() => {
+    const time = clock.time()
+    const darkness = lighting().lights
+    return lamps.map((lamp, index) => ({
+      x: lamp.x,
+      y: lamp.y + LANTERN_HEIGHT,
+      z: LANTERN_HEIGHT,
+      radius: 420,
+      intensity: lightLevel({ ...lamp, flicker: 0 }, index, time, darkness, 0) * 1.2,
+    }))
+  })
+  const casterOptions = { height: 90, blur: 3, hardness: 0.55, perspective: 0.7 }
+
+  // Villagers walking around town
+  const route = (points) => {
+    const lengths = points.map((point, index) => Math.hypot(points[(index + 1) % points.length][0] - point[0], points[(index + 1) % points.length][1] - point[1]))
+    const total = lengths.reduce((sum, value) => sum + value, 0)
+    return (distance) => {
+      let d = ((distance % total) + total) % total
+      for (let i = 0; i < points.length; i++) {
+        if (d <= lengths[i]) {
+          const [x0, y0] = points[i]
+          const [x1, y1] = points[(i + 1) % points.length]
+          const t = d / lengths[i]
+          return [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t]
+        }
+        d -= lengths[i]
+      }
+      return points[0]
+    }
+  }
+  const walkerDefs = [
+    { image: './characters/villager.png', speed: 42, path: route([[220, 520], [1760, 520]]) },
+    { image: './characters/merchant.png', speed: 30, path: route([[330, 985], [1600, 985]]) },
+    { image: './characters/mage.png', speed: 36, path: route([[770, 560], [1150, 560], [1150, 880], [770, 880]]) },
+    { image: './characters/cat.png', speed: 55, path: route([[905, 1080], [1010, 1160], [905, 1300], [1010, 1380]]) },
+  ]
+  const walkers = walkerDefs.map((def, index) => {
+    const [x, y] = def.path(index * 400)
+    return { image: def.image, x: signal(x), y: signal(y) }
+  })
+  let walked = 0
+  tick(({ deltaTime }) => {
+    walked += Math.min(deltaTime, 100) / 1000
+    walkerDefs.forEach((def, index) => {
+      const [x, y] = def.path(index * 400 + walked * def.speed)
+      walkers[index].x.set(x)
+      walkers[index].y.set(y + Math.abs(Math.sin(walked * 9 + index)) * -2)
+    })
+  })
+
+  // Player
+  const heroX = signal(960)
+  const heroY = signal(1060)
+  const step = 5
+  const move = (dx, dy) => () => {
+    heroX.update((x) => Math.min(1890, Math.max(30, x + dx)))
+    heroY.update((y) => Math.min(1430, Math.max(110, y + dy)))
+  }
+  const heroControls = {
+    left: { repeat: true, bind: 'left', keyDown: move(-step, 0) },
+    right: { repeat: true, bind: 'right', keyDown: move(step, 0) },
+    up: { repeat: true, bind: 'up', keyDown: move(0, -step) },
+    down: { repeat: true, bind: 'down', keyDown: move(0, step) },
+  }
   const nightFactor = computed(() => lighting().lights)
 
   const litCount = computed(() => {
