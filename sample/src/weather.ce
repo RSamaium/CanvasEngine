@@ -615,8 +615,23 @@
   ];
 
 
-  const groupIndex = signal(0);
-  const presetIndex = signal(1);
+  // Optional deep link: ?example=weather&preset=volcanoEmbers
+  const findPreset = (name) => {
+    for (let group = 0; group < weatherGroups.length; group++) {
+      const index = weatherGroups[group].presets.findIndex((preset) =>
+        Object.entries(WEATHER_PRESET_VALUES).some(([key, values]) => key === name && values === preset.values)
+      );
+      if (index >= 0) return [group, index];
+    }
+    return [0, 1];
+  };
+  const WEATHER_PRESET_VALUES = {
+    ...RAIN_PRESETS, ...SNOW_PRESETS, ...FOG_PRESETS, ...CLOUD_PRESETS, ...RAYS_PRESETS,
+    ...VOLCANO_PRESETS, ...AUTUMN_PRESETS, ...AMBIENT_PRESETS, ...DESERT_PRESETS,
+  };
+  const [initialGroup, initialPreset] = findPreset(new URLSearchParams(location.search).get("preset"));
+  const groupIndex = signal(initialGroup);
+  const presetIndex = signal(initialPreset);
   const activeGroup = computed(() => weatherGroups[groupIndex()]);
   const activePreset = computed(() => activeGroup().presets[presetIndex()]);
   const activeValues = computed(() => activePreset().values);

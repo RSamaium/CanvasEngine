@@ -1,0 +1,149 @@
+<Canvas backgroundColor="#05070d">
+  <Container sortableChildren={true}>
+    <Viewport worldWidth={mapWidth} worldHeight={mapHeight} sortableChildren={true} wheel={true}>
+      <Sprite image={mapImage} zIndex={0} />
+      <SpriteShadows ambientLight={sun} lights={lampShadows} maxShadows={2} falloffPower={1.2} />
+      <GroundEffects />
+
+      @for (actor of actors) {
+        <Sprite
+          image={actor.image}
+          x={actor.x}
+          y={actor.y}
+          anchor={[0.5, 1]}
+          zIndex={actor.y}
+          shadowCaster={shadowOptions}
+          groundCaster={actor.ground}
+        />
+      }
+
+      <Fx name={fxName} trigger={fxTrigger} x={fxX} y={fxY} zIndex={5000} />
+
+      @if (hasDayNight) {
+        <DayNightCycle time={time} lights={townLights} />
+      }
+    </Viewport>
+
+    @if (hasWeather) {
+      <Weather preset={weatherPreset} zIndex={50} />
+    }
+  </Container>
+</Canvas>
+
+<script>
+  import { computed, signal, trigger } from "canvasengine";
+  import {
+    DayNightCycle,
+    Fx,
+    GroundEffects,
+    SpriteShadows,
+    Weather,
+    createSurfaceSampler,
+    lightLevel,
+    sampleDayLighting,
+    sunShadowAt,
+  } from "@canvasengine/presets";
+
+  /**
+   * Composed scenes used for the documentation screenshots:
+   * ?example=showcase&scene=town-autumn
+   */
+  const MAPS = {
+    town: { image: "./night-town.webp", width: 1920, height: 1440 },
+    beach: { image: "./beach.webp", width: 1920, height: 1280 },
+    forest: { image: "./back.png", width: 2048, height: 2048 },
+  };
+
+  const TOWN_CAST = [
+    { image: "./characters/knight.png", x: 960, y: 1010 },
+    { image: "./characters/villager.png", x: 860, y: 900 },
+    { image: "./characters/merchant.png", x: 1090, y: 930 },
+    { image: "./characters/cat.png", x: 1010, y: 1080 },
+    { image: "./characters/mage.png", x: 800, y: 600 },
+  ];
+  const FOREST_CAST = [
+    { image: "./characters/knight.png", x: 1000, y: 1170 },
+    { image: "./characters/villager.png", x: 880, y: 1150 },
+    { image: "./characters/merchant.png", x: 1180, y: 1215 },
+    { image: "./characters/mage.png", x: 1100, y: 1350 },
+    { image: "./characters/cat.png", x: 930, y: 1320 },
+  ];
+
+  const SCENES = {
+    "town-night": { map: "town", time: 21.6, cast: TOWN_CAST },
+    "town-dusk": { map: "town", time: 19.1, cast: TOWN_CAST },
+    "town-autumn": { map: "town", sun: 15.5, weather: "autumnGust", cast: TOWN_CAST },
+    "town-snow": { map: "town", sun: 11, weather: "winterSnow", cast: TOWN_CAST },
+    "forest-rays": { map: "forest", sun: 9.5, weather: "forestLightShafts", cast: FOREST_CAST },
+    "forest-embers": { map: "forest", sun: 17.5, weather: "eruptionEmbers", cast: FOREST_CAST },
+    "beach-clouds": { map: "beach", sun: 14, weather: "naturalClouds", cast: [] },
+    "fx-limit": { map: "town", sun: 13, cast: TOWN_CAST, fx: { name: "limitBurst", x: 960, y: 900 } },
+    "fx-holy": { map: "forest", sun: 10, cast: FOREST_CAST, fx: { name: "holyPillar", x: 1100, y: 1350 } },
+    "fx-crystal": { map: "town", sun: 12, cast: TOWN_CAST, fx: { name: "crystalBurst", x: 1090, y: 900 } },
+    "fx-sigil": { map: "town", time: 22, cast: TOWN_CAST, fx: { name: "summonSigil", x: 800, y: 600 } },
+  };
+
+  const params = new URLSearchParams(location.search);
+  const sceneConfig = SCENES[params.get("scene")] ?? SCENES["town-autumn"];
+  const scene = { ...sceneConfig, map: MAPS[sceneConfig.map] };
+  const mapImage = scene.map.image;
+  const mapWidth = scene.map.width;
+  const mapHeight = scene.map.height;
+
+  // Terrain sampling (beach water, grass...)
+  const terrain = signal(null);
+  createSurfaceSampler(scene.map.image).then((sampler) => terrain.set(sampler));
+  const actors = scene.cast.map((entry) => {
+    const under = computed(() => terrain()?.sample(entry.x, entry.y) ?? { surface: "ground", depth: 0 });
+    return {
+      ...entry,
+      ground: {
+        surface: () => (sceneConfig.map === "beach" ? under().surface : "ground"),
+        depth: () => under().depth,
+      },
+    };
+  });
+  const shadowOptions = { height: 90, blur: 2.5, hardness: 0.6 };
+
+  // Day / night for the town
+  const hasDayNight = sceneConfig.time !== undefined;
+  const time = signal(sceneConfig.time ?? 12);
+  const LAMPS = [
+    [875, 61], [1045, 61], [875, 372], [1045, 372], [480, 389], [1435, 388],
+    [756, 494], [1165, 494], [746, 785], [1173, 785], [348, 837],
+    [875, 931], [1045, 932], [876, 1217], [1045, 1217],
+  ].map(([x, y]) => ({ x, y, radius: 230, color: "#ffc070", halo: 0.95, haloSize: 0.12, flicker: 0.1 }));
+  const WINDOWS = [
+    [169, 306], [338, 302], [588, 280], [745, 277], [1225, 221], [1308, 216], [1404, 224],
+    [1217, 323], [1405, 322], [1806, 329], [152, 724], [290, 728], [436, 732], [553, 733],
+    [1512, 739], [1666, 749], [1799, 745], [637, 1189], [774, 1185], [1168, 1228],
+    [1240, 1214], [1309, 1203], [1650, 1206], [1798, 1202],
+  ].map(([x, y], index) => ({ x, y, radius: 62, color: "#ffcf7a", intensity: 0.9, halo: 0.45, haloSize: 0.32, schedule: [18.5 + (index % 5) * 0.2, 23.5] }));
+  const townLights = [...LAMPS, { x: 960, y: 700, radius: 150, color: "#7fd4ff", intensity: 0.55, halo: 0.25, haloSize: 0.3, threshold: 0.55 }, ...WINDOWS];
+
+  const darkness = computed(() => (hasDayNight ? sampleDayLighting(time()).lights : 0));
+  const sun = computed(() => sunShadowAt(sceneConfig.sun ?? time(), { intensity: 0.9, moonlight: 0.25 }));
+  const lampShadows = computed(() =>
+    hasDayNight && sceneConfig.map === "town"
+      ? LAMPS.map((lamp, index) => ({
+          x: lamp.x,
+          y: lamp.y + 105,
+          z: 105,
+          radius: 420,
+          intensity: lightLevel(lamp, index, time(), darkness(), 0) * 1.2,
+        }))
+      : []
+  );
+
+  // Weather overlay
+  const hasWeather = Boolean(sceneConfig.weather);
+  const weatherPreset = sceneConfig.weather ?? "lightRain";
+
+  // FX, fired by the capture script (or on load)
+  const fxTrigger = trigger();
+  const fxName = sceneConfig.fx?.name ?? "hitSpark";
+  const fxX = sceneConfig.fx?.x ?? 0;
+  const fxY = sceneConfig.fx?.y ?? 0;
+  globalThis.__playShowcaseFx = () => fxTrigger.start();
+  if (sceneConfig.fx) setTimeout(() => fxTrigger.start(), 1500);
+</script>

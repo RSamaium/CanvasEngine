@@ -81,7 +81,9 @@
     useGameClock,
   } from '@canvasengine/presets'
 
-  const clock = useGameClock({ time: 17.5, speed: 10 })
+  // Optional deep link: ?example=night-town&time=22
+  const startTime = Number(new URLSearchParams(location.search).get('time'))
+  const clock = useGameClock({ time: Number.isFinite(startTime) && startTime > 0 ? startTime : 17.5, speed: 10 })
   const clampOptions = { direction: 'all' }
 
   // Positions detected on the generated map (lantern glass and window panes).
