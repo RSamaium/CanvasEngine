@@ -1,9 +1,17 @@
 import { Container, h, mount, useProps } from "canvasengine";
 import {
-  BlurFilter,
+  AlphaFilter,
   Container as PixiContainer,
-  Graphics as PixiGraphics,
+  Matrix,
+  Sprite as PixiSprite,
+  Texture,
 } from "pixi.js";
+import {
+  bakeSilhouette,
+  getBlobSilhouette,
+  getContactShadowTexture,
+  type ShadowSilhouette,
+} from "./shadowSilhouette";
 
 type ReactiveValue<T> = T | (() => T);
 type PointLike = { x: number; y: number };
@@ -64,9 +72,21 @@ export type ShadowCasterOptions = {
   contactAlpha?: ReactiveValue<number>;
   contactScale?: ReactiveValue<number>;
   anchorX?: ReactiveValue<number>;
+  /**
+   * Ground foreshortening of the projected shadow (`1` = seen from straight above,
+   * `0.6` = RPG 3/4 view). Default: `0.7`
+   */
+  perspective?: ReactiveValue<number>;
+  /** Project the real sprite silhouette (`true`) or a soft blob (`false`). Default: `true` */
+  silhouette?: ReactiveValue<boolean>;
 };
 
-export type ShadowMode = "strongest" | "blend2";
+/**
+ * - `multi`: one shadow per nearby light (up to `maxShadows`), each fading with its light
+ * - `strongest`: a single shadow from the dominant light
+ * - `blend2`: a single shadow averaging the two dominant lights
+ */
+export type ShadowMode = "multi" | "strongest" | "blend2";
 
 export type SpriteShadowsProps = {
   lights?: ReactiveValue<Array<ShadowLightInput | ShadowLight>>;
@@ -75,10 +95,19 @@ export type SpriteShadowsProps = {
   minInfluence?: ReactiveValue<number>;
   falloffPower?: ReactiveValue<number>;
   mode?: ReactiveValue<ShadowMode>;
+  /** Maximum shadows per caster in `multi` mode. Default: `3` */
+  maxShadows?: ReactiveValue<number>;
   updateHz?: ReactiveValue<number>;
   scanHz?: ReactiveValue<number>;
   cullToViewport?: ReactiveValue<boolean>;
   shadowColor?: ReactiveValue<ColorInput>;
+  /**
+   * Opacity of the whole shadow layer. Shadows are merged before this opacity is applied,
+   * so overlapping shadows never get darker than a single one. Default: `0.5`
+   */
+  opacity?: ReactiveValue<number>;
+  /** zIndex of the shadow layer. Default: just below the lowest caster. */
+  layerZIndex?: ReactiveValue<number>;
 };
 
 type ResolvedCaster = {
@@ -94,9 +123,12 @@ type ResolvedCaster = {
   contactAlpha: number;
   contactScale: number;
   anchorX?: number;
+  perspective: number;
+  silhouette: boolean;
 };
 
 type ResolvedLight = {
+  key: string;
   x: number;
   y: number;
   globalX: number;
@@ -117,24 +149,37 @@ type ResolvedAmbientLight = {
 };
 
 type LightCandidate = {
+  key: string;
   dirX: number;
   dirY: number;
   influence: number;
   length: number;
 };
 
-type ManagedShadow = {
-  caster: any;
-  parent: PixiContainer;
-  near: PixiGraphics;
-  far: PixiGraphics;
-  contact: PixiGraphics;
-  nearBlur: BlurFilter;
-  farBlur: BlurFilter;
-  contactBlur: BlurFilter;
+type ShadowSlot = {
+  sprite: PixiSprite;
   dirX: number;
   dirY: number;
   length: number;
+  alpha: number;
+  targetAlpha: number;
+  initialized: boolean;
+};
+
+type ShadowLayer = {
+  layer: PixiContainer;
+  filter: AlphaFilter;
+};
+
+type ManagedShadow = {
+  caster: any;
+  parent: PixiContainer;
+  layer: PixiContainer;
+  contact: PixiSprite;
+  slots: Map<string, ShadowSlot>;
+  silhouette: ShadowSilhouette | null;
+  silhouetteKey: string;
+  foot: PointLike;
 };
 
 const SHADOW_MANAGED_MARK = "__spriteShadowManaged";
@@ -142,24 +187,30 @@ const DEFAULT_LIGHT_Z = 220;
 const DEFAULT_LIGHT_RADIUS = 360;
 const DEFAULT_LIGHT_INTENSITY = 1;
 const DEFAULT_AMBIENT_LIGHT_Z = 420;
-const DEFAULT_MODE: ShadowMode = "strongest";
-const DEFAULT_UPDATE_HZ = 30;
+const DEFAULT_MODE: ShadowMode = "multi";
+const DEFAULT_MAX_SHADOWS = 3;
+const DEFAULT_UPDATE_HZ = 60;
 const DEFAULT_SCAN_HZ = 8;
 const DEFAULT_MIN_INFLUENCE = 0;
 const DEFAULT_FALLOFF_POWER = 2;
-const DEFAULT_SHADOW_COLOR = 0x000000;
+const DEFAULT_SHADOW_COLOR = 0x0a0c16;
+const DEFAULT_OPACITY = 0.5;
+/** Default longest shadow, relative to the caster `height`. */
+const DEFAULT_MAX_LENGTH_RATIO = 1.5;
 const DEFAULT_CASTER: ResolvedCaster = {
   height: 72,
   footOffset: { x: 0, y: 0 },
   footAnchor: { x: 0.5, y: 1 },
-  alpha: 0.56,
+  alpha: 1,
   blur: 3.5,
   gradientPower: 2,
   hardness: 0.42,
   minLength: 10,
   maxLength: 280,
-  contactAlpha: 0.28,
-  contactScale: 0.28,
+  contactAlpha: 0.7,
+  contactScale: 0.34,
+  perspective: 0.7,
+  silhouette: true,
 };
 
 const clamp = (value: number, min: number, max: number) =>
@@ -262,6 +313,8 @@ const resolveCasterOptions = (rawValue: unknown): ResolvedCaster | null => {
   const contactAlpha = Number(resolveReactiveValue(source.contactAlpha));
   const contactScale = Number(resolveReactiveValue(source.contactScale));
   const anchorX = Number(resolveReactiveValue(source.anchorX));
+  const perspective = Number(resolveReactiveValue(source.perspective));
+  const silhouette = resolveReactiveValue(source.silhouette);
 
   return {
     height: isFiniteNumber(height) ? Math.max(2, height) : DEFAULT_CASTER.height,
@@ -276,7 +329,7 @@ const resolveCasterOptions = (rawValue: unknown): ResolvedCaster | null => {
     minLength: isFiniteNumber(minLength) ? Math.max(0, minLength) : DEFAULT_CASTER.minLength,
     maxLength: isFiniteNumber(maxLength)
       ? Math.max(2, maxLength)
-      : DEFAULT_CASTER.maxLength,
+      : (isFiniteNumber(height) ? Math.max(2, height) : DEFAULT_CASTER.height) * DEFAULT_MAX_LENGTH_RATIO,
     contactAlpha: isFiniteNumber(contactAlpha)
       ? clamp(contactAlpha, 0, 1)
       : DEFAULT_CASTER.contactAlpha,
@@ -284,6 +337,8 @@ const resolveCasterOptions = (rawValue: unknown): ResolvedCaster | null => {
       ? Math.max(0.05, contactScale)
       : DEFAULT_CASTER.contactScale,
     anchorX: isFiniteNumber(anchorX) ? clamp(anchorX, 0, 1) : undefined,
+    perspective: isFiniteNumber(perspective) ? clamp(perspective, 0.2, 1) : DEFAULT_CASTER.perspective,
+    silhouette: silhouette !== false,
   };
 };
 
@@ -348,6 +403,7 @@ const resolveLights = (
     const global = toGlobalPoint(lightSpace, { x, y });
 
     resolved.push({
+      key: `light:${i}`,
       x,
       y,
       globalX: global.x,
@@ -424,6 +480,7 @@ const blendCandidates = (
   if (norm <= 0.0001) return null;
 
   return {
+    key: "blend",
     dirX: weightedDirX / norm,
     dirY: weightedDirY / norm,
     length: weightedLength / weightTotal,
@@ -431,22 +488,22 @@ const blendCandidates = (
   };
 };
 
+const destroySlot = (slot: ShadowSlot) => {
+  slot.sprite.destroy();
+};
+
 const hideManagedShadow = (managed: ManagedShadow) => {
-  managed.near.visible = false;
-  managed.far.visible = false;
   managed.contact.visible = false;
+  for (const slot of managed.slots.values()) {
+    slot.sprite.visible = false;
+    slot.alpha = 0;
+  }
 };
 
 const destroyManagedShadow = (managed: ManagedShadow) => {
-  managed.near.filters = [];
-  managed.far.filters = [];
-  managed.contact.filters = [];
-  managed.nearBlur.destroy?.();
-  managed.farBlur.destroy?.();
-  managed.contactBlur.destroy?.();
-  managed.near.destroy();
-  managed.far.destroy();
   managed.contact.destroy();
+  for (const slot of managed.slots.values()) destroySlot(slot);
+  managed.slots.clear();
 };
 
 const getCullBounds = (target: any): BoundsLike | null => {
@@ -529,96 +586,168 @@ const getCasterBoundsInSpace = (
   };
 };
 
+const markManaged = <T extends PixiSprite>(sprite: T, shadowColor: number): T => {
+  sprite.tint = shadowColor;
+  // Shadow bodies are opaque inside their layer, so overlaps merge instead of darkening;
+  // the layer opacity is applied once on the merged result.
+  sprite.eventMode = "none";
+  sprite.visible = false;
+  (sprite as any)[SHADOW_MANAGED_MARK] = true;
+  return sprite;
+};
+
+const createShadowLayer = (parent: PixiContainer): ShadowLayer => {
+  const layer = new PixiContainer();
+  const filter = new AlphaFilter({ alpha: DEFAULT_OPACITY });
+  layer.filters = [filter];
+  layer.eventMode = "none";
+  (layer as any)[SHADOW_MANAGED_MARK] = true;
+  parent.addChild(layer);
+  return { layer, filter };
+};
+
 const createManagedShadow = (
   caster: any,
   parent: PixiContainer,
+  layer: PixiContainer,
   shadowColor: number
 ): ManagedShadow => {
-  const near = new PixiGraphics();
-  const far = new PixiGraphics();
-  const contact = new PixiGraphics();
-  const nearBlur = new BlurFilter({ strength: 3.2, quality: 3 });
-  const farBlur = new BlurFilter({ strength: 5.4, quality: 3 });
-  const contactBlur = new BlurFilter({ strength: 2.4, quality: 2 });
-
-  near.filters = [nearBlur];
-  far.filters = [farBlur];
-  contact.filters = [contactBlur];
-
-  near.tint = shadowColor;
-  far.tint = shadowColor;
-  contact.tint = shadowColor;
-  near.blendMode = "multiply" as any;
-  far.blendMode = "multiply" as any;
-  contact.blendMode = "multiply" as any;
-  near.eventMode = "none";
-  far.eventMode = "none";
-  contact.eventMode = "none";
-  near.visible = false;
-  far.visible = false;
-  contact.visible = false;
-  near.alpha = 0;
-  far.alpha = 0;
-
-  (near as any)[SHADOW_MANAGED_MARK] = true;
-  (far as any)[SHADOW_MANAGED_MARK] = true;
-  (contact as any)[SHADOW_MANAGED_MARK] = true;
-
-  parent.addChild(contact);
-  parent.addChild(far);
-  parent.addChild(near);
-
+  const contact = markManaged(new PixiSprite(getContactShadowTexture()), shadowColor);
+  contact.anchor.set(0.5);
+  layer.addChild(contact);
   return {
     caster,
     parent,
-    near,
-    far,
+    layer,
     contact,
-    nearBlur,
-    farBlur,
-    contactBlur,
-    dirX: 0,
-    dirY: 1,
-    length: 0,
+    slots: new Map(),
+    silhouette: null,
+    silhouetteKey: "",
+    foot: { x: 0, y: 0 },
   };
 };
 
-const placeBelowCaster = (managed: ManagedShadow) => {
-  const { caster, parent, near, far, contact } = managed;
-  if (!caster || caster.destroyed || !parent) return;
+const createSlot = (managed: ManagedShadow, shadowColor: number): ShadowSlot => {
+  const sprite = markManaged(new PixiSprite(Texture.EMPTY), shadowColor);
+  managed.layer.addChild(sprite);
+  return { sprite, dirX: 0, dirY: 1, length: 0, alpha: 0, targetAlpha: 0, initialized: false };
+};
 
-  const casterZIndex = isFiniteNumber(caster.zIndex) ? caster.zIndex : 0;
-  contact.zIndex = casterZIndex - 0.32;
-  far.zIndex = casterZIndex - 0.26;
-  near.zIndex = casterZIndex - 0.22;
+/**
+ * Reads the caster pixels once per texture frame (sprites) or per size (other display objects)
+ * and turns them into a shadow texture. Falls back to a soft blob without a renderer.
+ */
+const resolveSilhouette = (
+  managed: ManagedShadow,
+  config: ResolvedCaster,
+  renderer: any
+): ShadowSilhouette | null => {
+  const caster = managed.caster;
+  const texture: Texture | undefined = caster.texture;
+  const isSprite = !!texture && !!caster.anchor && !(caster.children?.length > 0);
+  let rect: BoundsLike;
+  let key: string;
+  let read: () => any;
 
-  if ((parent as any).sortableChildren) return;
-  if (!Array.isArray(parent.children) || !parent.children.includes(caster)) return;
+  if (isSprite) {
+    if (texture === Texture.EMPTY || !texture.width) return null;
+    const width = texture.orig?.width ?? texture.width;
+    const height = texture.orig?.height ?? texture.height;
+    const anchorX = config.anchorX ?? caster.anchor.x;
+    rect = { x: -anchorX * width, y: -caster.anchor.y * height, width, height };
+    key = `tex:${(texture as any).uid}`;
+    read = () => renderer.extract.canvas(texture);
+  } else {
+    const bounds = typeof caster.getLocalBounds === "function" ? caster.getLocalBounds() : null;
+    if (!bounds || !(bounds.width > 0) || !(bounds.height > 0)) return null;
+    rect = { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+    key = `obj:${caster.uid}:${Math.round(rect.width)}x${Math.round(rect.height)}`;
+    read = () => renderer.extract.canvas(caster);
+  }
 
-  const setBeforeCaster = (item: any) => {
-    if (!item || item.destroyed || !parent.children.includes(item)) return;
-    const casterIndex = parent.getChildIndex(caster);
-    const targetIndex = Math.max(0, casterIndex - 1);
-    if (parent.getChildIndex(item) !== targetIndex) {
-      parent.setChildIndex(item, targetIndex);
+  const foot = {
+    x: rect.x + config.footAnchor.x * rect.width + config.footOffset.x,
+    y: rect.y + config.footAnchor.y * rect.height + config.footOffset.y,
+  };
+  managed.foot = foot;
+  const fullKey = `${key}|${config.silhouette}|${foot.x}|${foot.y}|${config.blur}|${config.hardness}|${config.gradientPower}`;
+  if (managed.silhouetteKey === fullKey && managed.silhouette && !managed.silhouette.texture.destroyed) {
+    return managed.silhouette;
+  }
+
+  let silhouette: ShadowSilhouette | null = null;
+  if (config.silhouette && renderer?.extract?.canvas) {
+    try {
+      const canvas = read();
+      if (canvas && canvas.width > 0) {
+        silhouette = bakeSilhouette(key, canvas as HTMLCanvasElement, rect, {
+          blur: config.blur * 2.2,
+          hardness: config.hardness,
+          gradientPower: config.gradientPower,
+          foot,
+        });
+      }
+    } catch {
+      silhouette = null;
     }
-  };
+  }
+  if (!silhouette) silhouette = getBlobSilhouette(rect);
 
-  setBeforeCaster(contact);
-  setBeforeCaster(far);
-  setBeforeCaster(near);
+  managed.silhouette = silhouette;
+  managed.silhouetteKey = fullKey;
+  return silhouette;
 };
 
-const drawShadowEllipse = (
-  graphics: PixiGraphics,
-  width: number,
-  height: number,
-  centerY: number,
-  shadowColor: number
+const shadowMatrix = new Matrix();
+
+/**
+ * Lays the silhouette on the ground: its height follows the shadow direction
+ * (foreshortened by `perspective`) and its width stays perpendicular to it.
+ * Exported for custom shadow rendering and tests.
+ */
+export const applyShadowTransform = (
+  sprite: PixiSprite,
+  silhouette: ShadowSilhouette,
+  footX: number,
+  footY: number,
+  pxToParentX: number,
+  dirX: number,
+  dirY: number,
+  length: number,
+  perspective: number
 ) => {
-  graphics.clear();
-  graphics.ellipse(0, centerY, Math.max(1, width) * 0.5, Math.max(1, height) * 0.5);
-  graphics.fill({ color: shadowColor, alpha: 1 });
+  if (sprite.texture !== silhouette.texture) sprite.texture = silhouette.texture;
+  const textureWidth = silhouette.texture.width || 1;
+  const textureHeight = silhouette.texture.height || 1;
+  sprite.anchor.set(silhouette.footX / textureWidth, silhouette.footY / textureHeight);
+
+  // Shadow direction on the ground plane
+  let groundX = dirX;
+  let groundY = dirY / perspective;
+  const norm = Math.hypot(groundX, groundY) || 1;
+  groundX /= norm;
+  groundY /= norm;
+
+  // Silhouette height -> along the shadow, back to screen space
+  const upX = groundX * length;
+  const upY = groundY * length * perspective;
+
+  // Silhouette width -> screen X made perpendicular to the shadow on the ground.
+  // It naturally narrows when the light comes from the side (thin shadow).
+  const side = groundY >= 0 ? 1 : -1;
+  const widthScale = Math.max(Math.abs(groundY), 0.3);
+  const widthX = groundY * side * widthScale;
+  const widthY = -groundX * side * widthScale * perspective;
+
+  shadowMatrix.set(
+    widthX * pxToParentX,
+    widthY * pxToParentX,
+    -upX / silhouette.heightPx,
+    -upY / silhouette.heightPx,
+    footX,
+    footY
+  );
+  sprite.setFromMatrix(shadowMatrix);
 };
 
 const updateManagedShadow = (
@@ -629,7 +758,9 @@ const updateManagedShadow = (
   minInfluence: number,
   falloffPower: number,
   mode: ShadowMode,
-  shadowColor: number
+  maxShadows: number,
+  shadowColor: number,
+  renderer: any
 ) => {
   const caster = managed.caster;
   const parent = managed.parent;
@@ -643,44 +774,18 @@ const updateManagedShadow = (
     return;
   }
 
-  const bounds = typeof caster.getBounds === "function" ? caster.getBounds() : null;
-  const hasBounds =
-    !!bounds &&
-    isFiniteNumber(bounds.x) &&
-    isFiniteNumber(bounds.y) &&
-    isFiniteNumber(bounds.width) &&
-    isFiniteNumber(bounds.height) &&
-    bounds.width > 0 &&
-    bounds.height > 0;
-  if (!hasBounds) {
+  const silhouette = resolveSilhouette(managed, casterConfig, renderer);
+  if (!silhouette) {
     hideManagedShadow(managed);
     return;
   }
 
-  const casterWidth = Math.max(
-    1,
-    Math.abs(Number(caster.width)) || Math.abs(bounds.width)
-  );
-  const casterHeight = Math.max(
-    1,
-    Math.abs(Number(caster.height)) || Math.abs(bounds.height)
-  );
-
-  const casterAnchorXRaw = Number(caster.anchor?.x);
-  const casterAnchorYRaw = Number(caster.anchor?.y);
-  const casterAnchorX = isFiniteNumber(casterAnchorXRaw) ? clamp(casterAnchorXRaw, 0, 1) : 0.5;
-  const casterAnchorY = isFiniteNumber(casterAnchorYRaw) ? clamp(casterAnchorYRaw, 0, 1) : 1;
-
-  const localFootPoint: PointLike = {
-    x:
-      (casterConfig.footAnchor.x - casterAnchorX) * casterWidth +
-      casterConfig.footOffset.x,
-    y:
-      (casterConfig.footAnchor.y - casterAnchorY) * casterHeight +
-      casterConfig.footOffset.y,
-  };
-  const footGlobal = toGlobalPoint(caster, localFootPoint);
+  const footGlobal = toGlobalPoint(caster, managed.foot);
   const footLocal = toLocalPoint(parent, footGlobal);
+  // Caster scale as seen from the parent (keeps horizontal flips)
+  const unitX = toLocalPoint(parent, toGlobalPoint(caster, { x: managed.foot.x + 1, y: managed.foot.y }));
+  const pxToParentX = silhouette.localPerPx * (unitX.x - footLocal.x || 1);
+  const perspective = casterConfig.perspective;
   const candidates: LightCandidate[] = [];
 
   for (let i = 0; i < lights.length; i++) {
@@ -695,46 +800,36 @@ const updateManagedShadow = (
     const distance = Math.hypot(dx, dy);
     const falloff = Math.pow(clamp(1 - distance / light.radius, 0, 1), falloffPower);
     const zWeight = clamp(DEFAULT_LIGHT_Z / Math.max(12, light.z), 0.35, 2.4);
-    const influence = clamp(
-      falloff * light.intensity * light.shadowWeight * zWeight,
-      0,
-      2.2
-    );
+    const influence = clamp(falloff * light.intensity * light.shadowWeight * zWeight, 0, 2.2);
     if (influence <= 0.001) continue;
 
+    const groundDistance = Math.hypot(dx, dy / perspective);
     const directionNorm = distance > 0.0001 ? distance : 1;
-    const dirX = dx / directionNorm;
-    const dirY = dy / directionNorm;
-    const projectedLength = clamp(
-      (distance * casterConfig.height) / Math.max(14, light.z),
-      casterConfig.minLength,
-      casterConfig.maxLength
-    );
-
     candidates.push({
-      dirX: isFiniteNumber(dirX) ? dirX : 0,
-      dirY: isFiniteNumber(dirY) ? dirY : 1,
+      key: light.key,
+      dirX: distance > 0.0001 ? dx / directionNorm : 0,
+      dirY: distance > 0.0001 ? dy / directionNorm : 1,
       influence,
-      length: isFiniteNumber(projectedLength) ? projectedLength : casterConfig.minLength,
+      length: clamp(
+        (groundDistance * casterConfig.height) / Math.max(14, light.z),
+        casterConfig.minLength,
+        casterConfig.maxLength
+      ),
     });
   }
 
   if (ambientLight && ambientLight.intensity > 0.001 && ambientLight.shadowWeight > 0.001) {
     const ambientLength =
       ambientLight.length ??
-      clamp(
-        (casterConfig.height * DEFAULT_LIGHT_Z) / Math.max(14, ambientLight.z),
-        casterConfig.minLength,
-        casterConfig.maxLength
-      );
+      (casterConfig.height * DEFAULT_LIGHT_Z) / Math.max(14, ambientLight.z);
     const ambientInfluence = clamp(
       Math.max(minInfluence, ambientLight.intensity * ambientLight.shadowWeight),
       0,
       2.2
     );
-
     if (ambientInfluence > 0.001) {
       candidates.push({
+        key: "ambient",
         dirX: ambientLight.dirX,
         dirY: ambientLight.dirY,
         influence: ambientInfluence,
@@ -743,92 +838,108 @@ const updateManagedShadow = (
     }
   }
 
-  const projection = blendCandidates(candidates, mode);
-  if (!projection) {
-    hideManagedShadow(managed);
-    return;
+  candidates.sort((a, b) => b.influence - a.influence);
+  let picked: LightCandidate[];
+  if (mode === "blend2") {
+    const blended = blendCandidates([...candidates], "blend2");
+    picked = blended ? [blended] : [];
+  } else if (mode === "strongest") {
+    picked = candidates.slice(0, 1);
+  } else {
+    picked = candidates.slice(0, Math.max(1, maxShadows));
   }
 
-  const directionLerp = 0.34;
-  const lengthLerp = 0.32;
-  const smoothDirX = managed.dirX + (projection.dirX - managed.dirX) * directionLerp;
-  const smoothDirY = managed.dirY + (projection.dirY - managed.dirY) * directionLerp;
-  const smoothNorm = Math.hypot(smoothDirX, smoothDirY);
-  const dirX = smoothNorm > 0.0001 ? smoothDirX / smoothNorm : projection.dirX;
-  const dirY = smoothNorm > 0.0001 ? smoothDirY / smoothNorm : projection.dirY;
-  const length = managed.length + (projection.length - managed.length) * lengthLerp;
-  managed.dirX = dirX;
-  managed.dirY = dirY;
-  managed.length = length;
+  const strongest = picked[0]?.influence ?? 0;
+  // Set by GroundEffects: shadows fade on water and in tall grass.
+  const groundFactor = isFiniteNumber(caster.__groundShadowFactor) ? caster.__groundShadowFactor : 1;
+  for (const slot of managed.slots.values()) slot.targetAlpha = 0;
 
-  const lengthScale = clamp(length / casterHeight, 0.08, 3.2);
-  const hardness = clamp(casterConfig.hardness, 0, 1);
-  const influenceNorm = clamp(projection.influence, 0, 1);
-  const influenceFloor = projection.influence > 0.001 ? 0.12 : 0;
-  const visualInfluence = clamp(Math.max(influenceFloor, influenceNorm), 0, 1);
-  const alphaBase = clamp(casterConfig.alpha * visualInfluence, 0, 1);
-  const blurBase = Math.max(0, casterConfig.blur * (1.28 - hardness * 0.42));
-  const tailFade = clamp(2 / Math.max(0.2, casterConfig.gradientPower), 0.45, 1.35);
-  const tailLength = clamp(length, casterConfig.minLength, casterConfig.maxLength);
-  const nearWidth = casterWidth * clamp(0.5 + lengthScale * 0.08, 0.46, 0.78);
-  const nearHeight = Math.max(casterHeight * 0.16, tailLength * (0.42 + (1 - hardness) * 0.12));
-  const farWidth = casterWidth * clamp(0.34 + lengthScale * 0.07, 0.32, 0.66);
-  const farHeight = Math.max(
-    casterHeight * 0.14,
-    tailLength * (0.72 + (1 - hardness) * 0.16) * (0.82 + tailFade * 0.18)
-  );
-  const contactWidth = Math.max(
-    4,
-    casterWidth * clamp(casterConfig.contactScale * 1.65, 0.25, 1.05)
-  );
-  const contactHeight = Math.max(
-    2,
-    casterHeight * clamp(casterConfig.contactScale * 0.44, 0.08, 0.38)
-  );
-  // Local -Y is aligned to the chosen shadow direction.
-  const rotation = Math.atan2(dirY, dirX) + Math.PI / 2;
+  for (let i = 0; i < picked.length; i++) {
+    const candidate = picked[i];
+    let slot = managed.slots.get(candidate.key);
+    if (!slot) {
+      slot = createSlot(managed, shadowColor);
+      managed.slots.set(candidate.key, slot);
+    }
+    if (!slot.initialized) {
+      slot.dirX = candidate.dirX;
+      slot.dirY = candidate.dirY;
+      slot.length = candidate.length;
+      slot.initialized = true;
+    } else {
+      const smoothDirX = slot.dirX + (candidate.dirX - slot.dirX) * 0.35;
+      const smoothDirY = slot.dirY + (candidate.dirY - slot.dirY) * 0.35;
+      const smoothNorm = Math.hypot(smoothDirX, smoothDirY);
+      slot.dirX = smoothNorm > 0.0001 ? smoothDirX / smoothNorm : candidate.dirX;
+      slot.dirY = smoothNorm > 0.0001 ? smoothDirY / smoothNorm : candidate.dirY;
+      slot.length += (candidate.length - slot.length) * 0.35;
+    }
+    // Secondary lights cast lighter shadows; very close lights give crisp dark ones.
+    const share = strongest > 0 ? candidate.influence / strongest : 1;
+    // Square root keeps shadows readable away from the light, while still fading out.
+    const visual = clamp(Math.sqrt(candidate.influence), 0.2, 1);
+    slot.targetAlpha = clamp(
+      casterConfig.alpha * groundFactor * visual * (i === 0 ? 1 : 0.35 + share * 0.5),
+      0,
+      1
+    );
+  }
 
-  drawShadowEllipse(managed.far, farWidth, farHeight, -tailLength * 0.42, shadowColor);
-  drawShadowEllipse(managed.near, nearWidth, nearHeight, -tailLength * 0.2, shadowColor);
-  drawShadowEllipse(
-    managed.contact,
-    contactWidth * (0.92 + lengthScale * 0.12),
-    contactHeight,
-    0,
-    shadowColor
-  );
+  for (const [key, slot] of managed.slots) {
+    slot.alpha += (slot.targetAlpha - slot.alpha) * 0.25;
+    if (slot.targetAlpha === 0 && slot.alpha < 0.01) {
+      destroySlot(slot);
+      managed.slots.delete(key);
+      continue;
+    }
+    slot.sprite.tint = shadowColor;
+    slot.sprite.alpha = slot.alpha;
+    slot.sprite.visible = true;
+    applyShadowTransform(
+      slot.sprite,
+      silhouette,
+      footLocal.x,
+      footLocal.y,
+      pxToParentX,
+      slot.dirX,
+      slot.dirY,
+      slot.length,
+      perspective
+    );
+  }
 
-  managed.near.position.set(footLocal.x, footLocal.y);
-  managed.far.position.set(footLocal.x, footLocal.y);
-  managed.contact.position.set(
-    footLocal.x + dirX * Math.min(3, tailLength * 0.04),
-    footLocal.y + dirY * Math.min(3, tailLength * 0.04)
-  );
-  managed.near.rotation = rotation;
-  managed.far.rotation = rotation;
-  managed.contact.rotation = rotation;
-
-  managed.near.alpha = clamp(alphaBase * (0.3 + hardness * 0.12), 0, 0.42);
-  managed.far.alpha = clamp(alphaBase * (0.13 + (1 - hardness) * 0.12) * tailFade, 0, 0.24);
-  managed.near.visible = managed.near.alpha > 0.001;
-  managed.far.visible = managed.far.alpha > 0.001;
-
-  managed.nearBlur.strength = blurBase * (0.82 + (1 - visualInfluence) * 0.45);
-  managed.farBlur.strength = blurBase * (1.65 + (1 - visualInfluence) * 0.9);
-
-  const contactAlpha = clamp(casterConfig.contactAlpha * visualInfluence, 0, 1);
-  managed.contact.alpha = clamp(contactAlpha * (0.54 + hardness * 0.18), 0, 0.34);
-  managed.contactBlur.strength = blurBase * (0.7 + (1 - hardness) * 0.2);
+  // Contact shadow: soft occlusion right under the feet.
+  const casterWidth = silhouette.texture.width * Math.abs(pxToParentX);
+  const contactWidth = Math.max(6, casterWidth * clamp(casterConfig.contactScale * 1.7, 0.2, 1.2));
+  const textureWidth = managed.contact.texture.width || 128;
+  const textureHeight = managed.contact.texture.height || 64;
+  managed.contact.tint = shadowColor;
+  managed.contact.position.set(footLocal.x, footLocal.y);
+  managed.contact.scale.set(contactWidth / textureWidth, (contactWidth * 0.34 * perspective / 0.7) / textureHeight);
+  managed.contact.alpha = clamp(casterConfig.contactAlpha * groundFactor, 0, 1);
   managed.contact.visible = managed.contact.alpha > 0.001;
+};
 
-  placeBelowCaster(managed);
+const resolveRenderer = (context: any): any => {
+  const appSignal = context?.app;
+  if (typeof appSignal === "function") {
+    try {
+      const app = appSignal();
+      if (app?.renderer?.extract) return app.renderer;
+    } catch {
+      // Use the global renderer below.
+    }
+  }
+  const globalRenderer = (globalThis as any).__PIXI_RENDERER__;
+  return globalRenderer?.extract ? globalRenderer : null;
 };
 
 /**
  * SpriteShadows preset
  *
  * Adds RPG-style ground shadows for sprites tagged with `shadowCaster`.
- * The shadow direction is automatically opposite to the dominant light source.
+ * The real silhouette of each sprite is projected on the ground, away from each nearby light,
+ * with a penumbra that softens toward the tip and a contact shadow under the feet.
  *
  * Usage:
  * - Add `<SpriteShadows lights={lights} />` in your scene (preferably inside `Viewport`).
@@ -847,7 +958,17 @@ export function SpriteShadows(options: SpriteShadowsProps = {}) {
     if (!target || typeof target.addChild !== "function") return;
     const tickSignal = context?.tick;
 
+    const renderer = resolveRenderer(context);
     const managedByCaster = new Map<any, ManagedShadow>();
+    const layersByParent = new Map<PixiContainer, ShadowLayer>();
+    const layerFor = (parent: PixiContainer): ShadowLayer => {
+      let entry = layersByParent.get(parent);
+      if (!entry || entry.layer.destroyed) {
+        entry = createShadowLayer(parent);
+        layersByParent.set(parent, entry);
+      }
+      return entry;
+    };
     let cachedCasters: Array<{ instance: any; caster: ResolvedCaster }> = [];
     let accumulatorMs = 0;
     let scanAccumulatorMs = 0;
@@ -860,7 +981,14 @@ export function SpriteShadows(options: SpriteShadowsProps = {}) {
         resolveReactiveValue(props.shadowColor as ReactiveValue<ColorInput> | undefined)
       );
       const modeRaw = resolveReactiveValue(props.mode as ReactiveValue<ShadowMode> | undefined);
-      const mode: ShadowMode = modeRaw === "blend2" ? "blend2" : DEFAULT_MODE;
+      const mode: ShadowMode =
+        modeRaw === "blend2" || modeRaw === "strongest" || modeRaw === "multi" ? modeRaw : DEFAULT_MODE;
+      const maxShadowsRaw = Number(
+        resolveReactiveValue(props.maxShadows as ReactiveValue<number> | undefined)
+      );
+      const maxShadows = isFiniteNumber(maxShadowsRaw)
+        ? clamp(Math.round(maxShadowsRaw), 1, 8)
+        : DEFAULT_MAX_SHADOWS;
       const lights = resolveLights(lightsSource(), target);
       const ambientLight = resolveAmbientLight(
         props.ambientLight as
@@ -899,7 +1027,8 @@ export function SpriteShadows(options: SpriteShadowsProps = {}) {
         let managed = managedByCaster.get(casterInstance);
         if (!managed || managed.parent !== casterInstance.parent) {
           if (managed) destroyManagedShadow(managed);
-          managed = createManagedShadow(casterInstance, casterInstance.parent, shadowColor);
+          const { layer } = layerFor(casterInstance.parent);
+          managed = createManagedShadow(casterInstance, casterInstance.parent, layer, shadowColor);
           managedByCaster.set(casterInstance, managed);
         }
 
@@ -920,7 +1049,9 @@ export function SpriteShadows(options: SpriteShadowsProps = {}) {
           minInfluence,
           falloffPower,
           mode,
-          shadowColor
+          maxShadows,
+          shadowColor,
+          renderer
         );
       }
 
@@ -932,6 +1063,32 @@ export function SpriteShadows(options: SpriteShadowsProps = {}) {
         ) {
           destroyManagedShadow(managed);
           managedByCaster.delete(casterInstance);
+        }
+      }
+
+      // Each shadow layer sits on the ground: just below the lowest caster of its parent.
+      const opacityRaw = Number(resolveReactiveValue(props.opacity as ReactiveValue<number> | undefined));
+      const opacity = isFiniteNumber(opacityRaw) ? clamp(opacityRaw, 0, 1) : DEFAULT_OPACITY;
+      const layerZRaw = Number(resolveReactiveValue(props.layerZIndex as ReactiveValue<number> | undefined));
+      for (const [parent, entry] of layersByParent) {
+        if (parent.destroyed || entry.layer.destroyed) {
+          layersByParent.delete(parent);
+          continue;
+        }
+        entry.filter.alpha = opacity;
+        let lowestZ = Infinity;
+        let lowestIndex = Infinity;
+        for (const managed of managedByCaster.values()) {
+          if (managed.parent !== parent) continue;
+          const z = isFiniteNumber(managed.caster.zIndex) ? managed.caster.zIndex : 0;
+          lowestZ = Math.min(lowestZ, z);
+          const index = parent.children.indexOf(managed.caster);
+          if (index >= 0) lowestIndex = Math.min(lowestIndex, index);
+        }
+        entry.layer.zIndex = isFiniteNumber(layerZRaw) ? layerZRaw : (lowestZ === Infinity ? 0 : lowestZ - 0.5);
+        if (!(parent as any).sortableChildren && lowestIndex !== Infinity) {
+          const layerIndex = parent.children.indexOf(entry.layer);
+          if (layerIndex > lowestIndex) parent.setChildIndex(entry.layer, lowestIndex);
         }
       }
     };
@@ -981,6 +1138,8 @@ export function SpriteShadows(options: SpriteShadowsProps = {}) {
         destroyManagedShadow(managed);
       }
       managedByCaster.clear();
+      for (const entry of layersByParent.values()) entry.layer.destroy({ children: true });
+      layersByParent.clear();
     };
   });
 

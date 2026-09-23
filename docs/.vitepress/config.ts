@@ -183,6 +183,10 @@ const guideMenu = [
         link: "/presets/day-night",
       },
       {
+        text: "GroundEffects",
+        link: "/presets/ground-effects",
+      },
+      {
         text: "Footprints",
         link: "/presets/footprints",
       },

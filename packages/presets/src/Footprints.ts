@@ -1,11 +1,16 @@
 import { Container, h, mount, useProps } from "canvasengine";
 import {
-  BlurFilter,
   Container as PixiContainer,
-  Graphics,
   Sprite as PixiSprite,
-  Texture,
 } from "pixi.js";
+import {
+  FOOTPRINT_TEXTURE_SCALE,
+  getFootprintTextures,
+  type FootprintShape,
+  type FootprintTextures,
+} from "./footprintTextures";
+
+export type { FootprintShape };
 
 type ReactiveValue<T> = T | (() => T);
 type PointLike = { x: number; y: number };
@@ -39,6 +44,7 @@ type ResolvedCaster = {
   surface: string;
   angleOffset: number;
   jitter: number;
+  print: FootprintShape;
 };
 
 type ManagedCasterState = {
@@ -51,12 +57,12 @@ type ManagedCasterState = {
 };
 
 type ManagedFootprint = {
+  /** Crisp print, erodes first */
   baseSprite: PixiSprite;
+  /** Softened print, lasts longer (replaces the old animated blur) */
   depthSprite: PixiSprite;
+  /** Raised lit edge */
   rimSprite: PixiSprite;
-  baseBlurFilter: BlurFilter;
-  depthBlurFilter: BlurFilter;
-  rimBlurFilter: BlurFilter;
   bornAt: number;
   lifetimeMs: number;
   startAlpha: number;
@@ -98,6 +104,8 @@ export type FootprintCasterOptions = {
   surface?: ReactiveValue<string>;
   angleOffset?: ReactiveValue<number>;
   jitter?: ReactiveValue<number>;
+  /** Print shape. Default: `boot` */
+  print?: ReactiveValue<FootprintShape>;
 };
 
 export type FootprintsProps = {
@@ -112,11 +120,13 @@ const DEFAULT_SURFACE = "default";
 const DEFAULT_UPDATE_HZ = 30;
 const DEFAULT_MAX_FOOTPRINTS = 260;
 
+const FOOTPRINT_SHAPES: FootprintShape[] = ["boot", "shoe", "bare", "paw", "hoof"];
+
 const DEFAULT_CASTER: ResolvedCaster = {
   footAnchor: { x: 0.5, y: 1 },
   leftOffset: { x: -10, y: 1 },
   rightOffset: { x: 10, y: 1 },
-  minStepDistance: 18,
+  minStepDistance: 22,
   minSpeed: 36,
   stepIntervalMs: 85,
   size: 1,
@@ -124,7 +134,8 @@ const DEFAULT_CASTER: ResolvedCaster = {
   blur: 0,
   surface: DEFAULT_SURFACE,
   angleOffset: 0,
-  jitter: 8,
+  jitter: 6,
+  print: "boot",
 };
 
 const BASE_PROFILE: ResolvedSurfaceProfile = {
@@ -155,6 +166,45 @@ const BUILTIN_PROFILES: Record<string, ResolvedSurfaceProfile> = {
     erosionStart: 0.62,
     depth: 0.54,
     rimStrength: 0.12,
+  },
+  mud: {
+    lifetimeMs: 4200,
+    startAlpha: 0.5,
+    endAlpha: 0,
+    tint: 0x3f2a1a,
+    blendMode: "multiply",
+    scale: 1.04,
+    blurStart: 0.2,
+    blurEnd: 1,
+    erosionStart: 0.75,
+    depth: 0.9,
+    rimStrength: 0.1,
+  },
+  dirt: {
+    lifetimeMs: 2200,
+    startAlpha: 0.34,
+    endAlpha: 0,
+    tint: 0x5c4630,
+    blendMode: "multiply",
+    scale: 1,
+    blurStart: 0.4,
+    blurEnd: 1.8,
+    erosionStart: 0.55,
+    depth: 0.6,
+    rimStrength: 0.12,
+  },
+  grass: {
+    lifetimeMs: 1400,
+    startAlpha: 0.22,
+    endAlpha: 0,
+    tint: 0x2c4a1c,
+    blendMode: "multiply",
+    scale: 1,
+    blurStart: 0.6,
+    blurEnd: 2.4,
+    erosionStart: 0.4,
+    depth: 0.4,
+    rimStrength: 0.18,
   },
   snow: {
     lifetimeMs: 2550,
@@ -350,6 +400,7 @@ const resolveCasterOptions = (
   const angleOffset = Number(resolveReactiveValue(source.angleOffset));
   const jitter = Number(resolveReactiveValue(source.jitter));
   const surfaceRaw = resolveReactiveValue(source.surface);
+  const printRaw = resolveReactiveValue(source.print);
 
   return {
     footAnchor: resolvePoint(source.footAnchor, DEFAULT_CASTER.footAnchor),
@@ -371,6 +422,9 @@ const resolveCasterOptions = (
         : defaultSurface,
     angleOffset: isFiniteNumber(angleOffset) ? angleOffset : DEFAULT_CASTER.angleOffset,
     jitter: isFiniteNumber(jitter) ? Math.max(0, jitter) : DEFAULT_CASTER.jitter,
+    print: FOOTPRINT_SHAPES.includes(printRaw as FootprintShape)
+      ? (printRaw as FootprintShape)
+      : DEFAULT_CASTER.print,
   };
 };
 
@@ -416,41 +470,6 @@ const collectFootprintCasters = (
   }
 
   return collected;
-};
-
-const resolveRenderer = (context: any): any => {
-  const appSignal = context?.app;
-  if (typeof appSignal === "function") {
-    try {
-      const app = appSignal();
-      if (app?.renderer && typeof app.renderer.generateTexture === "function") {
-        return app.renderer;
-      }
-    } catch {
-      // Ignore and use fallback.
-    }
-  }
-  const globalRenderer = (globalThis as any).__PIXI_RENDERER__;
-  if (globalRenderer && typeof globalRenderer.generateTexture === "function") {
-    return globalRenderer;
-  }
-  return null;
-};
-
-const createFootprintTexture = (renderer: any): Texture => {
-  const graphics = new Graphics();
-
-  graphics.ellipse(0, 10, 8.4, 6.1).fill(0xffffff);
-  graphics.ellipse(0, -1.4, 6.8, 9.4).fill(0xffffff);
-  graphics.circle(-4.7, -12.8, 2).fill(0xffffff);
-  graphics.circle(-1.5, -14.6, 1.9).fill(0xffffff);
-  graphics.circle(1.5, -15.3, 1.75).fill(0xffffff);
-  graphics.circle(4.5, -14.1, 1.45).fill(0xffffff);
-
-  const texture = renderer.generateTexture(graphics);
-  graphics.destroy();
-
-  return texture;
 };
 
 const resolveCasterBasePoint = (
@@ -533,14 +552,9 @@ export function Footprints(options: FootprintsProps = {}) {
     let elapsedMs = 0;
     let forceRefresh = true;
     let tickSubscription: any = null;
-    let footprintTexture: Texture | null = null;
-
-    const ensureTexture = (): Texture | null => {
-      if (footprintTexture && !footprintTexture.destroyed) return footprintTexture;
-      const renderer = resolveRenderer(context);
-      if (!renderer) return null;
-      footprintTexture = createFootprintTexture(renderer);
-      return footprintTexture;
+    const texturesFor = (shape: FootprintShape): FootprintTextures | null => {
+      const textures = getFootprintTextures(shape);
+      return textures.sharp.destroyed ? null : textures;
     };
 
     const releaseFootprint = (managed: ManagedFootprint) => {
@@ -567,30 +581,21 @@ export function Footprints(options: FootprintsProps = {}) {
       }
     };
 
-    const acquireFootprint = (texture: Texture): ManagedFootprint => {
+    const acquireFootprint = (textures: FootprintTextures): ManagedFootprint => {
       let managed = freeFootprints.pop();
       if (!managed) {
-        const baseSprite = new PixiSprite(texture);
-        const depthSprite = new PixiSprite(texture);
-        const rimSprite = new PixiSprite(texture);
-
-        const baseBlurFilter = new BlurFilter({ strength: 0, quality: 1 });
-        const depthBlurFilter = new BlurFilter({ strength: 0, quality: 1 });
-        const rimBlurFilter = new BlurFilter({ strength: 0, quality: 1 });
+        const baseSprite = new PixiSprite(textures.sharp);
+        const depthSprite = new PixiSprite(textures.soft);
+        const rimSprite = new PixiSprite(textures.rim);
 
         const sprites = [baseSprite, depthSprite, rimSprite];
         for (let i = 0; i < sprites.length; i++) {
           const sprite = sprites[i];
           sprite.anchor.set(0.5, 0.84);
-          sprite.roundPixels = true;
           sprite.eventMode = "none";
           sprite.visible = false;
           (sprite as any)[FOOTPRINT_MANAGED_MARK] = true;
         }
-
-        baseSprite.filters = [baseBlurFilter];
-        depthSprite.filters = [depthBlurFilter];
-        rimSprite.filters = [rimBlurFilter];
         depthSprite.blendMode = "multiply" as any;
         rimSprite.blendMode = "screen" as any;
 
@@ -598,9 +603,6 @@ export function Footprints(options: FootprintsProps = {}) {
           baseSprite,
           depthSprite,
           rimSprite,
-          baseBlurFilter,
-          depthBlurFilter,
-          rimBlurFilter,
           bornAt: 0,
           lifetimeMs: BASE_PROFILE.lifetimeMs,
           startAlpha: BASE_PROFILE.startAlpha,
@@ -614,9 +616,9 @@ export function Footprints(options: FootprintsProps = {}) {
           rimStrength: BASE_PROFILE.rimStrength,
         };
       } else {
-        managed.baseSprite.texture = texture;
-        managed.depthSprite.texture = texture;
-        managed.rimSprite.texture = texture;
+        managed.baseSprite.texture = textures.sharp;
+        managed.depthSprite.texture = textures.soft;
+        managed.rimSprite.texture = textures.rim;
       }
 
       return managed;
@@ -650,10 +652,14 @@ export function Footprints(options: FootprintsProps = {}) {
         }
 
         const t = clamp((nowMs - managed.bornAt) / Math.max(1, managed.lifetimeMs), 0, 1);
-        const fade = 1 - smoothstep(0, 1, t);
-        const erosion =
-          t <= managed.erosionStart ? 1 : 1 - smoothstep(managed.erosionStart, 1, t);
-        const alpha = clamp(lerp(managed.startAlpha, managed.endAlpha, t) * fade * erosion, 0, 1.5);
+        // A print stays well marked, then erodes: hold (slight settling) and fade out at the end.
+        const settle = 1 - 0.18 * smoothstep(0, managed.erosionStart, t);
+        const fadeOut = 1 - smoothstep(managed.erosionStart, 1, t);
+        const alpha = clamp(
+          lerp(managed.endAlpha, managed.startAlpha * settle, fadeOut),
+          0,
+          1.5
+        );
 
         if (t >= 1 || alpha <= 0.001) {
           activeFootprints.splice(i, 1);
@@ -661,37 +667,19 @@ export function Footprints(options: FootprintsProps = {}) {
           continue;
         }
 
-        const spread = 1 + t * 0.08;
-        const depthSpread = 1 + t * 0.05;
-        const rimSpread = 1 + t * 0.12;
-        const depthScaleMul = 0.78 - managed.depth * 0.1;
-        const rimScaleMul = 1.05 + managed.depth * 0.12;
-
+        // Edges slowly slump outward as the print ages
+        const spread = 1 + t * 0.06;
         baseSprite.scale.set(managed.baseScaleX * spread, managed.baseScaleY * spread);
-        depthSprite.scale.set(
-          managed.baseScaleX * depthScaleMul * depthSpread,
-          managed.baseScaleY * depthScaleMul * depthSpread
-        );
-        rimSprite.scale.set(
-          managed.baseScaleX * rimScaleMul * rimSpread,
-          managed.baseScaleY * rimScaleMul * rimSpread
-        );
+        depthSprite.scale.set(managed.baseScaleX * (spread + 0.03), managed.baseScaleY * (spread + 0.03));
+        rimSprite.scale.set(managed.baseScaleX * (spread + 0.04), managed.baseScaleY * (spread + 0.04));
 
-        baseSprite.alpha = alpha;
-        depthSprite.alpha = clamp(alpha * (0.58 + managed.depth * 0.34), 0, 1.2);
-        rimSprite.alpha = clamp(alpha * managed.rimStrength, 0, 0.65);
-
-        managed.baseBlurFilter.strength = lerp(managed.blurStart, managed.blurEnd, t);
-        managed.depthBlurFilter.strength = lerp(
-          managed.blurStart * (0.45 + (1 - managed.depth) * 0.25),
-          managed.blurEnd * (0.72 + (1 - managed.depth) * 0.22),
-          t
-        );
-        managed.rimBlurFilter.strength = lerp(
-          managed.blurStart * 0.8,
-          managed.blurEnd * (1.28 + managed.depth * 0.24),
-          t
-        );
+        // Aging: crisp detail erodes first while the softened print lingers,
+        // which reads as the print blurring without any filter.
+        const softness = clamp(managed.blurEnd / 2.5, 0.2, 1);
+        const crisp = 1 - smoothstep(0, 0.85, t) * softness;
+        baseSprite.alpha = clamp(alpha * crisp, 0, 1);
+        depthSprite.alpha = clamp(alpha * (0.35 + managed.depth * 0.45) * (0.6 + t * 0.6), 0, 1);
+        rimSprite.alpha = clamp(alpha * managed.rimStrength * 2.2 * crisp, 0, 0.8);
 
         baseSprite.visible = true;
         depthSprite.visible = true;
@@ -707,9 +695,9 @@ export function Footprints(options: FootprintsProps = {}) {
       nowMs: number,
       maxFootprints: number
     ) => {
-      const texture = ensureTexture();
+      const textures = texturesFor(casterConfig.print);
       const parent = casterInstance.parent as PixiContainer | null;
-      if (!texture || !parent || parent.destroyed) return;
+      if (!textures || !parent || parent.destroyed) return;
 
       const basePoint = resolveCasterBasePoint(casterInstance, parent, casterConfig);
       const offset = state.nextFoot === "left" ? casterConfig.leftOffset : casterConfig.rightOffset;
@@ -723,7 +711,7 @@ export function Footprints(options: FootprintsProps = {}) {
       const x = basePoint.x + rightX * offset.x + forwardX * offset.y;
       const y = basePoint.y + rightY * offset.x + forwardY * offset.y;
 
-      const managed = acquireFootprint(texture);
+      const managed = acquireFootprint(textures);
       const sprites = [managed.rimSprite, managed.baseSprite, managed.depthSprite];
       for (let i = 0; i < sprites.length; i++) {
         const sprite = sprites[i];
@@ -738,8 +726,9 @@ export function Footprints(options: FootprintsProps = {}) {
       const jitterRad = degToRad(casterConfig.jitter);
       const randomJitter = (Math.random() * 2 - 1) * jitterRad;
       const angleOffsetRad = degToRad(casterConfig.angleOffset);
-      const rotation = heading - Math.PI / 2 + angleOffsetRad + randomJitter;
-      const profileScale = profile.scale * casterConfig.size;
+      // Textures point their toe up (-Y): turn it toward the walking direction.
+      const rotation = heading + Math.PI / 2 + angleOffsetRad + randomJitter;
+      const profileScale = profile.scale * casterConfig.size * FOOTPRINT_TEXTURE_SCALE;
       const scaleX = (state.nextFoot === "left" ? 1 : -1) * Math.max(0.01, profileScale);
       const scaleY = Math.max(0.01, profileScale);
       const baseAlpha = clamp(profile.startAlpha * casterConfig.alpha, 0, 1.5);
@@ -753,8 +742,8 @@ export function Footprints(options: FootprintsProps = {}) {
       managed.depthSprite.rotation = rotation;
       managed.rimSprite.rotation = rotation;
       managed.baseSprite.scale.set(scaleX, scaleY);
-      managed.depthSprite.scale.set(scaleX * 0.82, scaleY * 0.82);
-      managed.rimSprite.scale.set(scaleX * 1.08, scaleY * 1.08);
+      managed.depthSprite.scale.set(scaleX, scaleY);
+      managed.rimSprite.scale.set(scaleX, scaleY);
       managed.baseSprite.tint = profile.tint;
       managed.depthSprite.tint = depthTint;
       managed.rimSprite.tint = rimTint;
@@ -783,9 +772,6 @@ export function Footprints(options: FootprintsProps = {}) {
         0.05,
         0.95
       );
-      managed.baseBlurFilter.strength = managed.blurStart;
-      managed.depthBlurFilter.strength = managed.blurStart * (0.45 + (1 - profile.depth) * 0.25);
-      managed.rimBlurFilter.strength = managed.blurStart * 0.8;
 
       activeFootprints.push(managed);
       trimOverflow(maxFootprints);
@@ -915,10 +901,6 @@ export function Footprints(options: FootprintsProps = {}) {
       freeFootprints.length = 0;
       casterState.clear();
 
-      if (footprintTexture && !footprintTexture.destroyed) {
-        footprintTexture.destroy(true);
-      }
-      footprintTexture = null;
     };
   });
 

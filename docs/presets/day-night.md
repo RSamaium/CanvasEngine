@@ -99,6 +99,39 @@ Up to 64 lights are rendered.
 | `lightIntensity` | `number \| Signal<number>` | `1` | Multiplies every light |
 | `vignette` | `number \| Signal<number>` | `1` | Multiplies the vignette |
 
+## Sun Shadows
+
+`sunShadowAt(hour)` returns an `ambientLight` for [SpriteShadows](./sprite-shadows.md): shadows stretch west in the morning, stay short at noon and stretch east in the evening. At night a faint moonlight keeps sprites grounded, and lit street lamps can cast their own shadows.
+
+```html
+<Viewport>
+  <Sprite image="town.png" />
+  <SpriteShadows ambientLight={sun} lights={lampShadows} maxShadows={2} />
+  <Sprite image="hero.png" anchor={[0.5, 1]} shadowCaster={{ height: 90 }} />
+  <DayNightCycle time={clock.time} lights={lights} />
+</Viewport>
+
+<script>
+  const sun = computed(() => sunShadowAt(clock.time()))
+  const darkness = computed(() => sampleDayLighting(clock.time()).lights)
+  const lampShadows = computed(() => lamps.map((lamp, index) => ({
+    x: lamp.x,
+    y: lamp.y + 105, // lantern stands ~105px above its base
+    z: 105,
+    radius: 420,
+    intensity: lightLevel(lamp, index, clock.time(), darkness(), 0),
+  })))
+</script>
+```
+
+| Option | Default | Description |
+|------|---------|-------------|
+| `sunrise`, `sunset` | `6`, `18.5` | Hours of sunrise and sunset |
+| `maxElevation` | `62` | Sun elevation at noon, in degrees (lower = longer noon shadows) |
+| `intensity` | `1` | Shadow strength in daylight |
+| `moonlight` | `0.22` | Night shadow strength (`0` = none) |
+| `noonShadow` | `'south'` | `'south'` keeps shadows in front of characters (readable top-down); `'north'` is the physical northern-hemisphere sun |
+
 ## Custom Cycle
 
 The grading is defined by keyframes interpolated over 24 hours. Use `sampleDayLighting(hour)` to read the current values, for example to fade night-only elements:

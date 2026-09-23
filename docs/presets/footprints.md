@@ -6,9 +6,13 @@
 
 `Footprints` adds fading footprints behind moving sprites.
 
-- No footprint image is required: the shape is generated procedurally.
+- No footprint image is required: realistic prints are drawn procedurally — `boot` (treaded sole), `shoe`, `bare` foot, `paw` and `hoof`.
+- Each print has a crisp depression, a softened layer and a raised edge lit from the top-left. A print stays well marked for most of its life (`erosionStart`), then erodes: the crisp detail goes first and the soft imprint lingers.
+- Boot prints show a treaded sole and a separate heel, like real shoe prints.
+- Prints point their toe in the walking direction and alternate left / right.
 - Footprints are emitted from sprites tagged with `footprintCaster`.
-- You can tune rendering per surface profile (`sand`, `snow`, custom names).
+- You can tune rendering per surface profile (built-in `sand`, `snow`, `mud`, `dirt`, `grass`, or custom names).
+- No filter runs per print, so hundreds of prints stay cheap.
 
 ## Basic Usage
 
@@ -74,7 +78,7 @@
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `profiles` | `Record<string, SurfaceProfile> \| Signal<Record> \| () => Record` | Built-in (`default`, `sand`, `snow`) | Surface rendering profiles |
+| `profiles` | `Record<string, SurfaceProfile> \| Signal<Record> \| () => Record` | Built-in (`default`, `sand`, `snow`, `mud`, `dirt`, `grass`) | Surface rendering profiles |
 | `defaultSurface` | `string \| Signal<string> \| () => string` | `'default'` | Fallback profile name |
 | `maxFootprints` | `number \| Signal<number> \| () => number` | `260` | Maximum active footprints before recycling oldest |
 | `updateHz` | `number \| Signal<number> \| () => number` | `30` | Recompute/update frequency |
@@ -89,8 +93,8 @@
 | `tint` | `string \| number` | `0x2d2a26` | Footprint tint color |
 | `blendMode` | `string \| number` | `'multiply'` | Blend mode used by footprint sprites |
 | `scale` | `number` | `1` | Base scale multiplier |
-| `blurStart` | `number` | `0.45` | Initial blur strength |
-| `blurEnd` | `number` | `1.9` | Final blur strength |
+| `blurStart` | `number` | `0.45` | Softness of a fresh print |
+| `blurEnd` | `number` | `1.9` | How soft an old print gets (higher = the crisp detail fades faster) |
 | `erosionStart` | `number` | `0.54` | Normalized time (`0..1`) where erosion starts |
 | `depth` | `number` | `0.58` | Depression intensity (`0..1`) for center darkening |
 | `rimStrength` | `number` | `0.14` | Strength of the soft raised edge highlight |
@@ -132,9 +136,10 @@ Attach on each sprite that should leave footprints:
 | `blur` | `number` | `0` | Extra blur added to profile blur |
 | `surface` | `string` | `defaultSurface` | Profile name for this caster |
 | `angleOffset` | `number` | `0` | Extra rotation offset in degrees |
-| `jitter` | `number` | `8` | Random rotation variation in degrees |
+| `jitter` | `number` | `6` | Random rotation variation in degrees |
+| `print` | `'boot' \| 'shoe' \| 'bare' \| 'paw' \| 'hoof'` | `'boot'` | Print shape |
 
-If the footprint appears visually reversed in your art direction, set `angleOffset: 180`.
+Prints point their toe in the walking direction. If your art needs the opposite, set `angleOffset: 180`.
 
 ## Conditional Rules (Terrain / Zones / X-Y)
 
