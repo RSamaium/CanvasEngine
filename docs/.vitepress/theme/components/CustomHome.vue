@@ -1,145 +1,211 @@
 <template>
-  <div class="custom-home">
-    <!-- Custom Navbar -->
-    <nav class="custom-navbar">
-      <div class="navbar-container">
-        <div class="navbar-brand">
-          
-        </div>
-        <div class="navbar-links">
-          <a href="/get_started/installation" class="nav-link">Documentation</a>
-          <a href="https://github.com/RSamaium/CanvasEngine" target="_blank" class="nav-link">Github</a>
-          <a href="https://discord.gg/W38yDyGfwC" class="nav-link">Discord</a>
+  <div class="ce-home">
+    <nav class="ce-nav">
+      <div class="ce-container ce-nav-inner">
+        <a href="/" class="ce-brand"><span class="ce-brand-icon"><img src="/logo.png" alt="" /></span>CanvasEngine</a>
+        <div class="ce-nav-links">
+          <a href="/get_started/installation">Docs</a>
+          <a href="/presets/weather">Presets</a>
+          <a href="#showcase">Showcase</a>
+          <a href="https://github.com/RSamaium/CanvasEngine" target="_blank">GitHub</a>
+          <a href="https://discord.gg/W38yDyGfwC" target="_blank">Discord</a>
         </div>
       </div>
     </nav>
 
-    <!-- Hero Section -->
-    <section class="hero">
-      <div class="hero-content">
-        <div class="hero-text">
-          <h1 class="hero-title">
-            <img src="/logo.png" alt="Canvas Engine" class="logo" />
-            <span>Build 2D games faster with AI</span>
-          </h1>
-          <p class="hero-subtitle">
-            Install the CanvasEngine skill, prompt your coding agent, and start from a playable game scene.
+    <!-- Hero -->
+    <header class="ce-hero">
+      <div class="ce-container ce-hero-grid">
+        <div class="ce-hero-copy">
+          <p class="ce-eyebrow">Reactive 2D game engine · built on PixiJS</p>
+          <h1>Build 2D games from <span>ready-made components</span>.</h1>
+          <p class="ce-lead">
+            CanvasEngine is more than a renderer. Describe your game as reactive <code>.ce</code> components,
+            then plug in the systems it needs: tilemaps, cameras, controls, day &amp; night, weather,
+            particles, shadows, sound and UI.
           </p>
-          <p class="hero-description">
-            CanvasEngine gives AI assistants the framework context they need to generate .ce components,
-            tilemaps, controls, joystick input, sound, weather, FX particles, DOM overlays, and reactive game logic.
-          </p>
-          <div class="hero-command" aria-label="Install the CanvasEngine AI skill">
-            <span class="command-label">Install AI skill</span>
-            <code>npx skills add https://github.com/RSamaium/CanvasEngine</code>
+          <div class="ce-actions">
+            <a href="/get_started/start" class="ce-btn ce-btn-primary">Get started</a>
+            <a href="#showcase" class="ce-btn ce-btn-ghost">See what it can do</a>
           </div>
-          <div class="hero-prompt">
-            <span>Try asking:</span>
-            <strong>create mario style game</strong>
-          </div>
-          <div class="hero-actions">
-            <a href="/get_started/installation" class="btn btn-primary">
-              Start Building
-            </a>
-            <a href="https://github.com/RSamaium/CanvasEngine" class="btn btn-secondary" target="_blank">
-              <svg class="github-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-              </svg>
-              GitHub
-            </a>
+          <div class="ce-install">
+            <span>$</span>
+            <code>npx degit RSamaium/CanvasEngine/starter my-game</code>
           </div>
         </div>
-        <div class="hero-visual">
-          <div class="hero-playground">
-            <Playground
-              title="Crystal Rush"
-              description="A playable CanvasEngine mini-game with generated transparent pixel-art assets."
-              :files="heroDemoFiles"
-              :height="520"
-              defaultViewMode="preview"
-            />
+
+        <div class="ce-hero-visual">
+          <div class="ce-slides">
+            <figure v-for="(slide, index) in heroSlides" :key="slide.image" class="ce-slide" :style="{ animationDelay: `${index * 5}s` }">
+              <img :src="slide.image" :alt="slide.label" />
+              <figcaption>{{ slide.label }}</figcaption>
+            </figure>
           </div>
+          <div class="ce-hero-glow" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="ce-container">
+        <ul class="ce-stats">
+          <li v-for="stat in stats" :key="stat.label"><strong>{{ stat.value }}</strong><span>{{ stat.label }}</span></li>
+        </ul>
+      </div>
+    </header>
+
+    <!-- A scene is a component -->
+    <section class="ce-section">
+      <div class="ce-container ce-split">
+        <div>
+          <p class="ce-kicker">A scene is a component</p>
+          <h2>A living world in a few lines</h2>
+          <p class="ce-text">
+            No render loop to write, no manual syncing between state and pixels. Each system is a component
+            you place in the scene, configured with props that can be plain values or signals.
+            Change the hour, the world follows.
+          </p>
+          <ul class="ce-checks">
+            <li>Declarative <code>.ce</code> templates with <code>@if</code> / <code>@for</code></li>
+            <li>Signals everywhere: props, positions, weather, time</li>
+            <li>Directives for behavior: <code>controls</code>, <code>drag</code>, <code>sound</code>, <code>shake</code>…</li>
+            <li>Plain Vite + TypeScript, hot reload included</li>
+          </ul>
+        </div>
+        <div class="ce-code-card">
+          <div class="ce-code-bar"><i></i><i></i><i></i><span>town.ce</span></div>
+<pre class="ce-code"><code><span class="t">&lt;Canvas&gt;</span>
+  <span class="t">&lt;Viewport</span> <span class="a">worldWidth</span>={1920} <span class="a">worldHeight</span>={1440}<span class="t">&gt;</span>
+    <span class="t">&lt;Sprite</span> <span class="a">image</span>=<span class="s">"town.webp"</span> <span class="t">/&gt;</span>
+    <span class="t">&lt;SpriteShadows</span> <span class="a">ambientLight</span>={sun} <span class="a">lights</span>={lamps} <span class="t">/&gt;</span>
+
+    <span class="t">&lt;Sprite</span> <span class="a">image</span>=<span class="s">"hero.png"</span> <span class="a">x</span>={x} <span class="a">y</span>={y}
+      <span class="a">controls</span>={keys} <span class="a">viewportFollow</span> <span class="a">shadowCaster</span> <span class="t">/&gt;</span>
+
+    <span class="t">&lt;DayNightCycle</span> <span class="a">time</span>={clock.time} <span class="a">lights</span>={lamps} <span class="t">/&gt;</span>
+  <span class="t">&lt;/Viewport&gt;</span>
+  <span class="t">&lt;Weather</span> <span class="a">preset</span>=<span class="s">"autumnGust"</span> <span class="t">/&gt;</span>
+<span class="t">&lt;/Canvas&gt;</span>
+
+<span class="t">&lt;script&gt;</span>
+  <span class="k">const</span> clock = useGameClock({ time: <span class="n">18</span>, speed: <span class="n">10</span> })
+  <span class="k">const</span> sun = computed(() =&gt; sunShadowAt(clock.time()))
+<span class="t">&lt;/script&gt;</span></code></pre>
+          <img class="ce-code-result" src="/showcase/town-autumn.webp" alt="Result: a town at dusk with falling leaves, walking characters and shadows" />
         </div>
       </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="features">
-      <div class="features-container">
-        <h2 class="section-title">Everything for 2D games</h2>
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-              </svg>
+    <!-- Layers -->
+    <section class="ce-section ce-section-alt">
+      <div class="ce-container">
+        <p class="ce-kicker ce-center">From primitives to game systems</p>
+        <h2 class="ce-center">Three layers, use as much as you need</h2>
+        <p class="ce-text ce-center ce-narrow">
+          Start low-level with reactive primitives, or build a whole RPG world from presets.
+          Every layer is made of the same reusable components, so your own become first-class too.
+        </p>
+        <div class="ce-layers">
+          <article v-for="layer in layers" :key="layer.step" class="ce-layer">
+            <span class="ce-layer-step">{{ layer.step }}</span>
+            <h3>{{ layer.title }}</h3>
+            <p>{{ layer.text }}</p>
+            <div class="ce-pills">
+              <a v-for="item in layer.items" :key="item.label" :href="item.link">{{ item.label }}</a>
             </div>
-            <h3>Reactive game components</h3>
-            <p>Compose scenes with .ce components, signals, lifecycle hooks, template syntax, sprites, graphics, text, and canvas layouts.</p>
-          </div>
-          
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                <line x1="8" y1="21" x2="16" y2="21"/>
-                <line x1="12" y1="17" x2="12" y2="21"/>
-              </svg>
-            </div>
-            <h3>Tilemaps and worlds</h3>
-            <p>Render Tiled Map Editor worlds, object layers, animated tiles, and large maps with Viewport pan, zoom, clamp, and culling.</p>
-          </div>
-          
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
-            </div>
-            <h3>Weather and ambience</h3>
-            <p>Add rain, snow, fog, clouds, night ambience, shadows, footprints, and atmospheric presets directly to your scenes.</p>
-          </div>
-          
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="8" width="18" height="4" rx="1"/>
-                <path d="M12 8v13"/>
-                <path d="M19 12v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7"/>
-                <path d="M7.5 8a2.5 2.5 0 010-5A4.8 8 0 0112 8a4.8 8 0 014.5-5 2.5 2.5 0 010 5"/>
-              </svg>
-            </div>
-            <h3>Controls for every device</h3>
-            <p>Wire gameplay to keyboard, gamepad, and virtual joystick controls, with drag and drop for pointer-driven interactions.</p>
-          </div>
-          
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
-                <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
-                <line x1="12" y1="22.08" x2="12" y2="12"/>
-              </svg>
-            </div>
-            <h3>Sound and FX particles</h3>
-            <p>Trigger sound, ambience, hit sparks, smoke, magic bursts, fire, pickups, explosions, and custom particle effects.</p>
-          </div>
-          
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 18V5l12-2v13"/>
-                <circle cx="6" cy="18" r="3"/>
-                <circle cx="18" cy="16" r="3"/>
-              </svg>
-            </div>
-            <h3>Canvas and DOM together</h3>
-            <p>Use DOMContainer to mix HTML overlays, menus, forms, and UI panels with the same game scene structure.</p>
-          </div>
+          </article>
         </div>
       </div>
     </section>
 
+    <!-- Showcase -->
+    <section id="showcase" class="ce-section">
+      <div class="ce-container">
+        <p class="ce-kicker ce-center">Built-in, not bolted on</p>
+        <h2 class="ce-center">Game systems ready to drop in</h2>
+        <p class="ce-text ce-center ce-narrow">
+          Every image below is rendered live by CanvasEngine presets, composed in a single scene.
+        </p>
+        <div class="ce-gallery">
+          <a v-for="item in gallery" :key="item.image" :href="item.link" class="ce-tile" :class="{ 'ce-tile-wide': item.wide }">
+            <img :src="item.image" :alt="item.title" loading="lazy" />
+            <div class="ce-tile-body">
+              <code>{{ item.tag }}</code>
+              <h3>{{ item.title }}</h3>
+              <p>{{ item.text }}</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Positioning -->
+    <section class="ce-section ce-section-alt">
+      <div class="ce-container">
+        <p class="ce-kicker ce-center">Where it fits</p>
+        <h2 class="ce-center">A game engine that feels like modern web development</h2>
+        <div class="ce-compare">
+          <article v-for="item in comparisons" :key="item.title">
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.text }}</p>
+          </article>
+        </div>
+        <div class="ce-stack">
+          <span>PixiJS v8 rendering</span>
+          <span>TypeScript</span>
+          <span>Vite &amp; HMR</span>
+          <span>Tiled maps</span>
+          <span>Keyboard · gamepad · touch</span>
+          <span>Canvas + HTML UI</span>
+          <span>MIT license</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Playable demo -->
+    <section class="ce-section">
+      <div class="ce-container">
+        <p class="ce-kicker ce-center">Try it now</p>
+        <h2 class="ce-center">Play, then read the code</h2>
+        <p class="ce-text ce-center ce-narrow">A complete mini-game in one component. Use the arrow keys, then switch to the code view and change anything.</p>
+        <div class="ce-playground">
+          <Playground
+            title="Crystal Rush"
+            description="A playable CanvasEngine mini-game."
+            :files="heroDemoFiles"
+            :height="520"
+            defaultViewMode="preview"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- AI -->
+    <section class="ce-section ce-section-alt">
+      <div class="ce-container ce-ai">
+        <div>
+          <p class="ce-kicker">Works great with AI</p>
+          <h2>Your coding agent knows the engine</h2>
+          <p class="ce-text">
+            Install the CanvasEngine skill and your assistant writes idiomatic <code>.ce</code> scenes,
+            controls, tilemaps and presets instead of guessing.
+          </p>
+        </div>
+        <div class="ce-ai-card">
+          <div class="ce-install ce-install-block"><span>$</span><code>npx skills add https://github.com/RSamaium/CanvasEngine</code></div>
+          <p class="ce-prompt">“Create a top-down RPG village at dusk with a playable knight.”</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="ce-final">
+      <div class="ce-container ce-center">
+        <h2>Start with a scene. Grow it into a game.</h2>
+        <div class="ce-actions ce-actions-center">
+          <a href="/get_started/installation" class="ce-btn ce-btn-primary">Install CanvasEngine</a>
+          <a href="https://github.com/RSamaium/CanvasEngine" target="_blank" class="ce-btn ce-btn-ghost">Star on GitHub</a>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -418,597 +484,396 @@ const heroDemoFiles = {
 <\/style>
 `,
 }
+
+const heroSlides = [
+  { image: '/showcase/town-night.webp', label: 'DayNightCycle · SpriteShadows · Weather' },
+  { image: '/showcase/fx-limit.webp', label: 'Fx · limitBurst' },
+  { image: '/showcase/forest-rays.webp', label: 'Weather · light rays' },
+  { image: '/showcase/beach.webp', label: 'GroundEffects · Footprints' },
+]
+
+const stats = [
+  { value: '20+', label: 'components' },
+  { value: '55', label: 'FX presets' },
+  { value: '39', label: 'weather presets' },
+  { value: '15+', label: 'directives' },
+]
+
+const layers = [
+  {
+    step: '01',
+    title: 'Reactive core',
+    text: 'Signals, computed values, .ce single-file components, @if / @for templates, lifecycle hooks and a test bed. The glue that keeps game state and screen in sync.',
+    items: [
+      { label: 'Signals & reactivity', link: '/concepts/reactive' },
+      { label: 'Template syntax', link: '/concepts/template-syntax' },
+      { label: 'Triggers', link: '/concepts/trigger' },
+      { label: 'Lifecycle', link: '/concepts/lifecycle' },
+    ],
+  },
+  {
+    step: '02',
+    title: 'Game components',
+    text: 'Everything a scene is made of, ready to compose: sprites and spritesheets, a camera viewport, text, graphics, layout, joystick, HTML overlays.',
+    items: [
+      { label: 'Sprite', link: '/components/sprite' },
+      { label: 'Viewport', link: '/components/viewport' },
+      { label: 'DOMContainer', link: '/components/dom-container' },
+      { label: 'Joystick', link: '/components/joystick' },
+      { label: 'controls', link: '/directives/controls' },
+      { label: 'sound', link: '/directives/sound' },
+    ],
+  },
+  {
+    step: '03',
+    title: 'Game systems',
+    text: 'The part other renderers leave to you. Drop a preset in a scene and your world gets weather, light, shadows, particles and life.',
+    items: [
+      { label: 'Tilemap (Tiled)', link: '/presets/tilemap' },
+      { label: 'Weather', link: '/presets/weather' },
+      { label: 'Fx', link: '/presets/fx' },
+      { label: 'DayNightCycle', link: '/presets/day-night' },
+      { label: 'SpriteShadows', link: '/presets/sprite-shadows' },
+      { label: 'GroundEffects', link: '/presets/ground-effects' },
+      { label: 'Footprints', link: '/presets/footprints' },
+      { label: 'FogOfWar', link: '/presets/fog-of-war' },
+    ],
+  },
+]
+
+const gallery = [
+  { image: '/showcase/town-dusk.webp', title: 'Day & night', tag: '<DayNightCycle>', text: 'Time of day grades the whole scene. Lamps light up one by one, windows follow their own schedule.', link: '/presets/day-night', wide: true },
+  { image: '/showcase/fx-holy.webp', title: 'Spells & attacks', tag: '<Fx name="holyPillar">', text: '55 presets: slashes, limit breaks, elemental magic, auras, status effects. Recolor them in one prop.', link: '/presets/fx' },
+  { image: '/showcase/forest-embers.webp', title: 'Weather', tag: '<Weather preset="eruptionEmbers">', text: 'Rain, snow, fog, clouds, light rays, embers, leaves, fireflies, sandstorms.', link: '/presets/weather' },
+  { image: '/showcase/beach.webp', title: 'Sprites that live in their terrain', tag: 'groundCaster', text: 'Characters wade into water, disappear into tall grass and leave prints on sand, read straight from the map.', link: '/presets/ground-effects', wide: true },
+  { image: '/showcase/shadows.webp', title: 'Projected shadows', tag: '<SpriteShadows>', text: 'Each sprite casts its real silhouette away from every light: sun, torches, street lamps.', link: '/presets/sprite-shadows' },
+  { image: '/showcase/fx-sigil.webp', title: 'Magic at night', tag: '<Fx name="summonSigil">', text: 'Effects and lighting compose: a summoning circle glowing in a sleeping town.', link: '/presets/fx' },
+  { image: '/showcase/beach-clouds.webp', title: 'Clouds & sky', tag: '<Weather effect="cloud">', text: 'Fluffy cumulus seen from above, with their shadows sliding over the ground.', link: '/presets/weather' },
+  { image: '/showcase/footprints.webp', title: 'Footprints', tag: 'footprintCaster', text: 'Boots, bare feet, paws and hooves that sink into snow, sand and mud, then slowly fade.', link: '/presets/footprints' },
+  { image: '/showcase/town-snow.webp', title: 'Seasons', tag: '<Weather preset="winterSnow">', text: 'Same town, new season: switch one preset and the afternoon turns into a snowfall.', link: '/presets/weather' },
+  { image: '/showcase/fx-crystal.webp', title: 'Recolor any effect', tag: 'customizeFx()', text: 'Presets are data: change colors, scale, timing or layers and make them your own.', link: '/presets/fx' },
+]
+
+const comparisons = [
+  {
+    title: 'Compared to PixiJS alone',
+    text: 'Same fast WebGL renderer underneath. CanvasEngine adds the missing layer: a component model, reactivity, input, audio, cameras and ready-made game systems.',
+  },
+  {
+    title: 'Compared to classic JS game frameworks',
+    text: 'Scenes are declarative components instead of imperative update code: state lives in signals, the screen follows. Presets bring RPG-grade visuals out of the box.',
+  },
+  {
+    title: 'Compared to full editors',
+    text: 'No editor, no export step: it lives in your Vite + npm stack, mixes freely with HTML UI, and ships as a regular web app.',
+  },
+]
+
 </script>
 
 <style scoped>
-.custom-home {
-  --primary-color: #646cff;
-  --primary-color-light: #747bff;
-  --secondary-color: #42b883;
-  --text-color: #213547;
-  --text-color-light: #64748b;
-  --bg-color: #ffffff;
-  --border-color: #e2e8f0;
-  --card-bg: #f8fafc;
+.ce-home {
+  --ce-bg: #0b0f1a;
+  --ce-bg-alt: #0f1524;
+  --ce-card: #141b2d;
+  --ce-border: rgba(148, 163, 184, 0.14);
+  --ce-text: #e6ebf5;
+  --ce-muted: #9aa7bd;
+  --ce-accent: #7c83ff;
+  --ce-accent-2: #3fd6a0;
+  --ce-warm: #ffc070;
+  background: var(--ce-bg);
+  color: var(--ce-text);
+  font-family: var(--vp-font-family-base);
+  min-height: 100vh;
 }
 
-.dark .custom-home {
-  --text-color: #f1f5f9;
-  --text-color-light: #94a3b8;
-  --bg-color: #0f172a;
-  --border-color: #334155;
-  --card-bg: #1e293b;
-}
-
-/* Custom Navbar */
-.custom-navbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border-color);
-  padding: 1rem 0;
-}
-
-.dark .custom-navbar {
-  background: rgba(15, 23, 42, 0.95);
-}
-
-.navbar-container {
+.ce-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 0 24px;
 }
 
-.brand-text {
-  font-size: 1.5rem;
-  font-weight: 700;
-  background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.ce-center { text-align: center; }
+.ce-narrow { max-width: 680px; margin-left: auto; margin-right: auto; }
+
+code {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.9em;
+  background: rgba(124, 131, 255, 0.12);
+  color: #c7caff;
+  padding: 0.1em 0.4em;
+  border-radius: 6px;
 }
 
-.navbar-links {
-  display: flex;
-  gap: 2rem;
+/* Nav */
+.ce-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(11, 15, 26, 0.82);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--ce-border);
 }
+.ce-nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+.ce-brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 800; font-size: 18px; letter-spacing: -0.01em; text-decoration: none; }
+.ce-brand-icon { width: 25px; height: 30px; overflow: hidden; flex: none; }
+.ce-brand-icon img { height: 30px; max-width: none; display: block; margin-left: -3px; }
+.ce-nav-links { display: flex; gap: 28px; }
+.ce-nav-links a { color: var(--ce-muted); font-weight: 500; font-size: 15px; text-decoration: none; transition: color 0.2s; }
+.ce-nav-links a:hover { color: var(--ce-text); }
 
-.nav-link {
-  color: var(--text-color);
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s;
+/* Hero */
+.ce-hero {
   position: relative;
-}
-
-.nav-link:hover {
-  color: var(--primary-color);
-}
-
-.nav-link::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: var(--primary-color);
-  transition: width 0.2s;
-}
-
-.nav-link:hover::after {
-  width: 100%;
-}
-
-/* Hero Section */
-.hero {
+  overflow: hidden;
+  padding: 72px 0 40px;
   background:
-    radial-gradient(circle at 78% 18%, rgba(66, 184, 131, 0.22), transparent 28%),
-    radial-gradient(circle at 12% 16%, rgba(100, 108, 255, 0.2), transparent 32%),
-    linear-gradient(135deg, var(--bg-color) 0%, #f1f5f9 100%);
-  padding: 8rem 2rem 5rem;
-  min-height: 82vh;
-  display: flex;
-  align-items: center;
+    radial-gradient(900px 500px at 85% 10%, rgba(124, 131, 255, 0.18), transparent 60%),
+    radial-gradient(700px 400px at 5% 90%, rgba(63, 214, 160, 0.12), transparent 60%);
 }
-
-.dark .hero {
-  background:
-    radial-gradient(circle at 78% 18%, rgba(66, 184, 131, 0.2), transparent 28%),
-    radial-gradient(circle at 12% 16%, rgba(100, 108, 255, 0.22), transparent 32%),
-    linear-gradient(135deg, var(--bg-color) 0%, #1e293b 100%);
-}
-
-.hero-content {
-  max-width: 1280px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(480px, 1.1fr);
-  gap: 4rem;
-  align-items: center;
-}
-
-.hero-title {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1.25rem;
-  font-size: 4rem;
-  font-weight: 800;
-  line-height: 1;
-  margin-bottom: 1.5rem;
-  color: var(--text-color);
-}
-
-.logo {
-  width: min(320px, 100%);
-  height: auto;
-}
-
-.hero-title span {
-  max-width: 720px;
-}
-
-.gradient-text {
-  background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.hero-subtitle {
-  font-size: 1.45rem;
-  color: var(--text-color);
-  margin-bottom: 1rem;
+.ce-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 56px; align-items: center; }
+.ce-eyebrow {
+  display: inline-block;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 1.35;
-}
-
-.hero-description {
-  font-size: 1.1rem;
-  color: var(--text-color-light);
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
-}
-
-.hero-command {
-  background: #111827;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 0.85rem;
-  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.18);
-  color: #ffffff;
-  margin-bottom: 1rem;
-  max-width: 640px;
-  overflow-x: auto;
-  padding: 1rem;
-}
-
-.command-label {
-  color: #9ca3af;
-  display: block;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  margin-bottom: 0.55rem;
-  text-transform: uppercase;
-}
-
-.hero-command code {
-  color: #ffffff;
-  font-family: 'Fira Code', monospace;
-  font-size: 0.96rem;
-  white-space: nowrap;
-}
-
-.hero-prompt {
-  align-items: center;
-  color: var(--text-color-light);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  margin-bottom: 2rem;
-}
-
-.hero-prompt strong {
-  background: rgba(66, 184, 131, 0.16);
-  border: 1px solid rgba(66, 184, 131, 0.35);
+  letter-spacing: 0.04em;
+  color: var(--ce-accent-2);
+  background: rgba(63, 214, 160, 0.1);
+  border: 1px solid rgba(63, 214, 160, 0.25);
+  padding: 6px 12px;
   border-radius: 999px;
-  color: var(--text-color);
-  padding: 0.45rem 0.75rem;
+  margin: 0 0 22px;
 }
-
-.hero-actions {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
+.ce-hero h1 {
+  font-size: clamp(40px, 5.4vw, 64px);
+  line-height: 1.04;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 0 0 22px;
+  color: #fff;
 }
-
-.btn {
+.ce-hero h1 span {
+  background: linear-gradient(90deg, var(--ce-accent) 0%, var(--ce-accent-2) 60%, var(--ce-warm) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ce-lead { font-size: 18px; line-height: 1.65; color: var(--ce-muted); margin: 0 0 30px; max-width: 560px; }
+.ce-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 24px; }
+.ce-actions-center { justify-content: center; margin-top: 28px; }
+.ce-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
+  padding: 13px 24px;
+  border-radius: 12px;
   font-weight: 600;
+  font-size: 16px;
   text-decoration: none;
-  transition: all 0.2s;
-  border: 2px solid transparent;
+  transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
 }
-
-.btn-primary {
-  background: var(--primary-color);
-  color: white;
+.ce-btn:hover { transform: translateY(-2px); }
+.ce-btn-primary { background: linear-gradient(135deg, var(--ce-accent), #5b63f0); color: #fff; box-shadow: 0 10px 30px rgba(124, 131, 255, 0.35); }
+.ce-btn-ghost { color: var(--ce-text); border: 1px solid var(--ce-border); background: rgba(255, 255, 255, 0.03); }
+.ce-btn-ghost:hover { background: rgba(255, 255, 255, 0.07); }
+.ce-install {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #070a12;
+  border: 1px solid var(--ce-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  max-width: 100%;
+  overflow-x: auto;
 }
+.ce-install, .ce-code { scrollbar-width: thin; scrollbar-color: rgba(148, 163, 184, 0.3) transparent; }
+.ce-install span { color: var(--ce-accent-2); font-family: var(--vp-font-family-mono); }
+.ce-install code { background: none; padding: 0; color: #d7dcea; white-space: nowrap; }
 
-.btn-primary:hover {
-  background: var(--primary-color-light);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(100, 108, 255, 0.3);
-}
-
-.btn-secondary {
-  background: var(--card-bg);
-  color: var(--text-color);
-  border-color: var(--border-color);
-}
-
-.btn-secondary:hover {
-  border-color: var(--primary-color);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-}
-
-.btn-outline {
-  background: transparent;
-  color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-.btn-outline:hover {
-  background: var(--primary-color);
-  color: white;
-  transform: translateY(-2px);
-}
-
-.btn-large {
-  padding: 1rem 2rem;
-  font-size: 1.1rem;
-}
-
-.github-icon {
-  width: 1.2rem;
-  height: 1.2rem;
-}
-
-/* Hero Demo */
-.hero-visual {
-  min-width: 0;
-}
-
-.hero-playground {
-  border-radius: 1.25rem;
-  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28);
+.ce-hero-visual { position: relative; }
+.ce-slides {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  border-radius: 20px;
   overflow: hidden;
-  transform: rotateY(-5deg) rotateX(2deg);
+  border: 1px solid var(--ce-border);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+  background: #070a12;
 }
-
-.hero-playground :deep(.playground-container) {
-  border: 1px solid rgba(148, 163, 184, 0.36);
-  border-radius: 1.25rem;
+.ce-slide {
+  position: absolute;
+  inset: 0;
   margin: 0;
+  opacity: 0;
+  animation: ce-slide 20s infinite;
+}
+.ce-slide:first-child { opacity: 1; }
+.ce-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ce-slide figcaption {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 12px;
+  color: #fff;
+  background: rgba(7, 10, 18, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 6px 10px;
+  border-radius: 8px;
+  backdrop-filter: blur(6px);
+}
+@keyframes ce-slide {
+  0% { opacity: 0; transform: scale(1.04); }
+  4% { opacity: 1; }
+  25% { opacity: 1; transform: scale(1); }
+  29% { opacity: 0; }
+  100% { opacity: 0; }
+}
+.ce-hero-glow {
+  position: absolute;
+  inset: -40px;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgba(255, 192, 112, 0.18), transparent);
+  filter: blur(20px);
 }
 
-.hero-playground :deep(.playground-header) {
-  padding: 1rem;
-}
-
-.hero-playground :deep(.header-content h3) {
-  font-size: 1.05rem;
-}
-
-.hero-playground :deep(.playground-description) {
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.hero-playground :deep(.preview-header),
-.hero-playground :deep(.console-accordion) {
-  display: none;
-}
-
-/* Features Section */
-.features {
-  padding: 6rem 2rem;
-  background: var(--card-bg);
-}
-
-.features-container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.section-title {
-  text-align: center;
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--text-color);
-  margin-bottom: 4rem;
-}
-
-.features-grid {
+.ce-stats {
+  list-style: none;
+  padding: 0;
+  margin: 56px 0 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2.5rem;
-  align-items: start;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--ce-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
 }
+.ce-stats li { padding: 20px; text-align: center; }
+.ce-stats li + li { border-left: 1px solid var(--ce-border); }
+.ce-stats strong { display: block; font-size: 30px; font-weight: 800; color: #fff; }
+.ce-stats span { color: var(--ce-muted); font-size: 14px; }
 
-.feature-card {
-  background: var(--bg-color);
-  padding: 2.5rem;
-  border-radius: 1rem;
-  border: 1px solid var(--border-color);
-  transition: all 0.3s ease;
-  height: 100%;
+/* Sections */
+.ce-section { padding: 96px 0; }
+.ce-section-alt { background: var(--ce-bg-alt); border-top: 1px solid var(--ce-border); border-bottom: 1px solid var(--ce-border); }
+.ce-kicker { color: var(--ce-accent-2); font-weight: 700; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; margin: 0 0 12px; }
+.ce-section h2, .ce-final h2, .ce-ai h2 { font-size: clamp(28px, 3.4vw, 42px); line-height: 1.15; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 18px; color: #fff; }
+.ce-text { color: var(--ce-muted); font-size: 17px; line-height: 1.7; margin: 0 0 20px; }
+
+.ce-split { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 56px; align-items: center; }
+.ce-checks { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.ce-checks li { position: relative; padding-left: 28px; color: var(--ce-text); line-height: 1.5; }
+.ce-checks li::before { content: ""; position: absolute; left: 0; top: 7px; width: 14px; height: 8px; border-left: 2px solid var(--ce-accent-2); border-bottom: 2px solid var(--ce-accent-2); transform: rotate(-45deg); }
+
+.ce-code-card { background: #070a12; border: 1px solid var(--ce-border); border-radius: 18px; overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); }
+.ce-code-bar { display: flex; align-items: center; gap: 7px; padding: 12px 16px; border-bottom: 1px solid var(--ce-border); }
+.ce-code-bar i { width: 11px; height: 11px; border-radius: 50%; background: #2a3247; }
+.ce-code-bar span { margin-left: 10px; color: var(--ce-muted); font-size: 13px; font-family: var(--vp-font-family-mono); }
+.ce-code { margin: 0; padding: 18px 20px; font-size: 13px; line-height: 1.65; overflow-x: auto; color: #d7dcea; }
+.ce-code code { background: none; padding: 0; color: inherit; font-size: inherit; }
+.ce-code .t { color: #7c83ff; }
+.ce-code .a { color: #3fd6a0; }
+.ce-code .s { color: #ffc070; }
+.ce-code .k { color: #f472b6; }
+.ce-code .n { color: #fbbf24; }
+.ce-code-result { display: block; width: 100%; border-top: 1px solid var(--ce-border); aspect-ratio: 16 / 7; object-fit: cover; }
+
+/* Layers */
+.ce-layers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 40px; }
+.ce-layer {
+  position: relative;
+  background: var(--ce-card);
+  border: 1px solid var(--ce-border);
+  border-radius: 18px;
+  padding: 28px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.ce-layer:hover { border-color: rgba(124, 131, 255, 0.45); transform: translateY(-3px); }
+.ce-layer:nth-child(3) { background: linear-gradient(160deg, rgba(124, 131, 255, 0.16), var(--ce-card) 55%); }
+.ce-layer-step { font-family: var(--vp-font-family-mono); color: var(--ce-accent); font-size: 13px; font-weight: 700; }
+.ce-layer h3 { font-size: 21px; margin: 10px 0 10px; color: #fff; }
+.ce-layer p { color: var(--ce-muted); line-height: 1.65; margin: 0 0 18px; font-size: 15px; }
+.ce-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.ce-pills a {
+  font-size: 13px;
+  font-family: var(--vp-font-family-mono);
+  color: var(--ce-text);
+  text-decoration: none;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--ce-border);
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color 0.2s, color 0.2s;
+}
+.ce-pills a:hover { color: #fff; border-color: var(--ce-accent); }
+
+/* Gallery */
+.ce-gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 40px; }
+.ce-tile {
+  position: relative;
   display: flex;
   flex-direction: column;
+  background: var(--ce-card);
+  border: 1px solid var(--ce-border);
+  border-radius: 18px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
+.ce-tile:hover { transform: translateY(-4px); border-color: rgba(124, 131, 255, 0.5); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45); }
+.ce-tile-wide { grid-column: span 2; }
+.ce-tile img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; transition: transform 0.5s; }
+.ce-tile-wide img { aspect-ratio: 16 / 7.5; }
+.ce-tile:hover img { transform: scale(1.03); }
+.ce-tile-body { padding: 18px 20px 22px; }
+.ce-tile-body code { font-size: 12px; }
+.ce-tile-body h3 { font-size: 18px; margin: 10px 0 6px; color: #fff; }
+.ce-tile-body p { margin: 0; color: var(--ce-muted); font-size: 14px; line-height: 1.6; }
 
-.feature-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border-color: var(--primary-color);
+/* Comparison */
+.ce-compare { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 36px; }
+.ce-compare article { background: var(--ce-card); border: 1px solid var(--ce-border); border-radius: 16px; padding: 26px; }
+.ce-compare h3 { font-size: 17px; margin: 0 0 10px; color: #fff; }
+.ce-compare p { margin: 0; color: var(--ce-muted); line-height: 1.65; font-size: 15px; }
+.ce-stack { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 32px; }
+.ce-stack span { font-size: 13px; color: var(--ce-muted); border: 1px solid var(--ce-border); border-radius: 999px; padding: 6px 14px; }
+
+/* Playground */
+.ce-playground { margin-top: 36px; border-radius: 18px; overflow: hidden; border: 1px solid var(--ce-border); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4); }
+
+/* AI */
+.ce-ai { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: center; }
+.ce-ai-card { background: var(--ce-card); border: 1px solid var(--ce-border); border-radius: 18px; padding: 24px; }
+.ce-install-block { display: flex; width: 100%; box-sizing: border-box; }
+.ce-prompt { margin: 18px 0 0; color: var(--ce-text); font-style: italic; font-size: 16px; }
+
+/* Final */
+.ce-final { padding: 110px 0; background: radial-gradient(700px 300px at 50% 100%, rgba(124, 131, 255, 0.22), transparent 70%); }
+
+/* Responsive */
+@media (max-width: 1000px) {
+  .ce-hero-grid, .ce-split, .ce-ai { grid-template-columns: minmax(0, 1fr); }
+  .ce-layers, .ce-compare { grid-template-columns: minmax(0, 1fr); }
+  .ce-gallery { grid-template-columns: repeat(2, 1fr); }
+  .ce-tile-wide { grid-column: span 2; }
 }
-
-.dark .feature-card:hover {
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+@media (max-width: 640px) {
+  .ce-nav-links { gap: 16px; }
+  .ce-nav-links a:nth-child(n + 2):not(:nth-child(4)) { display: none; }
+  .ce-hero { padding-top: 40px; }
+  .ce-container { padding: 0 16px; }
+  .ce-lead { font-size: 16px; }
+  .ce-btn { padding: 12px 18px; font-size: 15px; }
+  .ce-stats { grid-template-columns: repeat(2, 1fr); }
+  .ce-stats li:nth-child(3) { border-left: none; }
+  .ce-stats li:nth-child(n + 3) { border-top: 1px solid var(--ce-border); }
+  .ce-gallery { grid-template-columns: minmax(0, 1fr); }
+  .ce-tile-wide { grid-column: auto; }
+  .ce-section { padding: 64px 0; }
 }
-
-.feature-icon {
-  width: 4rem;
-  height: 4rem;
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  border-radius: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-  flex-shrink: 0;
+@media (prefers-reduced-motion: reduce) {
+  .ce-slide { animation: none; }
+  .ce-slide:not(:first-child) { display: none; }
 }
-
-.feature-icon svg {
-  width: 2rem;
-  height: 2rem;
-  color: white;
-}
-
-.feature-card h3 {
-  font-size: 1.4rem;
-  font-weight: 600;
-  color: var(--text-color);
-  margin-bottom: 1rem;
-  line-height: 1.3;
-}
-
-.feature-card p {
-  color: var(--text-color-light);
-  line-height: 1.6;
-  font-size: 1rem;
-  flex-grow: 1;
-}
-
-.section-description {
-  text-align: center;
-  font-size: 1.2rem;
-  color: var(--text-color-light);
-  margin-bottom: 4rem;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* Code Example Section */
-.code-example {
-  padding: 6rem 2rem;
-  background: var(--bg-color);
-}
-
-.code-showcase {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
-  align-items: center;
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
-.code-block {
-  background: #1e293b;
-  border-radius: 1rem;
-  padding: 2rem;
-  overflow-x: auto;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-}
-
-.code-block pre {
-  margin: 0;
-  color: #e2e8f0;
-  font-family: 'Fira Code', monospace;
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
-
-.code-description h3 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text-color);
-  margin-bottom: 1rem;
-}
-
-.code-description p {
-  color: var(--text-color-light);
-  line-height: 1.6;
-  font-size: 1.1rem;
-}
-
-/* CTA Section */
-.cta {
-  padding: 6rem 2rem;
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  text-align: center;
-}
-
-.cta-content h2 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: white;
-  margin-bottom: 1rem;
-}
-
-.cta-content p {
-  font-size: 1.2rem;
-  color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 2rem;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.cta-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.cta .btn-primary {
-  background: white;
-  color: var(--primary-color);
-}
-
-.cta .btn-primary:hover {
-  background: #f1f5f9;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
-}
-
-.cta .btn-outline {
-  background: transparent;
-  color: white;
-  border-color: white;
-}
-
-.cta .btn-outline:hover {
-  background: white;
-  color: var(--primary-color);
-  transform: translateY(-2px);
-}
-
-/* Responsive Design */
-@media (max-width: 1024px) {
-  .features-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 2rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .navbar-container {
-    padding: 0 1rem;
-  }
-  
-  .navbar-links {
-    gap: 1rem;
-  }
-  
-  .hero {
-    padding: 6rem 1rem 4rem;
-  }
-  
-  .hero-content {
-    grid-template-columns: 1fr;
-    text-align: center;
-    gap: 3rem;
-  }
-  
-  .hero-title {
-    align-items: center;
-    font-size: 2.5rem;
-  }
-
-  .hero-playground {
-    transform: none;
-  }
-  
-  .code-showcase {
-    grid-template-columns: 1fr;
-  }
-
-  .features-grid {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-  
-  .feature-card {
-    padding: 2rem;
-  }
-  
-  .section-title {
-    font-size: 2rem;
-  }
-  
-  .cta-content h2 {
-    font-size: 2rem;
-  }
-  
-  .cta-actions {
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .btn-large {
-    width: 100%;
-    max-width: 300px;
-  }
-}
-
-@media (max-width: 480px) {
-  .navbar-links {
-    gap: 0.5rem;
-  }
-  
-  .nav-link {
-    font-size: 0.9rem;
-  }
-  
-  .hero {
-    padding: 5rem 1rem 3rem;
-  }
-  
-  .hero-title {
-    font-size: 2rem;
-  }
-  
-  .hero-subtitle {
-    font-size: 1.2rem;
-  }
-  
-  .features {
-    padding: 4rem 1rem;
-  }
-
-  .code-example {
-    padding: 4rem 1rem;
-  }
-  
-  .cta {
-    padding: 4rem 1rem;
-  }
-}
-</style> 
+</style>

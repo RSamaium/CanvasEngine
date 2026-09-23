@@ -51,7 +51,15 @@ CanvasEngine gives you a component-oriented way to describe scenes, entities, HU
 
 - Reactive [Text](/components/text), [Button](/components/button), [Sprite](/components/sprite), [Graphics](/components/graphic), and layout components.
 - [DOMContainer](/components/dom-container) for mixing HTML overlays, menus, forms, and UI panels with canvas scenes.
-- [Weather presets](/presets/weather), [NightAmbient](/presets/night-ambiant), fog of war, shadows, and footprints for world atmosphere.
+
+### World and atmosphere
+
+- [Weather](/presets/weather): 39 presets across rain, snow, fog, clouds, light rays, embers, falling leaves, fireflies and more.
+- [Fx](/presets/fx): 55 customizable presets for attacks, slashes, limit breaks, spells, auras and status effects.
+- [DayNightCycle](/presets/day-night) with a game clock, lighting grades and scheduled light sources.
+- [SpriteShadows](/presets/sprite-shadows): projected silhouette shadows from the sun and point lights.
+- [GroundEffects](/presets/ground-effects) and [Footprints](/presets/footprints): characters wade into water, hide in tall grass and leave prints on sand or snow.
+- [NightAmbient](/presets/night-ambiant) and [FogOfWar](/presets/fog-of-war).
 
 ## Use with AI
 

@@ -4,8 +4,26 @@
     {
       "name": "sample",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "sample", "--port", "5199", "--strictPort"],
+      "runtimeArgs": [
+        "vite",
+        "sample",
+        "--port",
+        "5199",
+        "--strictPort"
+      ],
       "port": 5199
+    },
+    {
+      "name": "docs",
+      "runtimeExecutable": "docs/node_modules/.bin/vitepress",
+      "runtimeArgs": [
+        "dev",
+        "docs",
+        "--port",
+        "5180",
+        "--strictPort"
+      ],
+      "port": 5180
     }
   ]
 }
