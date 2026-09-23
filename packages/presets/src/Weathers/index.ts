@@ -22,6 +22,16 @@ import {
 } from "pixi.js";
 import { createSnowShader } from "./snow";
 import { createFogShader, createCloudShader } from "./fog";
+import { createRaysShader } from "./rays";
+import {
+  WEATHER_PARTICLE_EFFECTS,
+  WeatherParticleField,
+  isWeatherParticleEffect,
+  type WeatherParticleEffect,
+} from "./particles";
+
+export { WEATHER_PARTICLE_EFFECTS, WeatherParticleField };
+export type { WeatherParticleEffect };
 
 const rainTextures = new Map<number, Texture>();
 
@@ -320,6 +330,71 @@ registerComponent("RainImpactLayer", RainImpactLayer);
 
 const RainImpacts = (props: any) => createComponent("RainImpactLayer", props);
 
+const PARTICLE_LAYER_INPUTS = [
+  "width",
+  "height",
+  "cameraX",
+  "cameraY",
+  "speed",
+  "windDirection",
+  "windStrength",
+  "density",
+  "maxDrops",
+  "colors",
+  "particleSize",
+  "haze",
+] as const;
+
+class WeatherParticleLayer extends DisplayObject(PixiContainer) {
+  private tickSubscription: any;
+  private field?: WeatherParticleField;
+  private inputs: Record<string, any> = {};
+
+  onUpdate(props: any) {
+    super.onUpdate(props);
+    for (const key of PARTICLE_LAYER_INPUTS) {
+      if (props[key] !== undefined) this.inputs[key] = props[key];
+    }
+  }
+
+  async onMount(element: any, index?: number) {
+    await super.onMount(element, index);
+    for (const key of PARTICLE_LAYER_INPUTS) {
+      const input = element.propObservables?.[key] ?? element.props[key];
+      if (input !== undefined) this.inputs[key] = input;
+    }
+    this.field = new WeatherParticleField(element.props.effect);
+    this.addChild(this.field);
+
+    this.tickSubscription = element.props.context?.tick?.observable?.subscribe(({ value }: any) => {
+      const read = (key: string) => resolveValue(this.inputs[key]);
+      this.field!.update(value?.deltaTime ?? 16.67, {
+        width: Number(read("width")) || 1000,
+        height: Number(read("height")) || 1000,
+        cameraX: Number(read("cameraX")) || 0,
+        cameraY: Number(read("cameraY")) || 0,
+        speed: read("speed"),
+        windDirection: read("windDirection"),
+        windStrength: read("windStrength"),
+        density: read("density"),
+        maxDrops: read("maxDrops"),
+        colors: read("colors"),
+        particleSize: read("particleSize"),
+        haze: read("haze"),
+      });
+    });
+  }
+
+  async onDestroy(parent: any, afterDestroy: any) {
+    this.tickSubscription?.unsubscribe?.();
+    await super.onDestroy(parent, afterDestroy);
+  }
+}
+
+registerComponent("WeatherParticleLayer", WeatherParticleLayer);
+
+const WeatherParticles = (props: any) => createComponent("WeatherParticleLayer", props);
+
 export const RAIN_PRESETS = {
   lightRain: { effect: "rain", speed: 0.35, windDirection: 0.1, windStrength: 0.15, density: 110, maxDrops: 90 },
   steadyRain: { effect: "rain", speed: 0.6, windDirection: 0.2, windStrength: 0.3, density: 180, maxDrops: 120 },
@@ -349,7 +424,41 @@ export const CLOUD_PRESETS = {
   sunsetTwinkleRays: { effect: "cloud", speed: 0.1, density: 0.74, height: 0.84, scale: 0.9, shadowIntensity: 0.42, shadowSoftness: 0.64, sunIntensity: 0.8, sunAngle: 0.64, raySpread: 0.8, rayTwinkle: 1.0, rayTwinkleSpeed: 1.6 },
   dramaticCrepuscularRays: { effect: "cloud", speed: 0.11, density: 0.9, height: 0.9, scale: 1.0, shadowIntensity: 0.52, shadowSoftness: 0.48, sunIntensity: 0.95, sunAngle: 0.7, raySpread: 0.68, rayTwinkle: 0.6, rayTwinkleSpeed: 1.2 },
   morningHazeRays: { effect: "cloud", speed: 0.09, density: 0.55, height: 0.7, scale: 0.74, shadowIntensity: 0.3, shadowSoftness: 0.82, sunIntensity: 0.3, sunAngle: 0.9, raySpread: 1.05, rayTwinkle: 0.42, rayTwinkleSpeed: 0.8 },
-  naturalClouds: { effect: "cloud", speed: 0.11, density: 0.52, height: 0.64, scale: 0.95, shadowIntensity: 0.36, shadowSoftness: 0.7, cloudOpacity: 0.8, cloudAltitude: 0.62, sunIntensity: 0.0, sunAngle: 0.78, raySpread: 0.95, rayTwinkle: 0.2, rayTwinkleSpeed: 0.8 },
+  naturalClouds: { effect: "cloud", speed: 0.11, density: 0.62, height: 0.64, scale: 0.95, shadowIntensity: 0.36, shadowSoftness: 0.7, cloudOpacity: 0.8, cloudAltitude: 0.62, sunIntensity: 0.0, sunAngle: 0.78, raySpread: 0.95, rayTwinkle: 0.2, rayTwinkleSpeed: 0.8 },
+} as const;
+
+export const RAYS_PRESETS = {
+  morningSunRays: { effect: "rays", speed: 0.3, sunIntensity: 0.8, sunAngle: 0.9, raySpread: 1.1, rayTwinkle: 0.4, rayTwinkleSpeed: 0.8, rayFan: 0.2, rayLength: 1, rayDust: 0.5, rayColor: "#fff4d6" },
+  goldenHourShafts: { effect: "rays", speed: 0.25, sunIntensity: 1.2, sunAngle: 0.55, raySpread: 0.9, rayTwinkle: 0.6, rayTwinkleSpeed: 0.9, rayFan: 0.35, rayLength: 1.4, rayDust: 0.6, rayColor: "#ffc870" },
+  forestLightShafts: { effect: "rays", speed: 0.2, sunIntensity: 1.0, sunAngle: 1.2, raySpread: 0.55, rayTwinkle: 0.8, rayTwinkleSpeed: 0.7, rayFan: 0, rayLength: 1.2, rayDust: 1, rayColor: "#f5ffd0" },
+  moonbeams: { effect: "rays", speed: 0.15, sunIntensity: 0.75, sunAngle: 1.0, raySpread: 1.2, rayTwinkle: 0.3, rayTwinkleSpeed: 0.5, rayFan: 0.15, rayLength: 1, rayDust: 0.4, rayColor: "#b8d4ff" },
+  holyRays: { effect: "rays", speed: 0.5, sunIntensity: 1.6, sunAngle: 1.35, raySpread: 0.8, rayTwinkle: 0.9, rayTwinkleSpeed: 1.2, rayFan: 0.9, rayLength: 2, rayDust: 0.8, rayColor: "#fff6dc" },
+  radiantBeams: { effect: "rays", speed: 1.2, sunIntensity: 2, sunAngle: 0.7, raySpread: 0.6, rayTwinkle: 1.2, rayTwinkleSpeed: 1.8, rayFan: 1, rayLength: 2, rayDust: 0.3, rayColor: "#ffe89a" },
+} as const;
+
+export const VOLCANO_PRESETS = {
+  volcanoEmbers: { effect: "embers", speed: 0.5, windDirection: 0.3, windStrength: 0.2, density: 110, maxDrops: 140 },
+  eruptionEmbers: { effect: "embers", speed: 1.1, windDirection: 0.6, windStrength: 0.55, density: 260, maxDrops: 280, haze: 2 },
+  ashfall: { effect: "ash", speed: 0.45, windDirection: 0.4, windStrength: 0.3, density: 150, maxDrops: 220 },
+} as const;
+
+export const AUTUMN_PRESETS = {
+  autumnLeaves: { effect: "leaves", speed: 0.45, windDirection: 0.4, windStrength: 0.25, density: 90, maxDrops: 60 },
+  autumnGust: { effect: "leaves", speed: 0.9, windDirection: 1, windStrength: 0.8, density: 200, maxDrops: 120 },
+  sakuraPetals: { effect: "petals", speed: 0.4, windDirection: 0.5, windStrength: 0.3, density: 110, maxDrops: 110 },
+  sakuraStorm: { effect: "petals", speed: 0.85, windDirection: 1, windStrength: 0.75, density: 260, maxDrops: 220 },
+} as const;
+
+export const AMBIENT_PRESETS = {
+  summerFireflies: { effect: "fireflies", speed: 0.4, windDirection: 0, windStrength: 0, density: 110, maxDrops: 60 },
+  swampFireflies: { effect: "fireflies", speed: 0.3, windDirection: 0, windStrength: 0, density: 200, maxDrops: 110, colors: ["#b8ff7a", "#7affc8", "#e8ff8a"] },
+  forestSpores: { effect: "spores", speed: 0.4, windDirection: 0.2, windStrength: 0.1, density: 120, maxDrops: 110 },
+  enchantedSpores: { effect: "spores", speed: 0.5, windDirection: 0, windStrength: 0, density: 200, maxDrops: 160, colors: ["#ffd6ff", "#c9a6ff", "#8fd3ff"] },
+} as const;
+
+export const DESERT_PRESETS = {
+  dustWind: { effect: "sand", speed: 0.4, windDirection: 1, windStrength: 0.3, density: 80, maxDrops: 120, haze: 0.5 },
+  sandstorm: { effect: "sand", speed: 1, windDirection: 1, windStrength: 0.9, density: 320, maxDrops: 420, haze: 1.6 },
 } as const;
 
 export const WEATHER_PRESETS = {
@@ -357,7 +466,39 @@ export const WEATHER_PRESETS = {
   snow: SNOW_PRESETS,
   fog: FOG_PRESETS,
   cloud: CLOUD_PRESETS,
+  rays: RAYS_PRESETS,
+  volcano: VOLCANO_PRESETS,
+  autumn: AUTUMN_PRESETS,
+  ambient: AMBIENT_PRESETS,
+  desert: DESERT_PRESETS,
 } as const;
+
+type WeatherPresetGroups = typeof WEATHER_PRESETS;
+export type WeatherPresetName = {
+  [G in keyof WeatherPresetGroups]: keyof WeatherPresetGroups[G];
+}[keyof WeatherPresetGroups];
+
+export function getWeatherPreset(name: string): Record<string, any> | undefined {
+  for (const group of Object.values(WEATHER_PRESETS)) {
+    if (name in group) return (group as Record<string, any>)[name];
+  }
+  return undefined;
+}
+
+/**
+ * Applies `preset` values under the explicitly passed props,
+ * so `<Weather preset="autumnGust" windDirection={-1} />` only overrides the wind.
+ */
+function applyWeatherPreset(options: any) {
+  if (!options || typeof options !== "object" || !("preset" in options)) return options;
+  const { preset, ...rest } = options;
+  const presetValue = resolveValue(preset);
+  const values = typeof presetValue === "string" ? getWeatherPreset(presetValue) : presetValue;
+  if (typeof presetValue === "string" && !values) {
+    throw new Error(`Unknown weather preset: ${presetValue}`);
+  }
+  return { ...(values ?? {}), ...rest };
+}
 
 
 /**
@@ -385,9 +526,16 @@ export const WeatherEffect = (options: any) => {
     raySpread = signal(1.0),  // Cloud sunlight ray spread
     rayTwinkle = signal(0.45),  // Cloud sunlight twinkle amount
     rayTwinkleSpeed = signal(1.0),  // Cloud sunlight twinkle speed
+    rayColor = signal("#fff1c7"),  // Rays: light color
+    rayFan = signal(0),  // Rays: 0 = parallel sun shafts, 1 = fan opening from a corner
+    rayLength = signal(1),  // Rays: how far beams travel before fading
+    rayDust = signal(0.6),  // Rays: amount of lit dust motes
+    colors,  // Particle effects: custom tint palette
+    particleSize = signal(1),  // Particle effects: size multiplier
+    haze = signal(1),  // Particle effects: background haze multiplier (embers, ash, sand)
     resolution,
     ...meshProps
-  } = useProps(options);
+  } = useProps(applyWeatherPreset(options));
 
   // Auto-detect resolution from canvas if not provided
   const defaultResolution = signal([1000, 1000]);
@@ -476,6 +624,18 @@ export const WeatherEffect = (options: any) => {
     typeof raySpread === "function" ? raySpread : signal(raySpread);
   const rayTwinkleSignal =
     typeof rayTwinkle === "function" ? rayTwinkle : signal(rayTwinkle);
+  const toSignal = (value: any) => (typeof value === "function" ? value : signal(value));
+  const rayColorSignal = toSignal(rayColor);
+  const rayFanSignal = toSignal(rayFan);
+  const rayLengthSignal = toSignal(rayLength);
+  const rayDustSignal = toSignal(rayDust);
+  const colorToVec3 = (value: any) => {
+    if (typeof value === "number") return [((value >> 16) & 255) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255];
+    const hex = String(value ?? "#fff1c7").trim().replace("#", "");
+    const full = hex.length === 3 ? hex.split("").map((char) => char + char).join("") : hex;
+    const parsed = parseInt(full, 16);
+    return Number.isFinite(parsed) ? colorToVec3(parsed) : [1, 0.945, 0.78];
+  };
   const rayTwinkleSpeedSignal =
     typeof rayTwinkleSpeed === "function" ? rayTwinkleSpeed : signal(rayTwinkleSpeed);
 
@@ -518,6 +678,53 @@ export const WeatherEffect = (options: any) => {
         : 1;
     return [width, height];
   };
+
+  // Keep the weather layer on the visible area when placed inside a Viewport
+  tick(() => {
+    if (viewportRef?.getVisibleBounds) {
+      const bounds = viewportRef.getVisibleBounds();
+      if (bounds && bounds.width > 0 && bounds.height > 0) {
+        const nextWidth = bounds.width;
+        const nextHeight = bounds.height;
+        const nextOriginX = bounds.x;
+        const nextOriginY = bounds.y;
+        if (nextWidth !== viewWidth()) viewWidth.set(nextWidth);
+        if (nextHeight !== viewHeight()) viewHeight.set(nextHeight);
+        if (nextOriginX !== originX()) originX.set(nextOriginX);
+        if (nextOriginY !== originY()) originY.set(nextOriginY);
+        const currentResolution = defaultResolution();
+        if (currentResolution[0] !== nextWidth || currentResolution[1] !== nextHeight) {
+          defaultResolution.set([nextWidth, nextHeight]);
+        }
+      }
+    }
+  });
+
+  if (isWeatherParticleEffect(effectSignal())) {
+    return h(Container, {
+      ...meshProps,
+      width: viewWidth,
+      height: viewHeight,
+      x: originX,
+      y: originY,
+    },
+      h(WeatherParticles, {
+        effect: effectSignal(),
+        width: viewWidth,
+        height: viewHeight,
+        cameraX: originX,
+        cameraY: originY,
+        speed: speedSignal,
+        windDirection: windDirectionSignal,
+        windStrength: windStrengthSignal,
+        density: densitySignal,
+        maxDrops: maxDropsSignal,
+        colors,
+        particleSize,
+        haze,
+      })
+    );
+  }
 
   if (effectSignal() === 'rain') {
     return h(Container, {
@@ -646,8 +853,26 @@ export const WeatherEffect = (options: any) => {
       uRayTwinkle: { value: normalizeRayTwinkleValue(rayTwinkleSignal()), type: "f32" },
       uRayTwinkleSpeed: { value: normalizeRayTwinkleSpeedValue(rayTwinkleSpeedSignal()), type: "f32" },
     };
+  } else if (effectSignal() === 'rays') {
+    glProgram = createRaysShader();
+    uniformConfig = {
+      uTime: { value: 0, type: "f32" },
+      uResolution: { value: normalizeResolutionValue(resolutionSignal()), type: "vec2<f32>" },
+      uSpeed: { value: speedSignal(), type: "f32" },
+      uSunIntensity: { value: normalizeSunIntensityValue(sunIntensitySignal()), type: "f32" },
+      uSunDirection: { value: sunDirectionFromAngle(normalizeSunAngleValue(sunAngleSignal())), type: "vec2<f32>" },
+      uRaySpread: { value: normalizeRaySpreadValue(raySpreadSignal()), type: "f32" },
+      uRayTwinkle: { value: normalizeRayTwinkleValue(rayTwinkleSignal()), type: "f32" },
+      uRayTwinkleSpeed: { value: normalizeRayTwinkleSpeedValue(rayTwinkleSpeedSignal()), type: "f32" },
+      uRayFan: { value: Number(rayFanSignal()) || 0, type: "f32" },
+      uRayLength: { value: Number(rayLengthSignal()) || 1, type: "f32" },
+      uRayDust: { value: Number(rayDustSignal()) || 0, type: "f32" },
+      uRayColor: { value: colorToVec3(rayColorSignal()), type: "vec3<f32>" },
+    };
   } else {
-    throw new Error(`Unknown weather effect: ${effectSignal()}. Supported: rain, snow, fog, cloud`);
+    throw new Error(
+      `Unknown weather effect: ${effectSignal()}. Supported: rain, snow, fog, cloud, rays, ${WEATHER_PARTICLE_EFFECTS.join(", ")}`
+    );
   }
 
   const uniformGroup = new UniformGroup(uniformConfig as any);
@@ -689,28 +914,11 @@ export const WeatherEffect = (options: any) => {
   let prevRaySpread = normalizeRaySpreadValue(raySpreadSignal());
   let prevRayTwinkle = normalizeRayTwinkleValue(rayTwinkleSignal());
   let prevRayTwinkleSpeed = normalizeRayTwinkleSpeedValue(rayTwinkleSpeedSignal());
+  let prevRayColor = rayColorSignal();
   let prevOriginX = originX();
   let prevOriginY = originY();
 
   tick(({ deltaTime }) => {
-    if (viewportRef?.getVisibleBounds) {
-      const bounds = viewportRef.getVisibleBounds();
-      if (bounds && bounds.width > 0 && bounds.height > 0) {
-        const nextWidth = bounds.width;
-        const nextHeight = bounds.height;
-        const nextOriginX = bounds.x;
-        const nextOriginY = bounds.y;
-        if (nextWidth !== viewWidth()) viewWidth.set(nextWidth);
-        if (nextHeight !== viewHeight()) viewHeight.set(nextHeight);
-        if (nextOriginX !== originX()) originX.set(nextOriginX);
-        if (nextOriginY !== originY()) originY.set(nextOriginY);
-        const currentResolution = defaultResolution();
-        if (currentResolution[0] !== nextWidth || currentResolution[1] !== nextHeight) {
-          defaultResolution.set([nextWidth, nextHeight]);
-        }
-      }
-    }
-
     // Always update time (required for animation)
     timeAccumulator += deltaTime / 600;
     uniformGroup.uniforms.uTime = timeAccumulator;
@@ -791,6 +999,26 @@ export const WeatherEffect = (options: any) => {
       if (currentMaxDrops !== prevMaxDrops) {
         uniformGroup.uniforms.uMaxFlakes = currentMaxDrops;
         prevMaxDrops = currentMaxDrops;
+      }
+    } else if (effectSignal() === 'rays') {
+      const uniforms = uniformGroup.uniforms;
+      uniforms.uSpeed = speedSignal();
+      uniforms.uSunIntensity = normalizeSunIntensityValue(sunIntensitySignal());
+      const currentSunAngle = normalizeSunAngleValue(sunAngleSignal());
+      if (currentSunAngle !== prevSunAngle) {
+        uniforms.uSunDirection = sunDirectionFromAngle(currentSunAngle);
+        prevSunAngle = currentSunAngle;
+      }
+      uniforms.uRaySpread = normalizeRaySpreadValue(raySpreadSignal());
+      uniforms.uRayTwinkle = normalizeRayTwinkleValue(rayTwinkleSignal());
+      uniforms.uRayTwinkleSpeed = normalizeRayTwinkleSpeedValue(rayTwinkleSpeedSignal());
+      uniforms.uRayFan = Number(rayFanSignal()) || 0;
+      uniforms.uRayLength = Number(rayLengthSignal()) || 1;
+      uniforms.uRayDust = Number(rayDustSignal()) || 0;
+      const currentRayColor = rayColorSignal();
+      if (currentRayColor !== prevRayColor) {
+        uniforms.uRayColor = colorToVec3(currentRayColor);
+        prevRayColor = currentRayColor;
       }
     } else if (effectSignal() === 'fog' || effectSignal() === 'cloud') {
       // Only update fog-specific uniforms if they changed
@@ -891,6 +1119,7 @@ export const WeatherEffect = (options: any) => {
   });
 
   return h(Mesh, {
+    ...(effectSignal() === 'rays' ? { blendMode: "add" } : {}),
     ...meshProps,
     geometry,
     shader,

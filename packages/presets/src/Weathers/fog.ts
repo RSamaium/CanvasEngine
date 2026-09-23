@@ -151,7 +151,7 @@ export function createCloudShader(): GlProgram {
   `;
 
   const fragmentSrc = /* glsl */ `
-    precision mediump float;
+    precision highp float;
     in vec2 vUV;
     out vec4 finalColor;
 
@@ -214,58 +214,32 @@ export function createCloudShader(): GlProgram {
       return body * 0.78 + puffs * 0.22;
     }
 
-    float cloudClusterField(vec2 p, float coverage) {
+    // Distance to the closest feature point: 1 - F1 gives round "billows".
+    float worley(vec2 p) {
       vec2 cell = floor(p);
       vec2 local = fract(p);
-      float broadNoise = clamp(fbm(p * 1.35 + 71.4) * 0.816, 0.0, 1.0);
-      float edgeNoise = clamp(fbm(p * 4.6 + 19.7) * 0.816, 0.0, 1.0);
-      float chippedNoise = noise(p * 13.0 + 8.9);
-      float field = 0.0;
+      float closest = 1.4;
       for (int y = -1; y <= 1; y++) {
         for (int x = -1; x <= 1; x++) {
           vec2 neighbor = vec2(float(x), float(y));
-          vec2 id = cell + neighbor;
-          vec2 seed = hash2(id);
-          vec2 center = neighbor + mix(vec2(0.36), vec2(0.64), seed);
-          float presence = step(mix(0.87, 0.58, coverage), hash(id + 83.1));
-          vec2 delta = local - center;
-
-          float angle = (seed.x - 0.5) * 1.15;
-          float ca = cos(angle);
-          float sa = sin(angle);
-          vec2 q = mat2(ca, -sa, sa, ca) * delta;
-          float phase = hash(id + 12.6) * 6.2831853;
-
-          // An anisotropic body with multi-scale erosion reads as a natural
-          // cloud bank from above, rather than as a union of round puffs.
-          vec2 bodySize = vec2(mix(0.62, 0.82, seed.x), mix(0.29, 0.43, seed.y));
-          float bodyDistance = length(q / bodySize);
-          float polar = atan(q.y, q.x);
-          float contour = (broadNoise - 0.5) * 0.7;
-          contour += (chippedNoise - 0.5) * 0.1;
-          contour += sin(polar * 3.0 + phase) * 0.11;
-          contour += sin(polar * 7.0 - phase * 1.7) * 0.045;
-          float body = 1.0 - smoothstep(0.72 + contour, 1.06 + contour, bodyDistance);
-
-          float branchSide = mix(-1.0, 1.0, step(0.5, hash(id + 31.8)));
-          vec2 branchQ = q - vec2(branchSide * mix(0.32, 0.46, seed.y), mix(-0.12, 0.16, seed.x));
-          vec2 branchSize = vec2(mix(0.38, 0.58, seed.y), mix(0.17, 0.28, seed.x));
-          float branch = 1.0 - smoothstep(0.64, 1.08, length(branchQ / branchSize));
-
-          vec2 wispQ = q + vec2(branchSide * mix(0.42, 0.58, seed.x), mix(0.08, 0.22, seed.y));
-          vec2 wispSize = vec2(mix(0.28, 0.46, seed.x), mix(0.1, 0.18, seed.y));
-          float wisp = 1.0 - smoothstep(0.58, 1.12, length(wispQ / wispSize));
-
-          float cluster = max(body, max(branch * 0.86, wisp * 0.64));
-          float fracturedDensity = edgeNoise * 0.68 + chippedNoise * 0.32;
-          float edgeErosion = smoothstep(0.44, 0.74, fracturedDensity + cluster * 0.42);
-          float protectedCore = smoothstep(0.48, 0.78, cluster);
-          float erosion = max(edgeErosion, protectedCore);
-          cluster *= erosion;
-          field = max(field, cluster * presence);
+          vec2 point = hash2(cell + neighbor);
+          closest = min(closest, length(neighbor + point - local));
         }
       }
-      return field;
+      return closest;
+    }
+
+    // Signed cumulus density seen from above: > 0 inside the cloud.
+    // Large warped masses carry the silhouette, cellular billows give the
+    // cauliflower edges and a fine fbm breaks the regularity.
+    float cumulusDensity(vec2 p, float coverage) {
+      vec2 warp = vec2(fbm(p * 0.45 + 3.7), fbm(p * 0.45 + 41.3)) - 0.6;
+      vec2 q = p + warp * 0.9;
+      float envelope = smoothstep(0.4, 0.8, fbm(q * 0.42));
+      float billows = 1.0 - worley(q * 1.7);
+      float puffs = 1.0 - worley(q * 3.9 + 7.3);
+      float d = envelope * 0.72 + billows * 0.2 + puffs * 0.08;
+      return d - mix(0.72, 0.42, coverage);
     }
 
     void main() {
@@ -349,35 +323,43 @@ export function createCloudShader(): GlProgram {
       vec3 visibleColor = vec3(0.0);
       if (visibleOpacity > 0.001) {
         float altitude = clamp(uCloudAltitude, 0.0, 1.0);
-        float projectionOffset = mix(0.035, 0.28, altitude);
-        vec2 visibleUv = flowUv - sunDir * projectionOffset;
-        vec2 groundClusterUv = flowUv * (scale * 5.0) + driftMain * 1.35;
-        vec2 clusterUv = groundClusterUv - sunDir * projectionOffset * (scale * 5.0);
-        float groundCluster = cloudClusterField(groundClusterUv, coverageMix);
-        float cluster = cloudClusterField(clusterUv, coverageMix);
-        float litCluster = cloudClusterField(clusterUv - sunDir * 0.055, coverageMix);
-        float projectedSoftness = mix(0.26, 0.5, clamp(uShadowSoftness, 0.0, 1.0));
-        float projectedMask = smoothstep(0.035, projectedSoftness, groundCluster);
-        projectedShadowAlpha = projectedMask
-          * clamp(uShadowIntensity, 0.0, 0.65)
-          * visibleOpacity
-          * 0.62;
-        float silhouette = smoothstep(0.09, 0.38, cluster);
-        float core = smoothstep(0.34, 0.88, cluster);
-        float relief = clamp(0.5 + (litCluster - cluster) * 2.8, 0.0, 1.0);
-        float surfaceDetail = clamp(fbm(visibleUv * (scale * 7.0) - driftDetail * 0.35) * 0.816, 0.0, 1.0);
-        float billowDetail = clamp(fbm(visibleUv * (scale * 12.5) + driftMain * 0.2 + 43.2) * 0.816, 0.0, 1.0);
-        float fineDetail = noise(visibleUv * (scale * 19.0) + driftDetail * 0.4);
-        float lighting = clamp(0.08 + core * 0.22 + relief * 0.3 + surfaceDetail * 0.2 + billowDetail * 0.16 + fineDetail * 0.04, 0.0, 1.0);
+        float softness = clamp(uShadowSoftness, 0.0, 1.0);
+        float cloudScale = scale * 6.0;
+        vec2 cloudDrift = driftMain * 1.6;
+        vec2 cloudUv = worldUv * cloudScale + cloudDrift;
+        float projection = mix(0.25, 1.6, altitude);
 
-        vec3 cloudUnderside = vec3(0.32, 0.37, 0.43);
-        vec3 cloudMid = vec3(0.58, 0.62, 0.64);
-        vec3 cloudTop = vec3(0.87, 0.88, 0.84);
-        visibleColor = mix(cloudUnderside, cloudMid, smoothstep(0.16, 0.58, lighting));
-        visibleColor = mix(visibleColor, cloudTop, smoothstep(0.56, 0.9, lighting));
-        visibleColor *= mix(0.82, 1.08, billowDetail);
-        float densityVariation = mix(0.62, 1.0, smoothstep(0.22, 0.78, surfaceDetail + core * 0.3));
-        visibleAlpha = silhouette * mix(0.24, 1.0, core) * densityVariation * visibleOpacity;
+        float groundDensity = cumulusDensity(cloudUv - sunDir * projection, coverageMix);
+        float projectedMask = smoothstep(-0.02, mix(0.06, 0.2, softness), groundDensity);
+        projectedShadowAlpha = projectedMask * clamp(uShadowIntensity, 0.0, 0.65) * visibleOpacity * 0.75;
+
+        // The visible layer casts its own shadow: the uncorrelated shadow-only
+        // field is replaced, and sun shafts only pass between real shadows.
+        float gapRays = shafts * (1.0 - projectedMask) * clamp(uSunIntensity, 0.0, 2.0) * twinkle * 0.18;
+        atmosphericAlpha = clamp(gapRays, 0.0, 0.72);
+        atmosphericColor = rayColor * atmosphericAlpha;
+
+        float density = cumulusDensity(cloudUv, coverageMix);
+        if (density > -0.03) {
+          // Self shadowing: denser matter toward the sun hides this point.
+          float towardSun = cumulusDensity(cloudUv - sunDir * 0.12, coverageMix);
+          float thickness = clamp(density / 0.22, 0.0, 1.0);
+          float light = clamp(0.62 + (density - towardSun) * 3.2 + thickness * 0.18, 0.0, 1.0);
+          float grain = fbm(cloudUv * 7.0 - cloudDrift * 0.5);
+          light = clamp(light + (grain - 0.6) * 0.18, 0.0, 1.0);
+
+          vec3 shade = vec3(0.56, 0.63, 0.76);
+          vec3 mid = vec3(0.84, 0.88, 0.94);
+          vec3 lit = vec3(1.0, 0.985, 0.95);
+          visibleColor = mix(shade, mid, smoothstep(0.1, 0.55, light));
+          visibleColor = mix(visibleColor, lit, smoothstep(0.5, 0.95, light));
+          // Silver lining on thin edges facing the sun
+          float rim = (1.0 - thickness) * smoothstep(0.55, 0.9, light);
+          visibleColor += vec3(0.06, 0.05, 0.03) * rim;
+
+          float edge = smoothstep(-0.03, mix(0.05, 0.14, softness), density);
+          visibleAlpha = edge * mix(0.82, 1.0, thickness) * visibleOpacity;
+        }
       }
 
       atmosphericColor = shadowColor * projectedShadowAlpha

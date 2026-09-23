@@ -31,6 +31,113 @@
         zIndex={10}
       />
     }
+    @else if (embersActive) {
+      <Weather
+        effect="embers"
+        speed={weatherSpeed}
+        windDirection={weatherWindDirection}
+        windStrength={weatherWindStrength}
+        density={weatherDensity}
+        maxDrops={weatherMaxDrops}
+        colors={weatherColors}
+        haze={weatherHaze}
+        zIndex={10}
+      />
+    }
+    @else if (ashActive) {
+      <Weather
+        effect="ash"
+        speed={weatherSpeed}
+        windDirection={weatherWindDirection}
+        windStrength={weatherWindStrength}
+        density={weatherDensity}
+        maxDrops={weatherMaxDrops}
+        colors={weatherColors}
+        haze={weatherHaze}
+        zIndex={10}
+      />
+    }
+    @else if (leavesActive) {
+      <Weather
+        effect="leaves"
+        speed={weatherSpeed}
+        windDirection={weatherWindDirection}
+        windStrength={weatherWindStrength}
+        density={weatherDensity}
+        maxDrops={weatherMaxDrops}
+        colors={weatherColors}
+        haze={weatherHaze}
+        zIndex={10}
+      />
+    }
+    @else if (petalsActive) {
+      <Weather
+        effect="petals"
+        speed={weatherSpeed}
+        windDirection={weatherWindDirection}
+        windStrength={weatherWindStrength}
+        density={weatherDensity}
+        maxDrops={weatherMaxDrops}
+        colors={weatherColors}
+        haze={weatherHaze}
+        zIndex={10}
+      />
+    }
+    @else if (firefliesActive) {
+      <Weather
+        effect="fireflies"
+        speed={weatherSpeed}
+        windDirection={weatherWindDirection}
+        windStrength={weatherWindStrength}
+        density={weatherDensity}
+        maxDrops={weatherMaxDrops}
+        colors={weatherColors}
+        haze={weatherHaze}
+        zIndex={10}
+      />
+    }
+    @else if (sporesActive) {
+      <Weather
+        effect="spores"
+        speed={weatherSpeed}
+        windDirection={weatherWindDirection}
+        windStrength={weatherWindStrength}
+        density={weatherDensity}
+        maxDrops={weatherMaxDrops}
+        colors={weatherColors}
+        haze={weatherHaze}
+        zIndex={10}
+      />
+    }
+    @else if (sandActive) {
+      <Weather
+        effect="sand"
+        speed={weatherSpeed}
+        windDirection={weatherWindDirection}
+        windStrength={weatherWindStrength}
+        density={weatherDensity}
+        maxDrops={weatherMaxDrops}
+        colors={weatherColors}
+        haze={weatherHaze}
+        zIndex={10}
+      />
+    }
+    @else if (raysActive) {
+      <Weather
+        effect="rays"
+        speed={weatherSpeed}
+        sunIntensity={weatherSunIntensity}
+        sunAngle={weatherSunAngle}
+        raySpread={weatherRaySpread}
+        rayTwinkle={weatherRayTwinkle}
+        rayTwinkleSpeed={weatherRayTwinkleSpeed}
+        rayFan={weatherRayFan}
+        rayLength={weatherRayLength}
+        rayDust={weatherRayDust}
+        rayColor={weatherRayColor}
+        zIndex={10}
+      />
+    }
     @else if (fogActive) {
       <Weather
         effect="fog"
@@ -72,8 +179,23 @@
     @else if (fogActive) {
       <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#0b241f" alpha={0.18} zIndex={20} />
     }
-    @else {
+    @else if (cloudActive) {
       <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#422d13" alpha={0.1} zIndex={20} />
+    }
+    @else if (raysActive) {
+      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#0d1a10" alpha={0.25} zIndex={9} />
+    }
+    @else if (volcanoActive) {
+      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#2a0a04" alpha={0.28} zIndex={20} />
+    }
+    @else if (autumnActive) {
+      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#2a1a08" alpha={0.12} zIndex={20} />
+    }
+    @else if (ambientActive) {
+      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#020a14" alpha={0.5} zIndex={20} />
+    }
+    @else if (desertActive) {
+      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#3a2a10" alpha={0.1} zIndex={20} />
     }
 
     <Container
@@ -111,8 +233,23 @@
       @else if (fogActive) {
         <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#8fe0d1" borderRadius={3} />
       }
-      @else {
+      @else if (cloudActive) {
         <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#ffd98b" borderRadius={3} />
+      }
+      @else if (raysActive) {
+        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#fff1c7" borderRadius={3} />
+      }
+      @else if (volcanoActive) {
+        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#ff8a4a" borderRadius={3} />
+      }
+      @else if (autumnActive) {
+        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#ffb45a" borderRadius={3} />
+      }
+      @else if (ambientActive) {
+        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#c6ff5a" borderRadius={3} />
+      }
+      @else if (desertActive) {
+        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#e3c48f" borderRadius={3} />
       }
       <Text
         width="100%"
@@ -240,6 +377,86 @@
           }
           <Text text="CLOUD · 9" color={cloudTextColor} size={12} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.1 }} />
         </Container>
+
+        <Container
+          height={44}
+          flexGrow={1}
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          click={selectRays}
+          cursor="pointer"
+        >
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#111c2b" borderRadius={9} border={{ width: 1, color: "#b5a36a" }} />
+          @if (raysActive) {
+            <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#5e5528" borderRadius={9} />
+          }
+          <Text text="RAYS · 6" color={raysTextColor} size={12} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.1 }} />
+        </Container>
+
+        <Container
+          height={44}
+          flexGrow={1}
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          click={selectVolcano}
+          cursor="pointer"
+        >
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#111c2b" borderRadius={9} border={{ width: 1, color: "#a8502a" }} />
+          @if (volcanoActive) {
+            <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#5c2413" borderRadius={9} />
+          }
+          <Text text="VOLCANO · 3" color={volcanoTextColor} size={12} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.1 }} />
+        </Container>
+
+        <Container
+          height={44}
+          flexGrow={1}
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          click={selectAutumn}
+          cursor="pointer"
+        >
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#111c2b" borderRadius={9} border={{ width: 1, color: "#a8742a" }} />
+          @if (autumnActive) {
+            <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#5c3a13" borderRadius={9} />
+          }
+          <Text text="SEASONS · 4" color={autumnTextColor} size={12} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.1 }} />
+        </Container>
+
+        <Container
+          height={44}
+          flexGrow={1}
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          click={selectAmbient}
+          cursor="pointer"
+        >
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#111c2b" borderRadius={9} border={{ width: 1, color: "#6b8f3a" }} />
+          @if (ambientActive) {
+            <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#2f4a18" borderRadius={9} />
+          }
+          <Text text="AMBIENT · 4" color={ambientTextColor} size={12} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.1 }} />
+        </Container>
+
+        <Container
+          height={44}
+          flexGrow={1}
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          click={selectDesert}
+          cursor="pointer"
+        >
+          <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#111c2b" borderRadius={9} border={{ width: 1, color: "#b0935a" }} />
+          @if (desertActive) {
+            <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#5e4a24" borderRadius={9} />
+          }
+          <Text text="DESERT · 2" color={desertTextColor} size={12} fontFamily="Arial" style={{ fontWeight: "700", letterSpacing: 1.1 }} />
+        </Container>
       </Container>
 
       <Container width="100%" flexGrow={1} display="flex" flexDirection="row" gap={12} alignItems="stretch">
@@ -280,10 +497,15 @@
 <script>
   import { computed, signal } from "canvasengine";
   import {
+    AMBIENT_PRESETS,
+    AUTUMN_PRESETS,
     CLOUD_PRESETS,
+    DESERT_PRESETS,
+    RAYS_PRESETS,
     FOG_PRESETS,
     RAIN_PRESETS,
     SNOW_PRESETS,
+    VOLCANO_PRESETS,
     Weather,
   } from "@canvasengine/presets";
 
@@ -336,7 +558,62 @@
         { label: "Natural Clouds", description: "Irregular overhead cloud banks with textured volume and projected shadows.", values: CLOUD_PRESETS.naturalClouds },
       ],
     },
+    {
+      id: "rays",
+      label: "LIGHT RAYS",
+      accent: "#fff1c7",
+      presets: [
+        { label: "Morning Sun", description: "Soft parallel shafts with drifting dust.", values: RAYS_PRESETS.morningSunRays },
+        { label: "Golden Hour", description: "Warm low-angle light sweeping the map.", values: RAYS_PRESETS.goldenHourShafts },
+        { label: "Forest Shafts", description: "Narrow flickering beams through the canopy.", values: RAYS_PRESETS.forestLightShafts },
+        { label: "Moonbeams", description: "Cool, calm night light.", values: RAYS_PRESETS.moonbeams },
+        { label: "Holy Rays", description: "A radiant fan of light from above.", values: RAYS_PRESETS.holyRays },
+        { label: "Radiant Beams", description: "Intense animated beams for dramatic moments.", values: RAYS_PRESETS.radiantBeams },
+      ],
+    },
+    {
+      id: "volcano",
+      label: "VOLCANO",
+      accent: "#ff8a4a",
+      presets: [
+        { label: "Volcano Embers", description: "Glowing embers rising and cooling in the hot air.", values: VOLCANO_PRESETS.volcanoEmbers },
+        { label: "Eruption", description: "Dense ember storm with a red heat haze.", values: VOLCANO_PRESETS.eruptionEmbers },
+        { label: "Ashfall", description: "Grey ash flakes tumbling slowly after an eruption.", values: VOLCANO_PRESETS.ashfall },
+      ],
+    },
+    {
+      id: "autumn",
+      label: "SEASONS",
+      accent: "#ffb45a",
+      presets: [
+        { label: "Autumn Leaves", description: "Leaves swaying and flipping as they fall.", values: AUTUMN_PRESETS.autumnLeaves },
+        { label: "Autumn Gust", description: "A strong wind sweeping leaves across the map.", values: AUTUMN_PRESETS.autumnGust },
+        { label: "Sakura Petals", description: "Soft cherry blossom petals drifting in spring.", values: AUTUMN_PRESETS.sakuraPetals },
+        { label: "Sakura Storm", description: "A flurry of petals carried by the wind.", values: AUTUMN_PRESETS.sakuraStorm },
+      ],
+    },
+    {
+      id: "ambient",
+      label: "AMBIENT",
+      accent: "#c6ff5a",
+      presets: [
+        { label: "Summer Fireflies", description: "Fireflies wandering and blinking at night.", values: AMBIENT_PRESETS.summerFireflies },
+        { label: "Swamp Fireflies", description: "A dense green swarm over dark water.", values: AMBIENT_PRESETS.swampFireflies },
+        { label: "Forest Spores", description: "Luminous spores floating up in a quiet forest.", values: AMBIENT_PRESETS.forestSpores },
+        { label: "Enchanted Spores", description: "Pastel magic motes for fairy places.", values: AMBIENT_PRESETS.enchantedSpores },
+      ],
+    },
+    {
+      id: "desert",
+      label: "DESERT",
+      accent: "#e3c48f",
+      presets: [
+        { label: "Dust Wind", description: "Light sand grains carried along the ground.", values: DESERT_PRESETS.dustWind },
+        { label: "Sandstorm", description: "Blinding streaks of sand in a thick haze.", values: DESERT_PRESETS.sandstorm },
+      ],
+    },
   ];
+
 
   const groupIndex = signal(0);
   const presetIndex = signal(1);
@@ -363,6 +640,12 @@
   const weatherRaySpread = computed(() => activeValues().raySpread ?? 1);
   const weatherRayTwinkle = computed(() => activeValues().rayTwinkle ?? 0.45);
   const weatherRayTwinkleSpeed = computed(() => activeValues().rayTwinkleSpeed ?? 1);
+  const weatherColors = computed(() => activeValues().colors);
+  const weatherRayFan = computed(() => activeValues().rayFan ?? 0);
+  const weatherRayLength = computed(() => activeValues().rayLength ?? 1);
+  const weatherRayDust = computed(() => activeValues().rayDust ?? 0.6);
+  const weatherRayColor = computed(() => activeValues().rayColor ?? "#fff1c7");
+  const weatherHaze = computed(() => activeValues().haze ?? 1);
 
   const activeAccent = computed(() => activeGroup().accent);
   const activeCategoryLabel = computed(() => activeGroup().label);
@@ -374,7 +657,10 @@
 
   const activeSettings = computed(() => {
     const values = activeValues();
-    if (values.effect === "rain" || values.effect === "snow") {
+    if (values.effect === "rays") {
+      return `LIGHT ${values.sunIntensity.toFixed(2)}  ·  FAN ${values.rayFan.toFixed(2)}  ·  SPREAD ${values.raySpread.toFixed(2)}  ·  TWINKLE ${values.rayTwinkle.toFixed(2)}`;
+    }
+    if (values.effect !== "fog" && values.effect !== "cloud") {
       return `SPEED ${values.speed.toFixed(2)}  ·  DENSITY ${values.density}  ·  WIND ${values.windStrength.toFixed(2)}  ·  COUNT ${values.maxDrops}`;
     }
     if (values.effect === "fog") {
@@ -391,12 +677,31 @@
   const snowActive = isGroup("snow");
   const fogActive = isGroup("fog");
   const cloudActive = isGroup("cloud");
+  const raysActive = isGroup("rays");
+  const volcanoActive = isGroup("volcano");
+  const autumnActive = isGroup("autumn");
+  const ambientActive = isGroup("ambient");
+  const desertActive = isGroup("desert");
+
+  const isEffect = (effect) => computed(() => activeValues().effect === effect);
+  const embersActive = isEffect("embers");
+  const ashActive = isEffect("ash");
+  const leavesActive = isEffect("leaves");
+  const petalsActive = isEffect("petals");
+  const firefliesActive = isEffect("fireflies");
+  const sporesActive = isEffect("spores");
+  const sandActive = isEffect("sand");
 
   const textColor = (active, selected) => computed(() => active() ? selected : "#8da2b8");
   const rainTextColor = textColor(rainActive, "#9ee7ff");
   const snowTextColor = textColor(snowActive, "#e8f6ff");
   const fogTextColor = textColor(fogActive, "#b6f5e7");
   const cloudTextColor = textColor(cloudActive, "#ffe6ad");
+  const raysTextColor = textColor(raysActive, "#fff6dc");
+  const volcanoTextColor = textColor(volcanoActive, "#ffc2a0");
+  const autumnTextColor = textColor(autumnActive, "#ffd9a0");
+  const ambientTextColor = textColor(ambientActive, "#e2ffb0");
+  const desertTextColor = textColor(desertActive, "#f5e2bd");
 
   const selectGroup = (index) => {
     if (groupIndex() === index) return;
@@ -407,6 +712,11 @@
   const selectSnow = () => selectGroup(1);
   const selectFog = () => selectGroup(2);
   const selectCloud = () => selectGroup(3);
+  const selectRays = () => selectGroup(4);
+  const selectVolcano = () => selectGroup(5);
+  const selectAutumn = () => selectGroup(6);
+  const selectAmbient = () => selectGroup(7);
+  const selectDesert = () => selectGroup(8);
 
   const previousPreset = () => {
     const count = activeGroup().presets.length;

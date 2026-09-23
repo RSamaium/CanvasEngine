@@ -9,7 +9,9 @@
 - rain
 - snow
 - fog (RPG-style)
-- cloud shadows projected on the ground (with optional sun rays)
+- cloud shadows projected on the ground, with an optional overhead cumulus layer
+- light rays (god rays), independent from clouds
+- ambient particles: volcano embers, ash, autumn leaves, sakura petals, fireflies, magic spores and sandstorms
 
 Rain mode combines scrolling streak layers with short ground impact splashes.
 Rain props are read reactively, including `speed`, `windDirection`, `windStrength`, `density`, `maxDrops`, and `topDown`.
@@ -27,7 +29,9 @@ It supports static values and reactive signals, can be used inside or outside `V
 - `SNOW_PRESETS`
 - `FOG_PRESETS`
 - `CLOUD_PRESETS`
-- `WEATHER_PRESETS`
+- `RAYS_PRESETS`
+- `VOLCANO_PRESETS`, `AUTUMN_PRESETS`, `AMBIENT_PRESETS`, `DESERT_PRESETS`
+- `WEATHER_PRESETS` (every group) and `getWeatherPreset(name)`
 
 ## Basic Usage
 
@@ -45,6 +49,19 @@ It supports static values and reactive signals, can be used inside or outside `V
 ```
 
 ## Using Built-in Presets
+
+The simplest way is the `preset` prop. Explicit props override the preset values:
+
+```html
+<Canvas>
+  <Weather preset="volcanoEmbers" />
+  <Weather preset="autumnGust" windDirection={-1} />
+</Canvas>
+```
+
+`preset` is read when the component is created. To switch between presets of different effects, wrap `Weather` in an `@if` block.
+
+You can also spread the values yourself:
 
 ```html
 <Canvas>
@@ -71,7 +88,45 @@ It supports static values and reactive signals, can be used inside or outside `V
 - Rain: `lightRain`, `steadyRain`, `stormRain`
 - Snow: `lightSnow`, `winterSnow`, `blizzardSnow`
 - Fog: `rpgMorningMist`, `rpgForestFog`, `rpgSwampFog`, `rpgNightFog`, `rpgHeavyFog`
+- Rays: `morningSunRays`, `goldenHourShafts`, `forestLightShafts`, `moonbeams`, `holyRays`, `radiantBeams`
 - Cloud: `lightClouds`, `overcastClouds`, `stormClouds`, `goldenHourRays`, `sunnySoftRays`, `sunsetTwinkleRays`, `dramaticCrepuscularRays`, `morningHazeRays`, `naturalClouds`
+- Volcano: `volcanoEmbers`, `eruptionEmbers`, `ashfall`
+- Seasons: `autumnLeaves`, `autumnGust`, `sakuraPetals`, `sakuraStorm`
+- Ambient: `summerFireflies`, `swampFireflies`, `forestSpores`, `enchantedSpores`
+- Desert: `dustWind`, `sandstorm`
+
+## Ambient Particles
+
+The `embers`, `ash`, `leaves`, `petals`, `fireflies`, `spores` and `sand` effects render lightweight sprite particles over the visible area. Every particle has its own depth (size, speed and parallax), so the field feels layered. Inside a `Viewport`, particles stay anchored to the world when the camera moves.
+
+| Effect | Behavior |
+|------|---------|
+| `embers` | Glowing sparks rising, flickering and cooling from yellow to red, with a warm haze |
+| `ash` | Grey flakes tumbling down, with a smoky haze |
+| `leaves` | Three leaf shapes swaying, spinning and flipping in 3D as they fall |
+| `petals` | Soft petals drifting and flipping |
+| `fireflies` | Wandering glows that blink on and off |
+| `spores` | Slow luminous motes floating upward |
+| `sand` | Fast streaks following the wind, with a dusty haze |
+
+```html
+<Weather
+  effect="leaves"
+  speed={0.5}
+  windDirection={0.6}
+  windStrength={0.4}
+  density={120}
+  maxDrops={90}
+  colors={['#6fbf3a', '#9bd14a', '#4e8f2a']}
+  particleSize={1.2}
+/>
+```
+
+- `density` controls how many particles cover a 1280×720 area; `maxDrops` caps the total.
+- `windDirection` (`-1` to `1`) and `windStrength` push particles sideways. `sand` follows the sign of `windDirection`.
+- `colors` replaces the palette (green leaves, blue embers...).
+- `particleSize` multiplies particle sizes.
+- `haze` multiplies the background tint of `embers`, `ash` and `sand` (`0` disables it).
 
 ## Viewport and Layering
 
@@ -99,7 +154,7 @@ Use `sortableChildren` on `Viewport` and a high `zIndex` on `Weather`.
 
 Cloud mode renders broad, moving shadows on the ground instead of a white atmospheric veil. This makes it visually distinct from fog. It also supports optional sun shafts with directional control and twinkle.
 
-Set `cloudOpacity` above `0` to display the overhead cloud itself. The visible layer uses irregular, eroded cloud banks with textured density, directional volume, and a shaded underside. `cloudAltitude` controls its projected separation from the ground shadow. Keep `cloudOpacity={0}` for shadow-only weather.
+Set `cloudOpacity` above `0` to display the overhead cloud itself. The visible layer renders fluffy cumulus seen from above: billowy edges, bright sunlit tops, blue-grey self-shadowed sides and a silver lining. Each cloud projects its own shadow on the ground, offset along `sunAngle`; `cloudAltitude` controls that offset. Keep `cloudOpacity={0}` for shadow-only weather.
 
 Important behavior:
 
@@ -124,6 +179,37 @@ Important behavior:
   rayTwinkleSpeed={1.6}
 />
 ```
+
+## Light Rays
+
+`effect="rays"` renders animated light shafts on their own, without clouds. It is drawn with an additive blend mode by default.
+
+```html
+<Weather preset="forestLightShafts" zIndex={1000} />
+
+<Weather
+  effect="rays"
+  sunIntensity={1.4}
+  sunAngle={0.7}
+  rayFan={0.8}
+  rayColor="#ffd98b"
+  rayDust={0.8}
+/>
+```
+
+| Prop | Default | Description |
+|------|---------|-------------|
+| `sunIntensity` | `0.85` | Brightness of the beams |
+| `sunAngle` | `0.85` | Direction the light travels, in radians |
+| `raySpread` | `1` | Beam width (lower = thinner, more numerous beams) |
+| `rayFan` | `0` | `0` = parallel sun shafts, `1` = beams fanning out from a corner |
+| `rayLength` | `1` | How far beams travel before fading (`2` = full screen) |
+| `rayTwinkle`, `rayTwinkleSpeed` | `0.45`, `1` | Beams breathing independently |
+| `rayDust` | `0.6` | Dust motes glittering inside the beams |
+| `rayColor` | `'#fff1c7'` | Light color |
+| `speed` | `0.5` | Drift speed of the beams |
+
+Presets: `morningSunRays`, `goldenHourShafts`, `forestLightShafts`, `moonbeams`, `holyRays`, `radiantBeams`.
 
 ## Dynamic Control with Signals
 
@@ -154,12 +240,16 @@ Important behavior:
 
 | Prop | Type | Default | Used by | Description |
 |------|------|---------|---------|-------------|
-| `effect` | `string \| Signal<string>` | `'rain'` | all | `'rain'`, `'snow'`, `'fog'`, `'cloud'` |
+| `preset` | `string \| object` | - | all | Built-in preset name (or values object) applied under the other props |
+| `effect` | `string \| Signal<string>` | `'rain'` | all | `'rain'`, `'snow'`, `'fog'`, `'cloud'`, `'rays'`, `'embers'`, `'ash'`, `'leaves'`, `'petals'`, `'fireflies'`, `'spores'`, `'sand'` |
 | `speed` | `number \| Signal<number>` | `0.5` | all | Movement/fall speed |
-| `windDirection` | `number \| Signal<number>` | `0.0` | rain/snow | Horizontal wind direction |
-| `windStrength` | `number \| Signal<number>` | `0.2` | rain/snow | Wind influence |
+| `windDirection` | `number \| Signal<number>` | `0.0` | rain/snow/particles | Horizontal wind direction |
+| `windStrength` | `number \| Signal<number>` | `0.2` | rain/snow/particles | Wind influence |
 | `density` | `number \| Signal<number>` | `120.0` | all | Particle density or fog/cloud intensity |
-| `maxDrops` | `number \| Signal<number>` | `80.0` | rain/snow | Rain impact cap / snowflake cap |
+| `maxDrops` | `number \| Signal<number>` | `80.0` | rain/snow/particles | Rain impact cap / snowflake cap / particle cap |
+| `colors` | `string[] \| Signal<string[]>` | effect palette | particles | Custom particle palette |
+| `particleSize` | `number \| Signal<number>` | `1` | particles | Particle size multiplier |
+| `haze` | `number \| Signal<number>` | `1` | embers/ash/sand | Background haze multiplier |
 | `topDown` | `boolean \| Signal<boolean>` | `true` | rain | Spreads impacts across the visible map. Use `false` to keep impacts near the bottom ground line |
 | `height` | `number \| Signal<number>` | `1.0` | fog/cloud | Bank fullness (`0` = sparse, `1` = full) |
 | `scale` | `number \| Signal<number>` | `2.0` | fog/cloud | Noise scale |
@@ -183,6 +273,7 @@ Important behavior:
 ## Recommended Ranges
 
 - Rain/Snow `density`: `80` to `320`
+- Particle effects `density`: `60` to `320` (`maxDrops` `60` to `400`)
 - Fog `density`: `0.6` to `1.5`
 - Fog `height`: `0.4` to `0.7`
 - Fog `fogOpacity`: `0.3` to `0.65`
