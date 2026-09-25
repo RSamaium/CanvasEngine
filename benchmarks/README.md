@@ -12,6 +12,36 @@ pnpm bench
 pnpm bench:compare
 ```
 
+Reactivity benchmarks run a bundle of `benchmarks/reactivity/scenarios.ts`
+built with esbuild, like the shipped library. Running the sources through tsx
+injects a `__name()` helper around every closure, which dominated the profile
+(~70% of `createComponent`) and hid the real engine costs.
+
+## Profiling
+
+```bash
+pnpm bench:profile                                # all scenarios, medians
+pnpm bench:profile teardown,patch-all --cpu       # + V8 CPU profile
+pnpm bench:profile loop:track --baseline HEAD     # A/B against a git ref
+```
+
+The first argument filters scenarios by name (comma separated substrings).
+For each scenario the profiler reports:
+
+- median, p95 and min time per iteration (medians stay usable on a busy machine);
+- heap retained per iteration (the script runs with `--expose-gc`);
+- instances created but never destroyed, and `onDestroy` calls per iteration
+  (catches leaks and subtrees torn down twice);
+- with `--cpu`, self time by package and by function, mapped back to the
+  TypeScript sources, plus a `.cpuprofile` file to open in Chrome DevTools or
+  https://www.speedscope.app.
+
+`--baseline <ref>` bundles the engine sources as they are at that git ref and
+runs both versions interleaved (A B B A ...) in the same process, so machine
+noise affects them equally. Use it to check an engine change before merging.
+
+Options: `--iterations 200`, `--warmup 20`, `--top 15`.
+
 ## Output
 
 Reports are written to `benchmarks/results/<suite>/`.
@@ -33,6 +63,7 @@ Useful environment variables:
 
 - `BENCH_REACTIVITY_TIME_MS=2000`
 - `BENCH_REACTIVITY_WARMUP_MS=1000`
+- `BENCH_REACTIVITY_FILTER=loop:track,teardown`
 - `BENCH_RENDER_DURATION_MS=10000`
 - `BENCH_RENDER_WARMUP_MS=2000`
 - `BENCH_RENDER_COUNTS=1000,5000,10000`

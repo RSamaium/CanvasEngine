@@ -119,7 +119,9 @@ function toMarkdown(report: BenchmarkReport): string {
         ? `${roundMetric(metrics.hz, 2)} ops/sec`
         : typeof metrics?.averageFps === "number"
           ? `${roundMetric(metrics.averageFps, 2)} fps`
-          : "measured";
+          : typeof metrics?.medianMs === "number"
+            ? `${roundMetric(metrics.medianMs, 4)} ms median`
+            : "measured";
     const status = validity?.valid === false ? "unstable" : "valid";
     const markers = validity?.reasons?.length ? validity.reasons.join(", ") : "none";
 

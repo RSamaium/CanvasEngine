@@ -12,6 +12,7 @@
     "coverage": "vitest --coverage",
     "bench": "pnpm bench:reactivity && pnpm bench:render",
     "bench:reactivity": "tsx benchmarks/reactivity/index.ts",
+    "bench:profile": "node --expose-gc --import tsx benchmarks/reactivity/profile.ts",
     "bench:render": "tsx benchmarks/render/run.ts",
     "bench:compare": "tsx benchmarks/compare.ts",
     "release": "bumpp package.json packages/*/package.json --all",
