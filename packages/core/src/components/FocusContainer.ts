@@ -3,6 +3,7 @@ import { applyDirective } from "../engine/directive";
 import { ComponentFunction } from "../engine/signal";
 import { DisplayObjectProps } from "./types/DisplayObject";
 import { focusManager, ScrollOptions } from "../engine/FocusManager";
+import type { Subscription } from "rxjs";
 import { signal, Signal, WritableSignal, WritableObjectSignal, isSignal } from "@signe/reactive";
 import { CanvasViewport } from "./Viewport";
 import { Controls } from "../directives/ControlsBase";
@@ -71,6 +72,10 @@ export class CanvasFocusContainer {
   private currentIndexSignal: WritableSignal<number | null> | null = null;
   private focusedElementSignal: WritableSignal<Element | null> | WritableObjectSignal<Element | null> | null = null;
   private registeredFocusables: Set<number> = new Set();
+  // One subscription per child flow (loop, cond, signal), released on destroy
+  private childFlowSubscriptions: Map<any, Subscription> = new Map();
+  private registerTimeout: ReturnType<typeof setTimeout> | null = null;
+  private destroyed = false;
 
   /**
    * Initialize the focus container
@@ -152,7 +157,8 @@ export class CanvasFocusContainer {
 
     // Register all focusable children initially
     // Use setTimeout to ensure children are mounted
-    setTimeout(() => {
+    this.registerTimeout = setTimeout(() => {
+      this.registerTimeout = null;
       this.registerChildren(element);
     }, 0);
   }
@@ -179,6 +185,16 @@ export class CanvasFocusContainer {
    * @param afterDestroy - Callback after destruction
    */
   async onDestroy(parent: Element<any>, afterDestroy?: () => void): Promise<void> {
+    this.destroyed = true;
+    if (this.registerTimeout) {
+      clearTimeout(this.registerTimeout);
+      this.registerTimeout = null;
+    }
+    // These subscriptions hold a reference on shared flows (loop uses
+    // shareReplay with refCount): keeping them would keep old children alive.
+    this.childFlowSubscriptions.forEach((subscription) => subscription.unsubscribe());
+    this.childFlowSubscriptions.clear();
+
     // Unregister all focusables
     for (const index of this.registeredFocusables) {
       focusManager.unregisterFocusable(this.containerId, index);
@@ -198,32 +214,46 @@ export class CanvasFocusContainer {
    * @param element - Container element
    */
   private registerChildren(element: Element<CanvasFocusContainer>) {
-    if (!element.props.children) return;
+    if (this.destroyed || !element.props.children) return;
 
+    const processFlowValue = (value: any) => {
+      // Handle FlowObservable result (from loop, cond, etc.) - has 'elements' property
+      if (value && typeof value === 'object' && 'elements' in value) {
+        const elements = value.elements || [];
+        if (Array.isArray(elements)) {
+          processChildren(elements);
+        }
+      } else if (Array.isArray(value)) {
+        processChildren(value);
+      } else if (value) {
+        processChild(value);
+      }
+    };
 
-    let registeredCount = 0;
+    const isFlow = (value: any) =>
+      isSignal(value) || (value && typeof value.subscribe === 'function');
+
+    // Subscribes once per flow: registerChildren runs again on every emission
+    // and must not stack a new subscription each time.
+    // A flow owned by a nested child is also released when that child is destroyed.
+    const watchFlow = (flow: any, owner?: Element) => {
+      const existing = this.childFlowSubscriptions.get(flow);
+      if (existing && !existing.closed) return;
+      const subscription = (isSignal(flow) ? flow.observable : flow).subscribe((value: any) => {
+        if (this.destroyed) return;
+        processFlowValue(value);
+      });
+      this.childFlowSubscriptions.set(flow, subscription);
+      owner?.effectSubscriptions?.push(subscription);
+    };
+
     const processChildren = (children: any[]) => {
       for (const child of children) {
         if (!child) continue;
 
         // Handle signals/observables
-        if (isSignal(child) || (child && typeof child.subscribe === 'function')) {
-
-          // Subscribe to changes
-          const subscription = (isSignal(child) ? child.observable : child).subscribe((value: any) => {
-            // Handle FlowObservable result (from loop, cond, etc.) - has 'elements' property
-            if (value && typeof value === 'object' && 'elements' in value) {
-              const elements = value.elements || [];
-              if (Array.isArray(elements)) {
-                processChildren(elements);
-              }
-            } else if (Array.isArray(value)) {
-              processChildren(value);
-            } else if (value) {
-              processChild(value);
-            }
-          });
-          // Note: We should track subscriptions for cleanup, but for now this works
+        if (isFlow(child)) {
+          watchFlow(child);
           continue;
         }
 
@@ -263,7 +293,6 @@ export class CanvasFocusContainer {
         if (!this.registeredFocusables.has(tabindex)) {
           focusManager.registerFocusable(this.containerId, child, tabindex);
           this.registeredFocusables.add(tabindex);
-          registeredCount++;
         }
       }
 
@@ -271,24 +300,8 @@ export class CanvasFocusContainer {
       if (child.props && child.props.children) {
         if (Array.isArray(child.props.children)) {
           processChildren(child.props.children);
-        } else if (isSignal(child.props.children) || (child.props.children && typeof child.props.children.subscribe === 'function')) {
-          const subscription = (isSignal(child.props.children) ? child.props.children.observable : child.props.children).subscribe((value: any) => {
-            // Handle FlowObservable result (from loop, cond, etc.) - has 'elements' property
-            if (value && typeof value === 'object' && 'elements' in value) {
-              const elements = value.elements || [];
-              if (Array.isArray(elements)) {
-                processChildren(elements);
-              }
-            } else if (Array.isArray(value)) {
-              processChildren(value);
-            } else if (value) {
-              processChild(value);
-            }
-          });
-          // Store subscription for cleanup if child has effectSubscriptions
-          if (child.effectSubscriptions) {
-            child.effectSubscriptions.push(subscription);
-          }
+        } else if (isFlow(child.props.children)) {
+          watchFlow(child.props.children, child);
         } else {
           processChild(child.props.children as any);
         }
@@ -297,29 +310,10 @@ export class CanvasFocusContainer {
 
     if (Array.isArray(element.props.children)) {
       processChildren(element.props.children);
-    } else if (element.props.children) {
-      if (isSignal(element.props.children) || (element.props.children && typeof element.props.children.subscribe === 'function')) {
-        const subscription = (isSignal(element.props.children) ? element.props.children.observable : element.props.children).subscribe((value: any) => {
-          // Handle FlowObservable result (from loop, cond, etc.) - has 'elements' property
-          if (value && typeof value === 'object' && 'elements' in value) {
-            const elements = value.elements || [];
-            if (Array.isArray(elements)) {
-              processChildren(elements);
-            }
-          } else if (Array.isArray(value)) {
-            processChildren(value);
-          } else if (value) {
-            processChild(value);
-          }
-        });
-        // Store subscription for cleanup
-        if (!element.effectSubscriptions) {
-          element.effectSubscriptions = [];
-        }
-        element.effectSubscriptions.push(subscription);
-      } else {
-        processChild(element.props.children as any);
-      }
+    } else if (isFlow(element.props.children)) {
+      watchFlow(element.props.children);
+    } else {
+      processChild(element.props.children as any);
     }
   }
 

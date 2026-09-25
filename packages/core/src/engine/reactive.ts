@@ -49,6 +49,8 @@ export interface Element<T = ComponentInstance> {
   destroy: () => void;
   allElements: Subject<void>;
   isFrozen: boolean;
+  /** Set once the element has been torn down by `destroyElement`. */
+  isDestroyed?: boolean;
 }
 
 type FlowResult = {
@@ -320,16 +322,45 @@ function handleAnimatedSignalsFreeze(element: Element, shouldPause: boolean) {
   Object.values(element.propObservables).forEach(processValue);
 }
 
+/** Releases the subscriptions and unmount callbacks owned by one element. */
+function releaseElementEffects(element: Element) {
+  const { propSubscriptions, effectSubscriptions, effectUnmounts } = element;
+  if (propSubscriptions) {
+    for (let i = 0; i < propSubscriptions.length; i++) propSubscriptions[i].unsubscribe();
+  }
+  if (effectSubscriptions) {
+    for (let i = 0; i < effectSubscriptions.length; i++) effectSubscriptions[i].unsubscribe();
+  }
+  if (effectUnmounts) {
+    for (let i = 0; i < effectUnmounts.length; i++) {
+      const fn = effectUnmounts[i];
+      if (isPromise(fn)) {
+        (fn as unknown as Promise<any>).then((retFn) => {
+          retFn?.();
+        });
+      } else {
+        fn?.();
+      }
+    }
+  }
+}
+
 export function destroyElement(element: Element | Element[]) {
   if (Array.isArray(element)) {
-    element.forEach((e) => destroyElement(e));
+    for (let i = 0; i < element.length; i++) destroyElement(element[i]);
     return;
   }
   if (!element) {
     return;
   }
-  if (element.props?.children) {
-    for (let child of element.props.children) {
+  // A flow child can be reached by several owners (the flow's own finalizer
+  // and its parent's cleanup): tearing a subtree down twice doubles the cost
+  // of replacing a scene.
+  if (element.isDestroyed) return;
+  element.isDestroyed = true;
+  const children = element.props?.children;
+  if (children) {
+    for (const child of children) {
       destroyElement(child)
     }
   }
@@ -337,24 +368,10 @@ export function destroyElement(element: Element | Element[]) {
     element.directives[name].onDestroy?.(element);
   }
   if (element.componentInstance && element.componentInstance.onDestroy) {
-    element.componentInstance.onDestroy(element.parent as any, () => {
-      element.propSubscriptions?.forEach((sub) => sub.unsubscribe());
-      element.effectSubscriptions?.forEach((sub) => sub.unsubscribe());
-      element.effectUnmounts?.forEach((fn) => {
-        if (isPromise(fn)) {
-          (fn as unknown as Promise<any>).then((retFn) => {
-            retFn?.();
-          });
-        } else {
-          fn?.();
-        }
-      });
-    });
+    element.componentInstance.onDestroy(element.parent as any, () => releaseElementEffects(element));
   } else {
     // If componentInstance is undefined or doesn't have onDestroy, still clean up subscriptions
-    element.propSubscriptions?.forEach((sub) => sub.unsubscribe());
-    element.effectSubscriptions?.forEach((sub) => sub.unsubscribe());
-    element.effectUnmounts?.forEach((fn) => fn?.());
+    releaseElementEffects(element);
   }
 }
 
@@ -389,6 +406,7 @@ export function createComponent(tag: string, props?: Props): Element {
     },
     allElements: new Subject(),
     isFrozen: false,
+    isDestroyed: false,
   };
 
   // Iterate over each property in the props object
@@ -822,7 +840,8 @@ export function createComponent(tag: string, props?: Props): Element {
         directives: {},
         destroy() { destroyElement(this) },
         allElements: new Subject(),
-        isFrozen: false
+        isFrozen: false,
+        isDestroyed: false
       });
 
       const mountFlowElement = (
@@ -992,6 +1011,13 @@ export function loop<T>(
   return defer(() => {
     let elements: Element[] = [];
     let elementMap = new Map<string | number, Element>();
+    // Reverse lookup (element -> key) so removals do not scan the whole key
+    // map. Tracked loops also keep the item and index each element was last
+    // rendered from, to skip re-rendering unchanged items.
+    type RenderedFrom = { key: string | number; item: T; index: number | string };
+    const renderedFrom = new Map<Element, RenderedFrom | string | number>();
+    // Callbacks declaring an index parameter must re-render when the index moves
+    const usesIndex = createElementFn.length >= 2;
     let isFirstSubscription = true;
     const getTrackKey = (item: T, index: number | string) =>
       options.track ? options.track(item, index) : index;
@@ -1012,19 +1038,13 @@ export function loop<T>(
         directives: {},
         destroy() { destroyElement(this) },
         allElements: new Subject(),
-        isFrozen: false
+        isFrozen: false,
+        isDestroyed: false
       };
     }
 
     const isArraySignal = (signal: any): signal is WritableArraySignal<T[]> =>
       Array.isArray(signal());
-
-    const cleanupUntrackedElement = (element: Element | null) => {
-      if (!element) return;
-      element.propSubscriptions?.forEach((sub) => sub.unsubscribe());
-      element.effectSubscriptions?.forEach((sub) => sub.unsubscribe());
-      element.effectUnmounts?.forEach((fn) => fn?.());
-    };
 
     const updateTrackedHotChildren = (targetChildren: any, sourceChildren: any) => {
       const targetList = Array.isArray(targetChildren) ? targetChildren : [targetChildren];
@@ -1055,9 +1075,9 @@ export function loop<T>(
       if (target.props.context) {
         nextProps.context = target.props.context;
       }
-      if (updatedHotChildren || (target.props.children && !source.props.children)) {
-        nextProps.children = target.props.children;
-      }
+      // The target keeps its own mounted children: the source tree was never
+      // mounted, so adopting its children would orphan the mounted ones.
+      nextProps.children = target.props.children;
 
       target.props = nextProps;
       target.propObservables = nextPropObservables;
@@ -1068,15 +1088,62 @@ export function loop<T>(
         }
       });
 
-      cleanupUntrackedElement(source);
+      // Release the whole throwaway tree (display objects, directives,
+      // nested subscriptions), not only its top-level subscriptions.
+      destroyElement(source);
+    };
+
+    const trackElement = (element: Element, key: string | number, item: T, index: number | string) => {
+      elementMap.set(key, element);
+      renderedFrom.set(element, options.track ? { key, item, index } : key);
+    };
+
+    const keyOf = (element: Element) => {
+      const entry = renderedFrom.get(element);
+      return typeof entry === "object" ? entry.key : entry;
+    };
+
+    const createItemElement = (item: T, index: number | string): Element | null => {
+      const element = ensureElement(createElementFn(item, index));
+      if (element) {
+        trackElement(element, getTrackKey(item, index), item, index);
+      }
+      return element;
+    };
+
+    /**
+     * Brings an existing tracked element up to date with `item`.
+     * `createElementFn` only runs when the item reference (or its index, for
+     * callbacks that read it) changed since the element was last rendered.
+     */
+    const updateTrackedElement = (existing: Element, key: string | number, item: T, index: number | string) => {
+      const previous = renderedFrom.get(existing) as RenderedFrom | undefined;
+      const unchanged = previous
+        && previous.item === item
+        && (!usesIndex || previous.index === index);
+
+      if (!unchanged) {
+        const nextElement = ensureElement(createElementFn(item, index));
+        if (nextElement) {
+          patchTrackedElement(existing, nextElement);
+        }
+      }
+
+      elementMap.set(key, existing);
+      if (previous) {
+        previous.key = key;
+        previous.item = item;
+        previous.index = index;
+      } else {
+        renderedFrom.set(existing, { key, item, index });
+      }
     };
 
     const removeElementFromMap = (element: Element) => {
-      for (const [key, mappedElement] of elementMap.entries()) {
-        if (mappedElement === element) {
-          elementMap.delete(key);
-          return;
-        }
+      const key = keyOf(element);
+      renderedFrom.delete(element);
+      if (key !== undefined && elementMap.get(key) === element) {
+        elementMap.delete(key);
       }
     };
 
@@ -1085,13 +1152,13 @@ export function loop<T>(
         elements.forEach(el => destroyElement(el));
         elements = [];
         elementMap.clear();
+        renderedFrom.clear();
 
         if (items) {
           items.forEach((item, index) => {
-            const element = ensureElement(createElementFn(item, index));
+            const element = createItemElement(item, index);
             if (element) {
               elements.push(element);
-              elementMap.set(index, element);
             }
           });
         }
@@ -1100,28 +1167,25 @@ export function loop<T>(
 
       const previousMap = elementMap;
       const nextElements: Element[] = [];
-      const nextMap = new Map<string | number, Element>();
       const usedElements = new Set<Element>();
+      elementMap = new Map<string | number, Element>();
 
       if (items) {
         items.forEach((item, index) => {
           const key = getTrackKey(item, index);
           const existing = previousMap.get(key);
-          const nextElement = ensureElement(createElementFn(item, index));
 
-          if (existing) {
-            if (nextElement) {
-              patchTrackedElement(existing, nextElement);
-            }
+          // A duplicated key must not mount the same element twice
+          if (existing && !usedElements.has(existing)) {
+            updateTrackedElement(existing, key, item, index);
             nextElements.push(existing);
-            nextMap.set(key, existing);
             usedElements.add(existing);
             return;
           }
 
+          const nextElement = createItemElement(item, index);
           if (nextElement) {
             nextElements.push(nextElement);
-            nextMap.set(key, nextElement);
             usedElements.add(nextElement);
           }
         });
@@ -1130,11 +1194,11 @@ export function loop<T>(
       elements.forEach((element) => {
         if (!usedElements.has(element)) {
           destroyElement(element);
+          renderedFrom.delete(element);
         }
       });
 
       elements = nextElements;
-      elementMap = nextMap;
     };
 
     return new Observable<FlowResult>(subscriber => {
@@ -1157,14 +1221,9 @@ export function loop<T>(
           if (change.type === 'init' || change.type === 'reset' || isDirectArrayChange) {
             rebuildArrayElements(itemsSubject());
           } else if (change.type === 'add' && change.index !== undefined) {
-            const newElements = change.items.map((item, i) => {
-              const index = change.index! + i;
-              const element = ensureElement(createElementFn(item as T, index));
-              if (element) {
-                elementMap.set(getTrackKey(item as T, index), element);
-              }
-              return element;
-            }).filter((el): el is Element => el !== null);
+            const newElements = change.items.map((item, i) =>
+              createItemElement(item as T, change.index! + i)
+            ).filter((el): el is Element => el !== null);
 
             elements.splice(change.index, 0, ...newElements);
           } else if (change.type === 'remove' && change.index !== undefined) {
@@ -1181,10 +1240,9 @@ export function loop<T>(
             // Check if the previous item at this index was effectively undefined or non-existent
             if (index >= elements.length || elements[index] === undefined || !elementMap.has(key)) {
               // Treat as add operation
-              const newElement = ensureElement(createElementFn(newItem as T, index));
+              const newElement = createItemElement(newItem as T, index);
               if (newElement) {
                 elements.splice(index, 0, newElement); // Insert at the correct index
-                elementMap.set(key, newElement);
                 // Adjust indices in elementMap for subsequent elements might be needed if map relied on exact indices
                 // This simple implementation assumes keys are stable or createElementFn handles context correctly
               } else {
@@ -1193,18 +1251,20 @@ export function loop<T>(
             } else {
               // Treat as a standard update operation
               const oldElement = elementMap.get(key) ?? elements[index];
-              const newElement = ensureElement(createElementFn(newItem as T, index));
-              if (options.track && oldElement && newElement) {
-                patchTrackedElement(oldElement, newElement);
+              const newElement = options.track && oldElement
+                ? null
+                : createItemElement(newItem as T, index);
+              if (options.track && oldElement) {
+                updateTrackedElement(oldElement, key, newItem as T, index);
                 elements[index] = oldElement;
-                elementMap.set(key, oldElement);
               } else if (newElement) {
                 destroyElement(oldElement)
+                removeElementFromMap(oldElement);
                 elements[index] = newElement;
-                elementMap.set(key, newElement);
               } else {
                 // Handle case where new element creation returns null
                 destroyElement(oldElement)
+                removeElementFromMap(oldElement);
                 elements.splice(index, 1);
                 elementMap.delete(key);
               }
