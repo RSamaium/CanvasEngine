@@ -6,7 +6,7 @@ import path from "path";
 import * as ts from "typescript";
 import { fileURLToPath } from 'url';
 import MagicString from "magic-string";
-import { analyzeTemplateAst } from "./src/analyze";
+import { analyzeTemplateAst, collectScriptRuntimeHelpers } from "./src/analyze";
 import { parseSfc } from "./src/sfc";
 import { scopeStyles } from "./src/style";
 import { parseTemplate } from "./src/template";
@@ -503,7 +503,11 @@ export default function canvasengine(options: CanvasEnginePluginOptions = {}) {
         .join("\n");
 
       const templateMetadata = analyzeTemplateAst(templateProgram.ast);
-      const requiredImports = templateMetadata.runtimeHelpers;
+      const scriptHelpers = collectScriptRuntimeHelpers(parsed);
+      const requiredImports = [
+        ...templateMetadata.runtimeHelpers,
+        ...scriptHelpers.filter(helper => !templateMetadata.runtimeHelpers.includes(helper)),
+      ];
 
       // Check for missing imports
       const missingImports = requiredImports.filter(
