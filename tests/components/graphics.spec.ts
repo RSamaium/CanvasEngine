@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Canvas, Circle, ComponentInstance, bootstrapCanvas, Container, Element, h, signal, Rect, mount, computed, Ellipse } from 'canvasengine';
+import { Canvas, Circle, ComponentInstance, bootstrapCanvas, Container, Element, h, signal, Rect, mount, computed, Ellipse, loop } from 'canvasengine';
 import { TestBed } from '../../packages/core/testing';
 
 const mockRect = vi.fn()
@@ -51,6 +51,68 @@ describe('Graphics', () => {
             expect(mockRect).toHaveBeenCalledTimes(2)
             // Second call should be with updated width
             expect(mockRect).toHaveBeenLastCalledWith(-0, -0, 200, 100)
+        })
+
+        it('tracks no signal when all its props are static', async () => {
+            const rect = await TestBed.createComponent(Rect, { width: 10, height: 3, color: '#fff', borderRadius: 2 })
+            const drawEffect = (rect.componentInstance as any).clearEffect
+
+            expect(drawEffect.dependencies.size).toBe(0)
+        })
+
+        it('tracks only the signals its draw function reads', async () => {
+            const color = signal('#fff')
+            const rect = await TestBed.createComponent(Rect, { width: signal(10), height: 3, color })
+            const drawEffect = (rect.componentInstance as any).clearEffect
+
+            // The width signal is handled by onUpdate, not by the draw effect
+            expect([...drawEffect.dependencies]).toEqual([color])
+        })
+
+        it('redraws when a color signal changes', async () => {
+            const color = signal('#fff')
+            await TestBed.createComponent(Rect, { width: 100, height: 100, color })
+            expect(mockRect).toHaveBeenCalledTimes(1)
+
+            color.set('#000')
+            await new Promise(resolve => setTimeout(resolve, 0))
+
+            expect(mockRect).toHaveBeenCalledTimes(2)
+        })
+
+        it('redraws when an anchor signal changes', async () => {
+            const anchor = signal([0, 0])
+            await TestBed.createComponent(Rect, { width: 100, height: 50, color: '#fff', anchor })
+
+            anchor.set([0.5, 0.5])
+            await new Promise(resolve => setTimeout(resolve, 0))
+
+            expect(mockRect).toHaveBeenLastCalledWith(-50, -25, 100, 50)
+        })
+
+        it('redraws when a tracked loop patches its static width', async () => {
+            const items = signal([{ id: 1, width: 40 }])
+            await TestBed.createComponent(Container, {}, loop(
+                items,
+                (item: any) => h(Rect, { width: item.width, height: 10, color: '#fff' }),
+                { track: (item: any) => item.id }
+            ))
+            expect(mockRect).toHaveBeenLastCalledWith(-0, -0, 40, 10)
+
+            items.set([{ id: 1, width: 80 }])
+            await new Promise(resolve => setTimeout(resolve, 0))
+
+            expect(mockRect).toHaveBeenLastCalledWith(-0, -0, 80, 10)
+        })
+
+        it('draws a percentage width once the layout computed it', async () => {
+            const rect = await TestBed.createComponent(Rect, { width: '50%', height: 10, color: '#fff' })
+            mockRect.mockClear()
+
+            ;(rect.componentInstance as any).emit('layout', { computedLayout: { width: 300, height: 10 } })
+
+            expect(mockRect).toHaveBeenCalledTimes(1)
+            expect(mockRect).toHaveBeenLastCalledWith(-0, -0, 300, 10)
         })
 
         it('should not draw when graphics is destroyed before mount completes', async () => {

@@ -1,9 +1,8 @@
-import { Effect, effect, isSignal, signal, Signal, WritableSignal } from "@signe/reactive";
+import { Effect, effect, isSignal, signal, Signal, untracked, WritableSignal } from "@signe/reactive";
 import { Assets, ObservablePoint, Graphics as PixiGraphics } from "pixi.js";
 import { createComponent, Element, registerComponent } from "../engine/reactive";
 import { ComponentInstance, DisplayObject } from "./DisplayObject";
 import { DisplayObjectProps } from "./types/DisplayObject";
-import { useProps } from "../hooks/useProps";
 import { SignalOrPrimitive } from "./types";
 import { isPercent } from "../utils/functions";
 import { setObservablePoint } from "../engine/utils";
@@ -44,6 +43,10 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
   _width: WritableSignal<number>;
   _height: WritableSignal<number>;
   #layoutBounds: { x: number; y: number; width: number; height: number } | null = null;
+  #anchor: Signal<[number, number]> | null = null;
+  #redraw: (() => void) | null = null;
+  // Size and anchor of the last drawing, to redraw only when they change
+  #drawnSize: { width: unknown; height: unknown; anchor: unknown } | null = null;
 
   isCustomAnchor = true;
   
@@ -109,22 +112,27 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
     // Store as class properties for access in other methods
     this._width = width;
     this._height = height;
+    this.#anchor = anchor;
     
     // Check if width or height are percentages to set display flex
     const isWidthPercentage = isPercent(width());
     const isHeightPercentage = isPercent(height());
     
     if (props.draw) {
-      this.clearEffect = effect(() => {
-        const w = width();
-        const h = height();
-        const a = anchor();
+      const draw = () => {
+        // Size and anchor are read untracked: `onUpdate` and layout events
+        // redraw when they change. The effect only tracks the signals the
+        // draw function reads (a color signal, for example), so a static
+        // shape subscribes to nothing. Each tracked signal costs several
+        // RxJS subscriptions, created on mount and released on destroy.
+        const [w, h, a] = untracked(() => [width(), height(), anchor()]);
         if (typeof w == 'string' || typeof h == 'string') {
           return
         }
         if (this.destroyed || !this.parent) {
           return
         }
+        this.#drawnSize = { width: w, height: h, anchor: a };
         this.clear();
         props.draw?.(this, w, h, a);
         const bounds = this.getLocalBounds();
@@ -147,7 +155,9 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
           forceLayoutUpdate.call(this.layout);
         }
         this.subjectInit.next(this)
-      });
+      };
+      this.#redraw = draw;
+      this.clearEffect = effect(draw);
     }
 
     this.on('layout', (event) => {
@@ -161,6 +171,7 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
       if (isHeightPercentage && isSignal(height) && height() !== layoutBox.height) {
         height.set(layoutBox.height);
       }
+      this.#redrawIfSizeChanged();
     });
   }
 
@@ -181,6 +192,28 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
     if (props.height !== undefined && this._height && this._height() !== props.height) {
       this._height.set(props.height);
     }
+
+    if ("width" in props || "height" in props || "anchor" in props) {
+      this.#redrawIfSizeChanged();
+    }
+  }
+
+  /** Redraws when the size or anchor differs from the last drawing. */
+  #redrawIfSizeChanged() {
+    const redraw = this.#redraw;
+    if (!redraw) return;
+    untracked(() => {
+      const drawn = this.#drawnSize;
+      if (
+        drawn &&
+        drawn.width === this._width() &&
+        drawn.height === this._height() &&
+        drawn.anchor === this.#anchor?.()
+      ) {
+        return;
+      }
+      redraw();
+    });
   }
 
   /**
@@ -217,19 +250,21 @@ const graphicsAnchor = (anchor, width, height) => {
   return { x: -ax * width, y: -ay * height };
 }
 
+/**
+ * Reads a shape prop inside a draw function: a signal is read (and tracked by
+ * the draw effect), a static value is used as is, without a signal around it.
+ */
 const propValue = (value: any) => isSignal(value) ? value() : value;
 
 export function Rect(props: RectProps) {
-  const { color, borderRadius, border } = useProps(props, {
-    borderRadius: null,
-    border: null
-  })
+  const { color, borderRadius, border } = props as any;
 
   return Graphics({
     draw: (g, width, height, anchor) => {
       const { x, y } = graphicsAnchor(anchor, width, height);
-      if (borderRadius()) {
-        g.roundRect(x, y, width, height, borderRadius());
+      const radius = propValue(borderRadius);
+      if (radius) {
+        g.roundRect(x, y, width, height, radius);
       } else {
         g.rect(x, y, width, height);
       }
@@ -244,10 +279,7 @@ export function Rect(props: RectProps) {
 }
 
 export function Circle(props: CircleProps) {  
-  const { color, border, radius } = useProps(props, {
-    border: null,
-    radius: null
-  })
+  const { color, border, radius } = props as any;
   return Graphics({
     draw: (g, width, height, anchor) => {
       const { x, y } = graphicsAnchor(anchor, width, height);
@@ -267,9 +299,7 @@ export function Circle(props: CircleProps) {
 }
 
 export function Ellipse(props: EllipseProps) {
-  const { color, border } = useProps(props, {
-    border: null
-  })
+  const { color, border } = props as any;
 
   return Graphics({
     draw: (g, width, height, anchor) => {
@@ -286,10 +316,8 @@ export function Ellipse(props: EllipseProps) {
 }
 
 export function Triangle(props: TriangleProps) {
-  const { color, border } = useProps(props, {
-    border: null,
-    color: '#000'
-  })
+  const { border } = props as any;
+  const color = "color" in props ? (props as any).color : "#000";
   return Graphics({
     draw: (g, gWidth, gHeight, anchor) => {
       const { x, y } = graphicsAnchor(anchor, gWidth, gHeight);
