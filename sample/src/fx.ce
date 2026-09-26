@@ -18,8 +18,8 @@
     <Fx name="levelUp" trigger={levelTrigger} x={335} y={315} zIndex={2} />
     <Fx name="magicBurst" trigger={magicTrigger} x={470} y={250} zIndex={2} />
     <Fx name="dashDust" trigger={dashTrigger} x={470} y={425} zIndex={2} />
-    <Fx name="campfire" x={620} y={360} loop zIndex={1} />
-    <Fx name="torchFire" x={700} y={360} loop zIndex={1} />
+    <Fx name="campfire" x={620} y={360} loop={true} zIndex={1} />
+    <Fx name="torchFire" x={700} y={360} loop={true} zIndex={1} />
     <Fx name="hitSpark" trigger={hitTrigger} x={sparkX} y={sparkY} zIndex={3} />
     <Fx preset={imageSpark} trigger={imageTrigger} x={770} y={250} zIndex={4} />
 

@@ -26,7 +26,7 @@
         shadowCaster={casterOptions}
       />
 
-      <Fx name="campfire" x={CAMPFIRE.x} y={CAMPFIRE.y} loop enabled={campfireOn} zIndex={CAMPFIRE.y} />
+      <Fx name="campfire" x={CAMPFIRE.x} y={CAMPFIRE.y} loop={true} enabled={campfireOn} zIndex={CAMPFIRE.y} />
       <Graphics x={torchX} y={torchY} zIndex={5000} draw={drawTorch} visible={torchOn} />
     </Viewport>
 

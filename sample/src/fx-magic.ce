@@ -20,11 +20,11 @@
       <Container x={cell.x} y={cell.y}>
         <Circle x={0} y={0} radius={3} color="#2b3345" />
         <Text text={cell.name} x={-56} y={46} width={112} color="#8f9bb0" size="11" />
-        <Fx name={cell.name} loop color={spellColor} zIndex={2} />
+        <Fx name={cell.name} loop={true} color={spellColor} zIndex={2} />
       </Container>
     }
 
-    <Fx name="magicTrail" x={trailX} y={trailY} loop color={spellColor} zIndex={3} />
+    <Fx name="magicTrail" x={trailX} y={trailY} loop={true} color={spellColor} zIndex={3} />
   </Container>
 </Canvas>
 
