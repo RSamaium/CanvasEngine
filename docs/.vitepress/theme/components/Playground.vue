@@ -166,6 +166,7 @@ import { javascript } from '@codemirror/lang-javascript'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { EditorState, Compartment } from '@codemirror/state'
 import pkg from "peggy"
+import { generateTemplateCode } from '../../../../packages/compiler/src/codegen'
 import { dependencyConfig, CORE_FUNCTIONS, PRIMITIVE_COMPONENTS } from './config'
 
 const { generate } = pkg
@@ -423,7 +424,9 @@ const initParser = async () => {
     // Load the grammar from the compiler package
     const response = await fetch('/grammar.pegjs')
     const grammar = await response.text()
-    parser = generate(grammar)
+    // The grammar reads the template into a tree; the code generator turns it into code
+    const templateParser = generate(grammar)
+    parser = { parse: (template: string) => generateTemplateCode(templateParser.parse(template)) }
     addLog('Parser initialized successfully', 'info')
   } catch (err: any) {
     addLog(`Failed to initialize parser: ${err.message}`, 'error')
