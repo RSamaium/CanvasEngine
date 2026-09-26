@@ -366,6 +366,14 @@ export class CanvasDOMContainer extends DisplayObject(PixiDOMContainer) {
     this.applyElementSize();
   }
 
+  /**
+   * Deferred teardown: the DOM element is not owned by the Pixi scene graph,
+   * so it would stay visible until this container is destroyed.
+   */
+  onTeardownQueued() {
+    if (this.element) this.element.style.display = "none";
+  }
+
   async onDestroy(parent: Element<any>, afterDestroy?: () => void) {
     const _afterDestroy = () => {
       if (this.canvasSizeEffect) {

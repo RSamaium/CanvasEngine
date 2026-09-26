@@ -143,6 +143,7 @@ export function DisplayObject(extendClass): any {
     #layoutRootSize: { width: Size; height: Size } | null = null;
     #layoutDependentChildren = new Set<any>();
     #layoutParentDependency: any = null;
+    #tearingDown = false;
     defaultLayoutObjectFit: ObjectFit | undefined = undefined;
 
     /**
@@ -544,6 +545,29 @@ export function DisplayObject(extendClass): any {
       this.filters = currentFilters;
     }
 
+    /** True from the start of this object's teardown. */
+    get isTearingDown() {
+      return this.#tearingDown;
+    }
+
+    /**
+     * Called by the engine when the teardown of this element starts, before
+     * its descendants are destroyed. The first object of a torn down tree
+     * leaves the stage here, once: its descendants are then removed from a
+     * detached subtree, without render group or layout work on the live
+     * scene. An object with an exit hook (`onBeforeDestroy`) stays on stage
+     * until the hook resolves.
+     */
+    beginTeardown() {
+      if (this.#tearingDown) return;
+      this.#tearingDown = true;
+      if (this.onBeforeDestroy) return;
+      const pixiParent = this.parent as any;
+      if (!pixiParent || pixiParent.isTearingDown) return;
+      pixiParent.removeChild(this);
+      this.#syncLayoutParentDependency(null);
+    }
+
     async onDestroy(parent: Element, afterDestroy?: () => void) {
       // Remove all registered event listeners
       for (const [eventName, eventHandler] of this.#registeredEvents) {
@@ -556,11 +580,16 @@ export function DisplayObject(extendClass): any {
         await this.onBeforeDestroy();
       }
       if (afterDestroy) afterDestroy();
-      const pixiParent = this.parent;
+      const pixiParent = this.parent as any;
       if (pixiParent && typeof pixiParent.removeChild === "function") {
         pixiParent.removeChild(this);
       }
-      this.#syncLayoutParentDependency(null);
+      if (pixiParent?.isTearingDown) {
+        // The parent is destroyed too: no need to update its layout role
+        this.#layoutParentDependency = null;
+      } else {
+        this.#syncLayoutParentDependency(null);
+      }
       super.destroy();
     }
 

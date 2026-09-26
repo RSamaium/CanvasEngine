@@ -166,6 +166,60 @@ Use the `viewportCull` directive to hide off-screen elements:
 </Viewport>
 ```
 
+### 7. Tracked Lists: Keep Unchanged Items
+
+With `track`, an item keeps its element across updates. The element is only
+re-rendered when the item is a new object (or when its index changes and the
+callback reads the index). Re-emitting a list where most items are the same
+objects is cheap:
+
+```javascript
+// Only the new projectile is rendered, the others are kept as they are
+projectiles.set([...projectiles(), newProjectile]);
+
+// To update one item, give it a new object
+projectiles.set(projectiles().map((p) => (p.id === id ? { ...p, x } : p)));
+```
+
+Mutating an item in place and re-emitting the list does not re-render it.
+
+### 8. Replacing Whole Scenes
+
+When an `@if` switches off (a map transfer, a menu closing), the whole tree
+under it is destroyed. The engine:
+
+- takes the tree off stage once, then destroys the descendants off stage;
+- stops updates to the tree first: a signal written during the teardown (an
+  unmount hook resetting game state, for example) does not update or re-render
+  elements that are going away;
+- keeps an element with an `onBeforeDestroy` exit hook on stage, with its
+  reactive props, until the hook resolves.
+
+For large scenes, the teardown can still take tens of milliseconds in one
+frame. Deferred teardown spreads it over several frames:
+
+```ts
+bootstrapCanvas(document.getElementById("root"), App, {
+  teardown: { deferred: true, budgetMs: 4 },
+});
+
+// or at any time
+import { configureTeardown } from 'canvasengine';
+configureTeardown({ deferred: true, budgetMs: 4 });
+```
+
+In deferred mode, removing a tree synchronously takes it off stage, stops its
+updates and directives (keyboard, gamepad and joystick controls, timers,
+sounds) and hides its DOM elements. The rest (components, subscriptions,
+display objects) is destroyed in chunks of at most `budgetMs` per idle period.
+Unmount callbacks and `onDestroy` hooks therefore run a few frames later.
+`flushTeardown()` destroys everything still pending synchronously, and
+`pendingTeardownCount()` returns how many elements are waiting.
+
+Measured on a scene of 1000 characters (body, name, HP bar) with
+`pnpm bench:teardown`: replacing the scene blocks the main thread ~40 ms
+synchronously, ~3.5 ms in deferred mode.
+
 ## Complete Optimized Example
 
 ```html
@@ -260,6 +314,8 @@ Use the `viewportCull` directive to hide off-screen elements:
 - [ ] Add frame throttling for non-critical updates
 - [ ] Implement LOD for very large element counts
 - [ ] Enable viewport culling for scrollable worlds
+- [ ] Keep unchanged items as the same objects in tracked lists
+- [ ] Enable deferred teardown when whole scenes are replaced
 - [ ] Profile with browser DevTools to identify bottlenecks
 
 ## Benchmark

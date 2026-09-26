@@ -273,6 +273,10 @@ export function waitForDependencies(deps: any[]): Promise<void> {
 export function isElementFrozen(element: Element): boolean {
   if (!element) return false;
 
+  // An element being torn down no longer takes updates: signals written
+  // during the teardown must not reach a subtree that is going away.
+  if (isUpdateSuspended(element)) return true;
+
   // Check if this element itself is frozen
   const freezeProp = element.propObservables?.freeze ?? element.props?.freeze;
 
@@ -322,18 +326,101 @@ function handleAnimatedSignalsFreeze(element: Element, shouldPause: boolean) {
   Object.values(element.propObservables).forEach(processValue);
 }
 
-/** Releases the subscriptions and unmount callbacks owned by one element. */
-function releaseElementEffects(element: Element) {
-  const { propSubscriptions, effectSubscriptions, effectUnmounts } = element;
-  if (propSubscriptions) {
+// ---------------------------------------------------------------------------
+// Teardown
+//
+// Destroying a tree runs in two passes:
+//
+// 1. Suspend (top-down): every element of the tree is marked destroyed, stops
+//    taking updates and releases its subscriptions. The root display object
+//    leaves the stage once, so descendants are removed from a detached
+//    subtree (no render group or layout work on the live scene). Releasing
+//    flow subscriptions tears the `loop` / `cond` children down.
+// 2. Hooks (bottom-up): directives and components run their `onDestroy`,
+//    then the unmount callbacks (`mount()` cleanups) run. Signals they write
+//    can no longer reach the suspended tree.
+//
+// An element with an exit hook (`onBeforeDestroy`) stays on stage and keeps
+// its subscriptions until its hook resolves, so exit animations still play.
+//
+// With `configureTeardown({ deferred: true })`, the tree leaves the stage
+// synchronously, its directives (inputs, timers, sounds) stop and its DOM
+// elements are hidden; the rest is destroyed element by element in
+// time-budgeted chunks.
+// ---------------------------------------------------------------------------
+
+export interface TeardownOptions {
+  /** Destroy removed trees over several frames instead of in one task. */
+  deferred: boolean;
+  /** Maximum time spent destroying elements per chunk, in milliseconds. */
+  budgetMs: number;
+}
+
+const teardownOptions: TeardownOptions = {
+  deferred: false,
+  budgetMs: 4,
+};
+
+/**
+ * Configures how removed element trees are destroyed.
+ *
+ * @param options - `deferred` spreads the destruction over several frames
+ * (the tree still leaves the stage immediately), `budgetMs` bounds the time
+ * spent per chunk.
+ * @example
+ * ```ts
+ * // Replacing a whole scene never blocks a frame for more than ~4 ms
+ * configureTeardown({ deferred: true, budgetMs: 4 })
+ * ```
+ */
+export function configureTeardown(options: Partial<TeardownOptions>) {
+  Object.assign(teardownOptions, options);
+  if (!teardownOptions.deferred) {
+    flushTeardown();
+  }
+}
+
+const hasExitHook = (element: Element) =>
+  Boolean((element.componentInstance as any)?.onBeforeDestroy);
+
+/** The element is being destroyed and its updates are dropped. */
+function isUpdateSuspended(element: Element) {
+  return element.isDestroyed === true && !hasExitHook(element);
+}
+
+/** The element or one of its ancestors is being destroyed. */
+function isTearingDown(element: Element | null) {
+  for (let current = element; current; current = current.parent) {
+    if (isUpdateSuspended(current)) return true;
+  }
+  return false;
+}
+
+/** Releases the prop and effect subscriptions owned by one element. */
+function releaseElementSubscriptions(element: Element) {
+  const { propSubscriptions, effectSubscriptions } = element;
+  if (propSubscriptions?.length) {
     for (let i = 0; i < propSubscriptions.length; i++) propSubscriptions[i].unsubscribe();
+    propSubscriptions.length = 0;
   }
-  if (effectSubscriptions) {
+  if (effectSubscriptions?.length) {
     for (let i = 0; i < effectSubscriptions.length; i++) effectSubscriptions[i].unsubscribe();
+    effectSubscriptions.length = 0;
   }
-  if (effectUnmounts) {
-    for (let i = 0; i < effectUnmounts.length; i++) {
-      const fn = effectUnmounts[i];
+}
+
+/** Releases what is left once the component's own destroy logic ran. */
+function releaseElementEffects(element: Element) {
+  // Already released while suspending, unless the element ran an exit hook
+  if (element.propSubscriptions?.length || element.effectSubscriptions?.length) {
+    releaseElementSubscriptions(element);
+  }
+  const { effectUnmounts } = element;
+  if (effectUnmounts?.length) {
+    const unmounts = effectUnmounts.slice();
+    effectUnmounts.length = 0;
+    for (let i = 0; i < unmounts.length; i++) {
+      const fn = unmounts[i];
       if (isPromise(fn)) {
         (fn as unknown as Promise<any>).then((retFn) => {
           retFn?.();
@@ -342,6 +429,233 @@ function releaseElementEffects(element: Element) {
         fn?.();
       }
     }
+  }
+}
+
+function forEachChildElement(children: any, fn: (child: Element) => void) {
+  if (!children) return;
+  for (const child of children) {
+    if (Array.isArray(child)) {
+      forEachChildElement(child, fn);
+    } else if (isElement(child)) {
+      fn(child);
+    }
+  }
+}
+
+/**
+ * First pass on one element: mark it destroyed, take it off stage when its
+ * parent stays, and release its subscriptions (unless it runs an exit hook).
+ */
+function suspendElement(element: Element) {
+  element.isDestroyed = true;
+  const instance = element.componentInstance as any;
+  if (instance) {
+    if (instance.beginTeardown) instance.beginTeardown();
+    // Exit hook: subscriptions are released once the hook resolved
+    if (instance.onBeforeDestroy) return;
+  }
+  releaseElementSubscriptions(element);
+}
+
+/** Second pass on one element: directives, then the component's `onDestroy`. */
+function runDestroyHooks(element: Element) {
+  for (let name in element.directives) {
+    element.directives[name].onDestroy?.(element);
+  }
+  if (element.componentInstance && element.componentInstance.onDestroy) {
+    element.componentInstance.onDestroy(element.parent as any, () => releaseElementEffects(element));
+  } else {
+    // If componentInstance is undefined or doesn't have onDestroy, still clean up subscriptions
+    releaseElementEffects(element);
+  }
+}
+
+// Pre-order list of the trees being destroyed, reused across teardowns. A
+// teardown can start another one (releasing a flow destroys its children):
+// each works on the slice above the length it started at.
+const suspendedStack: Element[] = [];
+
+/** Pushes `element` and its static descendants in pre-order, suspending each. */
+function suspendTree(element: Element) {
+  suspendElement(element);
+  suspendedStack.push(element);
+  const children = element.props?.children;
+  if (!children) return;
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    if (Array.isArray(child)) {
+      forEachChildElement(child, (nested) => {
+        if (!nested.isDestroyed) suspendTree(nested);
+      });
+    } else if (isElement(child) && !child.isDestroyed) {
+      suspendTree(child);
+    }
+  }
+}
+
+/** Destroys a whole tree now. */
+function teardownTree(root: Element) {
+  const children = root.props?.children;
+  if (!children || children.length === 0) {
+    // Leaf: most elements destroyed one by one (loop items, patched trees)
+    suspendElement(root);
+    runDestroyHooks(root);
+    return;
+  }
+  // Suspended top-down, then destroyed in reverse order so children always
+  // run their hooks before their parent.
+  const base = suspendedStack.length;
+  suspendTree(root);
+  try {
+    for (let i = suspendedStack.length - 1; i >= base; i--) {
+      runDestroyHooks(suspendedStack[i]);
+    }
+  } finally {
+    suspendedStack.length = base;
+  }
+}
+
+/**
+ * Destroys a tree that was never mounted, such as the throwaway tree built to
+ * patch a tracked loop item: nothing of it is on stage, subscribed to a flow
+ * or mounted, so it needs neither the two passes nor deferral.
+ */
+function disposeUnmountedTree(element: Element) {
+  if (element.isDestroyed) return;
+  element.isDestroyed = true;
+  forEachChildElement(element.props?.children, disposeUnmountedTree);
+  runDestroyHooks(element);
+}
+
+// Deferred teardown runs the same two passes as a sync teardown, in chunks:
+// every queued element is suspended first (subscriptions released, children
+// queued), then hooks run in reverse order of suspension, children before
+// their parent. Signals written by hooks never reach a suspended tree, and a
+// parent display object is never destroyed with its children still attached.
+const pendingSuspend: Element[] = [];
+const pendingHooks: Element[] = [];
+let deferredChunkScheduled = false;
+let processingDeferredQueue = false;
+
+/** Visits the mounted tree (static and flow children) below `element`. */
+function forEachMountedDescendant(element: Element, fn: (element: Element) => void) {
+  const groups = (element as any).__childGroups as Array<{ mounted: Map<any, Element> }> | undefined;
+  const visit = (child: Element) => {
+    fn(child);
+    forEachMountedDescendant(child, fn);
+  };
+  if (groups) {
+    for (const group of groups) {
+      for (const mounted of group.mounted.values()) {
+        if (isElement(mounted) && !mounted.isDestroyed) visit(mounted);
+      }
+    }
+  } else {
+    forEachChildElement(element.props?.children, (child) => {
+      if (!child.isDestroyed) visit(child);
+    });
+  }
+}
+
+/**
+ * Deferred mode: what must not outlive the removal of a tree by even a
+ * frame is stopped now. Directives are destroyed (keyboard / gamepad inputs,
+ * timers, sounds) and components hide what the stage does not own (DOM).
+ */
+function quiesceTree(root: Element) {
+  const quiesce = (element: Element) => {
+    const directives = element.directives;
+    for (let name in directives) {
+      directives[name].onDestroy?.(element);
+    }
+    element.directives = {};
+    (element.componentInstance as any)?.onTeardownQueued?.();
+  };
+  quiesce(root);
+  forEachMountedDescendant(root, quiesce);
+}
+
+const now = () =>
+  typeof performance !== "undefined" ? performance.now() : Date.now();
+
+/** Runs the next deferred teardown step: a suspension first, else a hook. */
+function runNextTeardownTask() {
+  const element = pendingSuspend.pop();
+  if (!element) {
+    runDestroyHooks(pendingHooks.pop()!);
+    return;
+  }
+  // Releasing its flows queues their children through destroyElement
+  suspendElement(element);
+  pendingHooks.push(element);
+  forEachChildElement(element.props?.children, (child) => {
+    if (!child.isDestroyed) queueTeardown(child);
+  });
+}
+
+function queueTeardown(element: Element) {
+  // Leave the stage and stop updates now; destroy later
+  element.isDestroyed = true;
+  (element.componentInstance as any)?.beginTeardown?.();
+  // Elements queued while the queue is processed belong to a tree that
+  // was already quiesced
+  if (!processingDeferredQueue) quiesceTree(element);
+  pendingSuspend.push(element);
+  scheduleTeardownChunk();
+}
+
+function runTeardownChunk(deadline?: { timeRemaining(): number }) {
+  deferredChunkScheduled = false;
+  const budget = deadline
+    ? Math.min(teardownOptions.budgetMs, Math.max(1, deadline.timeRemaining()))
+    : teardownOptions.budgetMs;
+  const start = now();
+  processingDeferredQueue = true;
+  try {
+    // At least one task per chunk, so a tiny budget still makes progress
+    do {
+      if (!pendingTeardownCount()) break;
+      runNextTeardownTask();
+    } while (now() - start < budget);
+  } finally {
+    processingDeferredQueue = false;
+  }
+  if (pendingTeardownCount()) {
+    scheduleTeardownChunk();
+  }
+}
+
+function scheduleTeardownChunk() {
+  if (deferredChunkScheduled) return;
+  deferredChunkScheduled = true;
+  const requestIdle = (globalThis as any).requestIdleCallback;
+  if (typeof requestIdle === "function") {
+    // Idle time after a frame; the timeout guarantees progress in busy scenes
+    requestIdle(runTeardownChunk, { timeout: 50 });
+  } else {
+    setTimeout(runTeardownChunk, 0);
+  }
+}
+
+/** Number of elements waiting to be destroyed in deferred mode. */
+export function pendingTeardownCount(): number {
+  return pendingSuspend.length + pendingHooks.length;
+}
+
+/**
+ * Destroys every element still waiting in the deferred queue, synchronously.
+ * Call it before tearing the application down, or in tests.
+ */
+export function flushTeardown() {
+  const wasProcessing = processingDeferredQueue;
+  processingDeferredQueue = true;
+  try {
+    while (pendingTeardownCount()) {
+      runNextTeardownTask();
+    }
+  } finally {
+    processingDeferredQueue = wasProcessing;
   }
 }
 
@@ -357,22 +671,11 @@ export function destroyElement(element: Element | Element[]) {
   // and its parent's cleanup): tearing a subtree down twice doubles the cost
   // of replacing a scene.
   if (element.isDestroyed) return;
-  element.isDestroyed = true;
-  const children = element.props?.children;
-  if (children) {
-    for (const child of children) {
-      destroyElement(child)
-    }
+  if (teardownOptions.deferred) {
+    queueTeardown(element);
+    return;
   }
-  for (let name in element.directives) {
-    element.directives[name].onDestroy?.(element);
-  }
-  if (element.componentInstance && element.componentInstance.onDestroy) {
-    element.componentInstance.onDestroy(element.parent as any, () => releaseElementEffects(element));
-  } else {
-    // If componentInstance is undefined or doesn't have onDestroy, still clean up subscriptions
-    releaseElementEffects(element);
-  }
+  teardownTree(element);
 }
 
 /**
@@ -441,6 +744,8 @@ export function createComponent(tag: string, props?: Props): Element {
 
             element.propSubscriptions.push(
               _value.observable.subscribe((freezeValue) => {
+                // Being destroyed: the element stays frozen
+                if (isUpdateSuspended(element)) return;
                 const wasFrozen = element.isFrozen;
                 element.isFrozen = freezeValue === true;
 
@@ -920,6 +1225,8 @@ export function createComponent(tag: string, props?: Props): Element {
       // Subscribe to the observable and handle the emitted values
       const subscription = child.subscribe(
         (value: any) => {
+          // A subtree being torn down does not mount new children
+          if (isTearingDown(parent)) return;
           // Handle different types of observable emissions
           if (value && typeof value === 'object' && 'elements' in value) {
             // Handle FlowObservable result (from loop, cond, etc.)
@@ -1090,7 +1397,7 @@ export function loop<T>(
 
       // Release the whole throwaway tree (display objects, directives,
       // nested subscriptions), not only its top-level subscriptions.
-      destroyElement(source);
+      disposeUnmountedTree(source);
     };
 
     const trackElement = (element: Element, key: string | number, item: T, index: number | string) => {

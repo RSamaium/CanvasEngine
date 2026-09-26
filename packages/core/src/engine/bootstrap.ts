@@ -2,7 +2,7 @@ import { Application, ApplicationOptions } from "pixi.js";
 import { Observable, Subscription } from "rxjs";
 import { ComponentFunction, h } from "./signal";
 import { useProps } from '../hooks/useProps';
-import { registerAllComponents, registerComponent } from './reactive';
+import { configureTeardown, registerAllComponents, registerComponent, type TeardownOptions } from './reactive';
 
 // Import all components to ensure they are registered
 // This is done here (not in reactive.ts) to avoid circular dependencies
@@ -25,6 +25,8 @@ import '../components/ParticleEmitter';
  * 
  * @property components - Optional mapping of component names to their classes (can include mocks for testing)
  * @property autoRegister - If true (default), registers all default components before applying custom components. If false, only registers the specified components.
+ * @property teardown - How removed element trees are destroyed, see `configureTeardown`.
+ * `{ deferred: true }` spreads the destruction of a replaced scene over several frames.
  */
 export interface BootstrapOptions extends ApplicationOptions {
   components?: {
@@ -32,6 +34,7 @@ export interface BootstrapOptions extends ApplicationOptions {
   };
   autoRegister?: boolean; // true by default if components is not provided
   enableLayout?: boolean; // true by default
+  teardown?: Partial<TeardownOptions>;
 }
 
 type BootstrapResult = {
@@ -70,7 +73,10 @@ type BootstrapResult = {
  */
 export const bootstrapCanvas = async (rootElement: HTMLElement | null, canvas: ComponentFunction<any>, options?: BootstrapOptions): Promise<BootstrapResult> => {
   // Extract component registration options
-  const { components, autoRegister, enableLayout, ...appOptions } = options ?? {};
+  const { components, autoRegister, enableLayout, teardown, ...appOptions } = options ?? {};
+  if (teardown) {
+    configureTeardown(teardown);
+  }
   const layoutOptions = (appOptions as ApplicationOptions & {
     layout?: { throttle?: number };
   }).layout;
