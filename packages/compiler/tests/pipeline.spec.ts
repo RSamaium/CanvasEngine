@@ -5,6 +5,10 @@ import canvasengine from "../index";
 import { analyzeTemplateExpression } from "../src/analyze";
 import { parseSfc } from "../src/sfc";
 import { scopeStyles } from "../src/style";
+import { parseTemplate } from "../src/template";
+import pkg from "peggy";
+
+const templateParser = pkg.generate(fs.readFileSync("packages/compiler/grammar2.pegjs", "utf8"));
 
 describe("compiler pipeline", () => {
   test("splits template, script and scoped style blocks with source spans", () => {
@@ -72,6 +76,41 @@ const label = "it's"
 
     expect(() => parseSfc(source, "/app/broken.ce")).toThrowError(
       /\[CE_SFC_UNCLOSED_BLOCK\].*<script>.*closing <\/script>/s,
+    );
+  });
+
+  test("reads the template into a tree before generating its code", () => {
+    const program = parseTemplate(
+      `<Container x={offset}>\n  <Text>Hi {name}</Text>\n  @if (show) { <Sprite /> }\n</Container>`,
+      templateParser,
+    );
+    const [container] = program.template.children as any[];
+
+    expect(container).toMatchObject({
+      type: "Element",
+      form: "content",
+      tag: "Container",
+      dom: false,
+      attributes: [{ type: "DynamicAttribute", name: "x", value: { type: "Expression", code: "offset" } }],
+    });
+    expect(container.location.start).toMatchObject({ line: 1, column: 1 });
+    expect(container.children.map((child: any) => child.type)).toEqual(["Element", "If"]);
+    expect(container.children[0].text.parts).toMatchObject([
+      { type: "TextPart", value: "Hi " },
+      { type: "Interpolation", value: { type: "Expression", code: "name" } },
+    ]);
+    expect(container.children[1]).toMatchObject({ type: "If", condition: "show", else: null });
+    expect(program.expression).toBe(
+      "h(Container, { x: offset }, [h(Text, null, 'Hi ' + name), cond(show, () => h(Sprite))])"
+    );
+  });
+
+  test("reports template syntax errors before invalid attribute expressions", () => {
+    expect(() => parseTemplate(`<A x={a b}></B>`, templateParser)).toThrow(
+      expect.objectContaining({ code: "CE_TEMPLATE_MISMATCHED_TAG" }),
+    );
+    expect(() => parseTemplate(`<A x={a b}></A>`, templateParser)).toThrow(
+      expect.objectContaining({ code: "CE_TEMPLATE_INVALID_EXPRESSION" }),
     );
   });
 

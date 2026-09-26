@@ -1,18 +1,29 @@
 import { parse } from "acorn";
 import { expressionHasCall } from "./analyze";
-import type { SourcePosition, TemplateProgram } from "./types";
+import { generateTemplateCode } from "./codegen";
+import type { SourcePosition, TemplateProgram, TemplateRoot } from "./types";
 
+/**
+ * Compiles a template in two passes: the grammar reads it into a tree, then
+ * the code generator turns the tree into a JavaScript expression.
+ *
+ * @param source - Template part of a `.ce` file.
+ * @param parser - Parser generated from `grammar2.pegjs`.
+ * @returns The template tree, the generated expression and its ESTree AST.
+ */
 export function parseTemplate(source: string, parser: any): TemplateProgram {
-  const expression = parser.parse(source, {
+  const template: TemplateRoot = parser.parse(source);
+  const expression = generateTemplateCode(template, {
     validateExpression(value: string) {
       parseExpression(value);
     },
     hasFunctionCall: expressionHasCall,
-  });
+  }) as string;
 
   return {
     type: "TemplateProgram",
     source,
+    template,
     expression,
     ast: parseExpression(expression),
     span: {

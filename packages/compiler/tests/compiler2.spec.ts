@@ -1,13 +1,16 @@
 import pkg from "peggy";
 import fs from "fs";
 import { beforeAll, describe, test, expect } from "vitest";
+import { generateTemplateCode } from "../src/codegen";
 
 const { generate } = pkg;
-let parser: any;
+// Reads a template with the grammar, then generates its code
+let parser: { parse(template: string): string | null };
 
 beforeAll(() => {
   const grammar = fs.readFileSync("packages/compiler/grammar2.pegjs", "utf8");
-  parser = generate(grammar);
+  const templateParser = generate(grammar);
+  parser = { parse: template => generateTemplateCode(templateParser.parse(template)) };
 });
 
 // Helper functions to test scoping logic directly
