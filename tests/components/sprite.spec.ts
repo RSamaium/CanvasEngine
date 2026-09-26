@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { Sprite, signal, Canvas, mount } from 'canvasengine'
-import { Texture } from 'pixi.js'
+import { Assets, Texture } from 'pixi.js'
 import { TestBed } from '../../packages/core/testing'
 import { CanvasSprite } from '../../packages/core/src/components/Sprite'
 import { GlobalAssetLoader } from '../../packages/core/src/utils/GlobalAssetLoader'
@@ -302,6 +302,85 @@ describe('Sprite Component', () => {
             const canvasParent = spriteElement.parent
             const globalLoader = canvasParent?.props?.context?.globalLoader
             expect(globalLoader).toBeDefined()
+        })
+    })
+
+    describe('Destruction during async initialization', () => {
+        function createSheetSprite() {
+            const pending: { resolve: (texture: Texture) => void; progress: (value: number) => void }[] = []
+            vi.spyOn(Assets, 'load').mockImplementation(((_url: string, onProgress?: (value: number) => void) =>
+                new Promise<Texture>(resolve => {
+                    pending.push({ resolve, progress: value => onProgress?.(value) })
+                })) as any)
+
+            const sprite = new CanvasSprite()
+            const globalLoader = new GlobalAssetLoader()
+            const params = {
+                props: {
+                    context: { tick: signal(0), app: () => null, globalLoader },
+                    sheet: {
+                        playing: 'stand',
+                        definition: {
+                            image: 'hero.png',
+                            framesWidth: 4,
+                            framesHeight: 1,
+                            textures: {
+                                stand: { animations: [[{ time: 0, frameX: 0, frameY: 0 }]] },
+                                walk: { animations: [[{ time: 0, frameX: 1, frameY: 0, scale: [1, 1] }]] },
+                            },
+                        },
+                    },
+                },
+                propObservables: {},
+            }
+            const flushLoads = async () => {
+                const texture = new Texture({ frame: undefined })
+                Object.defineProperty(texture, 'width', { value: 256 })
+                Object.defineProperty(texture, 'height', { value: 64 })
+                // Resolve every load, including the ones started by a resumed init
+                for (let i = 0; i < 10 && pending.length; i++) {
+                    for (const load of pending.splice(0)) {
+                        load.progress(0.5)
+                        load.progress(1)
+                        load.resolve(texture)
+                    }
+                    await new Promise(resolve => setTimeout(resolve))
+                }
+            }
+
+            return { sprite, params, flushLoads }
+        }
+
+        test('does not resume initialization after being destroyed', async () => {
+            const { sprite, params, flushLoads } = createSheetSprite()
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+            const playSpy = vi.spyOn(sprite, 'play')
+
+            const mounting = sprite.onMount(params as any)
+            await sprite.onDestroy(null as any, () => {})
+            await flushLoads()
+            await expect(mounting).resolves.toBeUndefined()
+
+            expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('not found in tracker'))
+            expect(playSpy).not.toHaveBeenCalled()
+            expect(sprite.has('stand')).toBe(false)
+
+            warn.mockRestore()
+            vi.restoreAllMocks()
+        })
+
+        test('ignores play() on a destroyed sprite', async () => {
+            const { sprite, params, flushLoads } = createSheetSprite()
+
+            const mounting = sprite.onMount(params as any)
+            await flushLoads()
+            await mounting
+            expect(sprite.has('stand')).toBe(true)
+
+            await sprite.onDestroy(null as any, () => {})
+            expect(() => sprite.play('walk')).not.toThrow()
+
+            vi.restoreAllMocks()
         })
     })
 }) 
