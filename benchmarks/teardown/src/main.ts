@@ -8,6 +8,8 @@ const mode = params.get("mode") ?? "sync";
 const cycles = Number(params.get("cycles") ?? 12);
 const warmupCycles = Number(params.get("warmupCycles") ?? 2);
 const budgetMs = Number(params.get("budgetMs") ?? 4);
+// Which phase the runner's CPU profiler records: "teardown" or "mount"
+const profilePhase = params.get("profilePhase") ?? "teardown";
 
 type LongFrame = { startTime: number; duration: number; blockingDuration?: number };
 
@@ -69,16 +71,19 @@ async function run() {
 
   for (let cycle = 0; cycle < cycles + warmupCycles; cycle++) {
     resetState();
+    const profilingMount = cycle >= warmupCycles && profilePhase === "mount" && window.__teardownProfiler;
+    if (profilingMount) await window.__teardownProfiler!("start");
     const mountStart = performance.now();
     showScene.set(true);
     // Mounting continues in microtasks: a message event runs once they are done
     await afterMicrotasks();
     const mountMs = performance.now() - mountStart;
+    if (profilingMount) await window.__teardownProfiler!("stop");
     for (let frame = 0; frame < 10; frame++) await nextFrame();
 
     await nextFrame();
     idleChunks.length = 0;
-    const profiling = cycle >= warmupCycles && window.__teardownProfiler;
+    const profiling = cycle >= warmupCycles && profilePhase === "teardown" && window.__teardownProfiler;
     if (profiling) await window.__teardownProfiler!("start");
     const start = performance.now();
     showScene.set(false);
@@ -126,7 +131,7 @@ declare global {
   interface Window {
     __TEARDOWN_RESULT__?: unknown;
     __TEARDOWN_ERROR__?: string;
-    /** Set by the runner when profiling: CPU profile of each teardown only. */
+    /** Set by the runner when profiling: CPU profile of each mount or teardown only. */
     __teardownProfiler?: (action: "start" | "stop") => Promise<void>;
   }
 }

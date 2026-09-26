@@ -32,6 +32,8 @@ const layouts = (process.env.BENCH_TEARDOWN_LAYOUTS ?? "absolute,flex").split(",
 const reset = process.env.BENCH_TEARDOWN_RESET === "1";
 const withCpuProfile = process.env.BENCH_TEARDOWN_CPU === "1";
 const cpuCount = Number(process.env.BENCH_TEARDOWN_CPU_COUNT ?? Math.max(...counts));
+// "teardown" (default) or "mount": the phase recorded by the CPU profiler
+const cpuPhase = process.env.BENCH_TEARDOWN_CPU_PHASE === "mount" ? "mount" : "teardown";
 
 type Sample = {
   mountMs: number;
@@ -108,7 +110,9 @@ async function profileVariant(browser: Browser, variant: Variant, outputDir: str
     }
   });
 
-  await page.goto(variantUrl(variant, cpuCount), { waitUntil: "load" });
+  const url = new URL(variantUrl(variant, cpuCount));
+  url.searchParams.set("profilePhase", cpuPhase);
+  await page.goto(url.toString(), { waitUntil: "load" });
   await page.waitForFunction(() => window.__TEARDOWN_RESULT__ || window.__TEARDOWN_ERROR__, null, { timeout: 180000 });
   const error = await page.evaluate(() => window.__TEARDOWN_ERROR__);
   if (error) throw new Error(`${variant.name}: ${error}`);
@@ -202,7 +206,7 @@ try {
     for (const variant of variants) {
       const { summary, file } = await profileVariant(browser, variant, outputDir);
       profiles[variant.name] = { ...summary, cpuProfilePath: file };
-      console.log(`\nCPU profile, ${variant.name}, ${cpuCount} items (teardowns only, ${summary.totalMs} ms profiled)`);
+      console.log(`\nCPU profile, ${variant.name}, ${cpuCount} items (${cpuPhase} only, ${summary.totalMs} ms profiled)`);
       printCpuSummary(summary);
       console.log(`  profile: ${file}`);
     }
