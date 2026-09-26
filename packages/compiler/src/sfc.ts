@@ -83,6 +83,8 @@ function findClosingTag(source: string, type: "script" | "style", from: number):
   let escaped = false;
   let lineComment = false;
   let blockComment = false;
+  // Last significant token, used to tell a regex literal from a division.
+  let previousToken: string | null = null;
 
   for (let index = from; index < source.length; index++) {
     const char = source[index];
@@ -117,8 +119,22 @@ function findClosingTag(source: string, type: "script" | "style", from: number):
     } else if (type === "script" && char === "/" && next === "/") {
       lineComment = true;
       index++;
+    } else if (type === "script" && char === "/" && regexAllowed(previousToken)) {
+      const regexEnd = skipRegexLiteral(source, index);
+      if (regexEnd < 0) {
+        previousToken = "/";
+      } else {
+        index = regexEnd;
+        previousToken = "regex";
+      }
+      continue;
     } else if (char === "'" || char === '"' || char === "`") {
       quote = char;
+      previousToken = "string";
+    } else if (/[\w$]/.test(char)) {
+      previousToken = /[\w$]/.test(source[index - 1]) ? previousToken + char : char;
+    } else if (!/\s/.test(char)) {
+      previousToken = char;
     }
   }
 
@@ -149,4 +165,41 @@ function positionAt(source: string, offset: number): SourcePosition {
     line: lines.length,
     column: lines[lines.length - 1].length + 1,
   };
+}
+
+const REGEX_PREFIX_KEYWORDS = new Set([
+  "return", "typeof", "instanceof", "in", "of", "new", "delete", "void",
+  "throw", "case", "do", "else", "yield", "await",
+]);
+
+/**
+ * Tells whether a `/` following `previousToken` starts a regex literal
+ * rather than a division.
+ */
+function regexAllowed(previousToken: string | null): boolean {
+  if (previousToken === null) return true;
+  if (/^[\w$]+$/.test(previousToken)) return REGEX_PREFIX_KEYWORDS.has(previousToken);
+  return previousToken !== ")" && previousToken !== "]";
+}
+
+/**
+ * Returns the index of the closing `/` of the regex literal starting at
+ * `start`, or -1 if the line ends before the literal is closed.
+ */
+function skipRegexLiteral(source: string, start: number): number {
+  let inClass = false;
+  for (let index = start + 1; index < source.length; index++) {
+    const char = source[index];
+    if (char === "\n" || char === "\r") return -1;
+    if (char === "\\") {
+      index++;
+    } else if (char === "[") {
+      inClass = true;
+    } else if (char === "]") {
+      inClass = false;
+    } else if (char === "/" && !inClass) {
+      return index;
+    }
+  }
+  return -1;
 }
