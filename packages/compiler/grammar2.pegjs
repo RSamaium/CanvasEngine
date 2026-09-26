@@ -299,6 +299,16 @@
       .replace(/\t/g, '\\t')}'`;
   }
 
+  // Escapes raw text embedded in a generated template literal, so backticks
+  // and interpolation markers in the source stay literal. (\x7B is an opening
+  // brace, spelled out because Peggy balances braces in code blocks.)
+  function escapeTemplateLiteral(value) {
+    return value
+      .replace(/\\/g, '\\\\')
+      .replace(/`/g, '\\`')
+      .replace(/\$(?=\x7B)/g, '\\$');
+  }
+
   function collectMemberRoots(value) {
     const roots = new Set();
     const memberRegex = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\./g;
@@ -1262,7 +1272,7 @@ svgElement "SVG element"
       // Clean up the content by removing extra whitespace and newlines
       const cleanContent = content.replace(/\s+/g, ' ').trim();
       const rawContent = `<svg${attributes ? ' ' + attributes : ''}>${cleanContent}</svg>`;
-      return `h(Svg, { content: \`${rawContent}\` })`;
+      return `h(Svg, { content: \`${escapeTemplateLiteral(rawContent)}\` })`;
     }
 
 svgInnerContent "SVG inner content"
