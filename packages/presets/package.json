@@ -1,6 +1,6 @@
 {
   "name": "@canvasengine/presets",
-  "version": "2.3.0",
+  "version": "3.0.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,7 @@
     "dev": "vite build --watch"
   },
   "peerDependencies": {
-    "canvasengine": "^2.1.1",
+    "canvasengine": "^2.4.0",
     "pixi.js": "^8.19.0"
   },
   "devDependencies": {
