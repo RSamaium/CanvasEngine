@@ -174,8 +174,21 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
         }
         this.subjectInit.next(this)
       };
-      this.#redraw = draw;
-      this.clearEffect = effect(draw);
+      // The effect collects its dependencies on its first run only, so it is
+      // created once the size can be drawn: a percentage size is drawn by the
+      // first layout event, and an effect created before would track nothing.
+      this.#redraw = () => {
+        if (this.clearEffect) {
+          draw();
+          return;
+        }
+        const [w, h] = untracked(() => [width.get(), height.get()]);
+        if (typeof w == 'string' || typeof h == 'string' || this.destroyed || !this.parent) {
+          return;
+        }
+        this.clearEffect = effect(draw);
+      };
+      this.#redraw();
     }
 
     this.on('layout', (event) => {

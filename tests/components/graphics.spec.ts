@@ -115,6 +115,20 @@ describe('Graphics', () => {
             expect(mockRect).toHaveBeenLastCalledWith(-0, -0, 300, 10)
         })
 
+        it('redraws a percentage-sized rect when its color signal changes', async () => {
+            const group = signal({ accent: '#fff' })
+            const color = computed(() => group().accent)
+            const rect = await TestBed.createComponent(Rect, { width: 5, height: '100%', color })
+            ;(rect.componentInstance as any).emit('layout', { computedLayout: { width: 5, height: 200 } })
+            mockRect.mockClear()
+
+            group.set({ accent: '#000' })
+            await new Promise(resolve => setTimeout(resolve, 0))
+
+            expect(mockRect).toHaveBeenCalledTimes(1)
+            expect(mockRect).toHaveBeenLastCalledWith(-0, -0, 5, 200)
+        })
+
         it('should not draw when graphics is destroyed before mount completes', async () => {
             const mounted = await TestBed.createComponent(Rect, { width: 1, height: 1, color: '#fff' })
             const GraphicsClass = mounted.componentInstance.constructor as any

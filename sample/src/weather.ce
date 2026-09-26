@@ -170,33 +170,7 @@
       />
     }
 
-    @if (rainActive) {
-      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#071827" alpha={0.2} zIndex={20} />
-    }
-    @else if (snowActive) {
-      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#183047" alpha={0.16} zIndex={20} />
-    }
-    @else if (fogActive) {
-      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#0b241f" alpha={0.18} zIndex={20} />
-    }
-    @else if (cloudActive) {
-      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#422d13" alpha={0.1} zIndex={20} />
-    }
-    @else if (raysActive) {
-      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#0d1a10" alpha={0.25} zIndex={9} />
-    }
-    @else if (volcanoActive) {
-      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#2a0a04" alpha={0.28} zIndex={20} />
-    }
-    @else if (autumnActive) {
-      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#2a1a08" alpha={0.12} zIndex={20} />
-    }
-    @else if (ambientActive) {
-      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#020a14" alpha={0.5} zIndex={20} />
-    }
-    @else if (desertActive) {
-      <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color="#3a2a10" alpha={0.1} zIndex={20} />
-    }
+    <Rect positionType="absolute" top={0} right={0} bottom={0} left={0} width="100%" height="100%" color={overlayColor} alpha={overlayAlpha} zIndex={overlayZIndex} />
 
     <Container
       positionType="absolute"
@@ -224,33 +198,7 @@
         borderRadius={14}
         border={{ width: 1, color: "#52677f" }}
       />
-      @if (rainActive) {
-        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#67d4ff" borderRadius={3} />
-      }
-      @else if (snowActive) {
-        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#d7efff" borderRadius={3} />
-      }
-      @else if (fogActive) {
-        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#8fe0d1" borderRadius={3} />
-      }
-      @else if (cloudActive) {
-        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#ffd98b" borderRadius={3} />
-      }
-      @else if (raysActive) {
-        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#fff1c7" borderRadius={3} />
-      }
-      @else if (volcanoActive) {
-        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#ff8a4a" borderRadius={3} />
-      }
-      @else if (autumnActive) {
-        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#ffb45a" borderRadius={3} />
-      }
-      @else if (ambientActive) {
-        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#c6ff5a" borderRadius={3} />
-      }
-      @else if (desertActive) {
-        <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color="#e3c48f" borderRadius={3} />
-      }
+      <Rect positionType="absolute" top={0} left={0} width={5} height="100%" color={activeAccent} borderRadius={3} />
       <Text
         width="100%"
         height={14}
@@ -663,6 +611,23 @@
   const weatherHaze = computed(() => activeValues().haze ?? 1);
 
   const activeAccent = computed(() => activeGroup().accent);
+
+  // Scene tint drawn over the background, per weather group
+  const overlays = {
+    rain: { color: "#071827", alpha: 0.2 },
+    snow: { color: "#183047", alpha: 0.16 },
+    fog: { color: "#0b241f", alpha: 0.18 },
+    cloud: { color: "#422d13", alpha: 0.1 },
+    rays: { color: "#0d1a10", alpha: 0.25, zIndex: 9 },
+    volcano: { color: "#2a0a04", alpha: 0.28 },
+    autumn: { color: "#2a1a08", alpha: 0.12 },
+    ambient: { color: "#020a14", alpha: 0.5 },
+    desert: { color: "#3a2a10", alpha: 0.1 },
+  };
+  const activeOverlay = computed(() => overlays[activeGroup().id]);
+  const overlayColor = computed(() => activeOverlay().color);
+  const overlayAlpha = computed(() => activeOverlay().alpha);
+  const overlayZIndex = computed(() => activeOverlay().zIndex ?? 20);
   const activeCategoryLabel = computed(() => activeGroup().label);
   const activePresetLabel = computed(() => activePreset().label);
   const activeDescription = computed(() => activePreset().description);
