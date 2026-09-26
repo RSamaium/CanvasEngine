@@ -1,4 +1,5 @@
 import { isSignal, signal } from "@signe/reactive"
+import { map } from "rxjs"
 import { isPrimitive } from "../engine/reactive"
 import { currentDefinePropsTracker } from "../engine/signal"
 import { isTrigger } from "../engine/trigger"
@@ -79,6 +80,39 @@ const toPropSignal = (value: any) => {
     return signal(value)
 }
 
+/**
+ * Wraps a signal prop so it reads `fallback` while its value is `undefined`,
+ * like a plain `undefined` prop gets its default.
+ *
+ * The wrapper is lazy: it reads the source signal on demand (so computed and
+ * effects still track the source) and never subscribes to it, so it does not
+ * keep the parent's signal alive. Writes go to the source signal.
+ *
+ * @param source - The signal passed by the parent.
+ * @param fallback - The resolved default value.
+ * @returns A signal reading `source()`, or `fallback` when it is `undefined`.
+ *
+ * @example
+ * const alpha = signal(undefined)
+ * const prop = withSignalDefault(alpha, 1)
+ * prop() // 1
+ * alpha.set(0.5)
+ * prop() // 0.5
+ */
+const withSignalDefault = (source: any, fallback: any) => {
+    const resolve = (value: any) => value === undefined ? fallback : value
+    const derived: any = () => resolve(source())
+
+    derived.observable = source.observable.pipe(map(resolve))
+    derived.set = (value: any) => source.set(value)
+    derived.update = (updater: (value: any) => any) => source.set(updater(derived()))
+    derived.mutate = source.mutate
+    derived.freeze = source.freeze
+    derived.unfreeze = source.unfreeze
+
+    return derived
+}
+
 const definePropSignals = (props: any): any => {
     const obj: any = {}
     for (let key in props) {
@@ -141,10 +175,14 @@ export const useDefineProps = (props: any) => {
                 }
                 
                 // Set default value if value is undefined
+                const resolveDefault = () => typeof propConfig.default === 'function'
+                    ? propConfig.default(rawProps)
+                    : propConfig.default
                 if (value === undefined && 'default' in propConfig) {
-                    validatedValue = typeof propConfig.default === 'function' 
-                        ? propConfig.default(rawProps)
-                        : propConfig.default
+                    validatedValue = resolveDefault()
+                } else if (isSignal(value) && !isTrigger(value) && 'default' in propConfig) {
+                    // A signal prop gets the default while its value is undefined
+                    validatedValue = withSignalDefault(value, resolveDefault())
                 } else {
                     validatedValue = value
                 }
@@ -215,10 +253,9 @@ export const useDefineEmits = (props: any) => {
  * @throws Will throw an error if the type check fails.
  */
 function validateType(key: string, value: any, types: any[]) {
-    if (value === undefined || value === null) return
-    
-    // Si c'est un signal, on vérifie la valeur du signal
+    // A signal is checked on its current value, which may be unset like a plain prop
     const valueToCheck = isSignal(value) ? value() : value
+    if (valueToCheck === undefined || valueToCheck === null) return
     
     const valid = types.some(type => {
         if (type === Number) return typeof valueToCheck === 'number'
