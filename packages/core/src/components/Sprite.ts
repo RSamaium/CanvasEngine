@@ -91,9 +91,44 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   onFinish: () => void;
   private globalLoader: GlobalAssetLoader | null = null;
   private trackedAssetIds: Set<string> = new Set();
+  // Set as soon as the teardown starts: `destroyed` only becomes true once
+  // `onDestroy` has resolved, and pending loads must stop before that.
+  private disposing = false;
 
   get renderer() {
     return this.app?.renderer;
+  }
+
+  /**
+   * Whether the sprite is being or has been destroyed. Async initialization
+   * checks it after each `await` so a torn down sprite is never updated.
+   */
+  private get isDisposed(): boolean {
+    return this.disposing || this.destroyed;
+  }
+
+  /**
+   * Registers an image in the global loader, if any, and returns its asset id.
+   */
+  private trackAsset(image: string): string | null {
+    if (!this.globalLoader) return null;
+    const assetId = this.globalLoader.registerAsset(image);
+    this.trackedAssetIds.add(assetId);
+    return assetId;
+  }
+
+  /**
+   * Reports the progress of a tracked asset. Ignored once the asset is no
+   * longer tracked, i.e. after the sprite has been destroyed.
+   */
+  private reportAssetProgress(assetId: string | null, progress: number) {
+    if (!this.globalLoader || !assetId || !this.trackedAssetIds.has(assetId)) return;
+    this.globalLoader.updateProgress(assetId, progress);
+  }
+
+  private completeAsset(assetId: string | null) {
+    if (!this.globalLoader || !assetId || !this.trackedAssetIds.has(assetId)) return;
+    this.globalLoader.completeAsset(assetId);
   }
 
   private currentAnimationContainer: Container | null = null;
@@ -116,23 +151,11 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       throw new Error(`Invalid image path provided to detectImageDimensions: ${imagePath}`);
     }
 
-    // Register asset in global loader if available
-    let assetId: string | null = null;
-    if (this.globalLoader) {
-      assetId = this.globalLoader.registerAsset(imagePath);
-      this.trackedAssetIds.add(assetId);
-    }
-
+    const assetId = this.trackAsset(imagePath);
     const texture = await Assets.load(imagePath, (progress) => {
-      if (this.globalLoader && assetId) {
-        this.globalLoader.updateProgress(assetId, progress);
-      }
+      this.reportAssetProgress(assetId, progress);
     });
-
-    // Mark as complete
-    if (this.globalLoader && assetId) {
-      this.globalLoader.completeAsset(assetId);
-    }
+    this.completeAsset(assetId);
 
     return {
       width: texture.width,
@@ -180,23 +203,12 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       return [];
     }
 
-    // Register asset in global loader if available
-    let assetId: string | null = null;
-    if (this.globalLoader) {
-      assetId = this.globalLoader.registerAsset(image);
-      this.trackedAssetIds.add(assetId);
-    }
-
+    const assetId = this.trackAsset(image);
     const texture = await Assets.load(image, (progress) => {
-      if (this.globalLoader && assetId) {
-        this.globalLoader.updateProgress(assetId, progress);
-      }
+      this.reportAssetProgress(assetId, progress);
     });
-
-    // Mark as complete
-    if (this.globalLoader && assetId) {
-      this.globalLoader.completeAsset(assetId);
-    }
+    this.completeAsset(assetId);
+    if (this.isDisposed) return [];
 
     // Auto-detect width and height from the image if not provided
     if (!width || width <= 0) {
@@ -280,6 +292,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
       if (image && ((!width || width <= 0) || (!height || height <= 0))) {
         const dimensions = await this.detectImageDimensions(image);
+        if (this.isDisposed) return;
         if (!width || width <= 0) {
           width = dimensions.width;
           optionsTextures.width = width;
@@ -294,10 +307,12 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       optionsTextures.spriteHeight = rectHeight
         ? rectHeight
         : height / framesHeight;
+      const frames = await this.createTextures(
+        optionsTextures as Required<TextureOptionsMerging>
+      );
+      if (this.isDisposed) return;
       this.animations.set(animationName, {
-        frames: await this.createTextures(
-          optionsTextures as Required<TextureOptionsMerging>
-        ),
+        frames,
         name: animationName,
         animations: textures[animationName].animations,
         params: [],
@@ -328,8 +343,10 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     });
     if (definition) {
       const resolvedDefinition = definition instanceof Promise ? await definition : definition;
+      if (this.isDisposed) return;
       this.spritesheet = resolvedDefinition.value ?? resolvedDefinition;
       await this.createAnimations();
+      if (this.isDisposed) return;
     }
     if (sheet?.params) {
       this.sheetParams = sheet.params;
@@ -399,26 +416,15 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         return null;
       }
 
-      // Register asset in global loader if available
-      let assetId: string | null = null;
-      if (this.globalLoader) {
-        assetId = this.globalLoader.registerAsset(image);
-        this.trackedAssetIds.add(assetId);
-      }
-
+      const assetId = this.trackAsset(image);
       const onProgress = this.fullProps.loader?.onProgress;
       const texture = await Assets.load(image, (progress) => {
-        // Update global loader progress
-        if (this.globalLoader && assetId) {
-          this.globalLoader.updateProgress(assetId, progress);
-        }
+        if (this.isDisposed) return;
+        this.reportAssetProgress(assetId, progress);
         // Call local loader callback if provided
         if (onProgress) onProgress(progress);
         if (progress == 1) {
-          // Mark as complete in global loader
-          if (this.globalLoader && assetId) {
-            this.globalLoader.completeAsset(assetId);
-          }
+          this.completeAsset(assetId);
           const onComplete = this.fullProps.loader?.onComplete;
           if (onComplete) {
             // hack to memoize the texture
@@ -429,7 +435,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         }
       });
 
-      return texture
+      return this.isDisposed ? null : texture
     }
 
     const sheet = props.sheet
@@ -437,8 +443,10 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
     if (definition?.type === 'reset') {
       const resolvedValue = definition.value instanceof Promise ? await definition.value : definition.value;
+      if (this.isDisposed) return;
       this.spritesheet = resolvedValue ?? definition;
       await this.resetAnimations();
+      if (this.isDisposed) return;
     }
 
     if (sheet?.params) this.sheetParams = sheet?.params;
@@ -479,12 +487,14 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       }
     }
 
+    if (this.isDisposed) return;
     if (this.hitbox && !this.spritesheet) {
       this.applyHitboxAnchor(this.texture.width, this.texture.height);
     }
   }
 
   async onDestroy(parent: Element, afterDestroy: () => void): Promise<void> {
+    this.disposing = true;
     const _afterDestroy = async () => {
       // Clean up tracked assets from global loader
       if (this.globalLoader) {
@@ -553,6 +563,8 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
   }
 
   play(name: string, params: any[] = []) {
+    // A destroyed Pixi sprite has null transforms: `update()` would crash
+    if (this.destroyed) return;
     const animParams = this.currentAnimation?.params;
 
     if (this.isPlaying(name) && arrayEquals(params, animParams || [])) return;
@@ -639,6 +651,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     // Recreate animations from spritesheet
     if (this.spritesheet) {
       await this.createAnimations();
+      if (this.isDisposed) return;
       const animationName = this.getPlayableAnimationName(this.sheetCurrentAnimation);
       if (animationName) {
         this.sheetCurrentAnimation = animationName;
