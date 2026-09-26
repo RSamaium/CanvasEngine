@@ -28,6 +28,45 @@ const value = 1
       .toBe(descriptor.script?.content);
   });
 
+  test("skips quotes inside regex literals when looking for </script>", () => {
+    const source = `<Text text={label} />
+
+<script>
+  const clean = (s) => s.replace(/["']/g, '')
+  const label = clean('"hi"')
+</script>`;
+
+    const descriptor = parseSfc(source, "/app/regex.ce");
+
+    expect(descriptor.script?.content).toContain(`s.replace(/["']/g, '')`);
+    expect(descriptor.script?.content).toContain(`const label = clean('"hi"')`);
+  });
+
+  test("skips regex literals with slashes in classes or after keywords", () => {
+    const source = `<Container />
+<script>
+  const strip = s => s.split(/[/"]/).join('')
+  const unquote = s => { return /^'(.*)$/.exec(s) }
+</script>`;
+
+    const descriptor = parseSfc(source, "/app/regex-edge.ce");
+
+    expect(descriptor.script?.content).toContain(`return /^'(.*)$/.exec(s)`);
+  });
+
+  test("keeps treating slashes after values as divisions", () => {
+    const source = `<Container />
+<script>
+const half = width / 2 / 1
+const ratio = (a + b) / "2".length
+const label = "it's"
+</script>`;
+
+    const descriptor = parseSfc(source, "/app/division.ce");
+
+    expect(descriptor.script?.content).toContain(`const label = "it's"`);
+  });
+
   test("reports an explicit diagnostic for an unclosed SFC block", () => {
     const source = `<Container />\n<script>\nconst value = 1`;
 
