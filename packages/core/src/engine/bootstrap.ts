@@ -4,6 +4,7 @@ import { ComponentFunction, h } from "./signal";
 import { useProps } from '../hooks/useProps';
 import { configureTeardown, registerAllComponents, registerComponent, type TeardownOptions } from './reactive';
 import { installLayoutVisibilityPatch } from './layoutVisibilityPatch';
+import { ensureYoga } from './yoga';
 
 // Import all components to ensure they are registered
 // This is done here (not in reactive.ts) to avoid circular dependencies
@@ -83,6 +84,7 @@ export const bootstrapCanvas = async (rootElement: HTMLElement | null, canvas: C
   }).layout;
   if (enableLayout !== false) {
     await import('@pixi/layout');
+    await ensureYoga();
     installLayoutVisibilityPatch();
   }
   
