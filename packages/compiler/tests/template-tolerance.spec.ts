@@ -45,4 +45,16 @@ describe("CanvasEngine template syntax tolerance", () => {
   test("matches closing DOM tags case-insensitively", () => {
     expect(compile(`<DIV></div>`)).toContain('element: "DIV"');
   });
+
+  test("treats PascalCase tags named like HTML elements as components", () => {
+    expect(compile(`<Video src="a.mp4" />`)).toContain("h(Video, { src: 'a.mp4' })");
+    expect(compile(`<Header title="Menu" />`)).toContain("h(Header, { title: 'Menu' })");
+    expect(compile(`<Map width={100}></Map>`)).toContain("h(Map, { width: 100 })");
+    expect(compile(`<Input value="a" />`)).toContain("h(Input, { value: 'a' })");
+  });
+
+  test("keeps lowercase and uppercase HTML tags as DOM elements", () => {
+    expect(compile(`<video src="a.mp4" />`)).toContain('h(DOMElement, { element: "video"');
+    expect(compile(`<IMG src="a.png">`)).toContain('h(DOMElement, { element: "IMG"');
+  });
 });
