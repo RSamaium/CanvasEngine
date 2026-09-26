@@ -1563,6 +1563,12 @@ describe('Svg', () => {
     const output = parser.parse(input);
     expect(output).toBe('h(Canvas, { antialias: true }, h(Svg, { content: `<svg height="400" width="450" xmlns="http://www.w3.org/2000/svg"></svg>` }))');
   });
+  test('keeps backticks, ${ and backslashes in svg content literal', () => {
+    const input = '<svg><text>`${boom}` a\\b</text></svg>';
+    const output = parser.parse(input);
+    const content = new Function('h', 'Svg', `return ${output}`)((_: any, props: any) => props.content, null);
+    expect(content).toBe('<svg><text>`${boom}` a\\b</text></svg>');
+  });
 });
 
 describe('DOM', () => {
