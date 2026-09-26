@@ -13,11 +13,6 @@
     'a', 'abbr', 'address', 'area', 'article', 'aside', 'audio', 'b', 'base', 'bdi', 'bdo', 'blockquote', 'body', 'br', 'button', 'caption', 'cite', 'code', 'col', 'colgroup', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'div', 'dl', 'dt', 'em', 'embed', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'i', 'iframe', 'img', 'input', 'ins', 'kbd', 'label', 'legend', 'li', 'link', 'main', 'map', 'mark', 'menu', 'meta', 'meter', 'nav', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param', 'picture', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 'samp', 's', 'script', 'section', 'select', 'slot', 'small', 'source', 'span', 'strong', 'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'u', 'ul', 'var', 'video', 'wbr'
   ]);
 
-  // Framework components that should NOT be transformed to DOM elements
-  const frameworkComponents = new Set([
-    'Canvas', 'Container', 'Sprite', 'Text', 'DOMElement', 'Svg', 'Button'
-  ]);
-
   const voidElements = new Set([
     'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta',
     'param', 'source', 'track', 'wbr'
@@ -42,16 +37,18 @@
     'clip', 'occlusion'
   ]);
 
+  // A PascalCase tag is always a component (<Video>, <Header>, <Map>), like in
+  // JSX and Vue. An HTML tag is written in lowercase, or in uppercase (<DIV>).
+  function hasHtmlCase(tagName) {
+    return tagName === tagName.toLowerCase() || tagName === tagName.toUpperCase();
+  }
+
   function isDOMElement(tagName) {
-    // Don't transform framework components to DOM elements
-    if (frameworkComponents.has(tagName)) {
-      return false;
-    }
-    return domElements.has(tagName.toLowerCase());
+    return hasHtmlCase(tagName) && domElements.has(tagName.toLowerCase());
   }
 
   function isVoidElement(tagName) {
-    return voidElements.has(tagName.toLowerCase());
+    return hasHtmlCase(tagName) && voidElements.has(tagName.toLowerCase());
   }
 
   function tagNamesMatch(openingTag, closingTag) {
