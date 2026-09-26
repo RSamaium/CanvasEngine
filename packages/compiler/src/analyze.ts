@@ -37,6 +37,51 @@ export function analyzeTemplateAst(program: any): CompileMetadata {
   };
 }
 
+/**
+ * Collects the runtime helpers (`computed`, `cond`, `loop`, `h`) called by a
+ * component script, so they can be auto-imported like in the template.
+ * Helpers declared at the top level of the script are ignored.
+ *
+ * @param program - Acorn AST of the transpiled `<script>` block.
+ * @returns The helper names called by the script, in canonical order.
+ *
+ * @example
+ * collectScriptRuntimeHelpers(parse("const a = computed(() => 1)", opts)) // ["computed"]
+ */
+export function collectScriptRuntimeHelpers(program: any): string[] {
+  const declared = new Set<string>();
+  for (const node of program.body ?? []) {
+    if ((node.type === "FunctionDeclaration" || node.type === "ClassDeclaration") && node.id) {
+      declared.add(node.id.name);
+    }
+    if (node.type === "VariableDeclaration") {
+      node.declarations.forEach((declaration: any) => collectPatternNames(declaration.id, declared));
+    }
+  }
+
+  const helpers = new Set<string>();
+  walk(program, node => {
+    if (node.type !== "CallExpression" || node.callee?.type !== "Identifier") return;
+    const callee = node.callee.name;
+    if (RUNTIME_HELPERS.includes(callee) && !declared.has(callee)) helpers.add(callee);
+  });
+
+  return RUNTIME_HELPERS.filter(helper => helpers.has(helper));
+}
+
+function collectPatternNames(pattern: any, names: Set<string>): void {
+  if (!pattern) return;
+  if (pattern.type === "Identifier") names.add(pattern.name);
+  else if (pattern.type === "ObjectPattern") {
+    pattern.properties.forEach((property: any) =>
+      collectPatternNames(property.type === "RestElement" ? property.argument : property.value, names)
+    );
+  } else if (pattern.type === "ArrayPattern") {
+    pattern.elements.forEach((element: any) => collectPatternNames(element, names));
+  } else if (pattern.type === "RestElement") collectPatternNames(pattern.argument, names);
+  else if (pattern.type === "AssignmentPattern") collectPatternNames(pattern.left, names);
+}
+
 export function expressionHasCall(expression: string): boolean {
   const program = parseExpression(expression);
   let hasCall = false;

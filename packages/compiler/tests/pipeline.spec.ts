@@ -105,6 +105,32 @@ const CustomComponent = props => props
     });
   });
 
+  test("the Vite plugin auto-imports runtime helpers used only in the script", () => {
+    const source = `<Text text={label} />
+<script>
+import { signal } from 'canvasengine'
+const n = signal(1)
+const label = computed(() => 'n=' + n())
+const items = loop([], item => item)
+</script>`;
+    const result = (canvasengine({ hmr: false }) as any).transform(source, "/app/script-helpers.ce");
+
+    expect(result.code).toContain("import { h, computed, loop } from 'canvasengine';");
+    expect(result.code).not.toMatch(/import \{[^}]*\bcond\b/);
+  });
+
+  test("the Vite plugin does not import helpers the script declares itself", () => {
+    const source = `<Text text={label} />
+<script>
+const computed = fn => fn()
+const label = computed(() => 'local')
+</script>`;
+    const result = (canvasengine({ hmr: false }) as any).transform(source, "/app/local-helper.ce");
+
+    expect(result.code).toContain("import { h } from 'canvasengine';");
+    expect(result.code).not.toMatch(/import \{[^}]*\bcomputed\b/);
+  });
+
   test("the Vite plugin returns a source map referencing the original .ce file", () => {
     const source = `<Container><Text text="Mapped" /></Container>`;
     const result = (canvasengine({ hmr: false }) as any).transform(source, "/app/mapped.ce");
