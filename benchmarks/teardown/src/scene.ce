@@ -1,0 +1,10 @@
+<Canvas backgroundColor="#101820" width={1280} height={720}>
+  @if (showScene) {
+    <SceneRoot />
+  }
+</Canvas>
+
+<script>
+  import SceneRoot from "./scene-root.ce";
+  import { showScene } from "./state";
+</script>

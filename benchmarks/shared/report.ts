@@ -22,6 +22,7 @@ export type BenchmarkReport = {
   environment: Record<string, unknown>;
   benchmarks: Array<Record<string, unknown>>;
   comparisons?: Array<Record<string, unknown>>;
+  profiles?: Record<string, unknown>;
 };
 
 export function getGitCommit(): string | null {

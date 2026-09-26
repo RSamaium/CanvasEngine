@@ -1,0 +1,18 @@
+<Container />
+
+<script>
+  import { mount } from "canvasengine";
+  import { items, hudRows, resetOnUnmount } from "./state";
+
+  // Game code often resets its state when a scene goes away (e.g. the
+  // players / events of a map). This component is destroyed before the
+  // characters: the engine must not rebuild them while they are going away.
+  mount(() => () => {
+    if (resetOnUnmount) {
+      // Stats first (every HP bar observes its signal), then the lists
+      for (const item of items()) item.hp.set(0);
+      items.set([]);
+      hudRows.set([]);
+    }
+  });
+</script>

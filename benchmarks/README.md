@@ -42,6 +42,39 @@ noise affects them equally. Use it to check an engine change before merging.
 
 Options: `--iterations 200`, `--warmup 20`, `--top 15`.
 
+## Scene Teardown
+
+```bash
+pnpm bench:teardown
+BENCH_TEARDOWN_CPU=1 pnpm bench:teardown           # + Chrome CPU profiles
+BENCH_TEARDOWN_BASELINE=b45180f pnpm bench:teardown # compare with another ref
+```
+
+Mounts and unmounts a whole scene (`@if` around characters with a body, a
+name and an HP bar, plus a flex HUD) in Chromium, with real Pixi, layout and
+compiled templates. For each unmount it reports the synchronous cost of
+`showScene.set(false)`, the longest frame until the teardown is over, long
+animation frames, the time until nothing is left to destroy and, in deferred
+mode, the number and longest duration of teardown chunks.
+
+It compares the engine at `BENCH_TEARDOWN_BASELINE` (default `HEAD`) with the
+working tree, in sync and deferred mode. Both sides are production builds of
+a git commit (the working tree through `git stash create`, which does not
+touch it), and the variants alternate between rounds: serving one side from a
+dev server and the other from git showed a ~7% bias on identical code.
+
+Environment variables:
+
+- `BENCH_TEARDOWN_COUNTS=100,300` characters per scene
+- `BENCH_TEARDOWN_LAYOUTS=absolute,flex` characters positioned with x / y or laid out with flex
+- `BENCH_TEARDOWN_RESET=1` the scene resets game state (HP, lists) in an unmount hook
+- `BENCH_TEARDOWN_ROUNDS=3`, `BENCH_TEARDOWN_CYCLES=12`
+- `BENCH_TEARDOWN_BUDGET_MS=4` deferred teardown budget per chunk
+- `BENCH_TEARDOWN_VARIANTS="baseline,candidate sync"` subset of variants
+- `BENCH_TEARDOWN_CPU=1`, `BENCH_TEARDOWN_CPU_COUNT`, `BENCH_TEARDOWN_CPU_TOP`
+
+The system Google Chrome is used when Playwright's Chromium is not installed.
+
 ## Output
 
 Reports are written to `benchmarks/results/<suite>/`.

@@ -22,6 +22,13 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 import { bundleEntry, loadSourceMap } from "../shared/bundle";
+import {
+  CpuProfileSummary,
+  bucketOfUrl,
+  printCpuSummary,
+  type CpuProfile,
+  type ResolveFrame,
+} from "../shared/cpuprofile";
 import type { Scenario } from "./scenarios";
 import {
   getEnvironment,
@@ -30,20 +37,6 @@ import {
   writeReport,
   type BenchmarkReport,
 } from "../shared/report";
-
-type CpuProfileNode = {
-  id: number;
-  callFrame: { functionName: string; url: string; lineNumber: number; columnNumber: number };
-  hitCount?: number;
-  children?: number[];
-};
-
-type CpuProfile = {
-  nodes: CpuProfileNode[];
-  startTime: number;
-  endTime: number;
-  samples?: number[];
-};
 
 const args = process.argv.slice(2);
 const readOption = (name: string) => {
@@ -85,56 +78,13 @@ const baseline = baselineRef
   )) as ScenariosModule)
   : null;
 
-/** Groups a script url into a readable package / source bucket. */
-function bucketOf(url: string): string {
-  if (!url) return "(native)";
-  const clean = url.replace(/^file:\/\//, "");
-  const match = clean.match(/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?((?:@[^/]+\/)?[^/]+)/);
-  if (match) return match[1];
-  if (clean.startsWith(rootDir)) return path.relative(rootDir, clean);
-  return clean.startsWith("node:") ? "(node)" : clean;
-}
-
-function summariseProfile(profile: CpuProfile) {
-  const totalMs = (profile.endTime - profile.startTime) / 1000;
-  const totalSamples = profile.samples?.length
-    ?? profile.nodes.reduce((sum, node) => sum + (node.hitCount ?? 0), 0);
-  const msPerSample = totalSamples ? totalMs / totalSamples : 0;
-
-  const byFunction = new Map<string, number>();
-  const byBucket = new Map<string, number>();
-
-  for (const node of profile.nodes) {
-    const hits = node.hitCount ?? 0;
-    if (!hits) continue;
-    const { functionName, url, lineNumber, columnNumber } = node.callFrame;
-    const original = url === bundleUrl ? mapPosition(lineNumber, columnNumber) : null;
-    const bucket = url === bundleUrl && !original
-      ? "(bundler runtime)"
-      : bucketOf(original ? pathToFileURL(original.source).href : url);
-    const line = original ? original.line : lineNumber + 1;
-    const location = url ? `${bucket}:${line}` : bucket;
-    const key = `${functionName || "(anonymous)"} ${location}`;
-    byFunction.set(key, (byFunction.get(key) ?? 0) + hits);
-    byBucket.set(bucket, (byBucket.get(bucket) ?? 0) + hits);
-  }
-
-  const rank = (map: Map<string, number>, limit: number) =>
-    [...map.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, limit)
-      .map(([name, hits]) => ({
-        name,
-        selfMs: roundMetric(hits * msPerSample, 2),
-        percent: roundMetric((hits / totalSamples) * 100, 1),
-      }));
-
-  return {
-    totalMs: roundMetric(totalMs, 2),
-    topFunctions: rank(byFunction, top),
-    byPackage: rank(byBucket, 10),
-  };
-}
+/** Maps bundle positions back to the TypeScript sources. */
+const resolveFrame: ResolveFrame = ({ url, lineNumber, columnNumber }) => {
+  if (url !== bundleUrl) return null;
+  const original = mapPosition(lineNumber, columnNumber);
+  if (!original) return { bucket: "(bundler runtime)", line: lineNumber + 1 };
+  return { bucket: bucketOfUrl(pathToFileURL(original.source).href, rootDir), line: original.line };
+};
 
 async function profileScenario(scenario: Scenario, session: Session | null, outputDir: string) {
   for (let index = 0; index < warmup; index++) scenario.run();
@@ -157,12 +107,14 @@ async function profileScenario(scenario: Scenario, session: Session | null, outp
     durations.push(performance.now() - start);
   }
 
-  let cpu: ReturnType<typeof summariseProfile> | null = null;
+  let cpu: ReturnType<CpuProfileSummary["summary"]> | null = null;
   let cpuProfilePath: string | null = null;
   if (session) {
     const { profile } = (await session.post("Profiler.stop")) as { profile: CpuProfile };
     await session.post("Profiler.disable");
-    cpu = summariseProfile(profile);
+    const summary = new CpuProfileSummary(resolveFrame);
+    summary.add(profile);
+    cpu = summary.summary(top);
     cpuProfilePath = path.join(outputDir, `${scenario.name.replace(/[^a-z0-9-]+/gi, "_")}.cpuprofile`);
     await writeFile(cpuProfilePath, JSON.stringify(profile), "utf8");
   }
@@ -300,14 +252,7 @@ for (const scenario of baseline ? [] : selected) {
     ` | leaked instances ${m.leakedInstances} | destroy calls/iter ${m.destroyCallsPerIteration}`
   );
   if (result.cpu) {
-    console.log("  self time by package:");
-    for (const entry of result.cpu.byPackage) {
-      console.log(`    ${String(entry.percent).padStart(5)}%  ${entry.selfMs} ms  ${entry.name}`);
-    }
-    console.log("  top functions (self time):");
-    for (const entry of result.cpu.topFunctions) {
-      console.log(`    ${String(entry.percent).padStart(5)}%  ${entry.name}`);
-    }
+    printCpuSummary(result.cpu);
     console.log(`  profile: ${result.cpuProfilePath}`);
   }
 }
