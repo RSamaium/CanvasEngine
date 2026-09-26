@@ -68,21 +68,8 @@
       return attributes[0].substring(3);
     }
   
-    // Otherwise, format as an object literal
-    const formattedAttrs = attributes.map(attr => {
-      // If it's a spread attribute, keep it as is
-      if (attr.startsWith('...')) {
-        return attr;
-      }
-      // If it's a standalone attribute (doesn't contain ':'), format as shorthand property 'name'
-      if (!attr.includes(':')) {
-        return attr; // JS object literal shorthand
-      }
-      // Otherwise (key: value), keep it as is
-      return attr;
-    });
-  
-    return `{ ${formattedAttrs.join(', ')} }`;
+    // Otherwise, an object literal: `key: value`, shorthand `name` or `...spread`
+    return `{ ${attributes.join(', ')} }`;
   }
 
   function formatDOMElement(tagName, attributes) {
@@ -909,10 +896,6 @@ singleQuotedStaticValue
       return quoteSingleString(chars.join(''));
     }
 
-eventAttribute
-  = "(" _ eventName:eventName _ ")" _ "=" _ "\"" eventAction:eventAction "\"" {
-      return `${eventName}: () => { ${eventAction} }`;
-    }
 
 content "component content"
   = elements:(element)* {
@@ -934,19 +917,6 @@ domContentPart
   = element
   / simpleTextContent
 
-
-
-textNode
-  = text:$([^<]+) {
-      const trimmed = text.trim();
-      return trimmed ? `'${trimmed}'` : null;
-    }
-
-textElement
-  = text:[^<>]+ {
-      const trimmed = text.join('').trim();
-      return trimmed ? JSON.stringify(trimmed) : null;
-    }
 
 forLoop "for loop"
   = _ forLocation:forToken _ "(" _ variableName:(tupleDestructuring / identifier) _ "of" _ iterable:iterable _ track:forTrack? ")" _ "{" _ content:content _ "}" _ {
@@ -1058,24 +1028,10 @@ tagPart "tag part"
 attributeName "attribute name"
   = [a-zA-Z_$][a-zA-Z0-9_$:-]* { return text(); }
 
-eventName
-  = [a-zA-Z][a-zA-Z0-9-]* { return text(); }
-
-variableName
-  = [a-zA-Z_][a-zA-Z0-9_]* { return text(); }
 
 iterable "iterable expression"
   = expression:$(directiveExpressionPart+) { return expression.trim(); }
 
-dotFunctionChain
-  = segment:identifier "(" _ args:functionArgs? _ ")" rest:("." dotFunctionChain)? {
-      const restStr = rest ? `.${rest[1]}` : '';
-      return `${segment}(${args || ''})${restStr}`;
-    }
-  / segment:identifier rest:("." dotFunctionChain)? {
-      const restStr = rest ? `.${rest[1]}` : '';
-      return `${segment}${restStr}`;
-    }
 
 condition "condition expression"
   = text:$(directiveExpressionPart*) {
@@ -1092,44 +1048,18 @@ condition "condition expression"
       return originalText;
   }
 
-conditionChunk
-  = "(" conditionChunk* ")"
-  / [^()]
-
-functionCall "function call"
-  = name:identifier "(" args:functionArgs? ")" {
-    return `${name}(${args || ''})`;
-  }
-
-functionCallWithArgs "function call with complex args"
-  = name:identifier "(" args:complexFunctionArgs? ")" {
-    return `${name}(${args || ''})`;
-  }
 
 functionArgs
   = arg:functionArg rest:("," _ functionArg)* {
     return [arg].concat(rest.map(r => r[2])).join(', ');
   }
 
-complexFunctionArgs
-  = arg:complexFunctionArg rest:("," _ complexFunctionArg)* {
-    return [arg].concat(rest.map(r => r[2])).join(', ');
-  }
 
 functionArg
   = _ value:(identifier / number / string) _ {
     return value;
   }
 
-complexFunctionArg "complex function argument"
-  = _ value:complexArgExpression _ {
-    return value.trim();
-  }
-
-complexArgExpression "complex argument expression"
-  = $([^,)]* ("(" [^)]* ")" [^,)]*)*) {
-    return text().trim();
-  }
 
 number
   = [0-9]+ ("." [0-9]+)? { return text(); }
@@ -1138,8 +1068,6 @@ string
   = '"' chars:[^"]* '"' { return text(); }
   / "'" chars:[^']* "'" { return text(); }
 
-eventAction
-  = [^"]* { return text(); }
 
 _ 'whitespace'
   = [ \t\n\r]* 
