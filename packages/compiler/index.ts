@@ -12,6 +12,18 @@ import { scopeStyles } from "./src/style";
 import { parseTemplate } from "./src/template";
 import type { CompileResult } from "./src/types";
 
+export type {
+  CompileMetadata,
+  CompileResult,
+  CompilerDiagnostic,
+  SfcAttributeValue,
+  SfcBlock,
+  SfcDescriptor,
+  SourcePosition,
+  SourceSpan,
+  TemplateProgram,
+} from "./src/types";
+
 const { generate } = pkg;
 
 const DEV_SRC = "../../src"
@@ -27,8 +39,8 @@ function getTemplateParser(): any {
   return cachedTemplateParser;
 }
 
-type ManualChunksFunction = (id: string, meta: any) => string | void;
-type ManualChunksOption = ManualChunksFunction | Record<string, string[]>;
+export type ManualChunksFunction = (id: string, meta: any) => string | void;
+export type ManualChunksOption = ManualChunksFunction | Record<string, string[]>;
 
 function normalizeModuleId(id: string): string {
   return id.replace(/\\/g, "/");
