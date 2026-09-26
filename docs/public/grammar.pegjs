@@ -1,3 +1,10 @@
+// CanvasEngine template grammar.
+//
+// This grammar only reads the template: it returns a tree of plain nodes
+// (Root, Element, Text, If, For, Svg, attributes...) with their source
+// locations, described in src/types.ts. JavaScript code is generated from that
+// tree by src/codegen.ts. Actions here must not generate code; they only throw
+// syntax errors, which need the parse position.
 {
   function generateError(code, message, location, hint) {
     const templateError = new Error(message);
@@ -13,340 +20,29 @@
     'a', 'abbr', 'address', 'area', 'article', 'aside', 'audio', 'b', 'base', 'bdi', 'bdo', 'blockquote', 'body', 'br', 'button', 'caption', 'cite', 'code', 'col', 'colgroup', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'div', 'dl', 'dt', 'em', 'embed', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'i', 'iframe', 'img', 'input', 'ins', 'kbd', 'label', 'legend', 'li', 'link', 'main', 'map', 'mark', 'menu', 'meta', 'meter', 'nav', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param', 'picture', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 'samp', 's', 'script', 'section', 'select', 'slot', 'small', 'source', 'span', 'strong', 'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'u', 'ul', 'var', 'video', 'wbr'
   ]);
 
-  // Framework components that should NOT be transformed to DOM elements
-  const frameworkComponents = new Set([
-    'Canvas', 'Container', 'Sprite', 'Text', 'DOMElement', 'Svg', 'Button'
-  ]);
-
   const voidElements = new Set([
     'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta',
     'param', 'source', 'track', 'wbr'
   ]);
 
-  const eventAttributes = new Set([
-    'click', 'tap', 'pointertap', 'pointerdown', 'pointerup', 'pointermove',
-    'pointerover', 'pointerout', 'pointerupoutside', 'mousedown', 'mouseup',
-    'mousemove', 'mouseover', 'mouseout', 'touchstart', 'touchend', 'touchmove',
-    'touchcancel', 'rightclick', 'keydown', 'keyup', 'keypress'
-  ]);
-
-  // DisplayObject special attributes that should not be in attrs
-  const displayObjectAttributes = new Set([
-    'x', 'y', 'scale', 'anchor', 'skew', 'tint', 'rotation', 'angle', 
-    'zIndex', 'roundPixels', 'cursor', 'visible', 'alpha', 'pivot', 'filters', 'maskOf', 
-    'blendMode', 'filterArea', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight', 
-    'aspectRatio', 'flexGrow', 'flexShrink', 'flexBasis', 'rowGap', 'columnGap', 
-    'positionType', 'top', 'right', 'bottom', 'left', 'objectFit', 'objectPosition', 
-    'transformOrigin', 'flexDirection', 'justifyContent', 'alignItems', 'alignContent', 
-    'alignSelf', 'margin', 'padding', 'border', 'gap', 'blur', 'shadow', 'outline',
-    'clip', 'occlusion'
-  ]);
+  // A PascalCase tag is always a component (<Video>, <Header>, <Map>), like in
+  // JSX and Vue. An HTML tag is written in lowercase, or in uppercase (<DIV>).
+  function hasHtmlCase(tagName) {
+    return tagName === tagName.toLowerCase() || tagName === tagName.toUpperCase();
+  }
 
   function isDOMElement(tagName) {
-    // Don't transform framework components to DOM elements
-    if (frameworkComponents.has(tagName)) {
-      return false;
-    }
-    return domElements.has(tagName.toLowerCase());
+    return hasHtmlCase(tagName) && domElements.has(tagName.toLowerCase());
   }
 
   function isVoidElement(tagName) {
-    return voidElements.has(tagName.toLowerCase());
+    return hasHtmlCase(tagName) && voidElements.has(tagName.toLowerCase());
   }
 
   function tagNamesMatch(openingTag, closingTag) {
     return isDOMElement(openingTag)
       ? openingTag.toLowerCase() === closingTag.toLowerCase()
       : openingTag === closingTag;
-  }
-
-  function formatAttributes(attributes) {
-    if (attributes.length === 0) {
-      return null;
-    }
-  
-    // Check if there's exactly one attribute and it's a spread attribute
-    if (attributes.length === 1 && attributes[0].startsWith('...')) {
-      // Return the identifier directly, removing the '...'
-      return attributes[0].substring(3);
-    }
-  
-    // Otherwise, format as an object literal
-    const formattedAttrs = attributes.map(attr => {
-      // If it's a spread attribute, keep it as is
-      if (attr.startsWith('...')) {
-        return attr;
-      }
-      // If it's a standalone attribute (doesn't contain ':'), format as shorthand property 'name'
-      if (!attr.includes(':')) {
-        return attr; // JS object literal shorthand
-      }
-      // Otherwise (key: value), keep it as is
-      return attr;
-    });
-  
-    return `{ ${formattedAttrs.join(', ')} }`;
-  }
-
-  function formatDOMElement(tagName, attributes) {
-    if (attributes.length === 0) {
-      return `h(DOMElement, { element: "${tagName}" })`;
-    }
-
-    const { domAttrs, displayObjectAttrs } = splitAttributes(attributes);
-
-    // Build the result
-    const parts = [`element: "${tagName}"`];
-    
-    if (domAttrs.length > 0) {
-      parts.push(`attrs: { ${domAttrs.join(', ')} }`);
-    }
-    
-    if (displayObjectAttrs.length > 0) {
-      parts.push(...displayObjectAttrs);
-    }
-
-    return `h(DOMElement, { ${parts.join(', ')} })`;
-  }
-
-  function splitAttributes(attributes) {
-    const domAttrs = [];
-    const displayObjectAttrs = [];
-    const classValues = [];
-    let classInsertIndex = null;
-
-    attributes.forEach(attr => {
-      // Handle spread attributes
-      if (attr.startsWith('...')) {
-        displayObjectAttrs.push(attr);
-        return;
-      }
-
-      // Extract attribute name and value (if present)
-      let attrName;
-      let attrValue;
-      if (attr.includes(':')) {
-        const colonIndex = attr.indexOf(':');
-        attrName = attr.slice(0, colonIndex).trim().replace(/['"]/g, '');
-        attrValue = attr.slice(colonIndex + 1).trim();
-      } else {
-        // Standalone attribute
-        attrName = attr.replace(/['"]/g, '');
-      }
-
-      // Check if it's a DisplayObject attribute
-      if (displayObjectAttributes.has(attrName)) {
-        displayObjectAttrs.push(attr);
-        return;
-      }
-
-      if (attrName === 'class' && attrValue !== undefined) {
-        classValues.push(attrValue);
-        if (classInsertIndex === null) {
-          classInsertIndex = domAttrs.length;
-        }
-        return;
-      }
-
-      domAttrs.push(attr);
-    });
-
-    if (classValues.length > 0) {
-      const mergedClass = classValues.length === 1
-        ? `class: ${classValues[0]}`
-        : `class: [${classValues.join(', ')}]`;
-      if (classInsertIndex === null) {
-        domAttrs.push(mergedClass);
-      } else {
-        domAttrs.splice(classInsertIndex, 0, mergedClass);
-      }
-    }
-
-    return { domAttrs, displayObjectAttrs };
-  }
-
-  function formatDOMContainerAttributes(attributes) {
-    if (attributes.length === 0) {
-      return null;
-    }
-
-    const propsEntries = [];
-    const domAttrs = [];
-    const classValues = [];
-    let classInsertIndex = null;
-    let attrsInsertIndex = null;
-    let attrsIndex = null;
-    let attrsValue = null;
-
-    attributes.forEach(attr => {
-      if (attr.startsWith('...')) {
-        propsEntries.push(attr);
-        return;
-      }
-
-      let attrName;
-      let attrValue;
-      if (attr.includes(':')) {
-        const colonIndex = attr.indexOf(':');
-        attrName = attr.slice(0, colonIndex).trim().replace(/['"]/g, '');
-        attrValue = attr.slice(colonIndex + 1).trim();
-      } else {
-        attrName = attr.replace(/['"]/g, '');
-      }
-
-      if (attrName === 'class' && attrValue !== undefined) {
-        classValues.push(attrValue);
-        if (classInsertIndex === null) {
-          classInsertIndex = domAttrs.length;
-        }
-        if (attrsInsertIndex === null) {
-          attrsInsertIndex = propsEntries.length;
-        }
-        return;
-      }
-
-      if (attrName === 'style') {
-        domAttrs.push(attr);
-        if (attrsInsertIndex === null) {
-          attrsInsertIndex = propsEntries.length;
-        }
-        return;
-      }
-
-      if (attrName === 'attrs' && attrValue !== undefined) {
-        attrsValue = attrValue;
-        attrsIndex = propsEntries.length;
-        propsEntries.push(null);
-        return;
-      }
-
-      propsEntries.push(attr);
-    });
-
-    if (classValues.length > 0) {
-      const mergedClass = classValues.length === 1
-        ? `class: ${classValues[0]}`
-        : `class: [${classValues.join(', ')}]`;
-      if (classInsertIndex === null) {
-        domAttrs.push(mergedClass);
-      } else {
-        domAttrs.splice(classInsertIndex, 0, mergedClass);
-      }
-    }
-
-    let attrsEntry = null;
-    if (attrsValue && domAttrs.length > 0) {
-      attrsEntry = `attrs: { ...${attrsValue}, ${domAttrs.join(', ')} }`;
-    } else if (attrsValue) {
-      attrsEntry = `attrs: ${attrsValue}`;
-    } else if (domAttrs.length > 0) {
-      attrsEntry = `attrs: { ${domAttrs.join(', ')} }`;
-    }
-
-    if (attrsEntry) {
-      if (attrsIndex !== null) {
-        propsEntries[attrsIndex] = attrsEntry;
-      } else if (attrsInsertIndex !== null) {
-        propsEntries.splice(attrsInsertIndex, 0, attrsEntry);
-      } else {
-        propsEntries.unshift(attrsEntry);
-      }
-    }
-
-    const filteredEntries = propsEntries.filter(entry => entry !== null);
-    if (filteredEntries.length === 0) {
-      return null;
-    }
-
-    if (filteredEntries.length === 1 && filteredEntries[0].startsWith('...')) {
-      return filteredEntries[0].substring(3);
-    }
-
-    return `{ ${filteredEntries.join(', ')} }`;
-  }
-
-  function hasFunctionCall(value) {
-    if (typeof options.hasFunctionCall === 'function') {
-      return options.hasFunctionCall(value);
-    }
-    return /[a-zA-Z_][a-zA-Z0-9_]*\s*\(/.test(value);
-  }
-
-  function formatLoopIterable(iterable) {
-    return hasFunctionCall(iterable) ? `computed(() => ${iterable})` : iterable;
-  }
-
-  function hasIdentifier(value) {
-    return /[a-zA-Z_]/.test(value);
-  }
-
-  function isSimpleAccessor(value) {
-    return /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$/.test(value.trim());
-  }
-
-  function formatObjectLiteralSpacing(value) {
-    const trimmed = value.trim();
-    if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) {
-      return value;
-    }
-    const inner = trimmed.slice(1, -1).trim();
-    return `{ ${inner} }`;
-  }
-
-  function quoteSingleString(value) {
-    return `'${value
-      .replace(/\\/g, '\\\\')
-      .replace(/'/g, "\\'")
-      .replace(/\r/g, '\\r')
-      .replace(/\n/g, '\\n')
-      .replace(/\t/g, '\\t')}'`;
-  }
-
-  function collectMemberRoots(value) {
-    const roots = new Set();
-    const memberRegex = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\./g;
-    let match;
-
-    while ((match = memberRegex.exec(value)) !== null) {
-      roots.add(match[1]);
-    }
-
-    return roots;
-  }
-
-  function transformBareIdentifiersToSignals(value) {
-    const memberRoots = collectMemberRoots(value);
-
-    return value.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g, (match, name, offset) => {
-      if (['true', 'false', 'null'].includes(name)) {
-        return match;
-      }
-
-      const beforeMatch = value.substring(0, offset);
-      const singleQuotesBefore = (beforeMatch.match(/'/g) || []).length;
-      const doubleQuotesBefore = (beforeMatch.match(/"/g) || []).length;
-      if (singleQuotesBefore % 2 === 1 || doubleQuotesBefore % 2 === 1) {
-        return match;
-      }
-
-      const charBefore = offset > 0 ? value[offset - 1] : '';
-      const charAfter = offset + match.length < value.length ? value[offset + match.length] : '';
-
-      if (charBefore === '.' || charAfter === '.') {
-        return match;
-      }
-
-      if (memberRoots.has(name)) {
-        return match;
-      }
-
-      const afterSlice = value.slice(offset + match.length);
-      if (/^\s*\(/.test(afterSlice)) {
-        return match;
-      }
-
-      return `${name}()`;
-    });
   }
 
   function isCompleteForHeader(header) {
@@ -356,29 +52,11 @@
   function isCompleteIfHeader(header) {
     return /^\s*\(\s*.+\s*\)\s*$/s.test(header);
   }
-
-  function validateAttributeExpression(attributeName, value, expressionLocation) {
-    if (typeof options.validateExpression !== 'function') return;
-
-    try {
-      options.validateExpression(value);
-    } catch {
-      generateError(
-        'CE_TEMPLATE_INVALID_EXPRESSION',
-        `Invalid expression for attribute '${attributeName}'.`,
-        expressionLocation,
-        `Check the JavaScript expression inside ${attributeName}={...}.`
-      );
-    }
-  }
 }
 
 start
   = _ elements:(element)* _ {
-    if (elements.length === 1) {
-      return elements[0];
-    }
-    return `[${elements.join(',')}]`;
+    return { type: 'Root', children: elements };
   }
 
 element "component or control structure"
@@ -404,22 +82,12 @@ element "component or control structure"
 
 selfClosingElement "self-closing component tag"
   = _ "<" _ tagName:tagName _ attributes:attributes _ "/>" _ {
-      // Check if it's a DOM element
-      if (isDOMElement(tagName)) {
-        return formatDOMElement(tagName, attributes);
-      }
-      if (tagName === 'DOMContainer') {
-        const attrsString = formatDOMContainerAttributes(attributes);
-        return attrsString ? `h(DOMContainer, ${attrsString})` : `h(DOMContainer)`;
-      }
-      // Otherwise, treat as regular component
-      const attrsString = formatAttributes(attributes);
-      return attrsString ? `h(${tagName}, ${attrsString})` : `h(${tagName})`;
+      return { type: 'Element', form: 'selfClosing', tag: tagName, dom: isDOMElement(tagName), attributes, location: location() };
     }
 
 voidElement "void DOM element tag"
   = _ "<" _ tagName:tagName &{ return isVoidElement(tagName); } _ attributes:attributes _ ">" _ {
-      return formatDOMElement(tagName, attributes);
+      return { type: 'Element', form: 'void', tag: tagName, dom: true, attributes, location: location() };
     }
 
 domElementWithText "DOM element with text content"
@@ -432,29 +100,8 @@ domElementWithText "DOM element with text content"
           `Replace </${closingTag.name}> with </${tagName}>.`
         );
       }
-      
-      if (isDOMElement(tagName)) {
-        if (attributes.length === 0) {
-          return `h(DOMElement, { element: "${tagName}", textContent: ${text} })`;
-        }
 
-        const { domAttrs, displayObjectAttrs } = splitAttributes(attributes);
-
-        // Build the result
-        const parts = [`element: "${tagName}"`];
-        
-        if (domAttrs.length > 0) {
-          parts.push(`attrs: { ${domAttrs.join(', ')} }`);
-        }
-        
-        parts.push(`textContent: ${text}`);
-        
-        if (displayObjectAttrs.length > 0) {
-          parts.push(...displayObjectAttrs);
-        }
-
-        return `h(DOMElement, { ${parts.join(', ')} })`;
-      }
+      return { type: 'Element', form: 'text', tag: tagName, dom: true, attributes, text, location: location() };
     }
 
 domElementWithMixedContent "DOM element with mixed content"
@@ -468,34 +115,7 @@ domElementWithMixedContent "DOM element with mixed content"
         );
       }
 
-      const childrenContent = children ? children : null;
-
-      if (attributes.length === 0) {
-        if (childrenContent) {
-          return `h(DOMElement, { element: "${tagName}" }, ${childrenContent})`;
-        } else {
-          return `h(DOMElement, { element: "${tagName}" })`;
-        }
-      }
-
-      const { domAttrs, displayObjectAttrs } = splitAttributes(attributes);
-
-      // Build the result
-      const parts = [`element: "${tagName}"`];
-      
-      if (domAttrs.length > 0) {
-        parts.push(`attrs: { ${domAttrs.join(', ')} }`);
-      }
-      
-      if (displayObjectAttrs.length > 0) {
-        parts.push(...displayObjectAttrs);
-      }
-
-      if (childrenContent) {
-        return `h(DOMElement, { ${parts.join(', ')} }, ${childrenContent})`;
-      } else {
-        return `h(DOMElement, { ${parts.join(', ')} })`;
-      }
+      return { type: 'Element', form: 'content', tag: tagName, dom: true, attributes, children, location: location() };
     }
 
 componentWithText "component with text content"
@@ -509,63 +129,25 @@ componentWithText "component with text content"
         );
       }
 
-      const attrsString = formatAttributes(attributes);
-      return attrsString ? `h(${tagName}, ${attrsString}, ${text})` : `h(${tagName}, null, ${text})`;
+      return { type: 'Element', form: 'text', tag: tagName, dom: false, attributes, text, location: location() };
     }
 
 simpleTextContent "simple text content"
   = parts:(simpleDynamicPart / simpleTextPart)+ {
-      const validParts = parts.filter(p => p !== null);
-      if (validParts.length === 0) return null;
-      if (validParts.length === 1) return validParts[0];
-      
-      // Multiple parts - need to concatenate
-      const normalizedParts = validParts.map(part => {
-        if (typeof part === 'string' && part.startsWith('computed(() => ') && part.endsWith(')')) {
-          return part.slice('computed(() => '.length, -1);
-        }
-        return part;
-      });
-      const hasSignals = normalizedParts.some(part => part && part.includes && part.includes('()'));
-      if (hasSignals) {
-        return `computed(() => ${normalizedParts.join(' + ')})`;
-      }
-      return normalizedParts.join(' + ');
+      return { type: 'Text', parts, location: location() };
     }
 
 simpleTextPart "simple text part"
   = text:$((!("<" / "{" / directiveStart) .)+) {
-      const trimmed = text.trim();
-      if (!trimmed) return null;
-      const escaped = text
-        .replace(/\\/g, '\\\\')
-        .replace(/'/g, "\\'")
-        .replace(/\r/g, '\\r')
-        .replace(/\n/g, '\\n')
-        .replace(/\t/g, '\\t');
-      return `'${escaped}'`;
+      return { type: 'TextPart', value: text };
     }
 
 simpleDynamicPart "simple dynamic part"
   = "{{" _ expr:attributeValue _ "}}" {
-      const trimmedExpr = expr.trim();
-      if (!trimmedExpr) {
-        return trimmedExpr;
-      }
-      if (hasFunctionCall(trimmedExpr)) {
-        return `computed(() => ${trimmedExpr})`;
-      }
-      return trimmedExpr;
+      return { type: 'Interpolation', value: expr, location: location() };
     }
   / "{" !([ \t\n\r]* "/*") _ expr:attributeValue _ "}" {
-      const trimmedExpr = expr.trim();
-      if (!trimmedExpr) {
-        return trimmedExpr;
-      }
-      if (hasFunctionCall(trimmedExpr)) {
-        return `computed(() => ${trimmedExpr})`;
-      }
-      return trimmedExpr;
+      return { type: 'Interpolation', value: expr, location: location() };
     }
 
 openCloseElement "component with content"
@@ -578,63 +160,8 @@ openCloseElement "component with content"
           `Replace </${closingTag.name}> with </${tagName}>.`
         );
       }
-      
-      const children = content ? content : null;
 
-      // Check if it's a DOM element
-      if (isDOMElement(tagName)) {
-        if (attributes.length === 0) {
-          if (children) {
-            return `h(DOMElement, { element: "${tagName}" }, ${children})`;
-          } else {
-            return `h(DOMElement, { element: "${tagName}" })`;
-          }
-        }
-
-        const { domAttrs, displayObjectAttrs } = splitAttributes(attributes);
-
-        // Build the result
-        const parts = [`element: "${tagName}"`];
-        
-        if (domAttrs.length > 0) {
-          parts.push(`attrs: { ${domAttrs.join(', ')} }`);
-        }
-        
-        if (displayObjectAttrs.length > 0) {
-          parts.push(...displayObjectAttrs);
-        }
-
-        if (children) {
-          return `h(DOMElement, { ${parts.join(', ')} }, ${children})`;
-        } else {
-          return `h(DOMElement, { ${parts.join(', ')} })`;
-        }
-      }
-      
-      // Otherwise, treat as regular component
-      if (tagName === 'DOMContainer') {
-        const attrsString = formatDOMContainerAttributes(attributes);
-        if (attrsString && children) {
-          return `h(DOMContainer, ${attrsString}, ${children})`;
-        } else if (attrsString) {
-          return `h(DOMContainer, ${attrsString})`;
-        } else if (children) {
-          return `h(DOMContainer, null, ${children})`;
-        } else {
-          return `h(DOMContainer)`;
-        }
-      }
-
-      const attrsString = formatAttributes(attributes);
-      if (attrsString && children) {
-        return `h(${tagName}, ${attrsString}, ${children})`;
-      } else if (attrsString) {
-        return `h(${tagName}, ${attrsString})`;
-      } else if (children) {
-        return `h(${tagName}, null, ${children})`;
-      } else {
-        return `h(${tagName})`;
-      }
+      return { type: 'Element', form: 'content', tag: tagName, dom: isDOMElement(tagName), attributes, children: content, location: location() };
     }
 
 attributes "component attributes"
@@ -658,14 +185,12 @@ attribute "attribute"
 
 jsxSpreadAttribute "JSX-style spread attribute"
   = "{" _ "..." _ expression:attributeExpression _ "}" {
-      const trimmedExpression = expression.trim();
-      validateAttributeExpression('spread', trimmedExpression, location());
-      return `...${trimmedExpression}`;
+      return { type: 'SpreadAttribute', code: expression.trim(), validate: true, location: location() };
     }
 
 spreadAttribute "spread attribute"
   = "..." expr:(functionCallExpr / dotNotation) {
-      return "..." + expr;
+      return { type: 'SpreadAttribute', code: expr, validate: false, location: location() };
     }
 
 functionCallExpr "function call"
@@ -700,82 +225,10 @@ unsupportedBindingAttribute "unsupported Vue-style binding"
 
 dynamicAttribute "dynamic attribute"
   = attributeName:attributeName _ "=" _ "{" _ attributeValue:attributeValue _ "}" {
-      validateAttributeExpression(attributeName, attributeValue, location());
-
-      // Check if attributeName needs to be quoted (contains dash or other invalid JS identifier chars)
-      const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
-      const formattedName = needsQuotes ? `'${attributeName}'` : attributeName;
-      
-        if (eventAttributes.has(attributeName)) {
-          return `${formattedName}: ${attributeValue}`;
-        }
-      
-      // If it's a template string, keep it as-is
-      if (attributeValue.trim().startsWith('`') && attributeValue.trim().endsWith('`')) {
-        return formattedName + ': ' + attributeValue;
-      }
-
-      const trimmedValue = attributeValue.trim();
-      if (
-        (trimmedValue.startsWith('"') && trimmedValue.endsWith('"')) ||
-        (trimmedValue.startsWith("'") && trimmedValue.endsWith("'"))
-      ) {
-        return `${formattedName}: ${attributeValue}`;
-      }
-
-      const isObjectLiteral = trimmedValue.startsWith('{') && trimmedValue.endsWith('}');
-      const isArrayLiteral = trimmedValue.startsWith('[') && trimmedValue.endsWith(']');
-
-      // Handle component and standalone function values without making event-like callbacks reactive.
-      if (attributeValue.startsWith('h(') || (!isObjectLiteral && attributeValue.includes('=>'))) {
-        return `${formattedName}: ${attributeValue}`;
-      }
-
-      if (trimmedValue.match(/^[a-zA-Z_]\w*$/)) {
-        return `${formattedName}: ${attributeValue}`;
-      }
-
-      if (/^\d+(\.\d+)?$/.test(trimmedValue) || ['true', 'false', 'null'].includes(trimmedValue)) {
-        return `${formattedName}: ${attributeValue}`;
-      }
-
-      if (isSimpleAccessor(trimmedValue)) {
-        return `${formattedName}: ${attributeValue}`;
-      }
-
-      const isTernaryExpression = trimmedValue.includes('?') && trimmedValue.includes(':');
-      if (isObjectLiteral) {
-        const formattedObject = formatObjectLiteralSpacing(attributeValue);
-        if (hasFunctionCall(trimmedValue)) {
-          return `${formattedName}: computed(() => (${formattedObject}))`;
-        }
-        return `${formattedName}: ${formattedObject}`;
-      }
-      if (isArrayLiteral) {
-        if (hasFunctionCall(trimmedValue)) {
-          return `${formattedName}: computed(() => ${attributeValue})`;
-        }
-        return `${formattedName}: ${attributeValue}`;
-      }
-
-      if (isTernaryExpression) {
-        return `${formattedName}: computed(() => ${attributeValue})`;
-      }
-
-      if (hasFunctionCall(trimmedValue)) {
-        return `${formattedName}: computed(() => ${attributeValue})`;
-      }
-
-      if (!hasIdentifier(trimmedValue)) {
-        return `${formattedName}: ${attributeValue}`;
-      }
-
-      const computedValue = transformBareIdentifiersToSignals(attributeValue);
-      return `${formattedName}: computed(() => ${computedValue})`;
+      return { type: 'DynamicAttribute', name: attributeName, value: attributeValue, location: location() };
     }
   / attributeName:attributeName _ {
-      const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
-      return needsQuotes ? `'${attributeName}'` : attributeName;
+      return { type: 'ShorthandAttribute', name: attributeName, location: location() };
     }
 
 attributeValue "attribute value"
@@ -783,7 +236,7 @@ attributeValue "attribute value"
   / functionWithElement
   / objectLiteral
   / expression:attributeExpression {
-    return expression.trim()
+    return { type: 'Expression', code: expression.trim() };
   }
 
 attributeExpression "JavaScript attribute expression"
@@ -831,35 +284,35 @@ expressionPart
   / ![{}()[\]"'`] .
 
 objectLiteral "object literal"
-  = "{" _ objContent:objectContent _ "}" {
-    return `{ ${objContent} }`;
+  = "{" _ properties:objectContent _ "}" {
+    return { type: 'ObjectLiteral', properties };
   }
 
 objectContent
   = prop:objectProperty rest:(_ "," _ objectProperty)* {
-    return [prop].concat(rest.map(r => r[3])).join(', ');
+    return [prop].concat(rest.map(r => r[3]));
   }
-  / "" { return ""; }
+  / "" { return []; }
 
 objectProperty
   = key:identifier _ ":" _ value:propertyValue {
-    return `${key}: ${value}`;
+    return { key, value };
   }
   / key:identifier {
-    return key;
+    return { key, value: null };
   }
 
 propertyValue
   = nestedObject
   / element
   / functionWithElement
-  / stringLiteral
-  / number
-  / value:propertyExpression { return value.trim(); }
+  / code:stringLiteral { return { type: 'Expression', code }; }
+  / code:number { return { type: 'Expression', code }; }
+  / value:propertyExpression { return { type: 'Expression', code: value.trim() }; }
 
 nestedObject
-  = "{" _ objContent:objectContent _ "}" {
-    return `{ ${objContent} }`;
+  = "{" _ properties:objectContent _ "}" {
+    return { type: 'ObjectLiteral', properties };
   }
 
 stringLiteral
@@ -868,7 +321,7 @@ stringLiteral
 
 functionWithElement "function expression"
   = "(" _ params:functionParams? _ ")" _ "=>" _ elem:element {
-      return `${params ? `(${params}) =>` : '() =>'} ${elem}`;
+      return { type: 'ArrowElement', params: params || null, body: elem };
     }
 
 functionParams
@@ -887,40 +340,28 @@ simpleParams
 
 staticAttribute "static attribute"
   = attributeName:attributeName _ "=" _ attributeValue:(doubleQuotedStaticValue / singleQuotedStaticValue) {
-      const needsQuotes = /[^a-zA-Z0-9_$]/.test(attributeName);
-      const formattedName = needsQuotes ? `'${attributeName}'` : attributeName;
-      return `${formattedName}: ${attributeValue}`;
+      return { type: 'StaticAttribute', name: attributeName, value: attributeValue, location: location() };
     }
 
 doubleQuotedStaticValue
   = "\"" chars:[^\"]* "\"" {
-      return quoteSingleString(chars.join(''));
+      return chars.join('');
     }
 
 singleQuotedStaticValue
   = "'" chars:[^']* "'" {
-      return quoteSingleString(chars.join(''));
+      return chars.join('');
     }
 
-eventAttribute
-  = "(" _ eventName:eventName _ ")" _ "=" _ "\"" eventAction:eventAction "\"" {
-      return `${eventName}: () => { ${eventAction} }`;
-    }
 
 content "component content"
   = elements:(element)* {
-      const filteredElements = elements.filter(el => el !== null);
-      if (filteredElements.length === 0) return null;
-      if (filteredElements.length === 1) return filteredElements[0];
-      return `[${filteredElements.join(', ')}]`;
+      return elements;
     }
 
 domContent "DOM content"
   = elements:(domContentPart)* {
-      const filteredElements = elements.filter(el => el !== null);
-      if (filteredElements.length === 0) return null;
-      if (filteredElements.length === 1) return filteredElements[0];
-      return `[${filteredElements.join(', ')}]`;
+      return elements;
     }
 
 domContentPart
@@ -928,23 +369,9 @@ domContentPart
   / simpleTextContent
 
 
-
-textNode
-  = text:$([^<]+) {
-      const trimmed = text.trim();
-      return trimmed ? `'${trimmed}'` : null;
-    }
-
-textElement
-  = text:[^<>]+ {
-      const trimmed = text.join('').trim();
-      return trimmed ? JSON.stringify(trimmed) : null;
-    }
-
 forLoop "for loop"
   = _ forLocation:forToken _ "(" _ variableName:(tupleDestructuring / identifier) _ "of" _ iterable:iterable _ track:forTrack? ")" _ "{" _ content:content _ "}" _ {
-      const trackOption = track ? `, { track: ${variableName} => ${track} }` : '';
-      return `loop(${formatLoopIterable(iterable)}, ${variableName} => ${content}${trackOption})`;
+      return { type: 'For', binding: variableName, iterable, track: track || null, children: content, location: forLocation };
     }
 
 forToken
@@ -985,20 +412,14 @@ ifCondition "if condition"
           'Expected "@if (condition) { ... }" with a non-empty condition.'
         );
       }
-      let result = `cond(${condition}, () => ${content}`;
-      
-      // Add else if clauses
-      elseIfs.forEach(elseIf => {
-        result += `, [${elseIf.condition}, () => ${elseIf.content}]`;
-      });
-      
-      // Add else clause if present
-      if (elseClause) {
-        result += `, () => ${elseClause}`;
-      }
-      
-      result += ')';
-      return result;
+      return {
+        type: 'If',
+        condition,
+        children: content,
+        elseIfs,
+        else: elseClause,
+        location: ifLocation,
+      };
     }
 
 ifToken
@@ -1016,7 +437,7 @@ invalidIfDirective "invalid @if directive"
 
 elseIfClause "else if clause"
   = branchTrivia "@else" _ "if" _ "(" _ condition:condition _ ")" _ "{" _ content:content _ "}" _ {
-      return { condition, content };
+      return { condition, children: content };
     }
 
 elseClause "else clause"
@@ -1051,78 +472,28 @@ tagPart "tag part"
 attributeName "attribute name"
   = [a-zA-Z_$][a-zA-Z0-9_$:-]* { return text(); }
 
-eventName
-  = [a-zA-Z][a-zA-Z0-9-]* { return text(); }
-
-variableName
-  = [a-zA-Z_][a-zA-Z0-9_]* { return text(); }
 
 iterable "iterable expression"
   = expression:$(directiveExpressionPart+) { return expression.trim(); }
 
-dotFunctionChain
-  = segment:identifier "(" _ args:functionArgs? _ ")" rest:("." dotFunctionChain)? {
-      const restStr = rest ? `.${rest[1]}` : '';
-      return `${segment}(${args || ''})${restStr}`;
-    }
-  / segment:identifier rest:("." dotFunctionChain)? {
-      const restStr = rest ? `.${rest[1]}` : '';
-      return `${segment}${restStr}`;
-    }
 
 condition "condition expression"
   = text:$(directiveExpressionPart*) {
-      const originalText = text.trim();
-      if (!originalText) {
-        return originalText;
-      }
-
-      const hasOperator = /[!<>=&|]/.test(originalText);
-      if (hasOperator || hasFunctionCall(originalText)) {
-        return `computed(() => ${originalText})`;
-      }
-
-      return originalText;
+      return text.trim();
   }
 
-conditionChunk
-  = "(" conditionChunk* ")"
-  / [^()]
-
-functionCall "function call"
-  = name:identifier "(" args:functionArgs? ")" {
-    return `${name}(${args || ''})`;
-  }
-
-functionCallWithArgs "function call with complex args"
-  = name:identifier "(" args:complexFunctionArgs? ")" {
-    return `${name}(${args || ''})`;
-  }
 
 functionArgs
   = arg:functionArg rest:("," _ functionArg)* {
     return [arg].concat(rest.map(r => r[2])).join(', ');
   }
 
-complexFunctionArgs
-  = arg:complexFunctionArg rest:("," _ complexFunctionArg)* {
-    return [arg].concat(rest.map(r => r[2])).join(', ');
-  }
 
 functionArg
   = _ value:(identifier / number / string) _ {
     return value;
   }
 
-complexFunctionArg "complex function argument"
-  = _ value:complexArgExpression _ {
-    return value.trim();
-  }
-
-complexArgExpression "complex argument expression"
-  = $([^,)]* ("(" [^)]* ")" [^,)]*)*) {
-    return text().trim();
-  }
 
 number
   = [0-9]+ ("." [0-9]+)? { return text(); }
@@ -1131,8 +502,6 @@ string
   = '"' chars:[^"]* '"' { return text(); }
   / "'" chars:[^']* "'" { return text(); }
 
-eventAction
-  = [^"]* { return text(); }
 
 _ 'whitespace'
   = [ \t\n\r]* 
@@ -1142,7 +511,7 @@ identifier
 
 comment
   = (singleComment / jsxComment)+ {
-    return null
+    return { type: 'Comment' };
   }
 
 singleComment
@@ -1261,11 +630,7 @@ unquotedAttributeElement "element with an unquoted attribute"
 
 svgElement "SVG element"
   = "<svg" attrs:([^>]*) ">" content:svgInnerContent "</svg>" _ {
-      const attributes = attrs.join('').trim();
-      // Clean up the content by removing extra whitespace and newlines
-      const cleanContent = content.replace(/\s+/g, ' ').trim();
-      const rawContent = `<svg${attributes ? ' ' + attributes : ''}>${cleanContent}</svg>`;
-      return `h(Svg, { content: \`${rawContent}\` })`;
+      return { type: 'Svg', attributes: attrs.join('').trim(), content, location: location() };
     }
 
 svgInnerContent "SVG inner content"
