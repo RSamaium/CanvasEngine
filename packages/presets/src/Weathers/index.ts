@@ -95,8 +95,46 @@ function createRainTexture(seed = 1): Texture {
   return texture;
 }
 
+/**
+ * Owns the tick subscription of a weather layer across async mounts.
+ *
+ * `onDestroy` can run while `onMount` is suspended on `super.onMount()`, and
+ * mounts can overlap. Each mount gets a generation: a mount resumed after a
+ * destroy or a newer mount no longer subscribes, and a new subscription
+ * always replaces the previous one.
+ *
+ * @example
+ * const generation = this.tickLifecycle.begin();
+ * await super.onMount(element, index);
+ * if (!this.tickLifecycle.isCurrent(generation)) return;
+ * this.tickLifecycle.subscribe(observable.subscribe(onTick));
+ */
+class TickLifecycle {
+  private generation = 0;
+  private subscription: any;
+
+  begin() {
+    return ++this.generation;
+  }
+
+  isCurrent(generation: number) {
+    return generation === this.generation;
+  }
+
+  subscribe(subscription: any) {
+    this.subscription?.unsubscribe?.();
+    this.subscription = subscription;
+  }
+
+  end() {
+    this.generation++;
+    this.subscription?.unsubscribe?.();
+    this.subscription = undefined;
+  }
+}
+
 class RainTextureLayer extends DisplayObject(PixiTilingSprite) {
-  private tickSubscription: any;
+  private tickLifecycle = new TickLifecycle();
   private widthInput = 1000;
   private heightInput = 1000;
   private speedInput = 1;
@@ -140,7 +178,9 @@ class RainTextureLayer extends DisplayObject(PixiTilingSprite) {
   }
 
   async onMount(element: any, index?: number) {
+    const generation = this.tickLifecycle.begin();
     await super.onMount(element, index);
+    if (this.destroyed || !this.tickLifecycle.isCurrent(generation)) return;
     this.widthInput = element.propObservables?.width ?? element.props.width ?? this.widthInput;
     this.heightInput = element.propObservables?.height ?? element.props.height ?? this.heightInput;
     this.speedInput = element.propObservables?.speed ?? element.props.speed ?? this.speedInput;
@@ -149,7 +189,7 @@ class RainTextureLayer extends DisplayObject(PixiTilingSprite) {
     this.densityInput = element.propObservables?.density ?? element.props.density ?? this.densityInput;
     this.maxDropsInput = element.propObservables?.maxDrops ?? element.props.maxDrops ?? this.maxDropsInput;
     this.topDownInput = element.propObservables?.topDown ?? element.props.topDown ?? this.topDownInput;
-    this.tickSubscription = element.props.context?.tick?.observable?.subscribe(({ value }: any) => {
+    this.tickLifecycle.subscribe(element.props.context?.tick?.observable?.subscribe(({ value }: any) => {
       const delta = Math.min(value?.deltaTime ?? 16.67, 50) / 16.67;
       const speed = Number(resolveValue(this.speedInput)) || 0;
       const windDirection = Number(resolveValue(this.windInput)) || 0;
@@ -173,11 +213,11 @@ class RainTextureLayer extends DisplayObject(PixiTilingSprite) {
       this.offsetX += drift + fall * 0.12;
       this.offsetY += fall;
       this.tilePosition.set(this.offsetX, this.offsetY);
-    });
+    }));
   }
 
   async onDestroy(parent: any, afterDestroy: any) {
-    this.tickSubscription?.unsubscribe?.();
+    this.tickLifecycle.end();
     await super.onDestroy(parent, afterDestroy);
   }
 }
@@ -187,7 +227,7 @@ registerComponent("RainTextureLayer", RainTextureLayer);
 const RainLayer = (props: any) => createComponent("RainTextureLayer", props);
 
 class RainImpactLayer extends DisplayObject(PixiContainer) {
-  private tickSubscription: any;
+  private tickLifecycle = new TickLifecycle();
   private graphics = new PixiGraphics();
   private widthInput = 1000;
   private heightInput = 1000;
@@ -219,7 +259,9 @@ class RainImpactLayer extends DisplayObject(PixiContainer) {
   }
 
   async onMount(element: any, index?: number) {
+    const generation = this.tickLifecycle.begin();
     await super.onMount(element, index);
+    if (this.destroyed || !this.tickLifecycle.isCurrent(generation)) return;
     this.addChild(this.graphics);
     this.widthInput = element.propObservables?.width ?? element.props.width ?? this.widthInput;
     this.heightInput = element.propObservables?.height ?? element.props.height ?? this.heightInput;
@@ -230,10 +272,10 @@ class RainImpactLayer extends DisplayObject(PixiContainer) {
     this.windInput = element.propObservables?.windDirection ?? element.props.windDirection ?? this.windInput;
     this.windStrengthInput = element.propObservables?.windStrength ?? element.props.windStrength ?? this.windStrengthInput;
 
-    this.tickSubscription = element.props.context?.tick?.observable?.subscribe(({ value }: any) => {
+    this.tickLifecycle.subscribe(element.props.context?.tick?.observable?.subscribe(({ value }: any) => {
       const delta = Math.min(value?.deltaTime ?? 16.67, 50) / 16.67;
       this.drawImpacts(delta);
-    });
+    }));
   }
 
   private numberValue(input: any, fallback: number) {
@@ -321,7 +363,7 @@ class RainImpactLayer extends DisplayObject(PixiContainer) {
   }
 
   async onDestroy(parent: any, afterDestroy: any) {
-    this.tickSubscription?.unsubscribe?.();
+    this.tickLifecycle.end();
     await super.onDestroy(parent, afterDestroy);
   }
 }
@@ -346,7 +388,7 @@ const PARTICLE_LAYER_INPUTS = [
 ] as const;
 
 class WeatherParticleLayer extends DisplayObject(PixiContainer) {
-  private tickSubscription: any;
+  private tickLifecycle = new TickLifecycle();
   private field?: WeatherParticleField;
   private inputs: Record<string, any> = {};
 
@@ -358,7 +400,9 @@ class WeatherParticleLayer extends DisplayObject(PixiContainer) {
   }
 
   async onMount(element: any, index?: number) {
+    const generation = this.tickLifecycle.begin();
     await super.onMount(element, index);
+    if (this.destroyed || !this.tickLifecycle.isCurrent(generation)) return;
     for (const key of PARTICLE_LAYER_INPUTS) {
       const input = element.propObservables?.[key] ?? element.props[key];
       if (input !== undefined) this.inputs[key] = input;
@@ -366,7 +410,7 @@ class WeatherParticleLayer extends DisplayObject(PixiContainer) {
     this.field = new WeatherParticleField(element.props.effect);
     this.addChild(this.field);
 
-    this.tickSubscription = element.props.context?.tick?.observable?.subscribe(({ value }: any) => {
+    this.tickLifecycle.subscribe(element.props.context?.tick?.observable?.subscribe(({ value }: any) => {
       const read = (key: string) => resolveValue(this.inputs[key]);
       this.field!.update(value?.deltaTime ?? 16.67, {
         width: Number(read("width")) || 1000,
@@ -382,11 +426,11 @@ class WeatherParticleLayer extends DisplayObject(PixiContainer) {
         particleSize: read("particleSize"),
         haze: read("haze"),
       });
-    });
+    }));
   }
 
   async onDestroy(parent: any, afterDestroy: any) {
-    this.tickSubscription?.unsubscribe?.();
+    this.tickLifecycle.end();
     await super.onDestroy(parent, afterDestroy);
   }
 }
