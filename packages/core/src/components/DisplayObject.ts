@@ -392,7 +392,8 @@ export function DisplayObject(extendClass): any {
       this._id = props.id;
       for (let event of EVENTS) {
         if (props[event] && !this.overrideProps.includes(event)) {
-          this.eventMode = "static";
+          // An explicit eventMode (e.g. "none" on a visual overlay) wins
+          if (props.eventMode === undefined) this.eventMode = "static";
           const originalEventHandler = props[event];
           
           // Wrap event handler to check freeze state
@@ -547,6 +548,7 @@ export function DisplayObject(extendClass): any {
       if (props.zIndex !== undefined) this.zIndex = props.zIndex;
       if (props.roundPixels !== undefined) this.roundPixels = props.roundPixels;
       if (props.cursor) this.cursor = props.cursor;
+      if (props.eventMode !== undefined) this.eventMode = props.eventMode;
       if (props.visible !== undefined || props.display !== undefined) {
         this.visible = this.fullProps.display === "none"
           ? false

@@ -78,6 +78,12 @@ export interface DisplayObjectProps {
     zIndex?: SignalOrPrimitive<number>;
     roundPixels?: SignalOrPrimitive<boolean>;
     cursor?: SignalOrPrimitive<string>;
+    /**
+     * Pixi event mode. Event props (`pointerdown`, `click`...) set it to
+     * `"static"` unless it is given explicitly; `"none"` makes a visual-only
+     * element ignore pointer hit testing.
+     */
+    eventMode?: SignalOrPrimitive<PIXI.EventMode>;
     visible?: SignalOrPrimitive<boolean>;
     pivot?: ObservablePointSignal;
     filters?: any[];
