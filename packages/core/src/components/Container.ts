@@ -51,12 +51,10 @@ export class CanvasContainer extends DisplayObject(PixiContainer) {
     if (isWidthPercentage || isHeightPercentage) {
       this.on('layout', (event) => {
         const layoutBox = event.computedLayout;
-        if (isWidthPercentage && layoutBox.width !== undefined) {
-          this.displayWidth.set(layoutBox.width);
-        }
-        if (isHeightPercentage && layoutBox.height !== undefined) {
-          this.displayHeight.set(layoutBox.height);
-        }
+        this.setDisplaySize(
+          isWidthPercentage ? layoutBox.width : undefined,
+          isHeightPercentage ? layoutBox.height : undefined,
+        );
       });
     }
   }

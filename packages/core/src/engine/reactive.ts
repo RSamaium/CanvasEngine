@@ -1033,10 +1033,37 @@ export function createComponent(tag: string, props?: Props): Element {
       }
     };
 
+    // While a batch of flow sources is processed in order: for each position,
+    // the next position whose source was already mounted before the batch.
+    // Sources after the current one are never mounted during the batch, so
+    // the insert index lookup can skip straight to these, instead of scanning
+    // every following source (quadratic for a large loop).
+    let batchSources: any[] | null = null;
+    let batchNextMounted: Int32Array | null = null;
+
+    const indexNextMountedSources = (sources: any[]) => {
+      const next = new Int32Array(sources.length);
+      let following = -1;
+      for (let i = sources.length - 1; i >= 0; i--) {
+        next[i] = following;
+        if (childGroup.mounted.has(sources[i])) following = i;
+      }
+      batchSources = sources;
+      batchNextMounted = next;
+    };
+
     const getInsertIndex = (
       sourceIndex: number,
       orderedSources: any[]
     ): number | undefined => {
+      if (orderedSources === batchSources && batchNextMounted) {
+        const next = batchNextMounted;
+        for (let i = next[sourceIndex]; i !== -1; i = next[i]) {
+          const index = getMountedIndex(childGroup.mounted.get(orderedSources[i]));
+          if (index !== undefined) return index;
+        }
+        return getNextGroupIndex();
+      }
       for (let i = sourceIndex + 1; i < orderedSources.length; i++) {
         const index = getMountedIndex(childGroup.mounted.get(orderedSources[i]));
         if (index !== undefined) return index;
@@ -1106,13 +1133,25 @@ export function createComponent(tag: string, props?: Props): Element {
       }
     };
 
+    // One reorder once a wave of mounts settled, not one per mounted element:
+    // each reorder walks every child of the parent.
+    let reorderScheduled = false;
+    const scheduleReorder = () => {
+      if (reorderScheduled) return;
+      reorderScheduled = true;
+      queueMicrotask(() => {
+        reorderScheduled = false;
+        reorderMountedChildGroups();
+      });
+    };
+
     const mountElementAtDeclaredOrder = (
       element: Element,
       sourceIndex: number,
       orderedSources: any[]
     ) => {
       const mountResult = onMount(parent, element, getInsertIndex(sourceIndex, orderedSources));
-      void Promise.resolve(mountResult).then(reorderMountedChildGroups);
+      void Promise.resolve(mountResult).then(scheduleReorder);
       return mountResult;
     };
 
@@ -1161,13 +1200,20 @@ export function createComponent(tag: string, props?: Props): Element {
             const insertIndex = getInsertIndex(sourceIndex, orderedSources);
             const parentInstance = mounted.parent?.componentInstance as any;
             const childInstance = mounted.componentInstance as any;
+            const currentIndex = parentInstance?.children?.indexOf(childInstance) ?? -1;
             if (
               insertIndex !== undefined &&
-              parentInstance &&
-              typeof parentInstance.addChildAt === "function" &&
-              parentInstance.children?.includes(childInstance)
+              currentIndex !== -1 &&
+              typeof parentInstance.addChildAt === "function"
             ) {
-              parentInstance.addChildAt(childInstance, insertIndex);
+              // `insertIndex` is the position of the next mounted sibling.
+              // addChildAt removes the child first: when it sits before that
+              // sibling, the target position is one less. Children already in
+              // place are not moved (moving emits events and render updates).
+              const targetIndex = currentIndex < insertIndex ? insertIndex - 1 : insertIndex;
+              if (targetIndex !== currentIndex) {
+                parentInstance.addChildAt(childInstance, targetIndex);
+              }
             }
           }
           return;
@@ -1250,9 +1296,15 @@ export function createComponent(tag: string, props?: Props): Element {
               syncFlowElements(nextElements);
               return;
             }
-            components.forEach((component, index) => {
-              processFlowComponent(component, nextElements, index, components, reorder);
-            });
+            indexNextMountedSources(components);
+            try {
+              components.forEach((component, index) => {
+                processFlowComponent(component, nextElements, index, components, reorder);
+              });
+            } finally {
+              batchSources = null;
+              batchNextMounted = null;
+            }
             syncFlowElements(nextElements);
           } else if (isElement(value)) {
             // Handle direct Element emission

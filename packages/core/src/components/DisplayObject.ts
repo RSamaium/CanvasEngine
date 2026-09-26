@@ -14,7 +14,7 @@ import type {
   Size,
   TransformOrigin,
 } from "./types/DisplayObject";
-import { signal } from "@signe/reactive";
+import { signal, type WritableSignal } from "@signe/reactive";
 import { BlurFilter, ObservablePoint, type Point, type Rectangle } from "pixi.js";
 import * as FILTERS from "pixi-filters";
 import { isPercent } from "../utils/functions";
@@ -126,8 +126,13 @@ export function DisplayObject(extendClass): any {
     isMounted: boolean = false;
     _anchorPoints = new ObservablePoint({ _onUpdate: () => {} }, 0, 0);
     isCustomAnchor: boolean = false;
-    displayWidth = signal<Size>(0);
-    displayHeight = signal<Size>(0);
+    // Requested size. The signals are only created when read from outside:
+    // creating two signals per display object was a measurable part of
+    // mounting large scenes.
+    #displayWidthValue: Size = 0;
+    #displayHeightValue: Size = 0;
+    #displayWidthSignal: WritableSignal<Size> | null = null;
+    #displayHeightSignal: WritableSignal<Size> | null = null;
     overrideProps: string[] = [];
     layout = null;
     onBeforeDestroy: OnHook | null = null;
@@ -144,6 +149,17 @@ export function DisplayObject(extendClass): any {
     #layoutDependentChildren = new Set<any>();
     #layoutParentDependency: any = null;
     #tearingDown = false;
+    // Layout checks of `fullProps`, which is replaced (never mutated) on update
+    #layoutFlagsProps: Props | null = null;
+    #layoutContainerFlag = false;
+    #layoutNodeFlag = false;
+    #requiresLayoutParentFlag = false;
+    // Layout styles written while props are applied, sent to @pixi/layout as
+    // one style update (it merges styles, so the result is the same). Each
+    // update stringifies and diffs the whole style and writes to Yoga: a few
+    // setters per element made it the main cost of mounting laid out scenes.
+    #layoutBatch: Record<string, unknown> | null = null;
+    #layoutBatchDepth = 0;
     defaultLayoutObjectFit: ObjectFit | undefined = undefined;
 
     /**
@@ -204,14 +220,42 @@ export function DisplayObject(extendClass): any {
       }
     }
 
+    /** Computes the layout checks once per `fullProps` object. */
+    #syncLayoutFlags() {
+      const props = this.fullProps;
+      if (props === this.#layoutFlagsProps) return;
+      this.#layoutFlagsProps = props;
+      this.#layoutContainerFlag = hasLayoutContainerProps(props);
+      this.#layoutNodeFlag = this.#layoutContainerFlag || hasLayoutNodeProps(props);
+      this.#requiresLayoutParentFlag = requiresLayoutParent(props);
+    }
+
+    #hasLayoutContainerProps(props: Props) {
+      if (props !== this.fullProps) return hasLayoutContainerProps(props);
+      this.#syncLayoutFlags();
+      return this.#layoutContainerFlag;
+    }
+
+    #hasLayoutNodeProps(props: Props) {
+      if (props !== this.fullProps) return hasLayoutNodeProps(props);
+      this.#syncLayoutFlags();
+      return this.#layoutNodeFlag;
+    }
+
+    #requiresLayoutParent(props: Props) {
+      if (props !== this.fullProps) return requiresLayoutParent(props);
+      this.#syncLayoutFlags();
+      return this.#requiresLayoutParentFlag;
+    }
+
     #syncLayoutRole(props: Props) {
-      this.isLayoutContainer = hasLayoutContainerProps(props);
+      this.isLayoutContainer = this.#hasLayoutContainerProps(props);
       this.isLayoutBoundary =
         this.isLayoutContainer || this.#layoutDependentChildren.size > 0;
       // Keep the historical flag as a broad "participates in layout" marker
       // for compatibility. New code must use isLayoutContainer when deciding
       // whether this object lays out its own children.
-      this.isFlex = this.isLayoutBoundary || hasLayoutNodeProps(props);
+      this.isFlex = this.isLayoutBoundary || this.#hasLayoutNodeProps(props);
     }
 
     #ensureLayoutChildren() {
@@ -257,7 +301,7 @@ export function DisplayObject(extendClass): any {
       const nextParent =
         !this.disableLayout &&
         canProvideLayoutParent &&
-        requiresLayoutParent(this.fullProps)
+        this.#requiresLayoutParent(this.fullProps)
           ? parent
           : null;
 
@@ -268,12 +312,37 @@ export function DisplayObject(extendClass): any {
       this.#layoutParentDependency?.registerLayoutDependentChild?.(this);
     }
 
+    /** Writes layout styles, deferred while a batch is open and the layout exists. */
+    #writeLayout(style: Record<string, unknown>) {
+      if (this.#layoutBatchDepth > 0 && this.layout) {
+        this.#layoutBatch = this.#layoutBatch
+          ? Object.assign(this.#layoutBatch, style)
+          : { ...style };
+        return;
+      }
+      this.layout = style as any;
+    }
+
+    #beginLayoutBatch() {
+      this.#layoutBatchDepth++;
+    }
+
+    #endLayoutBatch() {
+      if (--this.#layoutBatchDepth > 0) return;
+      const style = this.#layoutBatch;
+      this.#layoutBatch = null;
+      if (style && this.layout && !this.destroyed) {
+        this.layout = style as any;
+      }
+    }
+
     detachLayoutSubtree() {
       if (Array.isArray(this.children)) {
         for (const child of this.children) {
           child?.detachLayoutSubtree?.();
         }
       }
+      this.#layoutBatch = null;
       if (this.layout) this.layout = null;
       this.#computedLayoutBox = null;
     }
@@ -295,7 +364,7 @@ export function DisplayObject(extendClass): any {
         this.isLayoutBoundary ||
         Boolean(this.parent?.isLayoutContainer) ||
         this.#hasLayoutParentDependency() ||
-        hasLayoutNodeProps(source);
+        this.#hasLayoutNodeProps(source);
       if (!shouldHaveLayout) return;
 
       this.ensureLayout();
@@ -304,9 +373,9 @@ export function DisplayObject(extendClass): any {
           source.objectFit === undefined && this.defaultLayoutObjectFit !== undefined
             ? { ...source, objectFit: this.defaultLayoutObjectFit }
             : source;
-        this.layout = normalizeLayoutProps(normalizedSource, {
+        this.#writeLayout(normalizeLayoutProps(normalizedSource, {
           containerAnchor: this.isCustomAnchor && this.isLayoutBoundary,
-        });
+        }));
       }
     }
 
@@ -361,7 +430,7 @@ export function DisplayObject(extendClass): any {
       if (this.destroyed) return
       this.#element = element;
       this.#canvasContext = element.props.context;
-      if (this.isLayoutBoundary || hasLayoutNodeProps(this.fullProps)) {
+      if (this.isLayoutBoundary || this.#hasLayoutNodeProps(this.fullProps)) {
         this.ensureLayout();
       }
       if (element.parent) {
@@ -384,7 +453,7 @@ export function DisplayObject(extendClass): any {
           }
         }
         this.#syncLayoutParentDependency(instance);
-        if ((instance.isLayoutContainer || this.isLayoutBoundary || hasLayoutNodeProps(this.fullProps)) && !this.disableLayout) {
+        if ((instance.isLayoutContainer || this.isLayoutBoundary || this.#hasLayoutNodeProps(this.fullProps)) && !this.disableLayout) {
           try {
             this.ensureLayout();
           } catch (error) {
@@ -420,6 +489,16 @@ export function DisplayObject(extendClass): any {
     }
 
     onUpdate(props: Props) {
+      // Prop setters write layout styles one by one: apply them at once
+      this.#beginLayoutBatch();
+      try {
+        this.#applyProps(props);
+      } finally {
+        this.#endLayoutBatch();
+      }
+    }
+
+    #applyProps(props: Props) {
       this.fullProps = {
         ...this.fullProps,
         ...props,
@@ -444,7 +523,7 @@ export function DisplayObject(extendClass): any {
         this.isLayoutBoundary ||
         Boolean(this.parent?.isLayoutContainer) ||
         this.#hasLayoutParentDependency() ||
-        hasLayoutNodeProps(this.fullProps)
+        this.#hasLayoutNodeProps(this.fullProps)
       ) {
         this.ensureLayout();
       }
@@ -594,46 +673,46 @@ export function DisplayObject(extendClass): any {
     }
 
     setFlexDirection(direction: FlexDirection) {
-      this.layout = { flexDirection: direction };
+      this.#writeLayout({ flexDirection: direction });
     }
 
     setFlexWrap(wrap: FlexWrap) {
-      this.layout = { flexWrap: wrap };
+      this.#writeLayout({ flexWrap: wrap });
     }
 
     setAlignContent(align: AlignContent) {
-      this.layout = { alignContent: align };
+      this.#writeLayout({ alignContent: align });
     }
 
     setAlignSelf(align: AlignSelf) {
-      this.layout = { alignSelf: align };
+      this.#writeLayout({ alignSelf: align });
     }
 
     setAlignItems(align: AlignItems) {
-      this.layout = { alignItems: align };
+      this.#writeLayout({ alignItems: align });
     }
 
     setJustifyContent(justifyContent: JustifyContent) {
-      this.layout = { justifyContent };
+      this.#writeLayout({ justifyContent });
     }
 
     setPosition(position: EdgeSize) {
       if (position instanceof Array) {
         if (position.length === 2) {
-          this.layout = {
+          this.#writeLayout({
             positionY: position[0],
             positionX: position[1],
-          };
+          });
         } else if (position.length === 4) {
-          this.layout = {
+          this.#writeLayout({
             positionTop: position[0],
             positionRight: position[1],
             positionBottom: position[2],
             positionLeft: position[3],
-          };
+          });
         }
       } else {
-        this.layout = { position };
+        this.#writeLayout({ position });
       }
     }
 
@@ -643,7 +722,7 @@ export function DisplayObject(extendClass): any {
         this.x = x;
       } else {
         this.x = x;
-        this.layout = { x };
+        this.#writeLayout({ x });
       }
     }
 
@@ -653,45 +732,75 @@ export function DisplayObject(extendClass): any {
         this.y = y;
       } else {
         this.y = y;
-        this.layout = { y };
+        this.#writeLayout({ y });
       }
     }
 
     setPadding(padding: EdgeSize) {
-      this.layout = normalizeLayoutProps({ padding });
+      this.#writeLayout(normalizeLayoutProps({ padding }));
     }
 
     setMargin(margin: EdgeSize) {
-      this.layout = normalizeLayoutProps({ margin });
+      this.#writeLayout(normalizeLayoutProps({ margin }));
     }
 
     setGap(gap: Size) {
-      this.layout = { gap };
+      this.#writeLayout({ gap });
     }
 
     setBorder(border: LayoutBorder) {
-      if (isLayoutBorder(border)) this.layout = normalizeLayoutProps({ border });
+      if (isLayoutBorder(border)) this.#writeLayout(normalizeLayoutProps({ border }));
     }
 
     setPositionType(positionType: "relative" | "absolute" | "static") {
-      this.layout = { position: positionType };
+      this.#writeLayout({ position: positionType });
+    }
+
+    /** Requested width as a signal, created on first access. */
+    get displayWidth(): WritableSignal<Size> {
+      return (this.#displayWidthSignal ??= signal<Size>(this.#displayWidthValue));
+    }
+
+    set displayWidth(value: WritableSignal<Size>) {
+      this.#displayWidthSignal = value;
+    }
+
+    /** Requested height as a signal, created on first access. */
+    get displayHeight(): WritableSignal<Size> {
+      return (this.#displayHeightSignal ??= signal<Size>(this.#displayHeightValue));
+    }
+
+    set displayHeight(value: WritableSignal<Size>) {
+      this.#displayHeightSignal = value;
+    }
+
+    /** Updates the requested size (and its signals, when they exist). */
+    setDisplaySize(width?: Size, height?: Size) {
+      if (width !== undefined) {
+        this.#displayWidthValue = width;
+        this.#displayWidthSignal?.set(width);
+      }
+      if (height !== undefined) {
+        this.#displayHeightValue = height;
+        this.#displayHeightSignal?.set(height);
+      }
     }
 
     setWidth(width: Size) {
-      this.displayWidth.set(width);
+      this.setDisplaySize(width, undefined);
       if (!this.parentIsFlex && !this.layout) {
         if (!isPercent(width)) this.width = width;
       } else {
-        this.layout = { width };
+        this.#writeLayout({ width });
       }
     }
 
     setHeight(height: Size) {
-      this.displayHeight.set(height);
+      this.setDisplaySize(undefined, height);
       if (!this.parentIsFlex && !this.layout) {
         if (!isPercent(height)) this.height = height;
       } else {
-        this.layout = { height };
+        this.#writeLayout({ height });
       }
     }
 
@@ -705,7 +814,9 @@ export function DisplayObject(extendClass): any {
         return typeof this.width === 'number' ? this.width : 0;
       }
       // For static values, use native PixiJS width or displayWidth signal
-      const requestedWidth = this.displayWidth();
+      const requestedWidth = this.#displayWidthSignal
+        ? this.#displayWidthSignal()
+        : this.#displayWidthValue;
       const staticWidth = typeof this.width === 'number' && this.width > 0 
         ? this.width 
         : (typeof requestedWidth === 'number' ? requestedWidth : 0);
@@ -722,7 +833,9 @@ export function DisplayObject(extendClass): any {
         return typeof this.height === 'number' ? this.height : 0;
       }
       // For static values, use native PixiJS height or displayHeight signal
-      const requestedHeight = this.displayHeight();
+      const requestedHeight = this.#displayHeightSignal
+        ? this.#displayHeightSignal()
+        : this.#displayHeightValue;
       const staticHeight = typeof this.height === 'number' && this.height > 0 
         ? this.height 
         : (typeof requestedHeight === 'number' ? requestedHeight : 0);
@@ -731,69 +844,69 @@ export function DisplayObject(extendClass): any {
 
     // Min/Max constraints
     setMinWidth(minWidth: number | string) {
-      this.layout = { minWidth };
+      this.#writeLayout({ minWidth });
     }
 
     setMinHeight(minHeight: number | string) {
-      this.layout = { minHeight };
+      this.#writeLayout({ minHeight });
     }
 
     setMaxWidth(maxWidth: number | string) {
-      this.layout = { maxWidth };
+      this.#writeLayout({ maxWidth });
     }
 
     setMaxHeight(maxHeight: number | string) {
-      this.layout = { maxHeight };
+      this.#writeLayout({ maxHeight });
     }
 
     // Aspect ratio
     setAspectRatio(aspectRatio: number) {
-      this.layout = { aspectRatio };
+      this.#writeLayout({ aspectRatio });
     }
 
     // Flex properties
     setFlexGrow(flexGrow: number) {
-      this.layout = { flexGrow };
+      this.#writeLayout({ flexGrow });
     }
 
     setFlexShrink(flexShrink: number) {
-      this.layout = { flexShrink };
+      this.#writeLayout({ flexShrink });
     }
 
     setFlexBasis(flexBasis: number | string) {
-      this.layout = { flexBasis };
+      this.#writeLayout({ flexBasis });
     }
 
     // Gap properties
     setRowGap(rowGap: Size) {
-      this.layout = { rowGap };
+      this.#writeLayout({ rowGap });
     }
 
     setColumnGap(columnGap: Size) {
-      this.layout = { columnGap };
+      this.#writeLayout({ columnGap });
     }
 
     // Position insets
     setTop(top: number | string) {
-      this.layout = { top };
+      this.#writeLayout({ top });
     }
 
     setLeft(left: number | string) {
-      this.layout = { left };
+      this.#writeLayout({ left });
     }
 
     setRight(right: number | string) {
-      this.layout = { right };
+      this.#writeLayout({ right });
     }
 
     setBottom(bottom: number | string) {
-      this.layout = { bottom };
+      this.#writeLayout({ bottom });
     }
 
     // Object properties
     setObjectFit(objectFit: ObjectFit) {
       try {
-        this.layout = { objectFit };
+        this.#writeLayout({ objectFit });
       } catch (error) {
         // Ignore layout errors in test environments or when yoga-layout is not available
       }
@@ -801,7 +914,7 @@ export function DisplayObject(extendClass): any {
 
     setObjectPosition(objectPosition: ObjectPosition) {
       try {
-        this.layout = { objectPosition };
+        this.#writeLayout({ objectPosition });
       } catch (error) {
         // Ignore layout errors in test environments or when yoga-layout is not available
       }
@@ -809,7 +922,7 @@ export function DisplayObject(extendClass): any {
 
     setTransformOrigin(transformOrigin: TransformOrigin) {
       try {
-        this.layout = { transformOrigin };
+        this.#writeLayout({ transformOrigin });
       } catch (error) {
         // Ignore layout errors in test environments or when yoga-layout is not available
       }

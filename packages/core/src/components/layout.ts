@@ -182,11 +182,18 @@ export function normalizeLayoutProps(
   return style;
 }
 
+// These checks run several times per element on mount and on every update:
+// plain loops, no closure per key.
+
+function hasDefinedProp(props: Props, keys: readonly string[]): boolean {
+  for (let i = 0; i < keys.length; i++) {
+    if (props[keys[i]] !== undefined) return true;
+  }
+  return false;
+}
+
 export function hasLayoutContainerProps(props: Props): boolean {
-  return Boolean(
-    props.isRoot ||
-      CONTAINER_LAYOUT_PROPS.some((key) => props[key] !== undefined),
-  );
+  return Boolean(props.isRoot) || hasDefinedProp(props, CONTAINER_LAYOUT_PROPS);
 }
 
 export function hasLayoutNodeProps(props: Props): boolean {
@@ -197,13 +204,20 @@ export function hasLayoutNodeProps(props: Props): boolean {
   ) {
     return true;
   }
-  return ITEM_LAYOUT_PROPS.some((key) =>
-    key === "border" ? isLayoutBorder(props.border) : props[key] !== undefined,
-  );
+  for (let i = 0; i < ITEM_LAYOUT_PROPS.length; i++) {
+    const key = ITEM_LAYOUT_PROPS[i];
+    if (key === "border" ? isLayoutBorder(props.border) : props[key] !== undefined) return true;
+  }
+  return false;
 }
 
 function containsPercentage(value: unknown): boolean {
-  if (Array.isArray(value)) return value.some(containsPercentage);
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      if (containsPercentage(value[i])) return true;
+    }
+    return false;
+  }
   return typeof value === "string" && value.endsWith("%");
 }
 
@@ -217,11 +231,12 @@ function containsPercentage(value: unknown): boolean {
 export function requiresLayoutParent(props: Props): boolean {
   if (props.right !== undefined || props.bottom !== undefined) return true;
 
-  if (FLEX_ITEM_PROPS.some((key) => props[key] !== undefined)) return true;
+  if (hasDefinedProp(props, FLEX_ITEM_PROPS)) return true;
 
-  return PERCENTAGE_DEPENDENT_PROPS.some((key) =>
-    containsPercentage(props[key]),
-  );
+  for (let i = 0; i < PERCENTAGE_DEPENDENT_PROPS.length; i++) {
+    if (containsPercentage(props[PERCENTAGE_DEPENDENT_PROPS[i]])) return true;
+  }
+  return false;
 }
 
 export function withLayoutSize(

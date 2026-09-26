@@ -1,4 +1,4 @@
-import { Effect, effect, isSignal, signal, Signal, untracked, WritableSignal } from "@signe/reactive";
+import { Effect, effect, isSignal, untracked, WritableSignal } from "@signe/reactive";
 import { Assets, ObservablePoint, Graphics as PixiGraphics } from "pixi.js";
 import { createComponent, Element, registerComponent } from "../engine/reactive";
 import { ComponentInstance, DisplayObject } from "./DisplayObject";
@@ -38,12 +38,32 @@ interface SvgProps extends DisplayObjectProps {
   content?: string;
 }
 
+/**
+ * A prop read by the draw function: the signal given as prop when there is
+ * one, else a plain value. Static sizes do not get a signal of their own.
+ */
+class PropSource<T> {
+  constructor(private source: WritableSignal<T> | null, private value: T) {}
+
+  get(): T {
+    return this.source ? this.source() : this.value;
+  }
+
+  set(value: T) {
+    if (this.source) this.source.set(value);
+    else this.value = value;
+  }
+}
+
+const propSource = <T>(observable: unknown, value: T) =>
+  new PropSource<T>(isSignal(observable) ? (observable as WritableSignal<T>) : null, value);
+
 class CanvasGraphics extends DisplayObject(PixiGraphics) {
   clearEffect: Effect;
-  _width: WritableSignal<number>;
-  _height: WritableSignal<number>;
+  #width: PropSource<number | string> | null = null;
+  #height: PropSource<number | string> | null = null;
   #layoutBounds: { x: number; y: number; width: number; height: number } | null = null;
-  #anchor: Signal<[number, number]> | null = null;
+  #anchor: PropSource<[number, number]> | null = null;
   #redraw: (() => void) | null = null;
   // Size and anchor of the last drawing, to redraw only when they change
   #drawnSize: { width: unknown; height: unknown; anchor: unknown } | null = null;
@@ -104,19 +124,17 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
     }
     const { props, propObservables } = element;
     
-    // Use original signals from propObservables if available, otherwise create new ones
-    const width = (isSignal(propObservables?.width) ? propObservables.width : signal(props.width || 0)) as WritableSignal<number>;
-    const height = (isSignal(propObservables?.height) ? propObservables.height : signal(props.height || 0)) as WritableSignal<number>;
-    const anchor = (isSignal(propObservables?.anchor) ? propObservables.anchor : signal(props.anchor || [0, 0])) as WritableSignal<[number, number]>;
-
-    // Store as class properties for access in other methods
-    this._width = width;
-    this._height = height;
+    // The signals given as props, or the static values
+    const width = propSource<number | string>(propObservables?.width, props.width || 0);
+    const height = propSource<number | string>(propObservables?.height, props.height || 0);
+    const anchor = propSource<[number, number]>(propObservables?.anchor, props.anchor || [0, 0]);
+    this.#width = width;
+    this.#height = height;
     this.#anchor = anchor;
     
     // Check if width or height are percentages to set display flex
-    const isWidthPercentage = isPercent(width());
-    const isHeightPercentage = isPercent(height());
+    const isWidthPercentage = isPercent(width.get());
+    const isHeightPercentage = isPercent(height.get());
     
     if (props.draw) {
       const draw = () => {
@@ -125,7 +143,7 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
         // draw function reads (a color signal, for example), so a static
         // shape subscribes to nothing. Each tracked signal costs several
         // RxJS subscriptions, created on mount and released on destroy.
-        const [w, h, a] = untracked(() => [width(), height(), anchor()]);
+        const [w, h, a] = untracked(() => [width.get(), height.get(), anchor.get()]);
         if (typeof w == 'string' || typeof h == 'string') {
           return
         }
@@ -134,7 +152,7 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
         }
         this.#drawnSize = { width: w, height: h, anchor: a };
         this.clear();
-        props.draw?.(this, w, h, a);
+        props.draw?.(this, w as number, h as number, a);
         const bounds = this.getLocalBounds();
         const nextBounds = {
           x: bounds.x,
@@ -163,12 +181,12 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
     this.on('layout', (event) => {
       const layoutBox = event.computedLayout;
       // Update width if it's a percentage and value has changed
-      if (isWidthPercentage && isSignal(width) && width() !== layoutBox.width) {
+      if (isWidthPercentage && width.get() !== layoutBox.width) {
         width.set(layoutBox.width);
       }
       
       // Update height if it's a percentage and value has changed
-      if (isHeightPercentage && isSignal(height) && height() !== layoutBox.height) {
+      if (isHeightPercentage && height.get() !== layoutBox.height) {
         height.set(layoutBox.height);
       }
       this.#redrawIfSizeChanged();
@@ -183,14 +201,14 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
   onUpdate(props: any) {
     super.onUpdate(props);
 
-    // Update width signal if width prop changed and value is different
-    if (props.width !== undefined && this._width && this._width() !== props.width) {
-      this._width.set(props.width);
+    // Update width if width prop changed and value is different
+    if (props.width !== undefined && this.#width && this.#width.get() !== props.width) {
+      this.#width.set(props.width);
     }
     
-    // Update height signal if height prop changed and value is different
-    if (props.height !== undefined && this._height && this._height() !== props.height) {
-      this._height.set(props.height);
+    // Update height if height prop changed and value is different
+    if (props.height !== undefined && this.#height && this.#height.get() !== props.height) {
+      this.#height.set(props.height);
     }
 
     if ("width" in props || "height" in props || "anchor" in props) {
@@ -206,9 +224,9 @@ class CanvasGraphics extends DisplayObject(PixiGraphics) {
       const drawn = this.#drawnSize;
       if (
         drawn &&
-        drawn.width === this._width() &&
-        drawn.height === this._height() &&
-        drawn.anchor === this.#anchor?.()
+        drawn.width === this.#width?.get() &&
+        drawn.height === this.#height?.get() &&
+        drawn.anchor === this.#anchor?.get()
       ) {
         return;
       }

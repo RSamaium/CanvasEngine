@@ -1145,3 +1145,66 @@ describe("loop additional tests", () => {
     expect(children[0].text).toBe('updated-0');
   });
 });
+
+describe("loop insert position", () => {
+  const texts = (container: any) => container.componentInstance.children.map((child: any) => child.text);
+
+  test("new items are inserted before a following static sibling", async () => {
+    const items = signal([{ id: "a" }, { id: "b" }]);
+    const container = await TestBed.createComponent(Container, {}, [
+      loop(items, (item: any) => h(Text, { text: item.id }), { track: (item: any) => item.id }),
+      h(Text, { text: "footer" }),
+    ]);
+    await vi.waitFor(() => expect(texts(container)).toEqual(["a", "b", "footer"]));
+
+    items.set([...items(), { id: "c" }]);
+
+    await vi.waitFor(() => expect(texts(container)).toEqual(["a", "b", "c", "footer"]));
+  });
+
+  test("an item inserted in the middle lands before the next mounted item", async () => {
+    const a = { id: "a" };
+    const c = { id: "c" };
+    const items = signal([a, c]);
+    const container = await TestBed.createComponent(
+      Container,
+      {},
+      loop(items, (item: any) => h(Text, { text: item.id }), { track: (item: any) => item.id })
+    );
+
+    items.set([a, { id: "b" }, c]);
+
+    await vi.waitFor(() => expect(texts(container)).toEqual(["a", "b", "c"]));
+  });
+
+  test("re-emitting a tracked list in the same order moves no child", async () => {
+    const list = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    const items = signal(list);
+    const container = await TestBed.createComponent(
+      Container,
+      {},
+      loop(items, (item: any) => h(Text, { text: item.id }), { track: (item: any) => item.id })
+    );
+    const addChildAt = vi.spyOn(container.componentInstance as any, "addChildAt");
+
+    items.set([...list]);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(addChildAt).not.toHaveBeenCalled();
+    expect(texts(container)).toEqual(["a", "b", "c"]);
+  });
+
+  test("items added at the start land before the existing ones", async () => {
+    const c = { id: "c" };
+    const items = signal([c]);
+    const container = await TestBed.createComponent(
+      Container,
+      {},
+      loop(items, (item: any) => h(Text, { text: item.id }), { track: (item: any) => item.id })
+    );
+
+    items.set([{ id: "a" }, { id: "b" }, c]);
+
+    await vi.waitFor(() => expect(texts(container)).toEqual(["a", "b", "c"]));
+  });
+});
