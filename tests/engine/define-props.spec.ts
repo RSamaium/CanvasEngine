@@ -233,4 +233,74 @@ describe('useDefineProps', () => {
 
         expect(received).toBe('ok')
     })
+
+    describe('signal props with an undefined value', () => {
+        it('skips the type check like a plain undefined prop', () => {
+            const defineProps = useDefineProps({ alpha: signal(undefined) })
+
+            expect(() => defineProps({ alpha: { type: Number } })).not.toThrow()
+            expect(() => defineProps({ alpha: Number })).not.toThrow()
+        })
+
+        it('still rejects a signal holding a value of the wrong type', () => {
+            const defineProps = useDefineProps({ alpha: signal('opaque') })
+
+            expect(() => defineProps({ alpha: { type: Number } })).toThrow(/type check failed for prop "alpha"/)
+        })
+
+        it('reads the default while the signal value is undefined', () => {
+            const alpha = signal<number | undefined>(undefined)
+            const props = useDefineProps({ alpha })({
+                alpha: { type: Number, default: 1 }
+            })
+
+            expect(isSignal(props.alpha)).toBe(true)
+            expect(props.alpha()).toBe(1)
+
+            alpha.set(0.5)
+            expect(props.alpha()).toBe(0.5)
+
+            alpha.set(undefined)
+            expect(props.alpha()).toBe(1)
+        })
+
+        it('stays reactive for computed values and subscribers', () => {
+            const alpha = signal<number | undefined>(undefined)
+            const props = useDefineProps({ alpha })({
+                alpha: { type: Number, default: 1 }
+            })
+            const doubled = computed(() => props.alpha() * 2)
+            const emitted: number[] = []
+            props.alpha.observable.subscribe((value: number) => emitted.push(value))
+
+            expect(doubled()).toBe(2)
+            alpha.set(3)
+            expect(doubled()).toBe(6)
+            alpha.set(undefined)
+            expect(doubled()).toBe(2)
+            expect(emitted).toEqual([1, 3, 1])
+        })
+
+        it('writes through to the parent signal', () => {
+            const alpha = signal<number | undefined>(undefined)
+            const props = useDefineProps({ alpha })({
+                alpha: { type: Number, default: 1 }
+            })
+
+            props.alpha.set(0.2)
+            expect(alpha()).toBe(0.2)
+
+            props.alpha.update((value: number) => value + 1)
+            expect(alpha()).toBe(1.2)
+        })
+
+        it('calls a default factory with the raw props', () => {
+            const size = signal<number | undefined>(undefined)
+            const props = useDefineProps({ size, base: 4 })({
+                size: { type: Number, default: (raw: any) => raw.base * 2 }
+            })
+
+            expect(props.size()).toBe(8)
+        })
+    })
 })
