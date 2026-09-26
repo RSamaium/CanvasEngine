@@ -16,7 +16,9 @@ export default defineConfig(async () => {
             exclude: [
                 '**/sample/**',
                 '**/tests/visual/**',
-                '**/node_modules/**'
+                '**/node_modules/**',
+                // Worktrees of other sessions: their tests would run against this checkout
+                '**/.claude/**'
             ],
             coverage: {
                 include: [
