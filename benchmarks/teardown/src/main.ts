@@ -24,6 +24,13 @@ if (nativeRequestIdle) {
     }, options);
 }
 
+const afterMicrotasks = () =>
+  new Promise<void>((resolve) => {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => resolve();
+    channel.port2.postMessage(null);
+  });
+
 const nextFrame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve));
 
 async function run() {
@@ -62,7 +69,11 @@ async function run() {
 
   for (let cycle = 0; cycle < cycles + warmupCycles; cycle++) {
     resetState();
+    const mountStart = performance.now();
     showScene.set(true);
+    // Mounting continues in microtasks: a message event runs once they are done
+    await afterMicrotasks();
+    const mountMs = performance.now() - mountStart;
     for (let frame = 0; frame < 10; frame++) await nextFrame();
 
     await nextFrame();
@@ -92,6 +103,7 @@ async function run() {
     const loafs = longFrames.filter((entry) => entry.startTime + entry.duration >= start && entry.startTime <= last);
     if (cycle >= warmupCycles) {
       samples.push({
+        mountMs,
         syncMs,
         longestFrameMs,
         drainedMs: last - start,

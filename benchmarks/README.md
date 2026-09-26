@@ -52,7 +52,8 @@ BENCH_TEARDOWN_BASELINE=b45180f pnpm bench:teardown # compare with another ref
 
 Mounts and unmounts a whole scene (`@if` around characters with a body, a
 name and an HP bar, plus a flex HUD) in Chromium, with real Pixi, layout and
-compiled templates. For each unmount it reports the synchronous cost of
+compiled templates. It reports the mount time of the scene (until its
+microtasks are done) and, for each unmount, the synchronous cost of
 `showScene.set(false)`, the longest frame until the teardown is over, long
 animation frames, the time until nothing is left to destroy and, in deferred
 mode, the number and longest duration of teardown chunks.

@@ -34,6 +34,7 @@ const withCpuProfile = process.env.BENCH_TEARDOWN_CPU === "1";
 const cpuCount = Number(process.env.BENCH_TEARDOWN_CPU_COUNT ?? Math.max(...counts));
 
 type Sample = {
+  mountMs: number;
   syncMs: number;
   longestFrameMs: number;
   drainedMs: number;
@@ -159,6 +160,7 @@ try {
   });
 
   const benchmarks = [...samples.entries()].map(([name, list]) => {
+    const mount = summarise(list.map((sample) => sample.mountMs));
     const sync = summarise(list.map((sample) => sample.syncMs));
     const frame = summarise(list.map((sample) => sample.longestFrameMs));
     const loaf = summarise(list.map((sample) => sample.longAnimationFrameMs));
@@ -168,6 +170,8 @@ try {
       name,
       metrics: {
         sampleCount: list.length,
+        mountMedianMs: mount.median,
+        mountP95Ms: mount.p95,
         syncMedianMs: sync.median,
         syncP95Ms: sync.p95,
         longestFrameMedianMs: frame.median,
@@ -181,11 +185,11 @@ try {
     };
   });
 
-  console.log("\nvariant | scene | sync ms (median / p95) | longest frame ms (median / p95) | long animation frame ms (median) | fully destroyed after ms (median) | deferred chunks: count, longest ms (median / p95)");
+  console.log("\nvariant | scene | mount ms (median) | sync ms (median / p95) | longest frame ms (median / p95) | long animation frame ms (median) | fully destroyed after ms (median) | deferred chunks: count, longest ms (median / p95)");
   for (const { name, metrics: m } of benchmarks) {
     const [variant, items] = name.split(" | ");
     console.log(
-      `${variant} | ${items} | ${m.syncMedianMs} / ${m.syncP95Ms} | ${m.longestFrameMedianMs} / ${m.longestFrameP95Ms}` +
+      `${variant} | ${items} | ${m.mountMedianMs} | ${m.syncMedianMs} / ${m.syncP95Ms} | ${m.longestFrameMedianMs} / ${m.longestFrameP95Ms}` +
       ` | ${m.longAnimationFrameMedianMs} | ${m.drainedMedianMs}` +
       (m.chunksMedian ? ` | ${m.chunksMedian}, ${m.longestChunkMedianMs} / ${m.longestChunkP95Ms}` : " | -")
     );
