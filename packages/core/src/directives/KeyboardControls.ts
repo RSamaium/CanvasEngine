@@ -364,20 +364,24 @@ export class KeyboardControls extends ControlsBase {
             right: false
         };
 
+    // Kept as fields: removeEventListener only removes the reference given to addEventListener
+    private onKeyDown = (e: KeyboardEvent) => { this.onKeyChange(e, true); };
+    private onKeyUp = (e: KeyboardEvent) => { this.onKeyChange(e, false); };
+
     /**
      * Setup keyboard event listeners
      */
     protected setupListeners(): void {
-        document.addEventListener('keydown', (e) => { this.onKeyChange(e, true); });
-        document.addEventListener('keyup', (e) => { this.onKeyChange(e, false); });
+        document.addEventListener('keydown', this.onKeyDown);
+        document.addEventListener('keyup', this.onKeyUp);
     }
 
     /**
      * Cleanup keyboard event listeners
      */
     protected cleanup(): void {
-        document.removeEventListener('keydown', (e) => { this.onKeyChange(e, true); });
-        document.removeEventListener('keyup', (e) => { this.onKeyChange(e, false); });
+        document.removeEventListener('keydown', this.onKeyDown);
+        document.removeEventListener('keyup', this.onKeyUp);
     }
 
     /**
