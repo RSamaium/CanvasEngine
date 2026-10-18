@@ -20,6 +20,7 @@ import 'joypad.js'
  *     'right': 'right'
  *   },
  *   moveInterval: 400,
+ *   stepInterval: 200,
  *   onConnect: () => console.log('Gamepad connected!'),
  *   onDisconnect: () => console.log('Gamepad disconnected!')
  * };
@@ -40,6 +41,14 @@ export interface GamepadConfig {
     axisThreshold?: number;
     /** Interval in milliseconds for repeating movement actions (default: 400) */
     moveInterval?: number;
+    /**
+     * Minimum time in milliseconds between two applications of the same stick
+     * direction while the stick stays pushed. A number applies to every
+     * direction; an object maps a control name (or `default`) to an interval.
+     * Without it a direction is applied on every frame, which suits continuous
+     * movement but makes menu cursors race through their entries.
+     */
+    stepInterval?: number | { [controlName: string]: number };
     /** Callback called when a gamepad is connected */
     onConnect?: () => void;
     /** Callback called when a gamepad is disconnected */
@@ -113,6 +122,8 @@ export class GamepadControls extends ControlsBase {
     private connectCallbacks: Array<() => void> = [];
     private disconnectCallbacks: Array<() => void> = [];
     private currentPower: number = 0;
+    private joypadSubscriptions: Array<{ unsubscribe?: () => void } | undefined> = [];
+    private lastStepAt: { [direction: string]: number } = {};
 
     /**
      * Setup gamepad event listeners
@@ -126,6 +137,10 @@ export class GamepadControls extends ControlsBase {
      * Cleanup gamepad event listeners and intervals
      */
     protected cleanup(): void {
+        for (const subscription of this.joypadSubscriptions) {
+            subscription?.unsubscribe?.();
+        }
+        this.joypadSubscriptions = [];
         if (this.gamepadMoveInterval) {
             clearInterval(this.gamepadMoveInterval);
             this.gamepadMoveInterval = null;
@@ -149,13 +164,23 @@ export class GamepadControls extends ControlsBase {
             return;
         }
 
+        // Without the Gamepad API joypad.js leaves an empty object behind
+        if (typeof joypadLib.on !== 'function') {
+            if (this.gamepadConfig.gamepadConnected) {
+                this.gamepadConfig.gamepadConnected.set(false);
+            }
+            return;
+        }
+
         this.joypad = joypadLib;
 
-        // Setup event listeners
-        this.joypad.on('connect', () => this.handleGamepadConnect());
-        this.joypad.on('disconnect', () => this.handleGamepadDisconnect());
-        this.joypad.on('button_press', (e: any) => this.handleGamepadButtonPress(e));
-        this.joypad.on('axis_move', (e: any) => this.handleGamepadAxisMove(e));
+        // Setup event listeners and keep the subscriptions to remove them on cleanup
+        this.joypadSubscriptions = [
+            this.joypad.on('connect', () => this.handleGamepadConnect()),
+            this.joypad.on('disconnect', () => this.handleGamepadDisconnect()),
+            this.joypad.on('button_press', (e: any) => this.handleGamepadButtonPress(e)),
+            this.joypad.on('axis_move', (e: any) => this.handleGamepadAxisMove(e))
+        ];
     }
 
     /**
@@ -298,13 +323,29 @@ export class GamepadControls extends ControlsBase {
             }
         }
 
+        const now = Date.now();
         for (const direction in this.gamepadDirections) {
             if (this.gamepadDirections[direction]) {
+                const stepInterval = this.getStepInterval(direction);
+                if (stepInterval) {
+                    if (now - (this.lastStepAt[direction] ?? 0) < stepInterval) continue;
+                    this.lastStepAt[direction] = now;
+                }
                 this.applyControl(direction, true, { power: this.currentPower }).catch(() => {
                     // Ignore errors
                 });
             }
         }
+    }
+
+    /**
+     * Minimum delay between two applications of a stick direction, 0 when unset
+     */
+    private getStepInterval(direction: string): number {
+        const step = this.gamepadConfig.stepInterval;
+        if (typeof step === 'number') return step;
+        if (step) return step[direction] ?? step['default'] ?? 0;
+        return 0;
     }
 
     /**
@@ -318,6 +359,7 @@ export class GamepadControls extends ControlsBase {
         const now = Date.now();
         if (now - this.gamepadAxisDate > 100 && this.gamepadMoving) {
             const allDirections = ['up', 'down', 'left', 'right'];
+            this.lastStepAt = {};
             for (const dir of allDirections) {
                 this.gamepadDirections = {};
                 this.gamepadMoving = false;
@@ -350,6 +392,7 @@ export class GamepadControls extends ControlsBase {
             axisMapping: config.axisMapping || DEFAULT_AXIS_MAPPING,
             axisThreshold: config.axisThreshold || 0.5,
             moveInterval: config.moveInterval || 400,
+            stepInterval: config.stepInterval,
             onConnect: config.onConnect,
             onDisconnect: config.onDisconnect,
             gamepadConnected: config.gamepadConnected
