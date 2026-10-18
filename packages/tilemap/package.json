@@ -1,0 +1,37 @@
+{
+  "name": "@canvasengine/tilemap",
+  "version": "5.0.2",
+  "description": "A low-level, optimized rectangular tilemap implementation for PixiJS (CanvasEngine fork of pixijs/tilemap).",
+  "author": "Ivan Popelyshev",
+  "contributors": [
+    "Ivan Popelyshev <ivan.popelyshev@gmail.com>",
+    "Shukant Pal <shukant@pixijs.io>"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./lib/index.mjs",
+      "require": "./lib/index.js",
+      "types": "./lib/index.d.ts"
+    }
+  },
+  "main": "lib/index.js",
+  "module": "lib/index.mjs",
+  "types": "lib/index.d.ts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RSamaium/CanvasEngine.git",
+    "directory": "packages/tilemap"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "lib",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "pixi.js": ">=8.5.0"
+  }
+}

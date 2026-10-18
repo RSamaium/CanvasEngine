@@ -41,7 +41,7 @@
   ],
   "dependencies": {
     "@canvasengine/tiled": "workspace:*",
-    "@canvasengine/tilemap": "^5.0.1",
+    "@canvasengine/tilemap": "workspace:^",
     "rxjs": "^7.8.2"
   },
   "publishConfig": {
