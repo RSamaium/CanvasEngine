@@ -1,5 +1,15 @@
 # canvasengine
 
+## 2.4.1
+
+All CanvasEngine packages are released together as 2.4.1.
+
+### Patch Changes
+
+- `KeyboardControls` now removes the `keydown` / `keyup` listeners it added on `document` when it is destroyed. They were never removed, so every destroyed `controls` kept listening to the keyboard and could not be garbage collected (#75).
+- `GamepadControls` now unsubscribes from joypad.js when it is destroyed, so a closed UI no longer answers to the gamepad (#77). It no longer throws on init when the Gamepad API is missing (`window.joypad = {}`) (#78). New optional `stepInterval` gamepad option to limit how often a stick direction is applied while the stick stays pushed, so a menu cursor does not race through its entries (#79).
+- presets: tilemaps are no longer drawn at the wrong position after a nested filter inside a filtered parent. `TilemapPipe` read the last entry of `globalUniforms._activeUniforms`, which is a per-frame pool and not a stack, so it picked up the nested filter pass. It now uses the current global uniform data (#76). `@canvasengine/tilemap` is now vendored in `packages/tilemap` (released as 5.0.2) and presets depends on it through the workspace.
+
 ## 2.4.0
 
 All CanvasEngine packages are released together as 2.4.0.
