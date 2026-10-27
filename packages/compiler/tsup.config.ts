@@ -10,7 +10,7 @@ export default  defineConfig({
     shims: false,
     dts: true,
     sourcemap: true,
-    entry: ['index.ts'],
+    entry: ['index.ts', 'browser.ts'],
     outDir: 'dist',
     external: ['vite', 'acorn', 'peggy', 'typescript'],
     onSuccess: async () => {
