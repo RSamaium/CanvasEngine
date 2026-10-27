@@ -23,6 +23,28 @@ const { code, metadata } = compile(source, 'panel.ce')
 
 The Vite plugin calls the same function (`compileCe`), so the output is the same in both.
 
+## Load a module from text: `toFactory`
+
+A host that builds modules from text (no bundler, no `import()` of a path) can turn an ES module, a compiled component included,
+into a function of the host:
+
+```ts
+import { compile, toFactory } from '@canvasengine/compiler/browser'
+
+const { code } = compile(source, 'panel.ce')
+const factory = toFactory(code, {
+  external: { canvasengine: 'host.canvasengine' },   // modules the host provides
+  resolve: (specifier) => files.has(specifier.replace('./', '')) ? specifier.replace('./', '') : undefined, // files of the same package
+})
+// factory: "export default (host) => { …; return { default: component } }"
+```
+
+- The imports of an `external` module become constants taken from the host (`import { h } from 'canvasengine'` →
+  `const h = host.canvasengine.h`). An import of a file of the package is read with `host.require(key)`, which must give the
+  exports object of that file. Any other import throws an error that names it.
+- The exports become the returned object, `default` included. `export * from` and `export { a } from` are refused.
+- The host builds the function from the text (a `blob:` URL in a browser) and calls it with `{ canvasengine, require }`.
+
 ## Regenerating the parser
 
 The parser comes from `grammar2.pegjs`. After editing the grammar:

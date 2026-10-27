@@ -12,6 +12,7 @@
 import { compileCe, type CompileCeOptions } from "./src/compile";
 import { parse } from "./src/template-parser.generated.js";
 
+export { toFactory, type ToFactoryOptions } from "./src/to-factory";
 export type { CompileCeOptions, TemplateParser } from "./src/compile";
 export type { CompileMetadata, CompilerDiagnostic } from "./src/types";
 
