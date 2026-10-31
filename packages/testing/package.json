@@ -13,7 +13,7 @@
     "dev": "tsup --watch"
   },
   "peerDependencies": {
-    "canvasengine": "workspace:*",
+    "canvasengine": "workspace:^",
     "vitest": "*"
   },
   "devDependencies": {
