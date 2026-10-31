@@ -25,6 +25,7 @@
 | outline        | object              | Outline effect following the object's alpha contour.                        |
 | clip           | object              | Rectangular mask used to keep or hide part of the object.                   |
 | occlusion      | object              | Low-alpha redraw of the covered part when this object passes behind obstacles. |
+| afterimage     | object              | Fading copies left behind a moving sprite (dash, haste). See the Afterimage directive. |
 
 ## Layout Properties
 

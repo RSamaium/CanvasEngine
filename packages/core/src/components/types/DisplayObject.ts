@@ -5,6 +5,7 @@ import { ViewportFollowProps } from "../../directives/ViewportFollow";
 import { ShakeProps } from "../../directives/Shake";
 import { FlashProps } from "../../directives/Flash";
 import { FogVisibilityProps } from "../../directives/FogVisibility";
+import type { AfterimageProps } from "../../directives/Afterimage";
 import type { ClipProps, OcclusionProps, OutlineProps } from "../../directives/SpriteEffects";
 
 export type FlexDirection = 'row' | 'column' | 'row-reverse' | 'column-reverse';
@@ -109,6 +110,7 @@ export interface DisplayObjectProps {
     outline?: OutlineProps;
     clip?: ClipProps;
     occlusion?: OcclusionProps;
+    afterimage?: AfterimageProps;
 
     // Events
     click?: PIXI.FederatedEventHandler;
