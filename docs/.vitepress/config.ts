@@ -219,6 +219,10 @@ const guideMenu = [
       {
         text: "Use without Compiler",
         link: "/advanced/without-compiler",
+      },
+      {
+        text: "Compile without Node",
+        link: "/advanced/compile-without-node",
       }
     ],
   },
