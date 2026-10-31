@@ -70,6 +70,30 @@ describe('Freeze System', () => {
     })
 
     describe('Blocking reactive updates', () => {
+        test('re-applies props skipped while frozen once unfrozen', () => {
+            class Probe {
+                received: any[] = []
+                onInit(props) {}
+                onUpdate(props) {
+                    this.received.push(props)
+                }
+            }
+            registerComponent('FreezeProbe', Probe)
+
+            const frozen = signal(true)
+            const x = signal(300)
+            const parent = createComponent('FreezeProbe', { freeze: frozen })
+            const child = createComponent('FreezeProbe', { x })
+            child.parent = parent
+            parent.props.children = [child]
+            ;(child.componentInstance as Probe).received = []
+            x.set(400)
+
+            expect((child.componentInstance as Probe).received).toEqual([])
+            frozen.set(false)
+            expect((child.componentInstance as Probe).received).toEqual([{ x: 400 }])
+        })
+
         test('blocks onUpdate when element is frozen (boolean)', () => {
             class TestComponentWithUpdate {
                 updateCount = 0

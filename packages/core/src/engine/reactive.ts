@@ -49,6 +49,8 @@ export interface Element<T = ComponentInstance> {
   destroy: () => void;
   allElements: Subject<void>;
   isFrozen: boolean;
+  /** Updates skipped while frozen, re-applied with their last value on unfreeze. */
+  pendingUpdates?: Map<string, () => void>;
   /** Set once the element has been torn down by `destroyElement`. */
   isDestroyed?: boolean;
 }
@@ -306,6 +308,16 @@ export function isElementFrozen(element: Element): boolean {
  * @param element - The element containing animatedSignals
  * @param shouldPause - Whether to pause (true) or resume (false) animations
  */
+function flushPendingUpdates(element: Element) {
+  if (!element || isElementFrozen(element)) return;
+  const pending = element.pendingUpdates;
+  if (pending?.size) {
+    element.pendingUpdates = undefined;
+    pending.forEach((apply) => apply());
+  }
+  forEachChildElement(element.props?.children, flushPendingUpdates);
+}
+
 function handleAnimatedSignalsFreeze(element: Element, shouldPause: boolean) {
   if (!element.propObservables) return;
 
@@ -752,46 +764,50 @@ export function createComponent(tag: string, props?: Props): Element {
                 // Handle animatedSignal pause/resume when freeze state changes
                 if (wasFrozen !== element.isFrozen) {
                   handleAnimatedSignalsFreeze(element, element.isFrozen);
+                  if (!element.isFrozen) flushPendingUpdates(element);
                 }
               })
             );
             return;
           }
 
+          const pendingKey = (path ? path + "." : "") + key;
+          const applyValue = (value) => {
+            _set(path, key, value);
+            if (element.directives[key]) {
+              element.directives[key].onUpdate?.(value, element);
+            }
+            if (key == "tick") {
+              return
+            }
+            instance.onUpdate?.(
+              path == ""
+                ? {
+                  [key]: value,
+                }
+                : set({}, path + "." + key, value)
+            );
+          };
           element.propSubscriptions.push(
             _value.observable.subscribe((value) => {
-              // Block updates if element is frozen
               if (isElementFrozen(element)) {
+                // Keep the latest value (the initial one included) to
+                // re-apply on unfreeze
+                (element.pendingUpdates ??= new Map()).set(pendingKey, () => applyValue(_value()));
                 // Pause animatedSignal if it's an animated signal
                 if (isAnimatedSignal(_value as any)) {
                   (_value as unknown as AnimatedSignal<any>).pause();
                 }
                 return;
               }
+              element.pendingUpdates?.delete(pendingKey);
 
               // Resume animatedSignal if it was paused
               if (isAnimatedSignal(_value as any)) {
                 (_value as unknown as AnimatedSignal<any>).resume();
               }
 
-              _set(path, key, value);
-              if (element.directives[key]) {
-                element.directives[key].onUpdate?.(value, element);
-              }
-              if (key == "tick") {
-                // Block tick updates if element is frozen
-                if (isElementFrozen(element)) {
-                  return;
-                }
-                return
-              }
-              instance.onUpdate?.(
-                path == ""
-                  ? {
-                    [key]: value,
-                  }
-                  : set({}, path + "." + key, value)
-              );
+              applyValue(value);
             })
           );
         } else {
