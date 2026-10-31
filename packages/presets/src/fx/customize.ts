@@ -7,6 +7,7 @@ import type {
   FxPreset,
   FxRange,
 } from "./types";
+import { expandFxPreset } from "./expand";
 import { colorToNumber, hslToRgb, rgbToHsl } from "./utils";
 
 const CUSTOMIZATION_KEYS: (keyof FxCustomization)[] = [
@@ -43,6 +44,7 @@ export function pickFxCustomization(source: Record<string, any> = {}): FxCustomi
  */
 export function customizeFx(preset: FxPreset, options: FxCustomization = {}): FxPreset {
   if (!hasFxCustomization(options)) return preset;
+  preset = expandFxPreset(preset);
   const target = options.color !== undefined ? rgbToHsl(colorToNumber(options.color)) : undefined;
   const hueShift = options.hueShift ?? 0;
   const intensity = options.intensity ?? 1;
@@ -62,7 +64,7 @@ export function customizeFx(preset: FxPreset, options: FxCustomization = {}): Fx
     return Array.isArray(value) ? value.map(map) : map(value);
   };
 
-  const emitters: FxEmitterConfig[] = preset.emitters.map((emitter) => {
+  const emitters: FxEmitterConfig[] = (preset.emitters as FxEmitterConfig[]).map((emitter) => {
     const particle = emitter.particle ?? {};
     return {
       ...emitter,

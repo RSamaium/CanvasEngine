@@ -1,0 +1,71 @@
+<Canvas backgroundColor="#0b0e15">
+  <Container sortableChildren={true}>
+    <Text text="FX · Projectile + impact (declarative preset)" x={24} y={16} color="#ffffff" size="20" />
+    <Text text="Click anywhere: one preset = charge, shot on a path, impact at its end, smoke. Space = meteor volley." x={24} y={46} color="#9aa6b8" size="13" />
+
+    <Circle x={110} y={320} radius={20} color="#2f4a6b" zIndex={1} />
+    <Circle x={470} y={320} radius={28} color="#6b2f45" zIndex={1} />
+
+    <Fx name="fireShot" trigger={shot} zIndex={3} />
+    <Fx name="meteorVolley" trigger={volley} zIndex={3} />
+  </Container>
+</Canvas>
+
+<script>
+  import { Fx, registerFxPreset } from '@canvasengine/presets'
+  import { trigger } from 'canvasengine'
+
+  const FIRE = ['#ffffff', '#ffb347', '#b3200e']
+  const SMOKE = ['#ffffff', '#5a4a42', '#2a2a2a']
+
+  // Charge, then a shot flying on an arc, then an impact exactly where the path ends, then smoke.
+  // No code around it: the whole sequence lives in the preset.
+  registerFxPreset('fireShot', {
+    emitters: [
+      { use: 'charge', x: 110, y: 320, colors: FIRE },
+      {
+        use: 'projectile',
+        name: 'ball',
+        colors: FIRE,
+        path: [
+          { t: 500, x: 110, y: 320 },
+          { t: 850, x: 260, y: 210, ease: 'outQuad' },
+          { t: 1150, x: 470, y: 320, ease: 'inQuad' },
+        ],
+      },
+      { use: 'impact', colors: FIRE, trigger: { emitter: 'ball' } },
+      { use: 'mist', colors: SMOKE, trigger: { emitter: 'ball', delay: 120, offsetY: -10 } },
+    ],
+  })
+
+  // Several meteors: one group, cloned with offsets; the trigger fires once per clone.
+  registerFxPreset('meteorVolley', {
+    emitters: [
+      {
+        instances: [{ t: 0, x: 0 }, { t: 220, x: -70, y: 40 }, { t: 440, x: 80, y: -40 }],
+        emitters: [
+          {
+            use: 'projectile',
+            name: 'meteor',
+            colors: FIRE,
+            scale: 1.3,
+            path: [
+              { t: 0, x: 360, y: -40 },
+              { t: 650, x: 470, y: 320, ease: 'inQuad' },
+            ],
+          },
+          { use: 'impact', colors: FIRE, scale: 1.1, trigger: { emitter: 'meteor' } },
+        ],
+      },
+    ],
+  })
+
+  const shot = trigger()
+  const volley = trigger()
+
+  window.addEventListener('pointerdown', () => shot.start())
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') volley.start()
+  })
+  setTimeout(() => shot.start(), 600)
+</script>

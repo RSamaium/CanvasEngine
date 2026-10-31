@@ -26,6 +26,7 @@ export const EXAMPLES: ExampleDefinition[] = [
   { slug: 'fx', title: 'FX Presets', load: () => import('./fx.ce') },
   { slug: 'fx-magic', title: 'FX · RPG Magic', load: () => import('./fx-magic.ce') },
   { slug: 'fx-battle', title: 'FX · Attacks & Epic', load: () => import('./fx-battle.ce') },
+  { slug: 'fx-projectile', title: 'FX · Projectile + impact', load: () => import('./fx-projectile.ce') },
   { slug: 'layout-center', title: 'Layout · Centered GUI', load: () => import('./layout-center-gui.ce') },
   { slug: 'layout-overlay-resize', title: 'Layout · Overlay & Resize', load: () => import('./layout-overlay-resize-gui.ce') },
   { slug: 'layout-validation', title: 'Layout · Validation Lab', load: () => import('./layout-validation.ce') },

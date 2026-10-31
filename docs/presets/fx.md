@@ -147,6 +147,38 @@ registerFxPreset('acidBall', acidBall)
 </script>
 ```
 
+## Projectiles, Triggers and Recipes
+
+A preset can describe a whole sequence: a shot flying along a path, an impact exactly where it lands, repeated for several projectiles.
+
+```ts
+registerFxPreset('fireShot', {
+  emitters: [
+    { use: 'charge', x: 110, y: 320, colors: ['#ffffff', '#ffb347', '#b3200e'] },
+    {
+      use: 'projectile',
+      name: 'ball',
+      colors: ['#ffffff', '#ffb347', '#b3200e'],
+      path: [
+        { t: 500, x: 110, y: 320 },
+        { t: 850, x: 260, y: 210, ease: 'outQuad' },
+        { t: 1150, x: 470, y: 320, ease: 'inQuad' },
+      ],
+    },
+    // starts when `ball` reaches the end of its path, at that position
+    { use: 'impact', colors: ['#ffffff', '#ffb347', '#b3200e'], trigger: { emitter: 'ball' } },
+  ],
+})
+```
+
+- **`path`** moves an emitter along keyframes `{ t, x, y, ease? }` (`t` in ms, same clock as `delay`). `delay` and `duration` default to the path start and length.
+- **`direction: 'backward' | 'forward'`** emits against / along the heading of an emitter on a path (`angle` is a spread around it), which makes trails.
+- **`trigger`** `{ emitter, at?, delay?, offsetX?, offsetY? }` starts an emitter when a named emitter reaches `'pathEnd'` (default), `'pathStart'`, or a number of ms after its start.
+- **`instances`** `[{ t?, x?, y? }]` clones an emitter, or a group `{ instances, emitters }`, with a time and position offset. A trigger aimed at a cloned emitter fires once per clone, so several meteors each get their own impact.
+- **Recipes** `{ use, t?, x?, y?, scale?, density?, colors?: [core, main, deep] }` expand into several tuned emitters: `charge`, `projectile` (requires `path`, takes `name`), `impact` (`ground`), `mist` (`rise`, `opacity`) and `circle` (`radius`, `marks`).
+
+`expandFxPreset(preset)` returns the plain emitters, which is handy to inspect a recipe or start from it. `customizeFx` and the `color`, `intensity` or `sizeScale` props work on recipes too.
+
 ## Creating Your Own FX
 
 An FX preset has three levels:
@@ -464,7 +496,7 @@ Extra display props such as `zIndex` are forwarded to the underlying `Container`
 |------|------|-------------|
 | `delay` | `number` | Delay before the preset starts, in ms |
 | `duration` | `number` | Preset emission duration, in ms |
-| `emitters` | `FxEmitterConfig[]` | Emitters used by the preset |
+| `emitters` | `(FxEmitterConfig \| FxRecipeUse \| FxEmitterGroup)[]` | Emitters, recipes and groups used by the preset |
 
 ## `FxEmitterConfig`
 
@@ -479,11 +511,15 @@ Extra display props such as `zIndex` are forwarded to the underlying `Container`
 | `rate` | `number` | Particles emitted per second |
 | `maxParticles` | `number` | Emitter particle cap |
 | `x`, `y` | `number` | Local emitter offset |
+| `name` | `string` | Id referenced by a `trigger` |
+| `path` | `{ t, x, y, ease? }[]` | Moves the emitter along keyframes (`t` in ms) |
+| `trigger` | `{ emitter, at?, delay?, offsetX?, offsetY? }` | Starts when another emitter reaches a point of its path |
+| `instances` | `{ t?, x?, y? }[]` | Clones the emitter with offsets |
 | `spreadX`, `spreadY` | `number` | Random spawn spread |
 | `radius` | `number \| [number, number]` | Spawns particles in a circle around the emitter |
 | `innerRadius` | `number` | Turns the circle into a ring |
 | `ellipse` | `number` | Vertical squash of `radius` and `orbit` (`1` = circle) |
-| `direction` | `'angle' \| 'outward' \| 'inward' \| 'tangent'` | Velocity direction (default `'angle'`) |
+| `direction` | `'angle' \| 'outward' \| 'inward' \| 'tangent' \| 'backward' \| 'forward'` | Velocity direction (default `'angle'`). `backward` / `forward` follow the heading of an emitter on a `path` |
 | `angle` | `number \| [number, number]` | Direction in degrees |
 | `speed` | `number \| [number, number]` | Initial speed in px/s |
 | `accelerationX`, `accelerationY` | `number` | Acceleration in px/s |
