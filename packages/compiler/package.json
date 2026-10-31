@@ -8,7 +8,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup && cp grammar2.pegjs ../../docs/public/grammar.pegjs",
+    "generate:parser": "node scripts/generate-parser.mjs",
+    "build": "pnpm run generate:parser && tsup && cp grammar2.pegjs ../../docs/public/grammar.pegjs",
     "dev": "tsup --watch"
   },
   "type": "module",
@@ -29,5 +30,17 @@
   "devDependencies": {
     "@types/node": "^25.6.0",
     "tsup": "^8.5.1"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    },
+    "./grammar2.pegjs": "./dist/grammar2.pegjs",
+    "./package.json": "./package.json"
   }
 }
