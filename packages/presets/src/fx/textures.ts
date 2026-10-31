@@ -1,4 +1,5 @@
 import { Assets, Texture } from "pixi.js";
+import { expandFxPreset } from "./expand";
 import type { FxParticleConfig, FxShape } from "./types";
 
 const shapeTextures = new Map<FxShape, Texture>();
@@ -287,7 +288,7 @@ export async function preloadParticleTextures(config: FxParticleConfig = {}) {
 
 export async function preloadPresetTextures(preset) {
   await Promise.all(
-    (preset?.emitters ?? []).map((emitter) => preloadParticleTextures(emitter.particle))
+    (preset ? expandFxPreset(preset).emitters : []).map((emitter) => preloadParticleTextures(emitter.particle))
   );
 }
 

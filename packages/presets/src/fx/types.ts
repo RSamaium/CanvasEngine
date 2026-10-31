@@ -35,8 +35,16 @@ export type FxBlendMode = "normal" | "add" | "multiply" | "screen" | string;
  * - `angle`: uses the emitter `angle`
  * - `outward` / `inward`: away from / toward the emitter center
  * - `tangent`: perpendicular to the center (swirl)
+ * - `backward` / `forward`: against / along the heading of an emitter moving on a `path`
+ *   (`angle` then becomes a spread around it, e.g. `[-15, 15]`)
  */
-export type FxDirection = "angle" | "outward" | "inward" | "tangent";
+export type FxDirection =
+  | "angle"
+  | "outward"
+  | "inward"
+  | "tangent"
+  | "backward"
+  | "forward";
 
 export interface FxParticleConfig {
   image?: string;
@@ -70,8 +78,51 @@ export interface FxParticleConfig {
   ease?: "linear" | "outQuad" | "outCubic" | "inQuad";
 }
 
+export type FxPathEase = "linear" | "outQuad" | "outCubic" | "inQuad";
+
+/** A position of a moving emitter. `t` is in ms from the start of the preset (same clock as `delay`). */
+export interface FxPathKey {
+  t: number;
+  x: number;
+  y: number;
+  /** Easing of the segment ending at this key. */
+  ease?: FxPathEase;
+}
+
+/**
+ * Starts an emitter when another named emitter reaches a point of its path
+ * (an impact exactly when a projectile lands). Resolved when the preset is expanded.
+ */
+export interface FxTrigger {
+  /** `name` of the source emitter. */
+  emitter: string;
+  /** `pathEnd` (default), `pathStart`, or ms after the path start. */
+  at?: "pathStart" | "pathEnd" | number;
+  /** Extra delay in ms after the trigger point. */
+  delay?: number;
+  offsetX?: number;
+  offsetY?: number;
+  /** Set when the trigger was renamed for a clone (instances). */
+  fallback?: string;
+}
+
+/** Offset of one clone: `t` in ms, `x` / `y` in px. */
+export interface FxCloneOffset {
+  t?: number;
+  x?: number;
+  y?: number;
+}
+
 export interface FxEmitterConfig {
   name?: string;
+  /**
+   * Moves the emitter along keyframes. `delay` and `duration` default to the path start and length,
+   * and `x` / `y` are ignored.
+   */
+  path?: FxPathKey[];
+  trigger?: FxTrigger;
+  /** Clones this emitter with a time/position offset (several meteors). A trigger aimed at it fires once per clone. */
+  instances?: FxCloneOffset[];
   delay?: number;
   duration?: number;
   loop?: boolean;
@@ -106,9 +157,60 @@ export interface FxEmitterConfig {
   particle?: FxParticleConfig;
 }
 
+export type FxRecipeName = "charge" | "projectile" | "impact" | "mist" | "circle";
+
+/**
+ * A ready-made building block expanded into several emitters. Times are in ms, sizes in px.
+ * `colors` is `[core, main, deep]`.
+ */
+export interface FxRecipeUse {
+  use: FxRecipeName;
+  /** Start time in ms (default `0`). */
+  t?: number;
+  x?: number;
+  y?: number;
+  scale?: number;
+  density?: number;
+  colors?: FxColor[];
+  /** `projectile` only: keyframes of the shot (required). */
+  path?: FxPathKey[];
+  /** `projectile` only: name referenced by `trigger.emitter`. */
+  name?: string;
+  trigger?: FxTrigger;
+  instances?: FxCloneOffset[];
+  duration?: number;
+  /** `projectile`: head shape. `mist`: cloud shape. */
+  shape?: FxShape;
+  /** `projectile`: shape of the trail. */
+  trail?: FxShape;
+  /** `impact`: lays the ring and the debris on the ground. Default `true`. */
+  ground?: boolean;
+  /** `mist`: rising speed in px/s. */
+  rise?: number;
+  /** `mist`: peak opacity. */
+  opacity?: number;
+  /** `circle`: radius in px. */
+  radius?: number;
+  /** `circle`: number of orbiting marks. */
+  marks?: number;
+}
+
+/** Repeats a set of emitters (and recipes) with offsets, e.g. several meteors each with a trail and an impact. */
+export interface FxEmitterGroup {
+  instances: FxCloneOffset[];
+  emitters: (FxEmitterConfig | FxRecipeUse)[];
+}
+
+export type FxEmitterItem = FxEmitterConfig | FxRecipeUse | FxEmitterGroup;
+
 export interface FxPreset {
   duration?: number;
   delay?: number;
+  emitters: FxEmitterItem[];
+}
+
+/** A preset whose recipes, groups, instances and triggers are resolved. */
+export interface FxExpandedPreset extends Omit<FxPreset, "emitters"> {
   emitters: FxEmitterConfig[];
 }
 

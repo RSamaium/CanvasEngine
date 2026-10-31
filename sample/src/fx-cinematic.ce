@@ -1,0 +1,316 @@
+<Canvas backgroundColor="#05070c">
+  <Container x={stageX} y={stageY} scale={stageScale} sortableChildren={true}>
+    <!-- Camera: zoom toward the impact point, with a shake -->
+    <Container x={camX} y={camY} scale={zoom} sortableChildren={true}>
+      <Rect x={-200} y={-120} width={1000} height={620} color="#101826" zIndex={0} />
+      <Rect x={-200} y={290} width={1000} height={210} color="#1a2233" zIndex={0} />
+      <Rect x={-200} y={288} width={1000} height={3} color="#2a3550" zIndex={0} />
+
+      <!-- Monster -->
+      <Container x={monsterX} y={monsterY} zIndex={12} flash={monsterFlash}>
+        <Graphics draw={drawMonster} />
+      </Container>
+
+      <!-- Hero: afterimage while dashing and during the slow-motion strike -->
+      <Sprite
+        sheet={{ definition: heroSheet, playing: "walk", params: { direction, moving } }}
+        x={heroX}
+        y={290}
+        scale={1.7}
+        anchor={[0.5, 1]}
+        zIndex={14}
+        afterimage={{ enabled: ghosting, tint: 0x66ccff, interval: 34, duration: 380, alpha: 0.6 }}
+      />
+
+      <Fx name="dashDust" trigger={dust} zIndex={13} />
+      <Fx name="dashStreaks" trigger={streaks} zIndex={15} />
+      <Fx name="swordSlash" trigger={slash} timeScale={fxSpeed} scale={1.7} zIndex={20} />
+      <Fx name="heavyHit" trigger={hit} timeScale={fxSpeed} zIndex={19} />
+
+      <!-- Diagonal cut line along the slash -->
+      <Container x={cutX} y={cutY} rotation={-0.52} zIndex={30}>
+        <Rect x={-700} y={-2} width={1400} height={4} color="#ffffff" alpha={cutAlpha} />
+        <Rect x={-700} y={-10} width={1400} height={20} color="#9fd8ff" alpha={cutGlow} />
+      </Container>
+    </Container>
+
+    <!-- Slow-motion tint, impact flash, letterbox -->
+    <Rect x={0} y={0} width={640} height={360} color="#0a2a5a" alpha={slowTint} zIndex={40} />
+    <Rect x={0} y={0} width={640} height={360} color="#ffffff" alpha={flashAlpha} zIndex={41} />
+    <Rect x={0} y={0} width={640} height={barHeight} color="#000000" zIndex={50} />
+    <Rect x={0} y={barBottomY} width={640} height={barHeight} color="#000000" zIndex={50} />
+
+    <!-- Hides what the camera shows outside the 640x360 frame -->
+    <Rect x={-2000} y={-2000} width={4640} height={2000} color="#05070c" zIndex={55} />
+    <Rect x={-2000} y={360} width={4640} height={2000} color="#05070c" zIndex={55} />
+    <Rect x={-2000} y={0} width={2000} height={360} color="#05070c" zIndex={55} />
+    <Rect x={640} y={0} width={2000} height={360} color="#05070c" zIndex={55} />
+  </Container>
+
+  <Text text="Space / click: replay. Dash, slow-motion strike, hit-stop, zoom and cut." x={16} y={12} color="#9aa6b8" size={12} fontFamily="Arial" zIndex={60} />
+</Canvas>
+
+<script>
+  import { Fx, registerFxPreset } from '@canvasengine/presets'
+  import { signal, tick, trigger } from 'canvasengine'
+
+  const STAGE_W = 640
+  const STAGE_H = 360
+  const FLOOR = 290
+  const HERO_START = 120
+  const HERO_DASH_END = 350
+  const HERO_STRIKE_END = 410
+  const MONSTER_X = 470
+  const IMPACT = { x: MONSTER_X - 30, y: 215 }
+
+  // Timeline, in real ms
+  const T_BARS = 400
+  const T_DASH = 700
+  const T_DASH_END = 1100
+  const T_HIT = 2000
+  const T_HITSTOP = 160
+  const T_RECOVER = 2900
+  const T_END = 4600
+  const T_LOOP = 5600
+
+  const FIRE = ['#ffffff', '#bfe6ff', '#4a9bff']
+
+  registerFxPreset('dashStreaks', {
+    emitters: [
+      {
+        burst: 3,
+        spreadY: 70,
+        angle: [172, 188],
+        speed: [200, 480],
+        drag: 3,
+        particle: {
+          shape: 'streak',
+          align: 'velocity',
+          lifetime: [140, 280],
+          color: ['#ffffff', '#8fd0ff'],
+          alpha: [0.85, 0],
+          scale: 0.7,
+          scaleX: [0.6, 1.6],
+          blendMode: 'add',
+        },
+      },
+    ],
+  })
+
+  registerFxPreset('heavyHit', {
+    emitters: [
+      { use: 'impact', colors: FIRE, scale: 1.4, ground: false, x: 0, y: 0 },
+    ],
+  })
+
+  // 3 x 4 RPG-style sheet, one row per direction
+  const ROW = { down: 0, left: 1, right: 2, up: 3 }
+  const heroSheet = {
+    id: 'hero',
+    image: './characters/hero.png',
+    framesWidth: 3,
+    framesHeight: 4,
+    textures: {
+      walk: {
+        animations: ({ direction, moving }) => {
+          const frameY = ROW[direction ?? 'right']
+          if (!moving) return [[{ time: 0, frameX: 1, frameY }]]
+          return [[
+            { time: 0, frameX: 0, frameY },
+            { time: 6, frameX: 1, frameY },
+            { time: 12, frameX: 2, frameY },
+            { time: 18, frameX: 1, frameY },
+          ]]
+        },
+      },
+    },
+  }
+
+  function drawMonster(g) {
+    // horned beast, drawn around its feet (0, 0)
+    g.ellipse(0, 4, 70, 12).fill({ color: 0x000000, alpha: 0.35 })
+    g.roundRect(-52, -150, 104, 150, 36).fill(0x3b2a4a)
+    g.roundRect(-40, -122, 80, 110, 28).fill(0x56406b)
+    g.poly([-40, -148, -66, -196, -22, -160]).fill(0xe8dcc0)
+    g.poly([40, -148, 66, -196, 22, -160]).fill(0xe8dcc0)
+    g.circle(-18, -112, 8).fill(0xff3b2f)
+    g.circle(18, -112, 8).fill(0xff3b2f)
+    g.circle(-18, -112, 3).fill(0xfff2c0)
+    g.circle(18, -112, 3).fill(0xfff2c0)
+    g.roundRect(-24, -80, 48, 14, 6).fill(0x1a1022)
+    g.rect(-16, -80, 6, 9).fill(0xe8dcc0)
+    g.rect(10, -80, 6, 9).fill(0xe8dcc0)
+    g.roundRect(-70, -90, 22, 70, 10).fill(0x3b2a4a)
+    g.roundRect(48, -90, 22, 70, 10).fill(0x3b2a4a)
+  }
+
+  const heroX = signal(HERO_START)
+  const direction = signal('right')
+  const moving = signal(false)
+  const ghosting = signal(false)
+
+  const monsterX = signal(MONSTER_X)
+  const monsterY = signal(FLOOR + 2)
+  const monsterFlash = { trigger: trigger(), type: 'tint', tint: 0xffffff, duration: 220, cycles: 2 }
+
+  const camX = signal(0)
+  const camY = signal(0)
+  const zoom = signal(1)
+  const cutX = signal(IMPACT.x)
+  const cutY = signal(IMPACT.y)
+  const cutAlpha = signal(0)
+  const cutGlow = signal(0)
+  const flashAlpha = signal(0)
+  const slowTint = signal(0)
+  const barHeight = signal(0)
+  const barBottomY = signal(STAGE_H)
+  const fxSpeed = signal(1)
+
+  const stageScale = signal(1)
+  const stageX = signal(0)
+  const stageY = signal(0)
+
+  const dust = trigger()
+  const streaks = trigger()
+  const slash = trigger()
+  const hit = trigger()
+
+  const clamp01 = (v) => Math.min(1, Math.max(0, v))
+  const progress = (t, from, to) => clamp01((t - from) / (to - from))
+  const easeOut = (p) => 1 - Math.pow(1 - p, 3)
+  const easeInOut = (p) => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2)
+  const lerp = (a, b, p) => a + (b - a) * p
+
+  let t = 0
+  let started = false
+  let dustDone = false
+  let hitDone = false
+  let hitStopLeft = 0
+  let shake = 0
+  let lastStreak = 0
+
+  const reset = () => {
+    t = 0
+    dustDone = false
+    hitDone = false
+    hitStopLeft = 0
+    shake = 0
+    heroX.set(HERO_START)
+    monsterX.set(MONSTER_X)
+    moving.set(false)
+    ghosting.set(false)
+    fxSpeed.set(1)
+  }
+
+  tick(({ deltaTime }) => {
+    // fit the 640x360 stage in the canvas
+    const canvas = document.querySelector('canvas')
+    const w = canvas?.clientWidth || STAGE_W
+    const h = canvas?.clientHeight || STAGE_H
+    const s = Math.min(w / STAGE_W, (h - 28) / STAGE_H)
+    if (Number.isFinite(s) && s > 0) {
+      stageScale.set(s)
+      stageX.set(Math.max(0, (w - STAGE_W * s) / 2))
+      stageY.set(Math.max(0, 28 + (h - 28 - STAGE_H * s) / 2))
+    }
+
+    let dt = Math.min(deltaTime ?? 16.67, 50)
+    if (hitStopLeft > 0) {
+      hitStopLeft -= dt
+      fxSpeed.set(0)
+      shake = Math.max(shake, 6)
+      dt = 0
+    }
+    t += dt
+    if (!started) return
+
+    // letterbox
+    const bars = easeOut(progress(t, 0, T_BARS)) * 34 * (1 - easeInOut(progress(t, T_END, T_END + 700)))
+    barHeight.set(bars)
+    barBottomY.set(STAGE_H - bars)
+
+    // slow motion factor
+    let slow = 1
+    if (t >= T_DASH_END && t < T_HIT) slow = 0.22
+    else if (t >= T_HIT) slow = lerp(0.22, 1, easeInOut(progress(t, T_HIT + T_HITSTOP, T_RECOVER)))
+    if (hitStopLeft <= 0) fxSpeed.set(slow)
+    slowTint.set(0.28 * (t >= T_DASH_END ? 1 - progress(t, T_HIT + T_HITSTOP, T_RECOVER) : 0))
+
+    // dash
+    if (t >= T_DASH && t < T_DASH_END) {
+      const p = easeOut(progress(t, T_DASH, T_DASH_END))
+      heroX.set(lerp(HERO_START, HERO_DASH_END, p))
+      moving.set(true)
+      ghosting.set(true)
+      if (!dustDone) {
+        dustDone = true
+        dust.start({ x: HERO_START - 10, y: FLOOR })
+      }
+      if (t - lastStreak > 36) {
+        lastStreak = t
+        streaks.start({ x: heroX() - 10, y: FLOOR - 70 })
+      }
+    }
+
+    // slow-motion strike: a long lunge
+    if (t >= T_DASH_END && t < T_HIT + T_HITSTOP) {
+      const p = easeInOut(progress(t, T_DASH_END, T_HIT))
+      heroX.set(lerp(HERO_DASH_END, HERO_STRIKE_END, p))
+      moving.set(p < 0.6)
+      ghosting.set(true)
+    }
+
+    // hit
+    if (!hitDone && t >= T_HIT) {
+      hitDone = true
+      hitStopLeft = T_HITSTOP
+      slash.start({ x: IMPACT.x, y: IMPACT.y })
+      hit.start({ x: IMPACT.x + 10, y: IMPACT.y })
+      monsterFlash.trigger.start()
+      flashAlpha.set(0.85)
+      cutAlpha.set(1)
+      cutGlow.set(0.6)
+      shake = 16
+    }
+    if (t >= T_HIT) {
+      const knock = easeOut(progress(t, T_HIT, T_HIT + 600))
+      monsterX.set(MONSTER_X + 26 * knock)
+      flashAlpha.set(Math.max(0, flashAlpha() - dt / 140))
+      cutAlpha.set(Math.max(0, cutAlpha() - dt / 520))
+      cutGlow.set(Math.max(0, cutGlow() - dt / 360))
+    }
+    if (t >= T_HIT + T_HITSTOP + 500) {
+      ghosting.set(false)
+      moving.set(false)
+    }
+
+    // camera: slight zoom toward the impact, then back
+    const zIn = easeInOut(progress(t, T_DASH_END, T_HIT))
+    const zOut = easeInOut(progress(t, T_RECOVER, T_END))
+    const z = 1 + 0.22 * zIn * (1 - zOut)
+    zoom.set(z)
+    const target = { x: IMPACT.x - 20, y: IMPACT.y - 10 }
+    shake = Math.max(0, shake - dt * 0.03)
+    const jitterX = (Math.random() - 0.5) * 2 * shake
+    const jitterY = (Math.random() - 0.5) * 2 * shake
+    // the camera only leaves its rest position while it zooms toward the impact
+    const blend = zIn * (1 - zOut)
+    camX.set(blend * (STAGE_W / 2 - target.x * z) + jitterX)
+    camY.set(blend * (STAGE_H / 2 - target.y * z) + jitterY)
+
+    if (t > T_LOOP) {
+      reset()
+    }
+  })
+
+  const play = () => {
+    reset()
+    started = true
+  }
+
+  window.addEventListener('pointerdown', play)
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') play()
+  })
+  setTimeout(play, 700)
+</script>

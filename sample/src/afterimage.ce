@@ -1,0 +1,77 @@
+<Canvas backgroundColor="#0b0e15">
+  <Container sortableChildren={true}>
+    <Text text="Afterimage directive" x={24} y={16} color="#ffffff" size="20" />
+    <Text text="Arrow keys move the character. Hold Shift to dash: the sprite leaves fading copies behind it." x={24} y={46} color="#9aa6b8" size="13" />
+    <Rect x={0} y={380} width={800} height={4} color="#1f2937" />
+
+    <Sprite
+      sheet={{
+        definition: heroSheet,
+        playing: "walk",
+        params: { direction, moving }
+      }}
+      x
+      y
+      scale={1.6}
+      anchor={[0.5, 1]}
+      zIndex={10}
+      afterimage={{ enabled: dashing, tint: 0x66ccff, interval: 40, duration: 320, alpha: 0.55 }}
+    />
+  </Container>
+</Canvas>
+
+<script>
+  import { signal, tick } from "canvasengine";
+
+  // 3 x 4 RPG-style sheet, one row per direction
+  const ROW = { down: 0, left: 1, right: 2, up: 3 };
+  const heroSheet = {
+    id: "hero",
+    image: "./characters/hero.png",
+    framesWidth: 3,
+    framesHeight: 4,
+    textures: {
+      walk: {
+        animations: ({ direction, moving }) => {
+          const frameY = ROW[direction ?? "down"];
+          if (!moving) return [[{ time: 0, frameX: 1, frameY }]];
+          return [[
+            { time: 0, frameX: 0, frameY },
+            { time: 8, frameX: 1, frameY },
+            { time: 16, frameX: 2, frameY },
+            { time: 24, frameX: 1, frameY },
+          ]];
+        },
+      },
+    },
+  };
+
+  const x = signal(160);
+  const y = signal(300);
+  const dashing = signal(false);
+  const direction = signal("right");
+  const moving = signal(false);
+  const keys = new Set();
+
+  window.addEventListener("keydown", (e) => {
+    keys.add(e.code);
+    if (e.code.startsWith("Arrow")) e.preventDefault();
+  });
+  window.addEventListener("keyup", (e) => keys.delete(e.code));
+
+  tick(({ deltaTime }) => {
+    const shift = keys.has("ShiftLeft") || keys.has("ShiftRight");
+    const speed = (shift ? 0.9 : 0.25) * (deltaTime ?? 16.67);
+    const dx = (keys.has("ArrowRight") ? 1 : 0) - (keys.has("ArrowLeft") ? 1 : 0);
+    const dy = (keys.has("ArrowDown") ? 1 : 0) - (keys.has("ArrowUp") ? 1 : 0);
+    if (dx || dy) {
+      const length = Math.hypot(dx, dy);
+      x.update((value) => Math.min(780, Math.max(20, value + (dx / length) * speed)));
+      y.update((value) => Math.min(360, Math.max(100, value + (dy / length) * speed)));
+    }
+    moving.set(Boolean(dx || dy));
+    if (dx) direction.set(dx > 0 ? "right" : "left");
+    else if (dy) direction.set(dy > 0 ? "down" : "up");
+    dashing.set(shift && Boolean(dx || dy));
+  });
+</script>

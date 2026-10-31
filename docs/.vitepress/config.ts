@@ -149,6 +149,10 @@ const guideMenu = [
         link: "/directives/flash",
       },
       {
+        text: "Afterimage",
+        link: "/directives/afterimage",
+      },
+      {
         text: "Shake",
         link: "/directives/shake",
       }

@@ -6,6 +6,7 @@ import type {
   FxPreset,
   FxRuntimeOptions,
 } from "./types";
+import { expandFxPreset } from "./expand";
 import { getParticleTextures, getShapeTexture, preloadPresetTextures } from "./textures";
 import {
   colorStops,
@@ -13,6 +14,8 @@ import {
   curveStops,
   easeValue,
   normalizeAngle,
+  pathHeading,
+  pathPoint,
   rangeValue,
   sampleColorStops,
   sampleStops,
@@ -52,6 +55,7 @@ export class FxRuntime {
   }
 
   spawn(container: Container, preset: FxPreset, options: FxRuntimeOptions & { loop?: boolean } = {}): FxInstance {
+    const expanded = expandFxPreset(preset);
     const instance: RuntimeInstance = {
       container,
       preset,
@@ -61,7 +65,7 @@ export class FxRuntime {
       activeParticles: 0,
       lastX: container.x,
       lastY: container.y,
-      emitters: preset.emitters.map((emitter) => ({
+      emitters: expanded.emitters.map((emitter) => ({
         ...emitter,
         elapsed: 0,
         emittedBurst: false,
@@ -229,8 +233,10 @@ export class FxRuntime {
       textures.push(getShapeTexture(particleConfig.shape));
     }
 
-    const centerX = (emitter.x ?? 0) + (instance.options.x ?? 0);
-    const centerY = (emitter.y ?? 0) + (instance.options.y ?? 0);
+    // An emitter on a path follows it: its position is where the path is at this time.
+    const origin = emitter.path ? pathPoint(emitter.path, emitter.elapsed) : { x: emitter.x ?? 0, y: emitter.y ?? 0 };
+    const centerX = origin.x + (instance.options.x ?? 0);
+    const centerY = origin.y + (instance.options.y ?? 0);
     const ellipse = emitter.ellipse ?? 1;
     let offsetX = rangeValue([-(emitter.spreadX ?? 0), emitter.spreadX ?? 0], this.random, 0);
     let offsetY = rangeValue([-(emitter.spreadY ?? 0), emitter.spreadY ?? 0], this.random, 0);
@@ -310,8 +316,14 @@ export class FxRuntime {
     instance.options.onParticleSpawn?.(particle);
   }
 
-  private velocityAngle(emitter: FxEmitterConfig, offsetX: number, offsetY: number) {
+  private velocityAngle(emitter: FxEmitterConfig & { elapsed?: number }, offsetX: number, offsetY: number) {
     const direction = emitter.direction ?? "angle";
+    if (direction === "backward" || direction === "forward") {
+      // Relative to the heading of the emitter on its path; `angle` is a spread around it.
+      const heading = emitter.path ? pathHeading(emitter.path, emitter.elapsed ?? 0) : 0;
+      const spread = (rangeValue(emitter.angle, this.random, 0) * Math.PI) / 180;
+      return heading + (direction === "backward" ? Math.PI : 0) + spread;
+    }
     if (direction === "angle" || (offsetX === 0 && offsetY === 0)) {
       return normalizeAngle(emitter.angle ?? (direction === "angle" ? 0 : [0, 360]), this.random);
     }

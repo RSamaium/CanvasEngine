@@ -1,4 +1,4 @@
-import type { FxColor, FxColorRange, FxCurve, FxRange } from "./types";
+import type { FxColor, FxColorRange, FxCurve, FxPathKey, FxRange } from "./types";
 
 export function resolveValue<T>(value: T | (() => T)): T {
   return typeof value === "function" ? (value as () => T)() : value;
@@ -133,4 +133,29 @@ export function hslToRgb(h: number, s: number, l: number): number {
   const g = Math.round(channel(hue) * 255);
   const b = Math.round(channel(hue - 1 / 3) * 255);
   return (r << 16) + (g << 8) + b;
+}
+
+/** Position of a keyframed path at time `t` (ms), clamped to its first and last keys. */
+export function pathPoint(path: FxPathKey[], t: number): { x: number; y: number } {
+  const first = path[0];
+  const last = path[path.length - 1];
+  if (t <= first.t) return { x: first.x, y: first.y };
+  if (t >= last.t) return { x: last.x, y: last.y };
+  let i = 1;
+  while (path[i].t < t) i++;
+  const from = path[i - 1];
+  const to = path[i];
+  const progress = easeValue(to.ease, (t - from.t) / (to.t - from.t || 1));
+  return { x: lerp(from.x, to.x, progress), y: lerp(from.y, to.y, progress) };
+}
+
+/** Heading (radians) of a path at time `t`: the direction of the last segment that actually moves. */
+export function pathHeading(path: FxPathKey[], t: number): number {
+  const clamped = Math.min(path[path.length - 1].t, Math.max(path[0].t, t));
+  for (const step of [12, 48, 200]) {
+    const a = pathPoint(path, clamped - step);
+    const b = pathPoint(path, clamped);
+    if (a.x !== b.x || a.y !== b.y) return Math.atan2(b.y - a.y, b.x - a.x);
+  }
+  return 0;
 }
