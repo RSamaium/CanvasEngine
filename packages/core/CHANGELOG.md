@@ -1,5 +1,15 @@
 # canvasengine
 
+## 2.5.0
+
+### Minor Changes
+
+- a76df21: Add the `afterimage` directive: a sprite leaves fading, tinted copies of its current frame behind it while it moves (dash, haste), with `enabled`, `interval`, `duration`, `alpha`, `tint`, `blendMode` and `minDistance` options.
+
+### Patch Changes
+
+- a76df21: Re-apply the props that were skipped while an element was frozen once it is unfrozen.
+
 ## 2.4.1
 
 All CanvasEngine packages are released together as 2.4.1.
