@@ -1,5 +1,11 @@
 # canvasengine
 
+## 2.5.1
+
+### Patch Changes
+
+- 814895c: Re-apply the updates received during a `freeze` by children rendered by `@for` / `loop()`, `@if` / `cond()` and dynamic components once the element is unfrozen (#81).
+
 ## 2.5.0
 
 ### Minor Changes
