@@ -315,7 +315,9 @@ function flushPendingUpdates(element: Element) {
     element.pendingUpdates = undefined;
     pending.forEach((apply) => apply());
   }
-  forEachChildElement(element.props?.children, flushPendingUpdates);
+  // Children rendered by a flow (`loop`, `cond`, dynamic components) are not
+  // in `props.children`, which only holds the flow observable
+  forEachMountedChild(element, flushPendingUpdates);
 }
 
 function handleAnimatedSignalsFreeze(element: Element, shouldPause: boolean) {
@@ -550,24 +552,28 @@ const pendingHooks: Element[] = [];
 let deferredChunkScheduled = false;
 let processingDeferredQueue = false;
 
-/** Visits the mounted tree (static and flow children) below `element`. */
-function forEachMountedDescendant(element: Element, fn: (element: Element) => void) {
+/** Visits the mounted children (static and flow children) of `element`. */
+function forEachMountedChild(element: Element, fn: (child: Element) => void) {
   const groups = (element as any).__childGroups as Array<{ mounted: Map<any, Element> }> | undefined;
-  const visit = (child: Element) => {
-    fn(child);
-    forEachMountedDescendant(child, fn);
-  };
   if (groups) {
     for (const group of groups) {
       for (const mounted of group.mounted.values()) {
-        if (isElement(mounted) && !mounted.isDestroyed) visit(mounted);
+        if (isElement(mounted) && !mounted.isDestroyed) fn(mounted);
       }
     }
   } else {
     forEachChildElement(element.props?.children, (child) => {
-      if (!child.isDestroyed) visit(child);
+      if (!child.isDestroyed) fn(child);
     });
   }
+}
+
+/** Visits the mounted tree (static and flow children) below `element`. */
+function forEachMountedDescendant(element: Element, fn: (element: Element) => void) {
+  forEachMountedChild(element, (child) => {
+    fn(child);
+    forEachMountedDescendant(child, fn);
+  });
 }
 
 /**
