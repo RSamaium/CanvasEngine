@@ -33,6 +33,7 @@ export function Fx(options) {
     alpha,
     seed,
     maxParticles,
+    target,
     timeScale,
     preload,
     missingTexture,
@@ -70,7 +71,7 @@ export function Fx(options) {
   /**
    * `config` comes from `trigger.start(config)` and can override the preset
    * (`name`, `preset`), its customization (`color`, `intensity`...) and the
-   * local spawn position (`x`, `y`).
+   * local spawn position (`x`, `y`) and `target` (relative to the container origin).
    */
   const spawn = async (config: Record<string, any> = {}) => {
     if (!container || !valueOf(enabled)) return;
@@ -88,10 +89,11 @@ export function Fx(options) {
     const basePreset = configPreset || configName
       ? resolvePreset(configName, configPreset)
       : resolvePreset(name, preset);
+    const spawnTarget = runtimeConfig.target ?? valueOf(target);
     const selectedPreset = customizeFx(basePreset, {
       ...pickFxCustomization({ color, hueShift, intensity, speedScale, sizeScale, lifetimeScale }),
       ...pickFxCustomization(config ?? {}),
-    });
+    }, spawnTarget);
     if (valueOf(preload)) {
       await localRuntime.preload(selectedPreset);
     }
@@ -103,6 +105,7 @@ export function Fx(options) {
       onStart,
       onComplete,
       onParticleSpawn,
+      target: spawnTarget,
       ...runtimeConfig,
     });
     return instance;
@@ -113,10 +116,10 @@ export function Fx(options) {
     if (valueOf(autostart) || valueOf(loop)) {
       spawn();
     }
-    // A looping effect only reads its preset once: restart it when the preset or its customization changes.
+    // A looping effect only reads its preset once: restart it when the preset, its target or its customization changes.
     let initialized = false;
     const restartLoop = effect(() => {
-      [name, preset, color, hueShift, intensity, speedScale, sizeScale, lifetimeScale].forEach(valueOf);
+      [name, preset, target, color, hueShift, intensity, speedScale, sizeScale, lifetimeScale].forEach(valueOf);
       if (!initialized) {
         initialized = true;
         return;

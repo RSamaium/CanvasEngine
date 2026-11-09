@@ -177,7 +177,48 @@ registerFxPreset('fireShot', {
 - **`instances`** `[{ t?, x?, y? }]` clones an emitter, or a group `{ instances, emitters }`, with a time and position offset. A trigger aimed at a cloned emitter fires once per clone, so several meteors each get their own impact.
 - **Recipes** `{ use, t?, x?, y?, scale?, density?, colors?: [core, main, deep] }` expand into several tuned emitters: `charge`, `projectile` (requires `path`, takes `name`), `impact` (`ground`), `mist` (`rise`, `opacity`) and `circle` (`radius`, `marks`).
 
-`expandFxPreset(preset)` returns the plain emitters, which is handy to inspect a recipe or start from it. `customizeFx` and the `color`, `intensity` or `sizeScale` props work on recipes too.
+### Caster-to-target paths
+
+Path keys are pixels relative to the `Fx` container by default, so a shot authored for 200 px always travels 200 px to the right. To fly from a caster to a target, whatever the distance and angle, switch the path to the `target` space and give the target when the effect plays. The container is the caster; the target is relative to its origin.
+
+```ts
+registerFxPreset('fireball', {
+  emitters: [
+    { use: 'charge', colors: ['#ffffff', '#ffb347', '#b3200e'] },
+    {
+      use: 'projectile',
+      name: 'ball',
+      colors: ['#ffffff', '#ffb347', '#b3200e'],
+      pathSpace: 'target',
+      path: [
+        { t: 300, x: 0, y: 0 },
+        { t: 600, x: 0.5, y: -0.2 },
+        { t: 900, x: 1, y: 0 },
+      ],
+    },
+    { use: 'impact', colors: ['#ffffff', '#ffb347', '#b3200e'], trigger: { emitter: 'ball' } },
+    // a cloud lingering on the enemy
+    { use: 'mist', at: 'target', t: 900, colors: ['#ffb347', '#b3200e'] },
+  ],
+})
+```
+
+```html
+<Fx preset={fireball} trigger={cast} x={caster.x} y={caster.y} target={{ x: dx, y: dy }} />
+```
+
+```ts
+cast.start({ target: { x: dx, y: dy } })   // overrides the `target` prop for this cast
+runtime.spawn(container, fireball, { target: { x: 180, y: -40 } })
+```
+
+- **`pathSpace: 'target'`**: `x` runs along the caster to target line (`0` is the caster, `1` the target) and `y` is perpendicular to it, both as fractions of the distance. Only positions are mapped, particles are never stretched.
+- **`at: 'target'`** on an emitter without `path` (or on a recipe) places it on the target; `x` / `y` become offsets from it.
+- `trigger` (`pathEnd`), `direction`, `instances` and customization work on the mapped path. Instance offsets stay in pixels. Timings (`t`) are the preset's own, so the impact always happens at the same time.
+- Without a `target`, a reference target 200 px to the right (`FX_DEFAULT_TARGET`) keeps the preset previewable. A target at `{ x: 0, y: 0 }` collapses the path onto the caster, which suits a self-cast.
+- `customizeFx(preset, options, target)` resolves the target too: pass the same target you give the runtime. `<Fx>` does it for you.
+
+`expandFxPreset(preset, target?)` returns the plain emitters, which is handy to inspect a recipe or start from it. `customizeFx` and the `color`, `intensity` or `sizeScale` props work on recipes too.
 
 ## Creating Your Own FX
 
@@ -475,6 +516,7 @@ Recommended export:
 | `scale` | `number \| Signal<number>` | `1` | Effect container scale |
 | `alpha` | `number \| Signal<number>` | `1` | Effect container alpha |
 | `timeScale` | `number \| Signal<number>` | `1` | Multiplies update speed |
+| `target` | `{ x, y } \| Signal<{ x, y }>` | - | Target position relative to the container, for paths with `pathSpace: 'target'` and `at: 'target'` (see [Caster-to-target paths](#caster-to-target-paths)) |
 | `maxParticles` | `number` | `600` | Particle cap |
 | `preload` | `boolean` | `true` | Loads image/spritesheet assets before spawning |
 | `missingTexture` | `'shape' \| 'skip' \| 'error'` | `'shape'` | Behavior when an image texture is unavailable |
@@ -513,6 +555,8 @@ Extra display props such as `zIndex` are forwarded to the underlying `Container`
 | `x`, `y` | `number` | Local emitter offset |
 | `name` | `string` | Id referenced by a `trigger` |
 | `path` | `{ t, x, y, ease? }[]` | Moves the emitter along keyframes (`t` in ms) |
+| `pathSpace` | `'pixels' \| 'target'` | Space of the `path` keys (default `'pixels'`). `'target'` maps `x` / `y` to fractions of the caster to target line |
+| `at` | `'target'` | Places an emitter without `path` on the target (`x` / `y` become offsets) |
 | `trigger` | `{ emitter, at?, delay?, offsetX?, offsetY? }` | Starts when another emitter reaches a point of its path |
 | `instances` | `{ t?, x?, y? }[]` | Clones the emitter with offsets |
 | `spreadX`, `spreadY` | `number` | Random spawn spread |

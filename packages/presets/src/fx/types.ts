@@ -80,6 +80,21 @@ export interface FxParticleConfig {
 
 export type FxPathEase = "linear" | "outQuad" | "outCubic" | "inQuad";
 
+/** A point relative to the origin of the Fx container, in px. */
+export interface FxTarget {
+  x: number;
+  y: number;
+}
+
+/**
+ * Coordinate space of the keys of a `path`.
+ * - `pixels` (default): absolute px relative to the Fx container
+ * - `target`: `x` runs along the caster -> target line (`0` = caster, `1` = target) and `y` is
+ *   perpendicular to it (negative = left of the shot when the target is on the right),
+ *   both as fractions of the distance to `FxRuntimeOptions.target`
+ */
+export type FxPathSpace = "pixels" | "target";
+
 /** A position of a moving emitter. `t` is in ms from the start of the preset (same clock as `delay`). */
 export interface FxPathKey {
   t: number;
@@ -120,6 +135,13 @@ export interface FxEmitterConfig {
    * and `x` / `y` are ignored.
    */
   path?: FxPathKey[];
+  /** Space of the `path` keys (default `pixels`). `target` follows the caster -> target line. */
+  pathSpace?: FxPathSpace;
+  /**
+   * Places an emitter without `path` on the target (an impact, a cloud on the enemy);
+   * `x` / `y` then become offsets from the target.
+   */
+  at?: "target";
   trigger?: FxTrigger;
   /** Clones this emitter with a time/position offset (several meteors). A trigger aimed at it fires once per clone. */
   instances?: FxCloneOffset[];
@@ -174,6 +196,10 @@ export interface FxRecipeUse {
   colors?: FxColor[];
   /** `projectile` only: keyframes of the shot (required). */
   path?: FxPathKey[];
+  /** `projectile` only: space of the `path` keys (default `pixels`). */
+  pathSpace?: FxPathSpace;
+  /** Places the recipe on the target; `x` / `y` then become offsets from the target. */
+  at?: "target";
   /** `projectile` only: name referenced by `trigger.emitter`. */
   name?: string;
   trigger?: FxTrigger;
@@ -281,6 +307,11 @@ export interface FxRuntimeOptions {
   /** Local offset applied to every emitter of this instance. */
   x?: number;
   y?: number;
+  /**
+   * Target position relative to the container origin. Used by paths with `pathSpace: "target"`
+   * and emitters with `at: "target"`. Defaults to `FX_DEFAULT_TARGET` (200 px to the right).
+   */
+  target?: FxTarget;
   onStart?: (instance: FxInstance) => void;
   onComplete?: (instance: FxInstance) => void;
   onParticleSpawn?: (particle: FxParticle) => void;

@@ -291,7 +291,7 @@ Each frame in an animation can have these properties:
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `time` | number | Time (in frames) when this frame should be displayed |
+| `time` | number | Time (in ticks of 1/60 s, counted from the start of the animation) when this frame should be displayed. Animations last the same time at any frame rate |
 | `frameX` | number | Horizontal frame index in the spritesheet |
 | `frameY` | number | Vertical frame index in the spritesheet |
 | `x` | number | (Optional) X position offset for this frame |
