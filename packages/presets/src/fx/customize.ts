@@ -6,6 +6,7 @@ import type {
   FxEmitterConfig,
   FxPreset,
   FxRange,
+  FxTarget,
 } from "./types";
 import { expandFxPreset } from "./expand";
 import { colorToNumber, hslToRgb, rgbToHsl } from "./utils";
@@ -42,9 +43,10 @@ export function pickFxCustomization(source: Record<string, any> = {}): FxCustomi
  * const acidBall = customizeFx(FX_PRESETS.fireball, { color: '#6dff4a', intensity: 1.5, sizeScale: 1.3 })
  * ```
  */
-export function customizeFx(preset: FxPreset, options: FxCustomization = {}): FxPreset {
+export function customizeFx(preset: FxPreset, options: FxCustomization = {}, targetPosition?: FxTarget): FxPreset {
   if (!hasFxCustomization(options)) return preset;
-  preset = expandFxPreset(preset);
+  // Target-relative paths are mapped to px here, so the same target must be given to the runtime
+  preset = expandFxPreset(preset, targetPosition);
   const target = options.color !== undefined ? rgbToHsl(colorToNumber(options.color)) : undefined;
   const hueShift = options.hueShift ?? 0;
   const intensity = options.intensity ?? 1;

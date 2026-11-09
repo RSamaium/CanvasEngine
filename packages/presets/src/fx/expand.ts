@@ -5,10 +5,15 @@ import type {
   FxEmitterGroup,
   FxEmitterItem,
   FxExpandedPreset,
+  FxPathKey,
   FxPreset,
   FxRecipeUse,
+  FxTarget,
 } from "./types";
 import { pathPoint } from "./utils";
+
+/** Target used when none is given, so that a preset stays previewable (e.g. in an editor). */
+export const FX_DEFAULT_TARGET: FxTarget = { x: 200, y: 0 };
 
 const isRecipe = (item: FxEmitterItem): item is FxRecipeUse => "use" in item;
 const isGroup = (item: FxEmitterItem): item is FxEmitterGroup =>
@@ -17,24 +22,53 @@ const isGroup = (item: FxEmitterItem): item is FxEmitterGroup =>
 /** `true` when the preset only holds plain emitters: nothing to expand. */
 function isPlain(preset: FxPreset) {
   return preset.emitters.every(
-    (item) => !isRecipe(item) && !isGroup(item) && !(item as FxEmitterConfig).instances && !(item as FxEmitterConfig).trigger
+    (item) =>
+      !isRecipe(item) &&
+      !isGroup(item) &&
+      !(item as FxEmitterConfig).instances &&
+      !(item as FxEmitterConfig).trigger &&
+      (item as FxEmitterConfig).pathSpace !== "target" &&
+      (item as FxEmitterConfig).at !== "target"
   ) && preset.emitters.every((item) => !(item as FxEmitterConfig).path || (item as FxEmitterConfig).delay !== undefined);
 }
 
-function expandRecipe(item: FxRecipeUse): FxEmitterConfig[] {
+function expandRecipe(item: FxRecipeUse, target: FxTarget): FxEmitterConfig[] {
   const recipe = FX_RECIPES[item.use];
   if (!recipe) return [];
   const colors = item.colors?.length ? item.colors : ["#ffffff"];
-  const emitters = recipe(item, item.scale ?? 1, item.density ?? 1, [
+  // A recipe placed on the target is built at the target position
+  const placed = item.at === "target" ? { ...item, x: target.x + (item.x ?? 0), y: target.y + (item.y ?? 0) } : item;
+  const emitters = recipe(placed, item.scale ?? 1, item.density ?? 1, [
     colors[0],
     colors[1] ?? colors[0],
     colors[2] ?? colors[1] ?? colors[0],
   ]).filter((emitter): emitter is FxEmitterConfig => Boolean(emitter));
   return emitters.map((emitter) => ({
     ...emitter,
+    ...(item.pathSpace && emitter.path ? { pathSpace: item.pathSpace } : {}),
     ...(item.trigger ? { trigger: item.trigger } : {}),
     ...(item.instances ? { instances: item.instances } : {}),
   }));
+}
+
+/**
+ * Maps a path in `target` space to px: a complex product with the target vector, so `x` runs along
+ * the caster -> target line and `y` perpendicular to it. Only positions change, not particle sizes.
+ */
+function mapPathToTarget(path: FxPathKey[], target: FxTarget): FxPathKey[] {
+  return path.map((key) => ({
+    ...key,
+    x: key.x * target.x - key.y * target.y,
+    y: key.x * target.y + key.y * target.x,
+  }));
+}
+
+/** Resolves `pathSpace: "target"` and `at: "target"` of an emitter into plain px. */
+function placeOnTarget(emitter: FxEmitterConfig, target: FxTarget): FxEmitterConfig {
+  const { pathSpace, at, ...rest } = emitter;
+  if (pathSpace === "target" && rest.path) return { ...rest, path: mapPathToTarget(rest.path, target) };
+  if (at === "target" && !rest.path) return { ...rest, x: target.x + (rest.x ?? 0), y: target.y + (rest.y ?? 0) };
+  return rest;
 }
 
 /** Clones an emitter with a time/position offset. */
@@ -58,17 +92,22 @@ function shift(emitter: FxEmitterConfig, offset: FxCloneOffset, suffix: string):
   return clone;
 }
 
-function flatten(items: FxEmitterItem[]): FxEmitterConfig[] {
+function flatten(items: FxEmitterItem[], target: FxTarget): FxEmitterConfig[] {
   const out: FxEmitterConfig[] = [];
   items.forEach((item, index) => {
     if (isGroup(item)) {
-      const inner = item.emitters.flatMap((child) => (isRecipe(child) ? expandRecipe(child) : [child]));
+      const inner = item.emitters
+        .flatMap((child) => (isRecipe(child) ? expandRecipe(child, target) : [child]))
+        .map((emitter) => placeOnTarget(emitter, target));
       item.instances.forEach((offset, k) => {
         for (const emitter of inner) out.push(shift(emitter, offset, `#${index}.${k}`));
       });
       return;
     }
-    const emitters = isRecipe(item) ? expandRecipe(item) : [item];
+    // Mapped to px before instances and triggers, so offsets and `pathEnd` work on the real path
+    const emitters = (isRecipe(item) ? expandRecipe(item, target) : [item]).map((emitter) =>
+      placeOnTarget(emitter, target)
+    );
     for (const emitter of emitters) {
       if (emitter.instances) emitter.instances.forEach((offset, k) => out.push(shift(emitter, offset, `#${index}.${k}`)));
       else out.push({ ...emitter });
@@ -86,13 +125,16 @@ function timing(emitter: FxEmitterConfig) {
 }
 
 /**
- * Resolves recipes, groups, instances and triggers into plain emitters.
+ * Resolves recipes, groups, instances, triggers and target-relative paths into plain emitters.
  * Pure and idempotent: a preset that is already plain is returned as is.
+ *
+ * @param target position of the target relative to the container origin, used by `pathSpace: "target"`
+ * and `at: "target"` (defaults to `FX_DEFAULT_TARGET`)
  */
-export function expandFxPreset(preset: FxPreset): FxExpandedPreset {
+export function expandFxPreset(preset: FxPreset, target: FxTarget = FX_DEFAULT_TARGET): FxExpandedPreset {
   if (isPlain(preset)) return preset as FxExpandedPreset;
 
-  const out = flatten(preset.emitters);
+  const out = flatten(preset.emitters, target);
 
   // A trigger aimed at an emitter cloned by instances fires once per clone (one impact per meteor).
   const named = out.filter((emitter): emitter is FxEmitterConfig & { name: string } => Boolean(emitter.name));

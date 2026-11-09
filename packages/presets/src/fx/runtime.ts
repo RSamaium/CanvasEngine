@@ -55,7 +55,7 @@ export class FxRuntime {
   }
 
   spawn(container: Container, preset: FxPreset, options: FxRuntimeOptions & { loop?: boolean } = {}): FxInstance {
-    const expanded = expandFxPreset(preset);
+    const expanded = expandFxPreset(preset, options.target);
     const instance: RuntimeInstance = {
       container,
       preset,
