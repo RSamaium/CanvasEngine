@@ -28,6 +28,22 @@ function createAnimatedHitboxSprite(hitbox: { w: number; h: number; anchorMode?:
     return sprite
 }
 
+function createTimedSprite(times: number[], onFinish?: () => void) {
+    const sprite = new CanvasSprite()
+    ;(sprite as any).spritesheet = {}
+    ;(sprite as any).onFinish = onFinish
+    ;(sprite as any).currentAnimationContainer = { children: [{}] }
+    ;(sprite as any).currentAnimation = {
+        frames: [[Texture.EMPTY, Texture.EMPTY, Texture.EMPTY, Texture.EMPTY]],
+        sprites: times.map((time, i) => ({ time, frameX: i, frameY: 0 })),
+        name: 'attack',
+        animations: [],
+        params: [],
+        data: {}
+    }
+    return sprite
+}
+
 describe('Sprite Component', () => {
     test('creates sprite component with basic properties', async () => {
         const spriteElement = await TestBed.createComponent(Sprite, {
@@ -383,4 +399,70 @@ describe('Sprite Component', () => {
             vi.restoreAllMocks()
         })
     })
-}) 
+
+    describe('time-based sheet animation', () => {
+        // frames start at 0, 10, 20, 30 ticks of 1/60s
+        const run = (fps: number) => {
+            const onFinish = vi.fn()
+            const sprite = createTimedSprite([0, 10, 20, 30], onFinish)
+            const step = 60 / fps
+            let updates = 0
+            while (!onFinish.mock.calls.length && updates < 1000) {
+                sprite.update({ deltaRatio: step })
+                updates++
+            }
+            return { updates, ticks: updates * step }
+        }
+
+        test('lasts the same time at 60, 30 and 15 fps', () => {
+            const at60 = run(60)
+            const at30 = run(30)
+            const at15 = run(15)
+
+            expect(at60.ticks).toBeGreaterThanOrEqual(30)
+            expect(Math.abs(at30.ticks - at60.ticks)).toBeLessThanOrEqual(2 + 1)
+            expect(Math.abs(at15.ticks - at60.ticks)).toBeLessThanOrEqual(6)
+            expect(at15.updates).toBeLessThan(at60.updates)
+        })
+
+        test('skips several frames when time jumps past them', () => {
+            const sprite = createTimedSprite([0, 10, 20, 30])
+
+            sprite.update({ deltaRatio: 25 })
+
+            expect((sprite as any).frameIndex).toBe(2)
+        })
+
+        test('carries the extra time over when the animation loops', () => {
+            const onFinish = vi.fn()
+            const sprite = createTimedSprite([0, 10, 20, 30], onFinish)
+
+            sprite.update({ deltaRatio: 35 })
+            expect((sprite as any).frameIndex).toBe(3)
+
+            sprite.update({ deltaRatio: 5 })
+            expect(onFinish).toHaveBeenCalledTimes(1)
+            expect((sprite as any).frameIndex).toBe(0)
+            expect((sprite as any).time).toBe(10)
+        })
+
+        test('falls back to one tick without a valid deltaRatio', () => {
+            const sprite = createTimedSprite([0, 10])
+
+            sprite.update({ deltaRatio: undefined })
+
+            expect((sprite as any).time).toBe(1)
+        })
+
+        test('reads deltaRatio from the tick signal wrapper', async () => {
+            const tick = signal({ timestamp: 0, deltaTime: 0, frame: 0, deltaRatio: 1 })
+            const sprite = new CanvasSprite()
+            const update = vi.spyOn(sprite, 'update').mockImplementation(() => {})
+
+            await sprite.onMount({ props: { context: { tick, app: () => null, globalLoader: new GlobalAssetLoader() } }, propObservables: {} } as any)
+            tick.set({ timestamp: 1, deltaTime: 33, frame: 1, deltaRatio: 2 })
+
+            expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ deltaRatio: 2 }))
+        })
+    })
+})

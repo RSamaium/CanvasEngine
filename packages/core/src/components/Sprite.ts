@@ -337,9 +337,10 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
     if (sheet?.onFinish) {
       this.onFinish = sheet.onFinish;
     }
-    this.subscriptionTick = tick.observable.subscribe((value) => {
+    // An object signal emits a wrapper ({ type, value: Tick }), not the tick itself
+    this.subscriptionTick = tick.observable.subscribe((payload: any) => {
       if (this.destroyed) return
-      this.update(value);
+      this.update(payload && typeof payload === "object" && "value" in payload ? payload.value : payload);
     });
     if (definition) {
       const resolvedDefinition = definition instanceof Promise ? await definition : definition;
@@ -613,7 +614,7 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
     // Updates immediately to avoid flickering
     this.update({
-      deltaRatio: 1,
+      deltaRatio: 0,
     });
   }
 
@@ -747,16 +748,28 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
       applyTransformValue("visible");
     }
 
+    // deltaRatio is expressed in 1/60s ticks, so the animation lasts the same
+    // time whatever the frame rate
+    const elapsed = Number.isFinite(deltaRatio) && deltaRatio >= 0 ? deltaRatio : 1;
+
     if (!nextFrame) {
-      this.time = 0;
+      const lastFrame = sprites[sprites.length - 1];
+      // Carry the time past the last frame over to the next loop
+      this.time = sprites.length > 1
+        ? Math.max(0, this.time + elapsed - lastFrame.time)
+        : 0;
       this.frameIndex = 0;
       if (this.onFinish && sprites.length > 1) this.onFinish();
       return;
     }
 
-    this.time += deltaRatio ?? 1;
+    this.time += elapsed;
 
-    if (this.time >= nextFrame.time) {
+    // A long frame can skip several animation frames at once
+    while (
+      sprites[this.frameIndex + 1] &&
+      this.time >= sprites[this.frameIndex + 1].time
+    ) {
       this.frameIndex++;
     }
   }
