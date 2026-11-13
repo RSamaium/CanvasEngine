@@ -8,7 +8,7 @@ export const PRIMITIVE_COMPONENTS = new Set([
   "DOMSprite", "Button", "Joystick",
 ]);
 
-const RUNTIME_HELPERS = ["h", "computed", "cond", "loop"];
+const RUNTIME_HELPERS = ["h", "computed", "cond", "loop", "isSignal"];
 
 export function analyzeTemplateExpression(expression: string): CompileMetadata {
   return analyzeTemplateAst(parseExpression(expression));

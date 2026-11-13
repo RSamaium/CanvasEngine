@@ -73,7 +73,7 @@ conditional branches:
 
 ### Expressions and computed
 
-The compiler only wraps expressions containing a function call in `computed`. Simple expressions stay as-is.
+A single variable or property (`text={nb}`, `text={user.name}`) and a value without variables (`text={1 + 1}`) are passed as they are. An expression containing a function call is wrapped in `computed` as written.
 
 ```html
 <Text text={1 + 1} />
@@ -86,6 +86,19 @@ Compiles to:
 h(Text, { text: 1 + 1 })
 h(Text, { text: computed(() => nb() + 1) })
 ```
+
+In an expression without any call, the compiler treats each bare variable as a signal and calls it: `text={nb + 1}` compiles to `computed(() => nb() + 1)`. Properties (`user.name`) are left as written.
+
+#### Ternaries
+
+In a ternary without any call, each bare variable is read when the expression runs: a signal is called, a plain value (such as a loop variable) is used as is. The value updates when any signal of the ternary changes, whichever branch is taken.
+
+```html
+<Text text={frozen ? "FROZEN" : "ACTIVE"} />
+<Model3D animation={moving ? (running ? "Running" : "Walking") : "Idle"} />
+```
+
+`frozen`, `moving` and `running` can be signals or plain values. When the ternary contains a call (`selected() ? a : b`), it is compiled as written, like any expression with a call.
 
 Nested object and array values support the same JavaScript expressions. Call signals explicitly when a nested value must be reactive:
 
