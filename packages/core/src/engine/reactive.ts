@@ -706,6 +706,16 @@ export function destroyElement(element: Element | Element[]) {
  *                         using the combineLatest RxJS operator to wait for all BehaviorSubjects to emit.
  * @returns {Object} An object representing the created element, including tag name and dynamic properties.
  */
+/** Array props whose items are not values to track: elements, or dependency signals. */
+const NON_REACTIVE_ARRAY_PROPS = new Set(["children", "dependencies"]);
+
+const isArrayChangeRecord = (value: unknown): boolean =>
+  typeof value === "object" &&
+  value !== null &&
+  !Array.isArray(value) &&
+  typeof (value as any).type === "string" &&
+  Array.isArray((value as any).items);
+
 export function createComponent(tag: string, props?: Props): Element {
   if (!components[tag]) {
     throw new Error(`Component ${tag} is not registered`);
@@ -742,6 +752,13 @@ export function createComponent(tag: string, props?: Props): Element {
       };
 
       Object.entries(props).forEach(([key, value]: [string, unknown]) => {
+        // `[0, spin, 0]`: track the signals inside the array
+        if (!NON_REACTIVE_ARRAY_PROPS.has(key) && Array.isArray(value) && value.some((item) => isSignal(item))) {
+          const items = value;
+          const reactiveArray = computed(() => items.map((item) => (isSignal(item) ? (item as Signal<any>)() : item)));
+          element.propSubscriptions.push((reactiveArray as any).subscription);
+          value = reactiveArray;
+        }
         if (isSignal(value)) {
           const _value = value as Signal<any>;
           if ("dependencies" in _value && _value.dependencies.size == 0) {
@@ -796,6 +813,10 @@ export function createComponent(tag: string, props?: Props): Element {
           };
           element.propSubscriptions.push(
             _value.observable.subscribe((value) => {
+              // An array signal emits change records ({ type, items }): props get the array
+              if (isArrayChangeRecord(value) && Array.isArray(_value())) {
+                value = _value();
+              }
               if (isElementFrozen(element)) {
                 // Keep the latest value (the initial one included) to
                 // re-apply on unfreeze

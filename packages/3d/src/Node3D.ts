@@ -1,4 +1,4 @@
-import { computed, isSignal, type Element } from "canvasengine";
+import type { Element } from "canvasengine";
 import { Container3D } from "@pixi/3d";
 import { deepMerge, mergeVec3, type Vec3Input } from "./utils";
 
@@ -21,12 +21,6 @@ export interface Node3DProps {
   eventMode?: "none" | "passive" | "auto" | "static" | "dynamic";
   [key: string]: any;
 }
-
-/** Vector props whose array form may hold signals: `rotation={[0, spin, 0]}`. */
-const VECTOR_PROPS = ["position", "rotation", "scale", "lookAt"];
-
-const isArrayChange = (value: any): value is { type: string; items: any[] } =>
-  value != null && typeof value === "object" && !Array.isArray(value) && typeof value.type === "string" && Array.isArray(value.items);
 
 /** 3D pointer events forwarded from props to the node. */
 export const EVENTS_3D = [
@@ -70,7 +64,6 @@ export function Node3D(Base: new (...args: any[]) => Container3D): any {
     isMounted = false;
     element: Element<any> | null = null;
     _handlers = new Map<string, (...args: any[]) => void>();
-    _vectorBindings = new Map<string, { unsubscribe(): void }>();
 
     /** Children of this component attach here. */
     get childTarget3D(): Container3D {
@@ -78,32 +71,7 @@ export function Node3D(Base: new (...args: any[]) => Container3D): any {
     }
 
     onInit(props: Node3DProps) {
-      this.fullProps = this._bindVectorSignals({ ...props });
-    }
-
-    /**
-     * The engine does not look inside arrays, so `[0, spin, 0]` reaches us with the
-     * signal itself. Subscribe to such arrays and replace them with their values.
-     */
-    _bindVectorSignals(props: Node3DProps): Node3DProps {
-      for (const key of VECTOR_PROPS) {
-        if (!(key in props)) continue;
-        this._vectorBindings.get(key)?.unsubscribe();
-        this._vectorBindings.delete(key);
-        // An array signal emits `{ type: "reset", items }` change records, not the array
-        if (isArrayChange(props[key])) props[key] = props[key].items;
-        const value = props[key];
-        if (!Array.isArray(value) || !value.some((item) => isSignal(item))) continue;
-        const resolved = computed(() => value.map((item) => (isSignal(item) ? (item as any)() : item)));
-        props[key] = resolved();
-        const subscription = resolved.observable.subscribe((next) => {
-          if (next === this.fullProps[key]) return;
-          this.fullProps = { ...this.fullProps, [key]: next };
-          if (this.isMounted) this.applyProps3D({ [key]: next }, false);
-        });
-        this._vectorBindings.set(key, subscription);
-      }
-      return props;
+      this.fullProps = { ...props };
     }
 
     onMount(element: Element<any>, index?: number) {
@@ -124,7 +92,6 @@ export function Node3D(Base: new (...args: any[]) => Container3D): any {
     }
 
     onUpdate(props: Node3DProps) {
-      props = this._bindVectorSignals({ ...props });
       this.fullProps = deepMerge(this.fullProps, props);
       if (!this.isMounted) return;
       this.applyProps3D(props, false);
@@ -187,8 +154,6 @@ export function Node3D(Base: new (...args: any[]) => Container3D): any {
       const node = this as any;
       for (const [name, handler] of this._handlers) node.off(name, handler);
       this._handlers.clear();
-      for (const binding of this._vectorBindings.values()) binding.unsubscribe();
-      this._vectorBindings.clear();
       this.element = null;
       afterDestroy?.();
       node.parent?.removeChild(node);
