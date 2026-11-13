@@ -201,6 +201,19 @@ const guideMenu = [
     ],
   },
   {
+    text: "3D",
+    collapsed: false,
+    items: [
+      { text: "Getting Started", link: "/3d/getting-started" },
+      { text: "View3D", link: "/3d/view3d" },
+      { text: "Camera3D", link: "/3d/camera3d" },
+      { text: "Mesh3D", link: "/3d/mesh3d" },
+      { text: "Model3D", link: "/3d/model3d" },
+      { text: "Lights", link: "/3d/lights" },
+      { text: "Group3D", link: "/3d/group3d" },
+    ],
+  },
+  {
     text: "API",
     collapsed: false,
     items: [
@@ -252,6 +265,7 @@ export default defineConfig({
       "/components/": guideMenu,
       "/directives/": guideMenu,
       "/presets/": guideMenu,
+      "/3d/": guideMenu,
       "/api/": guideMenu,
     },
   },
