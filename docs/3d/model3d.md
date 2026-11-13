@@ -106,11 +106,20 @@ A child component with `bone` follows that bone of the model: a sword in a hand,
 </Model3D>
 ```
 
-The bone must be a node of the model's scene. If the name is not found, a warning lists the available bone names.
+Bones work whether they are nodes of the model's scene (often the upper bones, such as `Head`) or exist only in its skeleton (often hands and fingers). If the name is not found, a warning lists every bone name of the model.
 
-::: warning
-Some bones exist only in the skeleton, not as scene nodes (in RobotExpressive, `Head`, `Torso` and `UpperArm.R` are nodes; `LowerArm.R` and the fingers are not). `bone` can't follow those yet: attach to the nearest bone that is a node.
-:::
+A sword in a hand, pointing forward when the robot stands still:
+
+```html
+<Model3D src="./models/robot.glb" animation={clip}>
+  <Group3D bone="Palm2.R" rotation={[Math.PI / 2, 0, 0]}>
+    <Mesh3D geometry={{ type: "cylinder", radiusTop: 0.07, radiusBottom: 0.07, height: 0.5 }} material={{ baseColor: 0x5a3a1a }} />
+    <Mesh3D geometry={{ type: "cube", width: 0.14, height: 1.8, depth: 0.04 }} material={{ baseColor: 0xd8dde3, metallic: 1 }} position={[0, 1.2, 0]} />
+  </Group3D>
+</Model3D>
+```
+
+The offset is read in the model's axes in the pose the model has when the child attaches; the bone then turns it with every animation. Use a `Group3D` to attach a multi-part object and turn it as a whole.
 
 ## Morph Targets
 

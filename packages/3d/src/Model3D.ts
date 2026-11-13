@@ -12,6 +12,14 @@ import {
 } from "@pixi/3d";
 import { Node3D, type Node3DProps } from "./Node3D";
 
+// Scratch values for the bone followers, reused every frame
+const followMatrix = new Matrix4();
+const boneMatrix = new Matrix4();
+const followResult = new Matrix4();
+const followPosition = new Vector3();
+const followRotation = new Quaternion();
+const followScale = new Vector3();
+
 /** How many Model3D components use each loaded URL, to unload a file nobody uses. */
 const sourceUsers = new Map<string, number>();
 
@@ -85,8 +93,10 @@ class CanvasModel3D extends Node3D(Container3D) {
 
   /**
    * Makes `node` follow the bone named `bone`. The node's own position, rotation and
-   * scale are an offset from the bone, in the model's units and axes. Works with bones
-   * that are scene nodes.
+   * scale are an offset from the bone, in the model's units and axes.
+   *
+   * A bone that is a scene node holds the node directly. A bone that exists only in a
+   * skeleton is copied each frame into a follower node of this component.
    */
   attachToBone(node: Container3D, bone: string) {
     this.#boneChildren.set(node, bone);
@@ -102,19 +112,23 @@ class CanvasModel3D extends Node3D(Container3D) {
       if (node.parent === socket) socket.removeChild(node);
       socket.destroy();
     }
+    this.#removeFollower(node);
   }
 
   /** Bone sockets: nodes that cancel a bone's rest rotation and scale, one per attached node */
   #sockets = new Map<Container3D, Container3D>();
+  /** Followers of skeleton-only bones, updated each frame */
+  #followers = new Map<Container3D, { follower: Container3D; skeleton: any; index: number; skinned: Container3D }>();
+  #followTick = () => this.#updateFollowers();
+  #followTickActive = false;
 
   #placeOnBone(node: Container3D, bone: string) {
-    const target = this.model?.getChildByLabel(bone, true) as Container3D | null;
+    const sceneBone = this.model?.getChildByLabel(bone, true) as Container3D | null;
+    let target: Container3D | null = sceneBone;
+    this.#removeFollower(node);
+    if (!target) target = this.#createFollower(node, bone);
     if (!target) {
-      const labels: string[] = [];
-      this.model?.traverse((child: any) => {
-        if (child.label && !(child instanceof PixiMesh3D)) labels.push(child.label);
-      });
-      console.warn(`<Model3D> no bone node named "${bone}". Available: ${labels.join(", ")}`);
+      console.warn(`<Model3D> no bone named "${bone}". Available: ${this.#boneNames().join(", ")}`);
       return;
     }
     // A bone often has its own rotation and a large scale (FBX exports): a socket under
@@ -136,6 +150,71 @@ class CanvasModel3D extends Node3D(Container3D) {
     socket.quaternion.copyFrom(rotation.inverse());
     socket.scale.set(1 / scale.x, 1 / scale.y, 1 / scale.z);
     if (node.parent !== socket) socket.addChild(node);
+  }
+
+  /** Finds `bone` in a skeleton and adds a follower node that copies its pose. */
+  #createFollower(node: Container3D, bone: string): Container3D | null {
+    for (const skeleton of this.model?.skeletons ?? []) {
+      const index = (skeleton as any)._labelToIndex?.[bone];
+      if (index === undefined) continue;
+      // Skinned meshes are drawn in their own space: the skeleton's poses are relative to it
+      let skinned: Container3D | null = null;
+      this.model!.traverse((child: any) => {
+        if (!skinned && child instanceof PixiMesh3D && child.skeleton === skeleton) skinned = child;
+      });
+      if (!skinned) continue;
+      const follower = new Container3D({ label: `${bone}:follower` });
+      this.addChild(follower);
+      this.#followers.set(node, { follower, skeleton, index, skinned });
+      this.#updateFollowers();
+      if (!this.#followTickActive) {
+        // After the animation player, which runs at normal priority
+        Ticker.shared.add(this.#followTick, undefined, UPDATE_PRIORITY.LOW);
+        this.#followTickActive = true;
+      }
+      return follower;
+    }
+    return null;
+  }
+
+  #removeFollower(node: Container3D) {
+    const entry = this.#followers.get(node);
+    if (!entry) return;
+    this.#followers.delete(node);
+    entry.follower.parent?.removeChild(entry.follower);
+    entry.follower.destroy();
+    if (this.#followers.size === 0 && this.#followTickActive) {
+      Ticker.shared.remove(this.#followTick);
+      this.#followTickActive = false;
+    }
+  }
+
+  /** Copies each followed bone's pose, in this component's space, into its follower. */
+  #updateFollowers() {
+    if (this.#followers.size === 0) return;
+    const toLocal = followMatrix.getInverse((this as unknown as Container3D).getGlobalTransform());
+    for (const { follower, skeleton, index, skinned } of this.#followers.values()) {
+      // Syncs bones bound to containers and recomputes the poses, if the pose changed
+      skeleton.updateWorld();
+      boneMatrix.fromArray(skeleton._nodeWorldMatrix, index * 16);
+      followResult.copyFrom(toLocal).multiply(skinned.getGlobalTransform()).multiply(boneMatrix);
+      followResult.decompose(followPosition, followRotation, followScale);
+      follower.position.copyFrom(followPosition);
+      follower.quaternion.copyFrom(followRotation);
+      follower.scale.copyFrom(followScale);
+    }
+  }
+
+  /** Bone names for the warning: scene-node bones, then skeleton bones. */
+  #boneNames(): string[] {
+    const names = new Set<string>();
+    this.model?.traverse((child: any) => {
+      if (child.label && !(child instanceof PixiMesh3D)) names.add(child.label);
+    });
+    for (const skeleton of this.model?.skeletons ?? []) {
+      for (const label of Object.keys((skeleton as any)._labelToIndex ?? {})) names.add(label);
+    }
+    return [...names];
   }
 
   /** Re-applies `morphWeights` after the player, which a clip with a weights track would overwrite */
@@ -262,8 +341,9 @@ class CanvasModel3D extends Node3D(Container3D) {
       for (const node of this.#boneChildren.keys()) {
         if (node.parent && node.parent !== (this as unknown as Container3D)) this.addChild(node);
       }
-      // The sockets go with the model's bones; new ones are made for the next model
+      // The sockets go with the model's bones and followers; new ones are made for the next model
       this.#sockets.clear();
+      for (const node of [...this.#followers.keys()]) this.#removeFollower(node);
       this.removeChild(this.model);
       this.model.destroy();
       this.model = null;

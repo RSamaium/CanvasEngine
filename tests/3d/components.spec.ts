@@ -3,7 +3,8 @@ import { signal } from "canvasengine";
 import { createComponent } from "../../packages/core/src/engine/reactive";
 import "../../packages/3d/src/index";
 import { BloomEffect, OutlinePass } from "@pixi/3d/extras";
-import { Container3D, CubeGeometry, Material3D, SphereGeometry } from "@pixi/3d";
+import { Container3D, CubeGeometry, Material3D, Quaternion, SphereGeometry, Vector3 } from "@pixi/3d";
+import { Ticker } from "pixi.js";
 
 /** A stand-in for the `<View3D>` component: a scene root and a pass registry. */
 function fakeView() {
@@ -206,5 +207,68 @@ describe("Instances", () => {
     const batch = element.componentInstance.batch;
     expect(batch.size).toBe(5);
     expect([0, 1, 2, 3, 4].map((i) => batch.getVisibleAt(i))).toEqual([true, true, false, false, false]);
+  });
+});
+
+describe("Model3D bone attachment", () => {
+  /**
+   * A model stand-in: a skinned mesh scaled by 10, with a two-bone skeleton whose
+   * "hand" bone sits 1 unit up from "root" (10 units once the mesh scale applies).
+   */
+  async function fakeRiggedModel() {
+    const { Skeleton, Mesh3D } = await import("@pixi/3d");
+    const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+    const skeleton = new Skeleton({
+      parent: new Int16Array([-1, 0]),
+      joints: new Int16Array([0, 1]),
+      inverseBindMatrices: new Float32Array([...identity, ...identity]),
+      labels: ["root", "hand"],
+    });
+    skeleton.setLocalTRS(1, 0, 1, 0, 0, 0, 0, 1);
+    const model: any = new Container3D();
+    const skinned = new Mesh3D({ skeleton } as any);
+    skinned.scale.set(10, 10, 10);
+    model.addChild(skinned);
+    model.skeletons = [skeleton];
+    return { model, skeleton };
+  }
+
+  test("follows a bone that exists only in the skeleton", async () => {
+    const view = fakeView();
+    const element = mountUnder(view.element, "Model3D", {});
+    const component = element.componentInstance;
+    const { model, skeleton } = await fakeRiggedModel();
+    component.model = model;
+    component.addChild(model);
+
+    const sword = new Container3D();
+    component.addChild(sword);
+    component.attachToBone(sword, "hand");
+    expect(sword.getGlobalTransform().elements[13]).toBeCloseTo(10);
+
+    // The pose changes: the attached node follows on the next frame
+    skeleton.setLocalTRS(1, 2, 1, 0, 0, 0, 0, 1);
+    Ticker.shared.update(performance.now() + 1000);
+    const world = sword.getGlobalTransform().elements;
+    expect(world[12]).toBeCloseTo(20);
+    expect(world[13]).toBeCloseTo(10);
+    // The socket cancels the bone's scale: the sword keeps its own size
+    const scale = new Vector3();
+    sword.getGlobalTransform().decompose(new Vector3(), new Quaternion(), scale);
+    expect(scale.x).toBeCloseTo(1);
+
+    component.detachFromBone(sword);
+    expect(component.children.some((child: any) => String(child.label).endsWith(":follower"))).toBe(false);
+  });
+
+  test("warns with the bone names when the bone is unknown", async () => {
+    const view = fakeView();
+    const component = mountUnder(view.element, "Model3D", {}).componentInstance;
+    const { model } = await fakeRiggedModel();
+    component.model = model;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    component.attachToBone(new Container3D(), "tail");
+    expect(warn.mock.calls[0][0]).toContain("hand");
+    warn.mockRestore();
   });
 });

@@ -29,7 +29,14 @@
       fadeDuration={0.25}
       castShadow={true}
       onLoad={onLoad}
-    />
+    >
+      <!-- A sword in the right hand: Palm2.R exists only in the skeleton -->
+      <Group3D bone="Palm2.R" rotation={[Math.PI / 2, 0, 0]}>
+        <Mesh3D geometry={{ type: "cylinder", radiusTop: 0.07, radiusBottom: 0.07, height: 0.5 }} material={{ baseColor: 0x5a3a1a, roughness: 0.8 }} />
+        <Mesh3D geometry={{ type: "cube", width: 0.6, height: 0.08, depth: 0.12 }} material={{ baseColor: 0xc9a227, metallic: 0.8, roughness: 0.3 }} position={[0, 0.27, 0]} />
+        <Mesh3D geometry={{ type: "cube", width: 0.14, height: 1.8, depth: 0.04 }} material={{ baseColor: 0xd8dde3, metallic: 1, roughness: 0.2 }} position={[0, 1.2, 0]} />
+      </Group3D>
+    </Model3D>
   </View3D>
 
   <!-- 2D HUD over the 3D view -->
@@ -53,7 +60,7 @@
 
 <script>
   import { signal, computed, tick } from "canvasengine";
-  import { View3D, Camera3D, Mesh3D, Model3D, DirectionalLight } from "@canvasengine/3d";
+  import { View3D, Camera3D, Mesh3D, Model3D, Group3D, DirectionalLight } from "@canvasengine/3d";
 
   const GESTURES = ["Wave", "Dance", "ThumbsUp", "Yes", "No", "Punch", "Jump", "Death"];
 
