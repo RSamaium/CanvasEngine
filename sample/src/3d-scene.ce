@@ -1,5 +1,8 @@
 <Canvas backgroundColor="#87b7e6">
   <View3D
+    positionType="absolute"
+    left={0}
+    top={0}
     toneMapping="aces"
     shadowQuality="medium"
     environment={{ skyColor: 0xbcd4f0, groundColor: 0x6b6250, intensity: 0.7 }}
@@ -48,8 +51,10 @@
   </View3D>
 
   <!-- 2D HUD over the 3D view -->
-  <Text text={hud} x={16} y={14} color="#ffffff" size={18} />
-  <Text text="Drag to orbit · wheel to zoom · click the crates" x={16} y={40} color="#e6eef8" size={13} />
+  <Container>
+    <Text text={hud} x={16} y={14} color="#ffffff" size={18} />
+    <Text text="Drag to orbit · wheel to zoom · click the crates" x={16} y={40} color="#e6eef8" size={13} />
+  </Container>
 </Canvas>
 
 <script>
