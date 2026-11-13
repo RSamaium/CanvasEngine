@@ -1,7 +1,33 @@
-import { Assets, Ticker } from "pixi.js";
+import { Assets, Ticker, UPDATE_PRIORITY } from "pixi.js";
 import { createComponent, registerComponent, type ComponentFunction } from "canvasengine";
-import { Container3D, Model3D as PixiModel3D, type AnimationState, type Scene3DSource } from "@pixi/3d";
+import {
+  Container3D,
+  Matrix4,
+  Mesh3D as PixiMesh3D,
+  Model3D as PixiModel3D,
+  Quaternion,
+  Vector3,
+  type AnimationState,
+  type Scene3DSource,
+} from "@pixi/3d";
 import { Node3D, type Node3DProps } from "./Node3D";
+
+/** How many Model3D components use each loaded URL, to unload a file nobody uses. */
+const sourceUsers = new Map<string, number>();
+
+function retainSource(url: string) {
+  sourceUsers.set(url, (sourceUsers.get(url) ?? 0) + 1);
+}
+
+function releaseSource(url: string) {
+  const count = (sourceUsers.get(url) ?? 1) - 1;
+  if (count > 0) {
+    sourceUsers.set(url, count);
+    return;
+  }
+  sourceUsers.delete(url);
+  Assets.unload(url).catch(() => {});
+}
 
 export interface Model3DProps extends Node3DProps {
   /** URL of a .glb / .gltf file, or an already loaded Scene3DSource */
@@ -16,6 +42,14 @@ export interface Model3DProps extends Node3DProps {
   animationSpeed?: number;
   castShadow?: boolean;
   receiveShadow?: boolean;
+  /**
+   * Morph target weights, written into every mesh that has morph targets: an array
+   * (`[0.8, 0]`), or `{ meshLabel: [...] }` for one mesh. A playing clip that animates
+   * the weights overwrites them.
+   */
+  morphWeights?: number[] | Record<string, number[]>;
+  /** Unloads the file when no Model3D uses it any more. Default `true` */
+  unload?: boolean;
   /** Called once the model is built */
   onLoad?: (model: PixiModel3D) => void;
 }
@@ -30,6 +64,9 @@ class CanvasModel3D extends Node3D(Container3D) {
   #clip: string | null = null;
   #state: AnimationState | null = null;
   #fade: ((ticker: Ticker) => void) | null = null;
+  #sourceUrl: string | null = null;
+  /** Nodes following a bone, with the `bone` prop on a child */
+  #boneChildren = new Map<Container3D, string>();
 
   applyProps3D(props: Model3DProps, initial: boolean) {
     super.applyProps3D(props, initial);
@@ -39,7 +76,89 @@ class CanvasModel3D extends Node3D(Container3D) {
       if (this.#state && props.loop !== undefined) this.#state.loop = props.loop;
       if (this.#state && props.animationSpeed !== undefined) this.#state.animationSpeed = props.animationSpeed;
       if (props.castShadow !== undefined || props.receiveShadow !== undefined) this.#applyShadows();
+      if (props.morphWeights !== undefined) {
+        this.#applyMorphWeights();
+        this.#syncMorphTick();
+      }
     }
+  }
+
+  /**
+   * Makes `node` follow the bone named `bone`. The node's own position, rotation and
+   * scale are an offset from the bone, in the model's units and axes. Works with bones
+   * that are scene nodes.
+   */
+  attachToBone(node: Container3D, bone: string) {
+    this.#boneChildren.set(node, bone);
+    if (this.model) this.#placeOnBone(node, bone);
+  }
+
+  detachFromBone(node: Container3D) {
+    this.#boneChildren.delete(node);
+    const socket = this.#sockets.get(node);
+    if (socket) {
+      this.#sockets.delete(node);
+      socket.parent?.removeChild(socket);
+      if (node.parent === socket) socket.removeChild(node);
+      socket.destroy();
+    }
+  }
+
+  /** Bone sockets: nodes that cancel a bone's rest rotation and scale, one per attached node */
+  #sockets = new Map<Container3D, Container3D>();
+
+  #placeOnBone(node: Container3D, bone: string) {
+    const target = this.model?.getChildByLabel(bone, true) as Container3D | null;
+    if (!target) {
+      const labels: string[] = [];
+      this.model?.traverse((child: any) => {
+        if (child.label && !(child instanceof PixiMesh3D)) labels.push(child.label);
+      });
+      console.warn(`<Model3D> no bone node named "${bone}". Available: ${labels.join(", ")}`);
+      return;
+    }
+    // A bone often has its own rotation and a large scale (FBX exports): a socket under
+    // it cancels both, as they are now, so the node's offset reads in model units and axes
+    const boneInModel = new Matrix4()
+      .getInverse((this as unknown as Container3D).getGlobalTransform())
+      .multiply(target.getGlobalTransform());
+    const position = new Vector3();
+    const rotation = new Quaternion();
+    const scale = new Vector3();
+    boneInModel.decompose(position, rotation, scale);
+
+    let socket = this.#sockets.get(node);
+    if (!socket) {
+      socket = new Container3D({ label: `${bone}:socket` });
+      this.#sockets.set(node, socket);
+    }
+    target.addChild(socket);
+    socket.quaternion.copyFrom(rotation.inverse());
+    socket.scale.set(1 / scale.x, 1 / scale.y, 1 / scale.z);
+    if (node.parent !== socket) socket.addChild(node);
+  }
+
+  /** Re-applies `morphWeights` after the player, which a clip with a weights track would overwrite */
+  #morphTick = () => this.#applyMorphWeights();
+  #morphTickActive = false;
+
+  #syncMorphTick() {
+    const wanted = !!this.fullProps.morphWeights && !!this.model;
+    if (wanted && !this.#morphTickActive) Ticker.shared.add(this.#morphTick, undefined, UPDATE_PRIORITY.LOW);
+    if (!wanted && this.#morphTickActive) Ticker.shared.remove(this.#morphTick);
+    this.#morphTickActive = wanted;
+  }
+
+  #applyMorphWeights() {
+    const weights = this.fullProps.morphWeights;
+    if (!weights || !this.model) return;
+    this.model.traverse((node: any) => {
+      if (!(node instanceof PixiMesh3D) || !node.weights) return;
+      const values = Array.isArray(weights) ? weights : weights[node.label ?? ""];
+      if (!values) return;
+      // Write into the array: replacing it disconnects it from the clips
+      for (let i = 0; i < node.weights.length && i < values.length; i++) node.weights[i] = values[i];
+    });
   }
 
   async #load(src: string | Scene3DSource) {
@@ -47,11 +166,21 @@ class CanvasModel3D extends Node3D(Container3D) {
     const source = typeof src === "string" ? await Assets.load<Scene3DSource>(src) : src;
     if (version !== this.#loadVersion || this.destroyed) return;
     this.#disposeModel();
+    if (typeof src === "string") {
+      retainSource(src);
+      this.#sourceUrl = src;
+    }
     const { castShadow, receiveShadow } = this.fullProps;
     // The `animation` prop drives playback: no clip starts on its own
     this.model = new PixiModel3D({ source, castShadow, receiveShadow, autoPlay: false });
     this.addChild(this.model);
     this.#play();
+    this.#applyMorphWeights();
+    this.#syncMorphTick();
+    // Opt-in passes target meshes, which exist only now
+    this.applyPassFlag("outline", this.fullProps.outlined);
+    this.applyPassFlag("wireframe", this.fullProps.wireframe);
+    for (const [node, bone] of this.#boneChildren) this.#placeOnBone(node, bone);
     this.fullProps.onLoad?.(this.model);
   }
 
@@ -124,12 +253,26 @@ class CanvasModel3D extends Node3D(Container3D) {
 
   #disposeModel() {
     this.#stopFade();
+    if (this.#morphTickActive) Ticker.shared.remove(this.#morphTick);
+    this.#morphTickActive = false;
     this.#state = null;
     this.#clip = null;
-    if (!this.model) return;
-    this.removeChild(this.model);
-    this.model.destroy();
-    this.model = null;
+    if (this.model) {
+      // Bone children belong to their own components: take them out before destroying
+      for (const node of this.#boneChildren.keys()) {
+        if (node.parent && node.parent !== (this as unknown as Container3D)) this.addChild(node);
+      }
+      // The sockets go with the model's bones; new ones are made for the next model
+      this.#sockets.clear();
+      this.removeChild(this.model);
+      this.model.destroy();
+      this.model = null;
+    }
+    if (this.#sourceUrl) {
+      if (this.fullProps.unload !== false) releaseSource(this.#sourceUrl);
+      else sourceUsers.set(this.#sourceUrl, Math.max(0, (sourceUsers.get(this.#sourceUrl) ?? 1) - 1));
+      this.#sourceUrl = null;
+    }
   }
 
   onDestroy(parent: any, afterDestroy?: () => void) {

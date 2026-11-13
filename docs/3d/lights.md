@@ -34,6 +34,7 @@ Lights are 3D nodes: place them inside a `View3D` like any other component.
 | `radius` | point, spot | `number` | Size of the light source; larger makes softer highlights |
 | `coneAngle` | spot | `number` | Angle of the cone, in radians |
 | `penumbra` | spot | `number` | Softness of the cone edge, from 0 to 1 |
+| `shadow` | directional, point, spot | object | Shadow settings (see [Shadow Settings](#shadow-settings)) |
 
 Plus the [common props](./getting-started#common-props). All can be signals.
 
@@ -82,6 +83,30 @@ The shadow resolution is set on the view: `<View3D shadowQuality="high">`.
   <Mesh3D geometry={{ type: "cube" }} position={[0, 1, 0]} />
 </View3D>
 ```
+
+## Shadow Settings
+
+The `shadow` prop tunes the shadow of a light with `castShadow`:
+
+```html
+<!-- Large outdoor scene: 2 cascades, sharp near the camera, up to 40 units away -->
+<DirectionalLight intensity={3} rotation={[-0.9, 0.6, 0]} castShadow={true} shadow={{ cascades: 2, maxDistance: 40 }} />
+
+<!-- Fixed area, redrawn only when asked -->
+<DirectionalLight castShadow={true} shadow={{ bounds: { min: [-20, 0, -20], max: [20, 10, 20] }, update: "manual" }} />
+```
+
+| Option | Lights | Description |
+|--------|--------|-------------|
+| `bias` | all | Depth offset that removes stripes on lit surfaces ("shadow acne"). Try `0.0005` |
+| `normalBias` | all | Offset along the surface, in world units, for the same purpose |
+| `bounds` | directional | `{ min: [x, y, z], max: [x, y, z] }`: the world box the shadow covers. Without it, the box fits the shadow casters |
+| `cascades` | directional | `1` to `4`: splits the shadow so it stays sharp near the camera in large scenes |
+| `maxDistance` | directional | With cascades: how far from the camera shadows reach |
+| `lambda` | directional | With cascades: `0` splits evenly, `1` gives more detail near the camera |
+| `update` | all | `1` redraws every frame (default), `N` every Nth frame, `"manual"` once and then only after `refreshShadows()` |
+
+For static scenes, `update: "manual"` or a slower rate saves a lot of work.
 
 ## Moving Lights
 

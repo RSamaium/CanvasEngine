@@ -68,12 +68,19 @@ Import the 3D components from `@canvasengine/3d`: the tag names in the template 
 | [Camera3D](./camera3d) | Sets up the view's camera, with optional mouse orbit |
 | [Mesh3D](./mesh3d) | A primitive shape (cube, sphere, plane...) or a custom geometry, with a material |
 | [Model3D](./model3d) | A glTF / GLB model, with its animation clips |
-| [Lights](./lights) | `DirectionalLight`, `PointLight`, `SpotLight`, `AmbientLight` |
+| [Lights](./lights) | `DirectionalLight`, `PointLight`, `SpotLight`, `AmbientLight`, with shadows |
 | [Group3D](./group3d) | Groups 3D nodes to move them together |
+| [Sprite3D](./sprite3d) | A flat image facing the camera: 2D characters, trees, glows |
+| [Particles3D](./particles3d) | Fire, smoke, sparks, snow |
+| [Effects](./effects) | `Bloom`, `Ssao`, `Fxaa`, `TiltShift`, `MotionBlur`, `Tint`, `Outline`, `Wireframe` |
+| [Surface3D](./surface3d) | 2D components shown on a plane in the scene |
+| [Label3D](./label3d) | 2D components pinned over a 3D point |
+| [Monitor3D](./monitor3d) | A screen showing the scene from a second camera; minimaps |
+| [Instances](./instances) | Thousands of copies of one mesh in one draw call |
 
 ## Common Props
 
-Every 3D node (`Mesh3D`, `Model3D`, lights, `Group3D`) accepts these props:
+Every 3D node (`Mesh3D`, `Model3D`, `Sprite3D`, lights, `Group3D`, `Particles3D`, `Surface3D`, `Monitor3D`, `Instances`) accepts these props:
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -85,6 +92,12 @@ Every 3D node (`Mesh3D`, `Model3D`, lights, `Group3D`) accepts these props:
 | `visible` | `boolean` | Shows or hides the node and its children |
 | `label` | `string` | Name of the node |
 | `eventMode` | `string` | Pointer events mode; set automatically (see below) |
+| `cursor` | `string` | CSS cursor over the node, such as `"pointer"` |
+| `hitVolume` | `"box"` \| `"geometry"` \| shape | What the pointer hits: the bounding box (default for meshes) or every triangle |
+| `drag3d` | `boolean` \| object | Drag the node with the pointer (see [Dragging](#dragging)) |
+| `outlined` | `boolean` | Ink outline around the node's meshes; needs an [`<Outline>`](./effects#outlines) in the view |
+| `wireframe` | `boolean` | Draws the node's meshes as lines; needs a [`<Wireframe>`](./effects) in the view |
+| `bone` | `string` | Inside a `Model3D`: follows that bone (see [Model3D](./model3d#attaching-to-a-bone)) |
 
 Any of them can be a signal. A signal can also go inside the array: `rotation={[0, angle, 0]}` updates when `angle` changes.
 
@@ -102,7 +115,9 @@ Any of them can be a signal. A signal can also go inside the array: `rotation={[
 
 ## Pointer Events
 
-3D nodes take the same event props as 2D components: `click`, `pointertap`, `pointerdown`, `pointerup`, `pointermove`, `pointerover`, `pointerout`, `pointerenter`, `pointerleave`, `rightclick` and `wheel`.
+3D nodes take the same event props as 2D components: `click`, `pointertap`, `pointerdown`, `pointerup`, `pointerupoutside`, `pointermove`, `globalpointermove`, `pointerover`, `pointerout`, `pointerenter`, `pointerleave`, `pointercancel`, `rightclick`, `rightdown`, `rightup` and `wheel`.
+
+The event has a `hit3D` field with the hit `point` (world position), `normal`, `distance` and `uv`.
 
 Picking is turned on automatically when you pass an event handler: you do not need to set `eventMode`.
 
@@ -115,6 +130,35 @@ Picking is turned on automatically when you pass an event handler: you do not ne
   click={() => select(item)}
 />
 ```
+
+## Dragging
+
+`drag3d` lets the user drag a node with the pointer. The node slides on a plane through its position, the ground plane by default. While dragging, an orbit camera does not turn.
+
+```html
+<Mesh3D geometry={{ type: "cube" }} position={[0, 0.5, 0]} drag3d={true} />
+
+<Mesh3D
+  geometry={{ type: "cube" }}
+  drag3d={{
+    plane: "xz",   // "xz" (ground, default), "xy" or "yz"
+    snap: 0.5,     // round the position to a grid
+    start: () => console.log("start"),
+    move: (position) => console.log(position.x, position.z),
+    end: () => console.log("end"),
+  }}
+/>
+```
+
+The prop is named `drag3d` because `drag` is the 2D [drag directive](/directives/drag).
+
+## Picking from Code
+
+`View3D`'s instance (see [Access the Pixi instances](./view3d#access-the-pixi-instances)) gives the `@pixi/3d` view, with:
+
+- `view.raycast({ x, y })`: the first node under a screen point, with the hit `point`, or `null`;
+- `view.screenToWorld({ x, y }, plane)`: the point of a `Plane` under a screen point;
+- `view.worldToScreen({ x, y, z })`: the screen position of a 3D point.
 
 ## 2D Over 3D
 

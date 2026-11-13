@@ -1,52 +1,9 @@
-import { Assets, type Texture } from "pixi.js";
 import { createComponent, registerComponent, type ComponentFunction } from "canvasengine";
-import {
-  BaseMaterial3D,
-  CapsuleGeometry,
-  ConeGeometry,
-  CubeGeometry,
-  CylinderGeometry,
-  FlatMaterial,
-  Geometry3D,
-  IcosahedronGeometry,
-  Material3D,
-  Mesh3D as PixiMesh3D,
-  PlaneGeometry,
-  SphereGeometry,
-  TorusGeometry,
-  TorusKnotGeometry,
-} from "@pixi/3d";
+import { BaseMaterial3D, Geometry3D, Mesh3D as PixiMesh3D } from "@pixi/3d";
 import { Node3D, type Node3DProps } from "./Node3D";
+import { buildGeometry, buildMaterial, canPatchMaterial, type GeometrySpec, type MaterialSpec } from "./builders";
 
-const GEOMETRIES = {
-  cube: CubeGeometry,
-  sphere: SphereGeometry,
-  plane: PlaneGeometry,
-  cylinder: CylinderGeometry,
-  cone: ConeGeometry,
-  capsule: CapsuleGeometry,
-  torus: TorusGeometry,
-  torusKnot: TorusKnotGeometry,
-  icosahedron: IcosahedronGeometry,
-} as const;
-
-export type GeometrySpec = { type: keyof typeof GEOMETRIES; [option: string]: any };
-
-export interface MaterialSpec {
-  /** `'pbr'` (Material3D, lit) by default, or `'flat'` (unlit) */
-  type?: "pbr" | "flat";
-  baseColor?: number | string;
-  metallic?: number;
-  roughness?: number;
-  alpha?: number;
-  alphaMode?: "opaque" | "blend" | "mask";
-  doubleSided?: boolean;
-  /** Glow: `{ color, strength }`; a strength above 1 feeds bloom */
-  emissive?: { color?: number | string; strength?: number };
-  /** Image URL or Texture used as base colour */
-  texture?: string | Texture;
-  [option: string]: any;
-}
+export type { GeometrySpec, MaterialSpec };
 
 export interface Mesh3DProps extends Node3DProps {
   /** `{ type: "cube", width, height, depth }`, `{ type: "sphere", radius }`... or a Geometry3D */
@@ -55,99 +12,93 @@ export interface Mesh3DProps extends Node3DProps {
   material?: MaterialSpec | BaseMaterial3D;
   castShadow?: boolean;
   receiveShadow?: boolean;
+  /** Faces the camera: `"none"` (default), `"spherical"` or `"cylindrical"` (stays upright) */
+  billboardMode?: "none" | "spherical" | "cylindrical";
 }
 
-/** Material fields that a live material accepts as plain property writes. */
-const LIVE_MATERIAL_FIELDS = ["baseColor", "metallic", "roughness", "alpha", "alphaMode"];
+/**
+ * Mixin for components that own a geometry and a material built from props:
+ * Mesh3D, and the screens of Surface3D and Monitor3D.
+ */
+export function MeshComponent(Base: new (...args: any[]) => PixiMesh3D): any {
+  return class extends Node3D(Base) {
+    _ownsGeometry = false;
+    _ownsMaterial = false;
+    _materialSpec: MaterialSpec | null = null;
+    _materialVersion = 0;
 
-class CanvasMesh3D extends Node3D(PixiMesh3D) {
-  #ownsGeometry = false;
-  #ownsMaterial = false;
-  #materialSpec: MaterialSpec | null = null;
-  #materialVersion = 0;
-
-  applyProps3D(props: Mesh3DProps, initial: boolean) {
-    super.applyProps3D(props, initial);
-    if (props.geometry !== undefined) this.#setGeometry(this.fullProps.geometry);
-    if (props.material !== undefined) this.#setMaterial(props.material, this.fullProps.material, initial);
-    if (props.castShadow !== undefined) this.castShadow = props.castShadow;
-    if (props.receiveShadow !== undefined) this.receiveShadow = props.receiveShadow;
-  }
-
-  #setGeometry(spec: GeometrySpec | Geometry3D | undefined) {
-    if (!spec) return;
-    if (this.#ownsGeometry) this.geometry?.destroy();
-    if (spec instanceof Geometry3D) {
-      this.geometry = spec;
-      this.#ownsGeometry = false;
-      return;
+    applyProps3D(props: Mesh3DProps, initial: boolean) {
+      super.applyProps3D(props, initial);
+      if (props.geometry !== undefined) this.setGeometrySpec(this.fullProps.geometry);
+      if (props.material !== undefined) this.setMaterialSpec(props.material, this.fullProps.material, initial);
+      if (props.castShadow !== undefined) this.castShadow = props.castShadow;
+      if (props.receiveShadow !== undefined) this.receiveShadow = props.receiveShadow;
+      if (props.billboardMode !== undefined) this.billboardMode = props.billboardMode;
     }
-    const { type, ...options } = spec;
-    const GeometryClass = GEOMETRIES[type];
-    if (!GeometryClass) {
-      console.warn(`<Mesh3D> unknown geometry type "${type}"`);
-      return;
-    }
-    this.geometry = new GeometryClass(options as any);
-    this.#ownsGeometry = true;
-  }
 
-  /**
-   * `patch` is what changed, `spec` the full merged spec. Colours, metallic and roughness
-   * are written in place; other changes (type, emissive, texture) rebuild the material.
-   */
-  #setMaterial(patch: MaterialSpec | BaseMaterial3D, spec: MaterialSpec | BaseMaterial3D, initial: boolean) {
-    if (spec instanceof BaseMaterial3D) {
-      this.#replaceMaterial(spec, false);
-      this.#materialSpec = null;
-      return;
+    setGeometrySpec(spec: GeometrySpec | Geometry3D | undefined) {
+      if (!spec) return;
+      const built = buildGeometry(spec);
+      if (!built) return;
+      const previous = this._ownsGeometry ? this.geometry : null;
+      this.geometry = built.geometry;
+      this._ownsGeometry = built.owned;
+      if (previous && previous !== built.geometry) previous.destroy();
     }
-    const canPatch =
-      !initial &&
-      this.#ownsMaterial &&
-      this.#materialSpec &&
-      Object.keys(patch).every((key) => LIVE_MATERIAL_FIELDS.includes(key));
-    if (canPatch) {
-      const material = this.material as any;
-      for (const key of Object.keys(patch)) material[key] = (patch as any)[key];
-      this.#materialSpec = { ...spec };
-      return;
+
+    /**
+     * `patch` is what changed, `spec` the full merged spec. Colours, metallic, roughness
+     * and alpha are written in place; other changes build a new material.
+     */
+    setMaterialSpec(patch: MaterialSpec | BaseMaterial3D, spec: MaterialSpec | BaseMaterial3D, initial: boolean) {
+      if (spec instanceof BaseMaterial3D) {
+        this._materialVersion++;
+        this.replaceMaterial(spec, false);
+        this._materialSpec = null;
+        return;
+      }
+      if (!initial && this._ownsMaterial && this._materialSpec && canPatchMaterial(patch as MaterialSpec)) {
+        const material = this.material as any;
+        for (const key of Object.keys(patch)) material[key] = (patch as any)[key];
+        this._materialSpec = { ...spec };
+        return;
+      }
+      this._materialSpec = { ...spec };
+      const version = ++this._materialVersion;
+      buildMaterial(spec)
+        .then((material) => {
+          // A newer spec arrived while textures loaded
+          if (version !== this._materialVersion || this.destroyed) {
+            material.destroy();
+            return;
+          }
+          this.replaceMaterial(material, true);
+          // Opt-in passes live on the mesh, but re-apply them for a new material
+          this.applyPassFlag("outline", this.fullProps.outlined);
+          this.applyPassFlag("wireframe", this.fullProps.wireframe);
+        })
+        .catch((error) => console.warn("<Mesh3D> material:", error));
     }
-    this.#materialSpec = { ...spec };
-    this.#buildMaterial(spec);
-  }
 
-  async #buildMaterial(spec: MaterialSpec) {
-    const version = ++this.#materialVersion;
-    const { type = "pbr", texture, ...options } = spec;
-    let baseColorTexture: Texture | undefined;
-    if (typeof texture === "string") {
-      baseColorTexture = await Assets.load(texture);
-      // A newer spec arrived during the load
-      if (version !== this.#materialVersion || this.destroyed) return;
-    } else if (texture) {
-      baseColorTexture = texture;
+    replaceMaterial(material: BaseMaterial3D, owned: boolean) {
+      const previous = this._ownsMaterial ? this.material : null;
+      this.material = material;
+      this._ownsMaterial = owned;
+      if (previous && previous !== material) previous.destroy();
     }
-    if (baseColorTexture) (options as any).baseColorTexture = baseColorTexture;
-    const material = type === "flat" ? new FlatMaterial(options as any) : new Material3D(options as any);
-    this.#replaceMaterial(material, true);
-  }
 
-  #replaceMaterial(material: BaseMaterial3D, owned: boolean) {
-    const previous = this.#ownsMaterial ? this.material : null;
-    this.material = material;
-    this.#ownsMaterial = owned;
-    if (previous && previous !== material) previous.destroy();
-  }
-
-  onDestroy(parent: any, afterDestroy?: () => void) {
-    const geometry = this.#ownsGeometry ? this.geometry : null;
-    const material = this.#ownsMaterial ? this.material : null;
-    super.onDestroy(parent, afterDestroy);
-    geometry?.destroy();
-    material?.destroy();
-  }
+    onDestroy(parent: any, afterDestroy?: () => void) {
+      this._materialVersion++;
+      const geometry = this._ownsGeometry ? this.geometry : null;
+      const material = this._ownsMaterial ? this.material : null;
+      super.onDestroy(parent, afterDestroy);
+      geometry?.destroy();
+      material?.destroy();
+    }
+  };
 }
+
+class CanvasMesh3D extends MeshComponent(PixiMesh3D) {}
 
 registerComponent("Mesh3D", CanvasMesh3D);
 
@@ -160,7 +111,6 @@ registerComponent("Mesh3D", CanvasMesh3D);
  *   geometry={{ type: "sphere", radius: 1.2 }}
  *   material={{ baseColor: color, roughness: 0.3, metallic: 0.2 }}
  *   position={[3, 1.2, 0]}
- *   castShadow
  *   click={() => console.log("hit")}
  * />
  * ```

@@ -21,6 +21,7 @@
 | `material` | `{ baseColor, ... }` \| material instance | The surface (see below) |
 | `castShadow` | `boolean` | Casts shadows from lights with `castShadow`. Default `true` |
 | `receiveShadow` | `boolean` | Shows shadows cast on it. Default `true` |
+| `billboardMode` | `"none"` \| `"spherical"` \| `"cylindrical"` | Turns the mesh to face the camera |
 
 Plus the [common props](./getting-started#common-props): `position`, `rotation`, `scale`, `visible`, events...
 
@@ -48,7 +49,7 @@ The default material is physically based (`Material3D`): it reacts to lights.
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `type` | `"pbr"` \| `"flat"` | `"pbr"` (default) is lit; `"flat"` ignores lights and shows `baseColor` as is |
+| `type` | `"pbr"` \| `"flat"` \| `"phong"` \| `"toon"` | `"pbr"` (default): physically based. `"flat"`: ignores lights. `"phong"`: classic shiny highlights. `"toon"`: cel shading |
 | `baseColor` | `number` \| `string` | Surface color |
 | `roughness` | `number` | 0 = mirror-smooth, 1 = matte |
 | `metallic` | `number` | 0 = plastic, wood, stone; 1 = metal |
@@ -57,6 +58,32 @@ The default material is physically based (`Material3D`): it reacts to lights.
 | `emissive` | `{ color, strength }` | Glow. A `strength` above 1 feeds [bloom](./view3d#post-processing) |
 | `texture` | `string` \| `Texture` | Image URL or texture for the base color |
 | `doubleSided` | `boolean` | Draws both faces |
+| `normalTexture` | `string` \| `Texture` | Normal map URL: surface detail without extra triangles |
+| `metallicRoughnessTexture` / `occlusionTexture` | `string` \| `Texture` | PBR texture maps |
+| `flatShading` | `boolean` | Faceted look: each triangle is shaded flat |
+
+Every texture option (any option named `texture` or ending in `Texture`, at any depth) takes an image URL: it is loaded before the material is built.
+
+### Physical Extensions
+
+`"pbr"` materials also take the glTF physical extensions as plain objects: `clearcoat`, `sheen`, `specular`, `iridescence`, `transmission` (glass), `anisotropy` and `ior`. For example a car paint and a glass:
+
+```html
+<Mesh3D geometry={{ type: "sphere" }} material={{ baseColor: 0xb3001b, metallic: 0.6, roughness: 0.4, clearcoat: { factor: 1, roughness: 0.05 } }} />
+<Mesh3D geometry={{ type: "cube" }} material={{ baseColor: 0xffffff, roughness: 0.05, transmission: { factor: 1 }, ior: 1.5 }} />
+```
+
+### Toon and Phong
+
+```html
+<!-- Cel shading in 3 bands -->
+<Mesh3D geometry={{ type: "torusKnot" }} material={{ type: "toon", baseColor: 0xff7043, bands: 3, rimIntensity: 0.5 }} />
+
+<!-- Shiny plastic -->
+<Mesh3D geometry={{ type: "sphere" }} material={{ type: "phong", baseColor: 0x3399ff, shininess: 60, specularColor: 0xffffff }} />
+```
+
+`"toon"` options: `bands`, `specularSize`, `rimPower`, `rimIntensity`. `"phong"` options: `shininess`, `specularColor`, `specularStrength`, `specularTexture`, `normalTexture`.
 
 ```html
 <!-- Translucent glass -->

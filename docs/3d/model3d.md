@@ -24,6 +24,8 @@
 | `animationSpeed` | `number` | Playback speed. Default `1`; negative values play backwards |
 | `castShadow` | `boolean` | Casts shadows |
 | `receiveShadow` | `boolean` | Shows shadows cast on it |
+| `morphWeights` | `number[]` \| `{ [meshLabel]: number[] }` | Morph target weights (see [Morph Targets](#morph-targets)) |
+| `unload` | `boolean` | Unloads the file from memory when no `Model3D` uses it any more. Default `true` |
 | `onLoad` | `(model) => void` | Called once the model is built, with the [`@pixi/3d` Model3D](https://3d.pixijs.download/release/docs/scene.Model3D.html) |
 
 Plus the [common props](./getting-started#common-props): `position`, `rotation`, `scale`, events...
@@ -88,6 +90,57 @@ For an action that should not loop (attack, jump, death), set `loop={false}`: th
 
 - glTF models face **+Z**. To turn a model toward its direction of travel `(dx, dz)`, use `rotation={[0, Math.atan2(dx, dz), 0]}`.
 - The file already sets its size and its "up" direction: do not add a correction rotation. Check the size with `model.getLocalBounds()` in `onLoad` before scaling it.
+
+## Attaching to a Bone
+
+A child component with `bone` follows that bone of the model: a sword in a hand, a hat on a head. Its `position`, `rotation` and `scale` are an offset from the bone, in the model's units and axes:
+
+```html
+<Model3D src="./models/robot.glb" animation="Wave">
+  <Mesh3D
+    bone="Head"
+    geometry={{ type: "cone", radius: 0.6, height: 0.9 }}
+    material={{ type: "toon", baseColor: 0xd9534f }}
+    position={[0, 1.9, 0]}
+  />
+</Model3D>
+```
+
+The bone must be a node of the model's scene. If the name is not found, a warning lists the available bone names.
+
+::: warning
+Some bones exist only in the skeleton, not as scene nodes (in RobotExpressive, `Head`, `Torso` and `UpperArm.R` are nodes; `LowerArm.R` and the fingers are not). `bone` can't follow those yet: attach to the nearest bone that is a node.
+:::
+
+## Morph Targets
+
+Morph targets reshape a mesh, often for facial expressions. `morphWeights` sets their weights, from 0 to 1:
+
+```html
+<Model3D src="./models/robot.glb" animation="Idle" morphWeights={face} />
+
+<script>
+  import { signal } from "canvasengine";
+
+  // RobotExpressive has 3 face morph targets
+  const face = signal([0, 1, 0]);
+</script>
+```
+
+An array applies to every mesh with morph targets; `{ meshLabel: [...] }` targets one mesh. While `morphWeights` is set, it wins over a clip that animates the weights.
+
+## Compressed Models
+
+glTF files compressed with meshopt or quantization load as is. Draco-compressed files fetch a decoder, by default from Google's servers. To host it yourself, call this before loading the first Draco file:
+
+```js
+import { setDracoDecoderPath } from "@canvasengine/3d";
+
+setDracoDecoderPath({
+  jsUrl: "/draco/draco_wasm_wrapper.js",
+  wasmUrl: "/draco/draco_decoder.wasm",
+});
+```
 
 ## Advanced Access
 

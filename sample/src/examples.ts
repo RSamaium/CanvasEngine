@@ -50,6 +50,8 @@ export const EXAMPLES: ExampleDefinition[] = [
   { slug: 'beach', title: 'Beach · Ground effects', load: () => import('./beach.ce') },
   { slug: '3d-scene', title: '3D · Scene (@canvasengine/3d)', load: () => import('./3d-scene.ce') },
   { slug: '3d-model', title: '3D · Animated glTF (Model3D)', load: () => import('./3d-model.ce') },
+  { slug: '3d-effects', title: '3D · Sprites, particles & effects', load: () => import('./3d-effects.ce') },
+  { slug: '3d-world', title: '3D · 2D surfaces, monitors, instances', load: () => import('./3d-world.ce') },
   { slug: 'showcase', title: 'Showcase (docs screenshots)', load: () => import('./showcase.ce') },
 ]
 

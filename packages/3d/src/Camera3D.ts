@@ -1,8 +1,14 @@
+import { Ticker } from "pixi.js";
 import { createComponent, registerComponent, type ComponentFunction, type Element } from "canvasengine";
 import type { Camera3D as PixiCamera3D } from "@pixi/3d";
-import { OrbitCamera, type OrbitCameraOptions } from "@pixi/3d/extras";
-import { findParent3D, type Node3DProps } from "./Node3D";
-import { deepMerge, mergeVec3 } from "./utils";
+import { FPSCamera, OrbitCamera, type FPSCameraOptions, type OrbitCameraOptions } from "@pixi/3d/extras";
+import { findViewComponent, type Node3DProps } from "./Node3D";
+import { deepMerge, mergeVec3, resolveObjectChanges } from "./utils";
+
+export interface FpsOptions extends Omit<FPSCameraOptions, "view" | "position"> {
+  /** Keeps the camera at this height, for a walker on flat ground */
+  height?: number;
+}
 
 export interface Camera3DProps extends Node3DProps {
   /** Vertical field of view in degrees (default 60) */
@@ -17,7 +23,14 @@ export interface Camera3DProps extends Node3DProps {
    * (`target`, `enableDamping`, `minDistance`, `autoRotate`...).
    */
   orbit?: boolean | Omit<OrbitCameraOptions, "view">;
+  /**
+   * First-person controls: mouse look (pointer lock on click) and WASD / arrow keys.
+   * `true` for defaults, or FPSCamera options (`moveSpeed`, `lookSpeed`, `height`...).
+   */
+  fps?: boolean | FpsOptions;
 }
+
+type Controller = { destroy(): void };
 
 /**
  * Configures the camera owned by the parent `<View3D>`; it creates no camera.
@@ -26,23 +39,18 @@ export interface Camera3DProps extends Node3DProps {
 class CanvasCamera3D {
   fullProps: Camera3DProps = {};
   camera: PixiCamera3D | null = null;
-  orbit: OrbitCamera | null = null;
+  /** The active OrbitCamera or FPSCamera, if any */
+  controller: Controller | null = null;
   #view: any = null;
+  #tick: ((ticker: Ticker) => void) | null = null;
 
   onInit(props: Camera3DProps) {
-    this.fullProps = { ...props };
+    this.fullProps = resolveObjectChanges({ ...props }, {});
   }
 
   onMount(element: Element<any>) {
-    const root = findParent3D(element);
-    // The camera lives on the view: reach it from the scene root
-    let view: any = null;
-    let parent = element.parent;
-    while (parent && !view) {
-      view = (parent.componentInstance as any)?.view ?? null;
-      parent = parent.parent;
-    }
-    if (!root || !view) {
+    const view = findViewComponent(element)?.view;
+    if (!view) {
       console.warn("<Camera3D> must be placed inside a <View3D>");
       return;
     }
@@ -52,6 +60,7 @@ class CanvasCamera3D {
   }
 
   onUpdate(props: Camera3DProps) {
+    props = resolveObjectChanges(props, this.fullProps);
     this.fullProps = deepMerge(this.fullProps, props);
     if (this.camera) this.#apply(props, false);
   }
@@ -69,21 +78,47 @@ class CanvasCamera3D {
     const lookAt = mergeVec3({ x: 0, y: 0, z: 0 }, this.fullProps.lookAt);
     if (lookAt && (initial || position || props.lookAt !== undefined)) camera.lookAt(lookAt);
 
-    if (initial || "orbit" in props) this.#syncOrbit(lookAt);
+    if (initial || "orbit" in props || "fps" in props) this.#syncController(lookAt);
   }
 
-  #syncOrbit(lookAt?: { x: number; y: number; z: number }) {
-    const orbit = this.fullProps.orbit;
-    this.orbit?.destroy();
-    this.orbit = null;
-    if (!orbit) return;
-    const options = orbit === true ? {} : orbit;
-    this.orbit = new OrbitCamera({ target: lookAt, ...options, view: this.#view });
+  #syncController(lookAt?: { x: number; y: number; z: number }) {
+    this.#stopController();
+    const { orbit, fps } = this.fullProps;
+    if (fps) {
+      const { height, ...options } = fps === true ? ({} as FpsOptions) : fps;
+      const p = this.camera!.position;
+      const controller = new FPSCamera({
+        ...options,
+        view: this.#view,
+        position: { x: p.x, y: p.y, z: p.z },
+        autoUpdate: height === undefined,
+      });
+      if (height !== undefined) {
+        // Walking follows the pitch: pin the height after each step
+        this.#tick = (ticker) => {
+          controller.update(ticker);
+          controller.camera.position.y = height;
+        };
+        Ticker.shared.add(this.#tick);
+      }
+      this.controller = controller;
+      return;
+    }
+    if (orbit) {
+      const options = orbit === true ? {} : orbit;
+      this.controller = new OrbitCamera({ target: lookAt, ...options, view: this.#view });
+    }
+  }
+
+  #stopController() {
+    if (this.#tick) Ticker.shared.remove(this.#tick);
+    this.#tick = null;
+    this.controller?.destroy();
+    this.controller = null;
   }
 
   onDestroy(_parent: Element<any>, afterDestroy?: () => void) {
-    this.orbit?.destroy();
-    this.orbit = null;
+    this.#stopController();
     this.camera = null;
     this.#view = null;
     afterDestroy?.();
@@ -98,6 +133,7 @@ registerComponent("Camera3D", CanvasCamera3D);
  * @example
  * ```html
  * <Camera3D position={[0, 5, 12]} lookAt={[0, 1, 0]} fov={50} orbit={{ enableDamping: true }} />
+ * <Camera3D position={[0, 1.7, 8]} fps={{ height: 1.7, moveSpeed: 4 }} />
  * ```
  */
 export const Camera3D: ComponentFunction<Camera3DProps> = (props) => createComponent("Camera3D", props);

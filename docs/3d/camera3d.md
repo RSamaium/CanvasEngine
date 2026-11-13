@@ -23,6 +23,7 @@
 | `mode` | `'perspective'` \| `'orthographic'` | Projection. Default `'perspective'` |
 | `orthographicSize` | `number` | In orthographic mode: half the view's width in world units. Default `5` |
 | `orbit` | `boolean` \| `object` | Mouse and touch orbit controls (see below) |
+| `fps` | `boolean` \| `object` | First-person controls (see below). Takes over from `orbit` |
 
 ## Orbit Controls
 
@@ -55,6 +56,38 @@
 ::: warning
 While orbit controls are on, they own the camera: a change to `position` is overwritten by the controls. To move the camera from code (a cutscene, a follow camera), set `orbit={false}` first.
 :::
+
+## First-person Controls
+
+`fps={true}` gives first-person controls: click the view to capture the mouse (pointer lock) and look around, move with WASD or the arrow keys, go up and down with Space and Shift (unless `height` is set), `Escape` to release the mouse.
+
+```html
+<Camera3D position={[0, 1.7, 8]} fps={{ height: 1.7, moveSpeed: 4, lookSpeed: 0.002 }} />
+```
+
+| Option | Description |
+|--------|-------------|
+| `height` | Keeps the camera at this height. Without it, walking follows the view direction, so looking down moves down |
+| `moveSpeed` | Units per second |
+| `lookSpeed` | Mouse sensitivity |
+| `maxPitch` | Limits looking up and down, in radians |
+| `yaw` / `pitch` | Start direction, in radians |
+| `keyboard` | `false` turns keyboard movement off, to move the camera yourself |
+| `pointerLock` | `false` turns the mouse capture off: look by dragging |
+
+Switch between orbit and first person with two signals:
+
+```html
+<Camera3D position={[0, 5, 11]} lookAt={[0, 1, 0]} orbit={orbitOptions} fps={fpsOptions} />
+
+<script>
+  import { signal, computed } from "canvasengine";
+
+  const firstPerson = signal(false);
+  const orbitOptions = computed(() => (firstPerson() ? false : { enableDamping: true }));
+  const fpsOptions = computed(() => (firstPerson() ? { height: 1.7 } : false));
+</script>
+```
 
 ## Follow Camera
 

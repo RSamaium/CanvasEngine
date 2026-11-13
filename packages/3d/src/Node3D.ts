@@ -1,6 +1,21 @@
 import type { Element } from "canvasengine";
-import { Container3D } from "@pixi/3d";
-import { deepMerge, mergeVec3, type Vec3Input } from "./utils";
+import { Container3D, Mesh3D as PixiMesh3D, Plane, Vector3 } from "@pixi/3d";
+import { deepMerge, mergeVec3, resolveObjectChanges, type Vec3Input } from "./utils";
+
+/** Options of the `drag3d` prop. */
+export interface Drag3DOptions {
+  /**
+   * Plane the node slides on: `"xz"` (ground, default), `"xy"` or `"yz"`, through the
+   * node's position when the drag starts
+   */
+  plane?: "xz" | "xy" | "yz";
+  /** Rounds the position to this grid step */
+  snap?: number;
+  start?: (event: any) => void;
+  /** Called on each move with the new world position */
+  move?: (position: { x: number; y: number; z: number }, event: any) => void;
+  end?: (event: any) => void;
+}
 
 /** Props shared by every 3D node component. */
 export interface Node3DProps {
@@ -19,6 +34,18 @@ export interface Node3DProps {
   label?: string;
   /** Pointer events mode; set automatically to `'static'` when an event handler is given */
   eventMode?: "none" | "passive" | "auto" | "static" | "dynamic";
+  /** CSS cursor shown over the node, such as `"pointer"` */
+  cursor?: string;
+  /** What the pointer hits: `"box"` (default for meshes), `"geometry"`, `"sphere"`, or a shape */
+  hitVolume?: any;
+  /** Drag the node on a plane with the pointer: `true` or options */
+  drag3d?: boolean | Drag3DOptions;
+  /** Draws an ink outline around the node's meshes; needs an `<Outline>` effect in the view */
+  outlined?: boolean;
+  /** Draws the node's meshes as lines; needs a `<Wireframe>` effect in the view */
+  wireframe?: boolean;
+  /** Inside a `<Model3D>`: name of the bone this node follows, such as `"Hand.R"` */
+  bone?: string;
   [key: string]: any;
 }
 
@@ -28,12 +55,17 @@ export const EVENTS_3D = [
   "pointertap",
   "pointerdown",
   "pointerup",
+  "pointerupoutside",
   "pointermove",
+  "globalpointermove",
   "pointerover",
   "pointerout",
   "pointerenter",
   "pointerleave",
+  "pointercancel",
   "rightclick",
+  "rightdown",
+  "rightup",
   "wheel",
 ];
 
@@ -51,12 +83,40 @@ export function findParent3D(element: Element<any>): Container3D | null {
   return null;
 }
 
+/** Finds the nearest ancestor component instance matching `test`. */
+export function findAncestor<T = any>(element: Element<any> | null, test: (instance: any) => boolean): T | null {
+  let parent = element?.parent;
+  while (parent) {
+    if (test(parent.componentInstance)) return parent.componentInstance as T;
+    parent = parent.parent;
+  }
+  return null;
+}
+
+/** The `<View3D>` component holding an element. */
+export function findViewComponent(element: Element<any> | null): any {
+  return findAncestor(element, (instance) => !!instance?.isView3DComponent);
+}
+
+/** Calls `fn` on every Mesh3D of a subtree, the node included. */
+export function forEachMesh(node: Container3D, fn: (mesh: PixiMesh3D) => void) {
+  node.traverse((child: Container3D) => {
+    if (child instanceof PixiMesh3D) fn(child);
+  });
+}
+
+const PLANE_NORMALS = {
+  xz: new Vector3(0, 1, 0),
+  xy: new Vector3(0, 0, 1),
+  yz: new Vector3(1, 0, 0),
+};
+
 /**
  * Mixin turning a `Container3D` subclass into a CanvasEngine component.
  *
  * It implements the engine lifecycle (`onInit`, `onMount`, `onUpdate`, `onDestroy`)
- * for 3D transforms, visibility and pointer events. Subclasses override
- * `applyProps3D` for their own props and call `super.applyProps3D`.
+ * for 3D transforms, visibility, pointer events, dragging and render passes.
+ * Subclasses override `applyProps3D` for their own props and call `super.applyProps3D`.
  */
 export function Node3D(Base: new (...args: any[]) => Container3D): any {
   return class Node3DComponent extends Base {
@@ -64,6 +124,8 @@ export function Node3D(Base: new (...args: any[]) => Container3D): any {
     isMounted = false;
     element: Element<any> | null = null;
     _handlers = new Map<string, (...args: any[]) => void>();
+    _dragCleanup: (() => void) | null = null;
+    _boneOwner: any = null;
 
     /** Children of this component attach here. */
     get childTarget3D(): Container3D {
@@ -71,7 +133,7 @@ export function Node3D(Base: new (...args: any[]) => Container3D): any {
     }
 
     onInit(props: Node3DProps) {
-      this.fullProps = { ...props };
+      this.fullProps = resolveObjectChanges({ ...props }, {});
     }
 
     onMount(element: Element<any>, index?: number) {
@@ -92,6 +154,7 @@ export function Node3D(Base: new (...args: any[]) => Container3D): any {
     }
 
     onUpdate(props: Node3DProps) {
+      props = resolveObjectChanges(props, this.fullProps);
       this.fullProps = deepMerge(this.fullProps, props);
       if (!this.isMounted) return;
       this.applyProps3D(props, false);
@@ -117,6 +180,8 @@ export function Node3D(Base: new (...args: any[]) => Container3D): any {
 
       if (props.visible !== undefined) node.visible = props.visible;
       if (props.label !== undefined) node.label = props.label;
+      if (props.cursor !== undefined) (node as any).cursor = props.cursor;
+      if (props.hitVolume !== undefined) (node as any).hitVolume = props.hitVolume;
 
       // lookAt depends on the position: re-aim whenever one of them changes
       const lookAt = mergeVec3({ x: 0, y: 0, z: 0 }, this.fullProps.lookAt);
@@ -125,6 +190,19 @@ export function Node3D(Base: new (...args: any[]) => Container3D): any {
       }
 
       this._syncEvents(props);
+      if ("drag3d" in props) this._syncDrag();
+      if (initial || props.outlined !== undefined) this.applyPassFlag("outline", this.fullProps.outlined);
+      if (initial || props.wireframe !== undefined) this.applyPassFlag("wireframe", this.fullProps.wireframe);
+      if (initial || "bone" in props) this._syncBone();
+    }
+
+    /** Turns an opt-in render pass on or off for every mesh of this node. */
+    applyPassFlag(pass: string, enabled: boolean | undefined) {
+      if (enabled === undefined) return;
+      forEachMesh(this as unknown as Container3D, (mesh) => {
+        if (enabled) mesh.enablePass(pass);
+        else mesh.disablePass(pass);
+      });
     }
 
     _syncEvents(props: Node3DProps) {
@@ -145,15 +223,94 @@ export function Node3D(Base: new (...args: any[]) => Container3D): any {
       }
       if (props.eventMode !== undefined) {
         node.eventMode = props.eventMode;
-      } else if (hasHandler && (node.eventMode === undefined || node.eventMode === "passive")) {
+      } else if (hasHandler) {
+        this._ensurePickable();
+      }
+    }
+
+    _ensurePickable() {
+      const node = this as any;
+      if (node.eventMode === undefined || node.eventMode === "passive" || node.eventMode === "none") {
         node.eventMode = "static";
       }
+    }
+
+    /** Pointer dragging on a plane through the node, with `drag3d`. */
+    _syncDrag() {
+      this._dragCleanup?.();
+      this._dragCleanup = null;
+      const value = this.fullProps.drag3d;
+      if (!value) return;
+      const options: Drag3DOptions = value === true ? {} : value;
+      const node = this as any;
+      this._ensurePickable();
+      if (node.cursor === undefined && this.fullProps.cursor === undefined) node.cursor = "grab";
+
+      const point = new Vector3();
+      const onDown = (event: any) => {
+        const view = this.element ? findViewComponent(this.element)?.view : null;
+        if (!view) return;
+        // Keeps an orbit camera from turning during the drag
+        event.stopPropagation();
+        const normal = PLANE_NORMALS[options.plane ?? "xz"];
+        const origin = node.position;
+        const plane = new Plane(normal, -(normal.x * origin.x + normal.y * origin.y + normal.z * origin.z));
+        if (!view.screenToWorld(event.global, plane, point)) return;
+        const offset = { x: origin.x - point.x, y: origin.y - point.y, z: origin.z - point.z };
+        const id = event.pointerId;
+        options.start?.(event);
+
+        const onMove = (move: any) => {
+          if (move.pointerId !== id || !view.screenToWorld(move.global, plane, point)) return;
+          const snap = (v: number) => (options.snap ? Math.round(v / options.snap) * options.snap : v);
+          const next = {
+            x: snap(point.x + offset.x),
+            y: snap(point.y + offset.y),
+            z: snap(point.z + offset.z),
+          };
+          node.position.set(next.x, next.y, next.z);
+          options.move?.(next, move);
+        };
+        const onEnd = (end: any) => {
+          if (end.pointerId !== id) return;
+          stop();
+          options.end?.(end);
+        };
+        const stop = () => {
+          node.off("globalpointermove", onMove);
+          node.off("pointerup", onEnd);
+          node.off("pointerupoutside", onEnd);
+        };
+        node.on("globalpointermove", onMove);
+        node.on("pointerup", onEnd);
+        node.on("pointerupoutside", onEnd);
+      };
+      node.on("pointerdown", onDown);
+      this._dragCleanup = () => node.off("pointerdown", onDown);
+    }
+
+    /** Follows a bone of the nearest `<Model3D>` ancestor, with the `bone` prop. */
+    _syncBone() {
+      this._boneOwner?.detachFromBone?.(this);
+      this._boneOwner = null;
+      const bone = this.fullProps.bone;
+      if (!bone || !this.element) return;
+      const owner = findAncestor(this.element, (instance) => typeof instance?.attachToBone === "function");
+      if (!owner) {
+        console.warn(`bone="${bone}" needs a <Model3D> ancestor`);
+        return;
+      }
+      owner.attachToBone(this, bone);
+      this._boneOwner = owner;
     }
 
     onDestroy(_parent: Element<any>, afterDestroy?: () => void) {
       const node = this as any;
       for (const [name, handler] of this._handlers) node.off(name, handler);
       this._handlers.clear();
+      this._dragCleanup?.();
+      this._boneOwner?.detachFromBone?.(this);
+      this._boneOwner = null;
       this.element = null;
       afterDestroy?.();
       node.parent?.removeChild(node);

@@ -26,14 +26,16 @@ Every other 3D component (`Camera3D`, `Mesh3D`, `Model3D`, lights, `Group3D`) mu
 |----------|------|-------------|
 | `width` | `number` | Width in pixels. Leave `width` and `height` out to fill the screen and follow resizes |
 | `height` | `number` | Height in pixels |
-| `environment` | `{ skyColor, groundColor, intensity }` \| `CubeTexture` | Soft fill light from all directions. A hemisphere object, or a cubemap / HDR texture for image-based lighting |
-| `background` | `number` \| `{ skyColor, groundColor }` \| `CubeTexture` | What is drawn behind the scene. Transparent by default, so the canvas background shows through |
+| `environment` | `{ skyColor, groundColor, intensity }` \| `string` \| `CubeTexture` | Soft fill light from all directions: a hemisphere object, or the URL of a `.hdr` / `.cubemap` file (or its loaded texture) for image-based lighting |
+| `background` | `number` \| `{ skyColor, groundColor }` \| `string` \| `CubeTexture` | What is drawn behind the scene: a colour, a sky gradient, or a `.hdr` / `.cubemap` URL. Transparent by default, so the canvas background shows through |
 | `toneMapping` | `'none'` \| `'aces'` \| `'reinhard'` \| `'uncharted2'` | Maps bright light to screen colors. Default `'none'` |
 | `exposure` | `number` | Brightness multiplier applied before tone mapping |
 | `fog` | `{ type, color, near, far, density }` | Distance fog. `type` is `'linear'`, `'exponential'` or `'exp2'` |
 | `shadowQuality` | `'low'` \| `'medium'` \| `'high'` \| `'ultra'` | Shadow map size. Changing it rebuilds the view |
 | `cull` | `'off'` \| `'cpu'` \| `'gpu'` | Skips objects outside the camera view |
-| `passes` | `Pass3D[]` | Post-processing effects (see below) |
+| `resolution` | `number` \| `"inherit"` | Render resolution; lower it to render the 3D faster on weak devices. Default `"inherit"`. Changing it rebuilds the view |
+| `passes` | `Pass3D[]` | Extra `@pixi/3d` passes, such as a custom effect. Prefer the [effect components](./effects) |
+| `debug` | `boolean` | Shows the render graph debug panel, to record and inspect how frames are drawn |
 
 All of them can be signals.
 
@@ -70,24 +72,29 @@ Give the fog the same color as the background so distant objects fade into the s
 
 ## Post-processing
 
-Effects come from `@pixi/3d/extras` and go in the `passes` prop:
+Effects are components placed inside the view; see [Effects](./effects):
 
 ```html
-<View3D toneMapping="aces" passes={[bloom]}>
+<View3D toneMapping="aces">
   <Mesh3D
     geometry={{ type: "sphere", radius: 0.5 }}
     material={{ baseColor: 0xffd34d, emissive: { color: 0xffaa00, strength: 2 } }}
   />
+  <Bloom threshold={1} intensity={1.2} />
 </View3D>
-
-<script>
-  import { BloomEffect } from "@pixi/3d/extras";
-
-  const bloom = new BloomEffect({ threshold: 1, intensity: 1.2 });
-</script>
 ```
 
-Bloom only affects light brighter than its `threshold` (1 by default): make glowing objects `emissive` with a `strength` above 1.
+## Image-based Lighting
+
+A `.hdr` or `.cubemap` file lights the scene from a photographed environment and can serve as the sky:
+
+```html
+<View3D toneMapping="aces" environment="./sky/venice_sunset_1k.hdr" background="./sky/venice_sunset_1k.hdr">
+  ...
+</View3D>
+```
+
+The file loads in the background; the scene shows without it until it is ready.
 
 ## Size and Layout
 

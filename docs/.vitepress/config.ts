@@ -211,6 +211,13 @@ const guideMenu = [
       { text: "Model3D", link: "/3d/model3d" },
       { text: "Lights", link: "/3d/lights" },
       { text: "Group3D", link: "/3d/group3d" },
+      { text: "Sprite3D", link: "/3d/sprite3d" },
+      { text: "Particles3D", link: "/3d/particles3d" },
+      { text: "Effects", link: "/3d/effects" },
+      { text: "Surface3D", link: "/3d/surface3d" },
+      { text: "Label3D", link: "/3d/label3d" },
+      { text: "Monitor3D", link: "/3d/monitor3d" },
+      { text: "Instances", link: "/3d/instances" },
     ],
   },
   {

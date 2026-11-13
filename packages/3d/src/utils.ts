@@ -47,3 +47,33 @@ export function deepMerge<T extends Record<string, any>>(target: T, patch: Recor
 }
 
 export { isPlainObject };
+
+const OBJECT_CHANGE_TYPES = new Set(["init", "reset", "update", "add", "remove"]);
+
+/** True for what an object signal emits: `{ type: "reset", value }` or `{ type: "update", key, value }`. */
+function isObjectChange(value: unknown): value is { type: string; key?: string; value: any } {
+  if (!isPlainObject(value) || !OBJECT_CHANGE_TYPES.has((value as any).type) || !("value" in value)) return false;
+  return Object.keys(value).every((key) => key === "type" || key === "value" || key === "key");
+}
+
+/**
+ * An object signal (`signal({ x: 0, y: 0 })`) reaches `onUpdate` as change records,
+ * not as the object. Turns each record back into the full object, using `previous`
+ * for partial changes.
+ */
+export function resolveObjectChanges<T extends Record<string, any>>(props: T, previous: Record<string, any>): T {
+  let out: Record<string, any> | null = null;
+  for (const [name, value] of Object.entries(props)) {
+    if (!isObjectChange(value)) continue;
+    out ??= { ...props };
+    if (value.type === "init" || value.type === "reset") {
+      out[name] = value.value;
+    } else if (value.type === "remove") {
+      const { [value.key!]: _removed, ...rest } = previous[name] ?? {};
+      out[name] = rest;
+    } else {
+      out[name] = { ...(previous[name] ?? {}), [value.key!]: value.value };
+    }
+  }
+  return (out ?? props) as T;
+}
