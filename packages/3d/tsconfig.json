@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "declaration": true,
+    "rootDir": "src",
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "canvasengine": ["../core/dist/index.d.ts"]
+    },
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules"]
+}

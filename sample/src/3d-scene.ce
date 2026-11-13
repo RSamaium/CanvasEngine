@@ -1,0 +1,93 @@
+<Canvas backgroundColor="#87b7e6">
+  <View3D
+    toneMapping="aces"
+    shadowQuality="medium"
+    environment={{ skyColor: 0xbcd4f0, groundColor: 0x6b6250, intensity: 0.7 }}
+  >
+    <Camera3D position={[0, 6, 12]} lookAt={[0, 1, 0]} fov={55} orbit={{ enableDamping: true, maxPolarAngle: 1.45 }} />
+
+    <DirectionalLight color={0xfff2dc} intensity={3} rotation={[-0.8, 0.5, 0]} castShadow={true} />
+    <PointLight color={0xff8a3d} intensity={30} range={8} position={lampPos} />
+
+    <!-- Ground: PlaneGeometry lies in XY, rotate it to make a floor -->
+    <Mesh3D
+      geometry={{ type: "plane", width: 30, height: 30 }}
+      material={{ baseColor: 0x7f8f6a, roughness: 0.95, metallic: 0 }}
+      rotation={[-Math.PI / 2, 0, 0]}
+      castShadow={false}
+      receiveShadow={true}
+    />
+
+    <!-- Clickable crates: each click changes its colour -->
+    @for (crate of crates) {
+      <Mesh3D
+        geometry={{ type: "cube", width: 1.4, height: 1.4, depth: 1.4 }}
+        material={{ baseColor: crate.color, roughness: 0.6 }}
+        position={crate.position}
+        rotation={[0, spin, 0]}
+        castShadow={true}
+        click={() => hit(crate)}
+      />
+    }
+
+    <!-- Group: the moon orbits with its parent -->
+    <Group3D position={[0, 2.2, 0]} rotation={[0, orbitAngle, 0]}>
+      <Mesh3D
+        geometry={{ type: "torusKnot", radius: 0.8, tube: 0.25 }}
+        material={{ baseColor: 0x4a90d9, roughness: 0.25, metallic: 0.6 }}
+        rotation={[spin, spin, 0]}
+        castShadow={true}
+      />
+      <Mesh3D
+        geometry={{ type: "sphere", radius: 0.35 }}
+        material={{ baseColor: 0xffd34d, emissive: { color: 0xffaa00, strength: 1.5 } }}
+        position={[2.4, 0, 0]}
+        castShadow={true}
+      />
+    </Group3D>
+  </View3D>
+
+  <!-- 2D HUD over the 3D view -->
+  <Text text={hud} x={16} y={14} color="#ffffff" size={18} />
+  <Text text="Drag to orbit · wheel to zoom · click the crates" x={16} y={40} color="#e6eef8" size={13} />
+</Canvas>
+
+<script>
+  import { signal, computed, tick } from "canvasengine";
+  import { View3D, Camera3D, Mesh3D, Group3D, DirectionalLight, PointLight } from "@canvasengine/3d";
+
+  const PALETTE = [0xd9534f, 0x5cb85c, 0xf0ad4e, 0x9b59b6, 0x1abc9c];
+
+  const makeCrate = (id, position) => {
+    const color = signal(PALETTE[id % PALETTE.length]);
+    return { id, position, color };
+  };
+
+  const crates = signal([
+    makeCrate(0, [-4, 0.7, 2]),
+    makeCrate(1, [4, 0.7, 2]),
+    makeCrate(2, [-3, 0.7, -3]),
+    makeCrate(3, [3, 0.7, -3]),
+  ]);
+
+  const hits = signal(0);
+  const hud = computed(() => `@canvasengine/3d · hits: ${hits()}`);
+  const spin = signal(0);
+  const orbitAngle = signal(0);
+  const lampPos = signal([0, 1.5, 4]);
+
+  function hit(crate) {
+    const index = PALETTE.indexOf(crate.color());
+    crate.color.set(PALETTE[(index + 1) % PALETTE.length]);
+    hits.update((n) => n + 1);
+  }
+
+  let time = 0;
+  tick(({ deltaTime }) => {
+    const dt = deltaTime ?? 16.67;
+    time += dt / 1000;
+    spin.update((a) => a + dt * 0.0008);
+    orbitAngle.update((a) => a + dt * 0.0012);
+    lampPos.set([Math.cos(time) * 5, 1.5, Math.sin(time) * 5]);
+  });
+</script>

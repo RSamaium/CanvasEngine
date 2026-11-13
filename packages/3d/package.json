@@ -1,0 +1,38 @@
+{
+  "name": "@canvasengine/3d",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch"
+  },
+  "peerDependencies": {
+    "@pixi/3d": "^0.1.0",
+    "canvasengine": "^2.5.2",
+    "pixi.js": "^8.23.0"
+  },
+  "devDependencies": {
+    "@pixi/3d": "^0.1.0",
+    "canvasengine": "workspace:*",
+    "pixi.js": "^8.23.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10",
+    "vite-plugin-dts": "^4.5.4"
+  },
+  "author": "Samuel Ronce",
+  "license": "MIT",
+  "homepage": "https://canvasengine.net",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RSamaium/CanvasEngine.git"
+  },
+  "keywords": ["canvas", "pixijs", "reactive", "3d"],
+  "publishConfig": {
+    "access": "public"
+  }
+}

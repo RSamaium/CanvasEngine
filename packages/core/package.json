@@ -9,7 +9,7 @@
     "dev": "vite build --watch"
   },
   "peerDependencies": {
-    "pixi.js": "^8.19.0"
+    "pixi.js": "^8.23.0"
   },
   "dependencies": {
     "@barvynkoa/particle-emitter": "^0.0.1",

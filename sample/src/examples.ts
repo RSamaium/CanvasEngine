@@ -48,6 +48,7 @@ export const EXAMPLES: ExampleDefinition[] = [
   { slug: 'weather', title: 'Weather · Preset Lab', load: () => import('./weather.ce') },
   { slug: 'night-town', title: 'Day & Night · Town', load: () => import('./night-town.ce') },
   { slug: 'beach', title: 'Beach · Ground effects', load: () => import('./beach.ce') },
+  { slug: '3d-scene', title: '3D · Scene (@canvasengine/3d)', load: () => import('./3d-scene.ce') },
   { slug: 'showcase', title: 'Showcase (docs screenshots)', load: () => import('./showcase.ce') },
 ]
 
