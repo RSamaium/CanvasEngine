@@ -218,6 +218,8 @@ const guideMenu = [
       { text: "Label3D", link: "/3d/label3d" },
       { text: "Monitor3D", link: "/3d/monitor3d" },
       { text: "Instances", link: "/3d/instances" },
+      { text: "Portal3D", link: "/3d/portal3d" },
+      { text: "ParticlePool3D", link: "/3d/particlepool3d" },
     ],
   },
   {

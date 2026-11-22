@@ -379,3 +379,55 @@ describe("Mesh3D dissolve", () => {
     expect(mesh.material.data.dissolve).toBeCloseTo(0.8);
   });
 });
+
+describe("Portal3D", () => {
+  test("adds the exit doorway and a portal pass, and removes them on destroy", async () => {
+    const { PortalPass } = await import("@pixi/3d/extras");
+    const view = fakeView();
+    Object.assign(view.instance.view, { width: 800, height: 600 });
+    const element = mountUnder(view.element, "Portal3D", { size: [2, 3], exit: { position: [60, 1.5, 0], rotation: [0, Math.PI, 0] } });
+    const portal = element.componentInstance;
+    const entry = view.registered.get(portal)!;
+    expect(entry.group).toBe("camera");
+    expect(entry.passes[0]).toBeInstanceOf(PortalPass);
+    expect(portal.exitMesh.position.x).toBe(60);
+    expect(view.root.children).toContain(portal.exitMesh);
+    // Entry and exit share one geometry
+    expect(portal.exitMesh.geometry).toBe(portal.geometry);
+    expect(portal.renderTexture.width).toBe(800);
+
+    portal.onDestroy(view.element, () => {});
+    expect(view.registered.size).toBe(0);
+    expect(view.root.children.some((child: any) => child === portal.exitMesh)).toBe(false);
+  });
+});
+
+describe("Camera3D viewport", () => {
+  test("sets the part of the view the camera draws in", async () => {
+    const { Camera3D: PixiCamera3D } = await import("@pixi/3d");
+    const view = fakeView();
+    const camera = new PixiCamera3D();
+    view.root.addChild(camera);
+    view.instance.view.camera = camera as any;
+    mountUnder(view.element, "Camera3D", { viewport: [0, 0, 0.5, 1] });
+    expect([camera.viewport.x, camera.viewport.y, camera.viewport.width, camera.viewport.height]).toEqual([0, 0, 0.5, 1]);
+  });
+});
+
+describe("ParticlePool3D", () => {
+  test("writes the particles and hides the unused slots", async () => {
+    const particles = signal([{ position: [1, 2, 3], size: 0.5 }]);
+    const element = mountUnder(fakeView().element, "ParticlePool3D", { capacity: 4, particles });
+    await settle();
+    const pool = element.componentInstance.pool;
+    expect(pool.capacity).toBe(4);
+    const setAt = vi.spyOn(pool, "setParticleAt");
+    const upload = vi.spyOn(pool, "upload");
+    particles.set([{ position: [0, 0, 0] }, { position: [1, 1, 1], color: 0xff0000 }]);
+    expect(setAt).toHaveBeenCalledTimes(4);
+    expect(setAt.mock.calls[1].slice(0, 4)).toEqual([1, 1, 1, 1]);
+    // Slots 2 and 3 get a size of 0
+    expect(setAt.mock.calls[2][4]).toBe(0);
+    expect(upload).toHaveBeenCalled();
+  });
+});

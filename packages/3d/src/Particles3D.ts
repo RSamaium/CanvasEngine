@@ -66,7 +66,7 @@ const COMPONENT_OPTIONS = ["playing", "onReady", "position", "x", "y", "z", "rot
 let defaultDot: Texture | null = null;
 
 /** A soft white dot drawn on a canvas, shared by every system without a texture. */
-function getDefaultDot(): Texture {
+export function getDefaultDot(): Texture {
   if (defaultDot) return defaultDot;
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = 64;

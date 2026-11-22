@@ -12,6 +12,8 @@ import {
 } from "@pixi/3d";
 import { findViewComponent, Node3D, type Node3DProps } from "./Node3D";
 import { applyDissolve, normalizeDissolve, withDissolveBit, type DissolveInput } from "./dissolve";
+import { BaseMaterial3D } from "@pixi/3d";
+import type { MaterialSpec } from "./builders";
 
 // Scratch values for the bone followers, reused every frame
 const followMatrix = new Matrix4();
@@ -20,6 +22,17 @@ const followResult = new Matrix4();
 const followPosition = new Vector3();
 const followRotation = new Quaternion();
 const followScale = new Vector3();
+
+export interface BlendLayer {
+  /** Clip name */
+  clip: string;
+  /** Share of this clip in the mix; weights are relative to each other. Default 1 */
+  weight?: number;
+  /** Playback speed. Default 1 */
+  speed?: number;
+  /** Default true */
+  loop?: boolean;
+}
 
 /** How many Model3D components use each loaded URL, to unload a file nobody uses. */
 const sourceUsers = new Map<string, number>();
@@ -65,6 +78,20 @@ export interface Model3DProps extends Node3DProps {
   onAnimationEnd?: (clip: string) => void;
   /** Called each time a looping clip starts over, with the clip name */
   onAnimationLoop?: (clip: string) => void;
+  /** Name of the scene to build, for a file with several. Default: the file's main scene */
+  scene?: string;
+  /**
+   * Changes to the model's materials: `{ materialName: { baseColor, roughness... } }`,
+   * `{ materialName: material }`, or `(material) => material`. This model only.
+   */
+  materials?: Record<string, MaterialSpec | BaseMaterial3D> | ((material: BaseMaterial3D) => BaseMaterial3D);
+  /**
+   * Several clips at once, mixed by weight: `[{ clip: "Walking", weight: 0.7 }, { clip: "Wave", weight: 0.3 }]`.
+   * While set, it replaces `animation`.
+   */
+  blend?: BlendLayer[];
+  /** Looks through a camera from the file: its name, its index, or `true` for the first */
+  useCamera?: string | number | boolean;
   /** Called once the model is built */
   onLoad?: (model: PixiModel3D) => void;
 }
@@ -85,9 +112,12 @@ class CanvasModel3D extends Node3D(Container3D) {
 
   applyProps3D(props: Model3DProps, initial: boolean) {
     super.applyProps3D(props, initial);
-    if (props.src !== undefined) this.#load(props.src);
+    if (props.src !== undefined || (!initial && "scene" in props && this.fullProps.src)) this.#load(this.fullProps.src);
     else if (this.model) {
-      if (props.animation !== undefined) this.#play();
+      if ("blend" in props) this.#syncBlend();
+      else if (props.animation !== undefined && !this.fullProps.blend) this.#play();
+      if ("materials" in props) this.#applyMaterialOverrides();
+      if ("useCamera" in props) this.#syncCamera();
       if (this.#state && props.loop !== undefined) this.#state.loop = props.loop;
       if (this.#state && props.animationSpeed !== undefined) this.#state.animationSpeed = props.animationSpeed;
       if (props.castShadow !== undefined || props.receiveShadow !== undefined) this.#applyShadows();
@@ -237,9 +267,8 @@ class CanvasModel3D extends Node3D(Container3D) {
     const settings = normalizeDissolve(this.fullProps.dissolve);
     if (!settings && !this.#dissolveReady) return;
     if (settings && !this.#dissolveReady) {
-      // Copies: other models from the same file keep their materials
-      this.model.materials = (material) => withDissolveBit(material);
       this.#dissolveReady = true;
+      this.#applyMaterialOverrides();
     }
     for (const material of this.model.materials) applyDissolve(material, settings ?? { amount: 0 });
   }
@@ -274,9 +303,12 @@ class CanvasModel3D extends Node3D(Container3D) {
     }
     const { castShadow, receiveShadow } = this.fullProps;
     // The `animation` prop drives playback: no clip starts on its own
-    this.model = new PixiModel3D({ source, castShadow, receiveShadow, autoPlay: false });
+    this.model = new PixiModel3D({ source, castShadow, receiveShadow, autoPlay: false, scene: this.fullProps.scene });
     this.addChild(this.model);
-    this.#play();
+    if (this.fullProps.blend) this.#syncBlend();
+    else this.#play();
+    if (this.fullProps.materials) this.#applyMaterialOverrides();
+    if (this.fullProps.useCamera !== undefined) this.#syncCamera();
     this.#applyMorphWeights();
     this.#syncMorphTick();
     // Opt-in passes target meshes, which exist only now
@@ -360,12 +392,114 @@ class CanvasModel3D extends Node3D(Container3D) {
     });
   }
 
+  /**
+   * Gives this model its own materials: the `materials` changes, then the dissolve bit.
+   * Copies, so other models from the same file keep theirs.
+   */
+  #applyMaterialOverrides() {
+    const model = this.model;
+    if (!model) return;
+    const overrides = this.fullProps.materials;
+    const dissolve = this.#dissolveReady;
+    if (!overrides && !dissolve) {
+      model.materials = undefined;
+      return;
+    }
+    model.materials = (source: BaseMaterial3D) => {
+      let material = source;
+      if (typeof overrides === "function") {
+        material = overrides(material);
+      } else if (overrides) {
+        const change = overrides[(source as any).label ?? ""];
+        if (change instanceof BaseMaterial3D) material = change;
+        else if (change) material = (material as any).clone(change);
+      }
+      return dissolve ? withDissolveBit(material) : material;
+    };
+    if (dissolve) {
+      const settings = normalizeDissolve(this.fullProps.dissolve) ?? { amount: 0 };
+      for (const material of model.materials) applyDissolve(material, settings);
+    }
+  }
+
+  /** Plays every clip of `blend` at its weight, and stops the clips left out. */
+  #syncBlend() {
+    const player = this.model?.player;
+    if (!player) return;
+    const layers = (this.fullProps.blend as BlendLayer[] | undefined) ?? [];
+    this.#stopFade();
+    if (!layers.length) {
+      // Back to the single `animation` clip
+      player.stop();
+      this.#blendClips.clear();
+      this.#state = null;
+      this.#clip = null;
+      this.#play();
+      return;
+    }
+    this.#clip = null;
+    this.#state = null;
+    const wanted = new Set<string>();
+    for (const layer of layers) {
+      if (!player.getAnimation(layer.clip)) {
+        console.warn(`<Model3D> no animation named "${layer.clip}"`);
+        continue;
+      }
+      wanted.add(layer.clip);
+      const state = player.getState(layer.clip);
+      if (!this.#blendClips.has(layer.clip)) {
+        state.onComplete = () => this.fullProps.onAnimationEnd?.(layer.clip);
+        state.onLoop = () => this.fullProps.onAnimationLoop?.(layer.clip);
+        state.gotoAndPlay(0);
+      }
+      state.weight = layer.weight ?? 1;
+      state.animationSpeed = layer.speed ?? 1;
+      state.loop = layer.loop ?? true;
+    }
+    for (const clip of this.#blendClips) {
+      if (!wanted.has(clip)) player.getState(clip).stop();
+    }
+    this.#blendClips = wanted;
+  }
+
+  #blendClips = new Set<string>();
+  /** The view's own camera while a file camera is in use */
+  #savedCamera: any = null;
+
+  /** Looks through a camera of the file, or gives the view its own camera back. */
+  #syncCamera() {
+    const view = this.element ? findViewComponent(this.element)?.view : null;
+    if (!view) return;
+    const choice = this.fullProps.useCamera;
+    const cameras = this.model?.cameras ?? [];
+    let camera: any = null;
+    if (choice === true) camera = cameras[0];
+    else if (typeof choice === "number") camera = cameras[choice];
+    else if (typeof choice === "string") camera = cameras.find((c: any) => c.label === choice);
+    if (choice !== undefined && choice !== false && !camera) {
+      console.warn(`<Model3D> no camera "${String(choice)}" in the file. Cameras: ${cameras.map((c: any) => c.label).join(", ") || "none"}`);
+    }
+    if (camera) {
+      if (!this.#savedCamera) this.#savedCamera = view.camera;
+      view.camera = camera;
+    } else if (this.#savedCamera) {
+      view.camera = this.#savedCamera;
+      this.#savedCamera = null;
+    }
+  }
+
   #disposeModel() {
     this.#stopFade();
     if (this.#morphTickActive) Ticker.shared.remove(this.#morphTick);
     this.#morphTickActive = false;
     this.#state = null;
     this.#clip = null;
+    this.#blendClips.clear();
+    if (this.#savedCamera) {
+      const view = this.element ? findViewComponent(this.element)?.view : null;
+      if (view) view.camera = this.#savedCamera;
+      this.#savedCamera = null;
+    }
     if (this.model) {
       // Bone children belong to their own components: take them out before destroying
       for (const node of this.#boneChildren.keys()) {

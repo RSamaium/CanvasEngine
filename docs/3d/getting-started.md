@@ -89,10 +89,12 @@ Import the 3D components from `@canvasengine/3d`: the tag names in the template 
 | [Label3D](./label3d) | 2D components pinned over a 3D point |
 | [Monitor3D](./monitor3d) | A screen showing the scene from a second camera; minimaps |
 | [Instances](./instances) | Thousands of copies of one mesh in one draw call |
+| [Portal3D](./portal3d) | A doorway onto another place of the scene |
+| [ParticlePool3D](./particlepool3d) | Particles your code places, drawn in one call |
 
 ## Common Props
 
-Every 3D node (`Mesh3D`, `Model3D`, `Sprite3D`, lights, `Group3D`, `Particles3D`, `Surface3D`, `Monitor3D`, `Instances`) accepts these props:
+Every 3D node (`Mesh3D`, `Model3D`, `Sprite3D`, lights, `Group3D`, `Particles3D`, `ParticlePool3D`, `Surface3D`, `Monitor3D`, `Portal3D`, `Instances`) accepts these props:
 
 | Property | Type | Description |
 |----------|------|-------------|

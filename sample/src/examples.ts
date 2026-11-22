@@ -52,6 +52,8 @@ export const EXAMPLES: ExampleDefinition[] = [
   { slug: '3d-model', title: '3D · Animated glTF (Model3D)', load: () => import('./3d-model.ce') },
   { slug: '3d-effects', title: '3D · Sprites, particles & effects', load: () => import('./3d-effects.ce') },
   { slug: '3d-world', title: '3D · 2D surfaces, monitors, instances', load: () => import('./3d-world.ce') },
+  { slug: '3d-advanced', title: '3D · Portal, blending, particle pool', load: () => import('./3d-advanced.ce') },
+  { slug: '3d-split', title: '3D · Split screen', load: () => import('./3d-split.ce') },
   { slug: 'showcase', title: 'Showcase (docs screenshots)', load: () => import('./showcase.ce') },
 ]
 

@@ -27,6 +27,10 @@
 | `morphWeights` | `number[]` \| `{ [meshLabel]: number[] }` | Morph target weights (see [Morph Targets](#morph-targets)) |
 | `unload` | `boolean` | Unloads the file from memory when no `Model3D` uses it any more. Default `true` |
 | `dissolve` | `number` \| object | Cuts the model away with noise (see [Dissolve](#dissolve)) |
+| `blend` | `{ clip, weight, speed, loop }[]` | Several clips at once, mixed by weight (see [Mixing Clips](#mixing-clips)). Replaces `animation` while set |
+| `scene` | `string` | Scene to build, for a file with several |
+| `materials` | object \| function | This model's own materials (see [Own Materials](#own-materials)) |
+| `useCamera` | `string` \| `number` \| `boolean` | Looks through a camera of the file (see [Cameras from the File](#cameras-from-the-file)) |
 | `onAnimationEnd` | `(clip) => void` | Called when a clip that does not loop reaches its end |
 | `onAnimationLoop` | `(clip) => void` | Called each time a looping clip starts over |
 | `onLoad` | `(model) => void` | Called once the model is built, with the [`@pixi/3d` Model3D](https://3d.pixijs.download/release/docs/scene.Model3D.html) |
@@ -109,6 +113,40 @@ For an action that should not loop (attack, jump, death), set `loop={false}`: th
 
 `onAnimationLoop` is called each time a looping clip wraps around, for example to play a footstep sound.
 
+## Mixing Clips
+
+`blend` plays several clips at the same time. Where they move the same bones, the pose mixes them by weight: weights are relative to each other, so `0.7` and `0.3` give 70% and 30%.
+
+```html
+<Model3D src="./models/robot.glb" blend={layers} />
+
+<script>
+  import { signal, computed } from "canvasengine";
+
+  const speed = signal(0.3); // 0 = walking, 1 = running
+  const layers = computed(() => {
+    const s = speed();
+    return [
+      { clip: "Walking", weight: 1 - s },
+      { clip: "Running", weight: s },
+    ];
+  });
+</script>
+```
+
+| Layer field | Description |
+|-------------|-------------|
+| `clip` | Clip name |
+| `weight` | Share in the mix. Default `1` |
+| `speed` | Playback speed. Default `1` |
+| `loop` | Default `true` |
+
+Changing a weight keeps the clips playing; a new clip starts from its beginning, and a clip left out stops. Set `blend` back to `undefined` (or `[]`) to return to `animation`.
+
+::: tip
+Clips mix bone by bone over the whole body: there is no "upper body only" mask. A waving arm mixed 50% with walking waves half as high.
+:::
+
 ## Facing and Size
 
 - glTF models face **+Z**. To turn a model toward its direction of travel `(dx, dz)`, use `rotation={[0, Math.atan2(dx, dz), 0]}`.
@@ -188,6 +226,41 @@ The first time `dissolve` is set, the model gets its own copy of its materials: 
 ::: warning
 Shadows and outlines don't dissolve: a half-dissolved model still casts its whole shadow. Objects attached with `bone` keep their own materials; give them a `dissolve` of their own.
 :::
+
+## Own Materials
+
+`materials` changes this model's materials without touching other models from the same file. Name the file's materials and give the changes:
+
+```html
+<!-- Paint this robot blue -->
+<Model3D src="./models/robot.glb" materials={{ Main: { baseColor: 0x4aa3ff } }} />
+```
+
+A value can be changes (a copy of the material with those options), a material instance, or a function that receives each material and returns the one to use:
+
+```html
+<Model3D src="./models/robot.glb" materials={(material) => (material.label === "Main" ? material.clone({ baseColor: 0x4aa3ff }) : material)} />
+```
+
+To find the material names, log them in `onLoad`: `model.traverse((node) => node.material && console.log(node.material.label))`.
+
+## Several Scenes
+
+A glTF file can hold several scenes (levels, variants). `scene` picks one by name; changing it builds the model again:
+
+```html
+<Model3D src="./models/levels.glb" scene="Level2" />
+```
+
+## Cameras from the File
+
+A file can carry cameras placed by the artist. `useCamera` makes the view look through one of them, by name or index (`true` for the first):
+
+```html
+<Model3D src="./models/room.glb" useCamera="Overview" />
+```
+
+The view's own camera comes back when `useCamera` is cleared or the model is removed. While a file camera is in use, the props of `<Camera3D>` (which drive the view's own camera) have no visible effect.
 
 ## Compressed Models
 

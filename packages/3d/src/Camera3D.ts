@@ -19,6 +19,11 @@ export interface Camera3DProps extends Node3DProps {
   /** Half the view's width in world units, in orthographic mode */
   orthographicSize?: number;
   /**
+   * Part of the view the camera draws in, `[x, y, width, height]` from 0 to 1:
+   * `[0, 0, 0.5, 1]` is the left half, for split screen. Default the whole view.
+   */
+  viewport?: [number, number, number, number];
+  /**
    * Mouse orbit controls. `true` for defaults, or OrbitCamera options
    * (`target`, `enableDamping`, `minDistance`, `autoRotate`...).
    */
@@ -95,6 +100,10 @@ class CanvasCamera3D {
     if (props.far !== undefined) camera.far = props.far;
     if (props.mode !== undefined) camera.mode = props.mode;
     if (props.orthographicSize !== undefined) camera.orthographicSize = props.orthographicSize;
+    if (props.viewport !== undefined) {
+      const [x, y, width, height] = props.viewport ?? [0, 0, 1, 1];
+      camera.viewport.set(x, y, width, height);
+    }
 
     const position = mergeVec3(camera.position, props.position);
     if (position) camera.position.set(position.x, position.y, position.z);

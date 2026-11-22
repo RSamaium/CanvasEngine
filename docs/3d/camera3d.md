@@ -25,6 +25,7 @@
 | `orbit` | `boolean` \| `object` | Mouse and touch orbit controls (see below) |
 | `fps` | `boolean` \| `object` | First-person controls (see below). Takes over from `orbit` |
 | `frame` | `boolean` \| `string` \| `object` | Places the camera so a node fits in view (see below) |
+| `viewport` | `[x, y, width, height]` | Part of the view the camera draws in, from 0 to 1. Default `[0, 0, 1, 1]` |
 
 ## Orbit Controls
 
@@ -113,6 +114,28 @@ A string frames the node with that `label`; `true` frames the whole scene (inclu
 | `padding` | Room around the target: `1` fits it exactly. Default `1.1` |
 
 `near` and `far` follow the distance, and an orbit camera turns around the framed centre, with zoom limits from the model's size (your own `minDistance` / `maxDistance` win).
+
+## Split Screen
+
+For two players, draw the main camera in the left half with `viewport`, and show a second camera on the right half: a [Monitor3D](./monitor3d) without its screen, whose picture goes in a 2D `Sprite`.
+
+```html
+<Canvas>
+  <View3D positionType="absolute" left={0} top={0} width={800} height={500}>
+    <!-- Player 1: left half -->
+    <Camera3D position={[-6, 4, 8]} lookAt={player1} viewport={[0, 0, 0.5, 1]} />
+    <!-- Player 2: a second camera, drawn into a texture -->
+    <Monitor3D showScreen={false} resolution={[400, 500]} camera={{ position: camera2, lookAt: player2 }} onTexture={(texture) => screen2.set(texture)} />
+    ...
+  </View3D>
+
+  <Container>
+    <Sprite texture={screen2} x={400} y={0} />
+  </Container>
+</Canvas>
+```
+
+Make the second picture the size of its half (`400 × 500` here), so both players see the same field of view. The playground example `3d-split` moves each player with its own keys.
 
 ## Follow Camera
 
