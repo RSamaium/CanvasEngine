@@ -14,6 +14,7 @@ import { findViewComponent, Node3D, type Node3DProps } from "./Node3D";
 import { applyDissolve, normalizeDissolve, withDissolveBit, type DissolveInput } from "./dissolve";
 import { BaseMaterial3D } from "@pixi/3d";
 import type { MaterialSpec } from "./builders";
+import { BoneLook, resolveBone, type LookAtBone } from "./boneLook";
 
 // Scratch values for the bone followers, reused every frame
 const followMatrix = new Matrix4();
@@ -92,6 +93,11 @@ export interface Model3DProps extends Node3DProps {
   blend?: BlendLayer[];
   /** Looks through a camera from the file: its name, its index, or `true` for the first */
   useCamera?: string | number | boolean;
+  /**
+   * Turns bones toward a point on top of the animation: a head following the player.
+   * `{ bone, target, weight, maxAngle, speed, forward }`, or a list of them.
+   */
+  lookAtBone?: LookAtBone | LookAtBone[] | null;
   /** Called once the model is built */
   onLoad?: (model: PixiModel3D) => void;
 }
@@ -118,6 +124,7 @@ class CanvasModel3D extends Node3D(Container3D) {
       else if (props.animation !== undefined && !this.fullProps.blend) this.#play();
       if ("materials" in props) this.#applyMaterialOverrides();
       if ("useCamera" in props) this.#syncCamera();
+      if ("lookAtBone" in props) this.#syncBoneLooks();
       if (this.#state && props.loop !== undefined) this.#state.loop = props.loop;
       if (this.#state && props.animationSpeed !== undefined) this.#state.animationSpeed = props.animationSpeed;
       if (props.castShadow !== undefined || props.receiveShadow !== undefined) this.#applyShadows();
@@ -309,6 +316,7 @@ class CanvasModel3D extends Node3D(Container3D) {
     else this.#play();
     if (this.fullProps.materials) this.#applyMaterialOverrides();
     if (this.fullProps.useCamera !== undefined) this.#syncCamera();
+    if (this.fullProps.lookAtBone) this.#syncBoneLooks();
     this.#applyMorphWeights();
     this.#syncMorphTick();
     // Opt-in passes target meshes, which exist only now
@@ -463,6 +471,47 @@ class CanvasModel3D extends Node3D(Container3D) {
   }
 
   #blendClips = new Set<string>();
+  /** One BoneLook per bone named in `lookAtBone` */
+  #boneLooks = new Map<string, BoneLook>();
+  #lookTick = (ticker: Ticker) => this.#updateBoneLooks(ticker.deltaMS / 1000);
+  #lookTicking = false;
+  #modelRotation = new Quaternion();
+
+  /** Matches the BoneLook list to `lookAtBone`, and runs them each frame after the animation. */
+  #syncBoneLooks() {
+    const value = this.fullProps.lookAtBone;
+    const settings = (Array.isArray(value) ? value : value ? [value] : []) as LookAtBone[];
+    const wanted = new Set(settings.map((entry) => entry.bone));
+    for (const [bone, look] of this.#boneLooks) {
+      if (!wanted.has(bone)) {
+        look.restore();
+        this.#boneLooks.delete(bone);
+      }
+    }
+    if (this.model) {
+      for (const entry of settings) {
+        if (this.#boneLooks.has(entry.bone)) continue;
+        const ref = resolveBone(this.model, entry.bone);
+        if (!ref) {
+          console.warn(`<Model3D> lookAtBone: no bone named "${entry.bone}". Available: ${this.#boneNames().join(", ")}`);
+          continue;
+        }
+        this.#boneLooks.set(entry.bone, new BoneLook(ref));
+      }
+    }
+    const ticking = this.#boneLooks.size > 0;
+    if (ticking && !this.#lookTicking) Ticker.shared.add(this.#lookTick, undefined, UPDATE_PRIORITY.LOW);
+    if (!ticking && this.#lookTicking) Ticker.shared.remove(this.#lookTick);
+    this.#lookTicking = ticking;
+  }
+
+  #updateBoneLooks(deltaSeconds: number) {
+    if (!this.model) return;
+    const value = this.fullProps.lookAtBone;
+    const settings = (Array.isArray(value) ? value : value ? [value] : []) as LookAtBone[];
+    this.model.getGlobalTransform().decompose(new Vector3(), this.#modelRotation, new Vector3());
+    for (const entry of settings) this.#boneLooks.get(entry.bone)?.update(entry, this.#modelRotation, deltaSeconds);
+  }
   /** The view's own camera while a file camera is in use */
   #savedCamera: any = null;
 
@@ -495,6 +544,9 @@ class CanvasModel3D extends Node3D(Container3D) {
     this.#state = null;
     this.#clip = null;
     this.#blendClips.clear();
+    this.#boneLooks.clear();
+    if (this.#lookTicking) Ticker.shared.remove(this.#lookTick);
+    this.#lookTicking = false;
     if (this.#savedCamera) {
       const view = this.element ? findViewComponent(this.element)?.view : null;
       if (view) view.camera = this.#savedCamera;

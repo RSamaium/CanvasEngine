@@ -21,6 +21,14 @@
       receiveShadow={true}
     />
 
+    <!-- Drag the ball: the robot's head follows it -->
+    <Mesh3D
+      geometry={{ type: "sphere", radius: 0.35 }}
+      material={{ baseColor: 0xffd34d, emissive: { color: 0xffaa00, strength: 0.6 } }}
+      position={ball}
+      drag3d={{ move: (p) => ball.set([p.x, p.y, p.z]) }}
+    />
+
     <!-- CC0 model by Tomás Laulhé (Quaternius), see public/models/CREDITS.md -->
     <Model3D
       src="./models/RobotExpressive.glb"
@@ -34,6 +42,7 @@
       castShadow={true}
       onLoad={onLoad}
       onAnimationEnd={onAnimationEnd}
+      lookAtBone={{ bone: "Head", target: ballHead, maxAngle: 1.1, speed: 6 }}
     >
       <!-- A sword in the right hand: Palm2.R exists only in the skeleton -->
       <Group3D bone="Palm2.R" rotation={[Math.PI / 2, 0, 0]}>
@@ -47,7 +56,7 @@
   <!-- 2D HUD over the 3D view -->
   <Container>
     <Text text={status} x={16} y={14} color="#ffffff" size={18} />
-    <Text text="Arrow keys: walk (Shift: run) · click a gesture · drag to orbit" x={16} y={40} color="#cfd8e3" size={13} />
+    <Text text="Arrow keys: walk (Shift: run) · click a gesture · drag the ball: the head follows it" x={16} y={40} color="#cfd8e3" size={13} />
 
     @for (gesture of gestures) {
       <Text
@@ -72,6 +81,9 @@
   const ONE_SHOT = ["ThumbsUp", "Yes", "No", "Punch", "Jump", "Death"];
 
   const robotPos = signal([0, 0, 0]);
+  const ball = signal([3, 0.35, 3]);
+  // Look at the ball's centre
+  const ballHead = computed(() => ball());
   const heading = signal(0);
   const moving = signal(false);
   const running = signal(false);

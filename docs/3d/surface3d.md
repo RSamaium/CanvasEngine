@@ -33,18 +33,35 @@ The 2D children are laid out in a `resolution`-sized area, from (0, 0) at the to
 | `lit` | `boolean` | `false` (default): shows as lit from within, like a screen. `true`: lit by the scene, like a poster |
 | `update` | `"frame"` \| `"manual"` | `"frame"` (default) redraws the 2D every frame. `"manual"`: only when you call `redraw()` |
 | `doubleSided` | `boolean` | Draws the back face too |
+| `interactive2d` | `boolean` | Sends pointer events to the 2D children (see [Clicks](#clicks)). Default `true` |
 
 Plus the [common props](./getting-started#common-props). The plane faces +Z: turn it with `rotation`.
 
 ## Clicks
 
-The 2D children are not on the stage, so they don't receive pointer events. Put the handler on the `Surface3D` itself:
+The 2D children receive pointer events as on the stage: `click`, `pointerdown`, `pointerup`, `pointerover`, `pointerout`... and the `cursor` of the component under the pointer. A panel in the scene can have real buttons:
 
 ```html
-<Surface3D click={() => score.update((n) => n + 1)}>...</Surface3D>
+<Surface3D position={[4.5, 3, -2]} width={4} resolution={[512, 256]} clearColor={0x1b1430}>
+  <Text text={label} x={256} y={70} anchor={0.5} size={36} color="#ffffff" />
+  <Rect
+    x={56} y={160} width={180} height={64}
+    color={hover ? "#4caf50" : "#2e7d32"}
+    cursor="pointer"
+    click={() => count.update((n) => n + 1)}
+    pointerover={() => hover.set(true)}
+    pointerout={() => hover.set(false)}
+  />
+</Surface3D>
 ```
 
-To know where the click landed, set `hitVolume="geometry"`: the event's `hit3D.uv` holds the position on the surface, from 0 to 1 (`uv.x * width`, `(1 - uv.y) * height` in the 2D area).
+The surface finds where the pointer hits its plane, converts that point to the 2D area, and replays the event there. Its own `click` and other event props still work, for clicks anywhere on it.
+
+With `interactive2d={false}`, the 2D children receive nothing, and the surface keeps its default hit test (its bounding box), which is cheaper.
+
+::: tip
+Pointer events need the surface to be pickable, which `interactive2d` turns on: the surface then blocks clicks to what is behind it, like any interactive mesh.
+:::
 
 ## Performance
 

@@ -31,6 +31,7 @@
 | `scene` | `string` | Scene to build, for a file with several |
 | `materials` | object \| function | This model's own materials (see [Own Materials](#own-materials)) |
 | `useCamera` | `string` \| `number` \| `boolean` | Looks through a camera of the file (see [Cameras from the File](#cameras-from-the-file)) |
+| `lookAtBone` | object \| `object[]` | Turns bones toward a point, on top of the animation (see [Looking at a Point](#looking-at-a-point)) |
 | `onAnimationEnd` | `(clip) => void` | Called when a clip that does not loop reaches its end |
 | `onAnimationLoop` | `(clip) => void` | Called each time a looping clip starts over |
 | `onLoad` | `(model) => void` | Called once the model is built, with the [`@pixi/3d` Model3D](https://3d.pixijs.download/release/docs/scene.Model3D.html) |
@@ -181,6 +182,40 @@ A sword in a hand, pointing forward when the robot stands still:
 ```
 
 The offset is read in the model's axes in the pose the model has when the child attaches; the bone then turns it with every animation. Use a `Group3D` to attach a multi-part object and turn it as a whole.
+
+## Looking at a Point
+
+`lookAtBone` turns a bone toward a point while the animation keeps playing: a character following the player with its eyes, a turret aiming at a target.
+
+```html
+<Model3D
+  src="./models/robot.glb"
+  animation="Idle"
+  lookAtBone={{ bone: "Head", target: playerPos, maxAngle: 1.1, speed: 6 }}
+/>
+
+<script>
+  import { signal } from "canvasengine";
+  const playerPos = signal([3, 1, 3]);
+</script>
+```
+
+| Option | Description |
+|--------|-------------|
+| `bone` | Name of the bone to turn. Scene-node bones and skeleton-only bones both work |
+| `target` | World point to look at, `[x, y, z]`; can be a signal |
+| `weight` | `0` keeps the animation, `1` looks straight at the target. Default `1` |
+| `maxAngle` | Largest turn away from the animated pose, in radians. Default `1.2` (about 70°): a head doesn't turn all the way round |
+| `speed` | How fast the bone turns toward a new target: higher is snappier, `0` is instant. Default `8` |
+| `forward` | Direction the bone faces, in the model's axes, when the model looks ahead. Default `[0, 0, 1]` |
+
+Give a list to turn several bones, for example the neck a little and the head the rest:
+
+```html
+<Model3D lookAtBone={[{ bone: "Neck", target, weight: 0.4 }, { bone: "Head", target }]} />
+```
+
+The turn is added each frame on top of the pose the animation sets, so it never builds up, and removing `lookAtBone` gives the bone back to the animation. The facing is taken from the first frame: start with the model looking ahead (the default for glTF characters, which face +Z).
 
 ## Morph Targets
 

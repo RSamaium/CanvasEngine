@@ -431,3 +431,87 @@ describe("ParticlePool3D", () => {
     expect(upload).toHaveBeenCalled();
   });
 });
+
+describe("Surface3D pointer events", () => {
+  test("sends a 3D click to the 2D child under the pointer", async () => {
+    // Pixi's event system (isInteractive...), loaded by any Application, not by bare tests
+    await import("pixi.js/events");
+    const { Graphics, Rectangle } = await import("pixi.js");
+    const surface = mountUnder(fakeView().element, "Surface3D", { resolution: [200, 100], width: 2 }).componentInstance;
+    // Two 2D buttons side by side
+    const left = new Graphics().rect(0, 0, 100, 100).fill(0xff0000);
+    const right = new Graphics().rect(100, 0, 100, 100).fill(0x00ff00);
+    for (const button of [left, right]) button.eventMode = "static";
+    left.hitArea = new Rectangle(0, 0, 100, 100);
+    right.hitArea = new Rectangle(100, 0, 100, 100);
+    surface.addChild(left, right);
+    const leftClick = vi.fn();
+    const rightClick = vi.fn();
+    left.on("click", leftClick);
+    right.on("click", rightClick);
+
+    // A press and release on the right half: uv.x 0.75, middle height
+    const event = (uv: { x: number; y: number }) => ({
+      hit3D: { target: surface, uv },
+      pointerId: 1,
+      pointerType: "mouse",
+      isPrimary: true,
+      button: 0,
+      buttons: 1,
+    });
+    surface.emit("pointerdown", event({ x: 0.75, y: 0.5 }));
+    surface.emit("pointerup", event({ x: 0.75, y: 0.5 }));
+    expect(rightClick).toHaveBeenCalledTimes(1);
+    expect(leftClick).not.toHaveBeenCalled();
+    expect(surface.hitVolume).toBe("geometry");
+  });
+});
+
+describe("lookAtBone", () => {
+  async function rig() {
+    const { BoneLook, resolveBone } = await import("../../packages/3d/src/boneLook");
+    const { Quaternion, Vector3 } = await import("@pixi/3d");
+    const model: any = new Container3D();
+    model.skeletons = [];
+    const head = new Container3D({ label: "Head", position: { x: 0, y: 2, z: 0 } });
+    model.addChild(head);
+    const look = new BoneLook(resolveBone(model, "Head")!);
+    const facing = () => new Vector3(0, 0, 1).applyQuaternion(head.quaternion);
+    return { look, head, facing, identity: new Quaternion() };
+  }
+
+  test("turns the bone toward the target", async () => {
+    const { look, facing, identity } = await rig();
+    look.update({ bone: "Head", target: [5, 2, 0], speed: 0, maxAngle: Math.PI }, identity, 1 / 60);
+    const f = facing();
+    expect(f.x).toBeCloseTo(1);
+    expect(f.z).toBeCloseTo(0);
+  });
+
+  test("does not add up the turn over frames when no clip rewrites the bone", async () => {
+    const { look, head, identity } = await rig();
+    const settings = { bone: "Head", target: [5, 2, 5] as [number, number, number], speed: 0, maxAngle: Math.PI };
+    look.update(settings, identity, 1 / 60);
+    const first = head.quaternion.clone();
+    look.update(settings, identity, 1 / 60);
+    look.update(settings, identity, 1 / 60);
+    expect(head.quaternion.angleTo(first)).toBeCloseTo(0);
+  });
+
+  test("limits the turn to maxAngle and scales it by weight", async () => {
+    const { look, facing, identity } = await rig();
+    // Target straight behind: a half turn, limited to 0.5 rad
+    look.update({ bone: "Head", target: [0, 2, -5], speed: 0, maxAngle: 0.5 }, identity, 1 / 60);
+    expect(Math.acos(Math.max(-1, Math.min(1, facing().z)))).toBeCloseTo(0.5);
+    const half = await rig();
+    half.look.update({ bone: "Head", target: [5, 2, 0], speed: 0, maxAngle: Math.PI, weight: 0.5 }, identity, 1 / 60);
+    expect(Math.acos(half.facing().z)).toBeCloseTo(Math.PI / 4);
+  });
+
+  test("restore puts the animated pose back", async () => {
+    const { look, head, identity } = await rig();
+    look.update({ bone: "Head", target: [5, 2, 0], speed: 0, maxAngle: Math.PI }, identity, 1 / 60);
+    look.restore();
+    expect(head.quaternion.angleTo(identity)).toBeCloseTo(0);
+  });
+});

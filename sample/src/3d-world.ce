@@ -66,11 +66,16 @@
     </Model3D>
 
     <!-- A 2D sign: CanvasEngine components drawn on a 3D plane -->
-    <Surface3D position={[4.5, 3, -2]} rotation={[0, -0.5, 0]} width={4} resolution={[512, 256]} clearColor={0x1b1430} click={() => clicks.update((n) => n + 1)}>
+    <!-- A 2D panel on a 3D plane: its buttons are real CanvasEngine components, clickable in 3D -->
+    <Surface3D position={[4.5, 3, -2]} rotation={[0, -0.5, 0]} width={4} resolution={[512, 256]} clearColor={0x1b1430}>
       <Rect x={0} y={0} width={512} height={256} color="#1b1430" />
       <Rect x={12} y={12} width={488} height={232} color="#2c2150" />
-      <Text text="Surface3D" x={256} y={70} anchor={0.5} size={44} color="#ffc46b" />
-      <Text text={signText} x={256} y={160} anchor={0.5} size={36} color="#ffffff" />
+      <Text text="Surface3D" x={256} y={50} anchor={0.5} size={40} color="#ffc46b" />
+      <Text text={signText} x={256} y={110} anchor={0.5} size={32} color="#ffffff" />
+      <Rect x={56} y={160} width={180} height={64} color={plusColor} cursor="pointer" click={() => clicks.update((n) => n + 1)} pointerover={() => plusHover.set(true)} pointerout={() => plusHover.set(false)} />
+      <Text text="+1" x={146} y={192} anchor={0.5} size={32} color="#ffffff" />
+      <Rect x={276} y={160} width={180} height={64} color={resetColor} cursor="pointer" click={() => clicks.set(0)} pointerover={() => resetHover.set(true)} pointerout={() => resetHover.set(false)} />
+      <Text text="reset" x={366} y={192} anchor={0.5} size={32} color="#ffffff" />
     </Surface3D>
     <Mesh3D geometry={{ type: "cylinder", radiusTop: 0.08, radiusBottom: 0.08, height: 3 }} material={{ type: "phong", baseColor: 0x8b5a2b, shininess: 30 }} position={[4.5, 0.75, -2]} />
 
@@ -94,7 +99,7 @@
 
   <Container>
     <Text text="@canvasengine/3d · Surface3D, Label3D, Monitor3D, Instances, bones, morphs" x={16} y={14} color="#ffffff" size={17} />
-    <Text text="Click the sign · keys E: face expression, W: wireframe, D: debug panel" x={16} y={40} color="#1d2533" size={13} />
+    <Text text="Click the sign's buttons · keys E: face expression, W: wireframe, D: debug panel" x={16} y={40} color="#1d2533" size={13} />
   </Container>
 </Canvas>
 
@@ -155,6 +160,10 @@
   const expression = signal(0);
 
   const signText = computed(() => `clicks: ${clicks()}`);
+  const plusHover = signal(false);
+  const resetHover = signal(false);
+  const plusColor = computed(() => (plusHover() ? "#4caf50" : "#2e7d32"));
+  const resetColor = computed(() => (resetHover() ? "#ef5350" : "#c62828"));
   const robotLabel = computed(() => (loaded() ? "Robot · Label3D" : "loading…"));
 
   // RobotExpressive has 3 face morph targets

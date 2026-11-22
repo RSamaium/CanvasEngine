@@ -1,4 +1,4 @@
-import { Container } from "pixi.js";
+import { Container, EventBoundary, FederatedPointerEvent } from "pixi.js";
 import { createComponent, registerComponent, type ComponentFunction, type Element } from "canvasengine";
 import { Container3D, ContainerTexture, FlatMaterial, Material3D, Mesh3D as PixiMesh3D, PlaneGeometry } from "@pixi/3d";
 import { findViewComponent, Node3D, type Node3DProps } from "./Node3D";
@@ -16,7 +16,21 @@ export interface Surface3DProps extends Node3DProps {
   update?: "frame" | "manual";
   /** Draws both faces */
   doubleSided?: boolean;
+  /**
+   * Sends pointer events on the surface to its 2D children, so their `click`,
+   * `pointerover`... work like on the stage. Default `true`
+   */
+  interactive2d?: boolean;
 }
+
+/** 3D pointer events on the surface, and the 2D event each one becomes. */
+const FORWARDED_EVENTS: Record<string, string> = {
+  pointerdown: "pointerdown",
+  pointerup: "pointerup",
+  pointermove: "pointermove",
+  pointerupoutside: "pointerupoutside",
+  pointerleave: "pointerout",
+};
 
 /**
  * A plane showing its 2D CanvasEngine children: a sign, a screen, a health bar over a
@@ -26,6 +40,10 @@ class CanvasSurface3D extends Node3D(PixiMesh3D) {
   /** Holds the 2D children */
   readonly content = new Container();
   texture2d: ContainerTexture | null = null;
+  /** Hit-tests and dispatches pointer events in the 2D content, as the stage does */
+  readonly boundary = new EventBoundary(this.content);
+  #forwarders: [string, (event: any) => void][] = [];
+  #lastPoint = { x: -1, y: -1 };
 
   /** 3D children go in the scene, 2D children in the texture's container. */
   addChild(...children: any[]) {
@@ -51,6 +69,7 @@ class CanvasSurface3D extends Node3D(PixiMesh3D) {
 
   applyProps3D(props: Surface3DProps, initial: boolean) {
     super.applyProps3D(props, initial);
+    if (initial || "interactive2d" in props) this.#syncForwarding();
     if (initial || "resolution" in props || "width" in props || "lit" in props || "clearColor" in props || "doubleSided" in props) {
       this.#build();
     } else if (props.update !== undefined && this.texture2d) {
@@ -89,12 +108,60 @@ class CanvasSurface3D extends Node3D(PixiMesh3D) {
     previous?.destroy(true);
   }
 
+  /** Listens to 3D pointer events on the surface and replays them in the 2D content. */
+  #syncForwarding() {
+    for (const [type, handler] of this.#forwarders) (this as any).off(type, handler);
+    this.#forwarders = [];
+    if (this.fullProps.interactive2d === false) return;
+    const node = this as any;
+    // The texture coordinate under the pointer needs a per-triangle hit test
+    if (this.fullProps.hitVolume === undefined) node.hitVolume = "geometry";
+    this._ensurePickable();
+    for (const [from, to] of Object.entries(FORWARDED_EVENTS)) {
+      const handler = (event: any) => this.#forward(to, event);
+      node.on(from, handler);
+      this.#forwarders.push([from, handler]);
+    }
+  }
+
+  /** Turns a 3D event into a 2D one at the matching point of the 2D area. */
+  #forward(type: string, event: any) {
+    const [width, height] = (this.fullProps.resolution as [number, number]) ?? [512, 256];
+    const hit = event.hit3D;
+    if (hit && hit.target === this && hit.uv) {
+      // A plane without flipV shows the 2D upright: v grows upward
+      this.#lastPoint = { x: hit.uv.x * width, y: (1 - hit.uv.y) * height };
+    } else if (type === "pointermove" || type === "pointerdown") {
+      return;
+    }
+    const e = new FederatedPointerEvent(this.boundary);
+    e.type = type;
+    e.pointerId = event.pointerId;
+    e.pointerType = event.pointerType;
+    e.isPrimary = event.isPrimary;
+    e.button = event.button;
+    e.buttons = event.buttons;
+    e.width = event.width;
+    e.height = event.height;
+    e.pressure = event.pressure;
+    e.nativeEvent = event.nativeEvent;
+    e.timeStamp = performance.now();
+    e.global.set(this.#lastPoint.x, this.#lastPoint.y);
+    e.screen.set(this.#lastPoint.x, this.#lastPoint.y);
+    e.client.set(this.#lastPoint.x, this.#lastPoint.y);
+    this.boundary.mapEvent(e);
+    // Show the cursor of the 2D component under the pointer
+    if (this.fullProps.cursor === undefined) (this as any).cursor = this.boundary.cursor ?? "default";
+  }
+
   /** Redraws the 2D content, with `update="manual"`. */
   redraw() {
     this.texture2d?.render();
   }
 
   onDestroy(parent: Element<any>, afterDestroy?: () => void) {
+    for (const [type, handler] of this.#forwarders) (this as any).off(type, handler);
+    this.#forwarders = [];
     const texture = this.texture2d;
     const material = this.material;
     const geometry = this.geometry;
