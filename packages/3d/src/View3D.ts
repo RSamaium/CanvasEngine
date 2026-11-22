@@ -89,6 +89,18 @@ class CanvasView3D extends DisplayObject(Container) {
     if (this.#registeredPasses.delete(owner)) this.#syncPasses();
   }
 
+  #sceneListeners = new Set<() => void>();
+
+  /** Calls `listener` when content that changes the scene's size arrives (a model loads). */
+  onSceneChange(listener: () => void): () => void {
+    this.#sceneListeners.add(listener);
+    return () => this.#sceneListeners.delete(listener);
+  }
+
+  notifySceneChange() {
+    for (const listener of this.#sceneListeners) listener();
+  }
+
   #syncPasses() {
     if (!this.view) return;
     const byGroup = (group: PassGroup) =>
@@ -191,6 +203,7 @@ class CanvasView3D extends DisplayObject(Container) {
     this.#debugOverlay?.destroy();
     this.#debugOverlay = null;
     this.#registeredPasses.clear();
+    this.#sceneListeners.clear();
     const view = this.view;
     await super.onDestroy(parent, afterDestroy);
     if (view && !view.destroyed) {

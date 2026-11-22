@@ -2,6 +2,7 @@ import { createComponent, registerComponent, type ComponentFunction } from "canv
 import { BaseMaterial3D, Geometry3D, Mesh3D as PixiMesh3D } from "@pixi/3d";
 import { Node3D, type Node3DProps } from "./Node3D";
 import { buildGeometry, buildMaterial, canPatchMaterial, type GeometrySpec, type MaterialSpec } from "./builders";
+import { applyDissolve, normalizeDissolve, withDissolveBit, type DissolveInput } from "./dissolve";
 
 export type { GeometrySpec, MaterialSpec };
 
@@ -14,6 +15,8 @@ export interface Mesh3DProps extends Node3DProps {
   receiveShadow?: boolean;
   /** Faces the camera: `"none"` (default), `"spherical"` or `"cylindrical"` (stays upright) */
   billboardMode?: "none" | "spherical" | "cylindrical";
+  /** Cuts the surface away with noise: 0 whole, 1 gone, or `{ amount, edgeColor, edgeStrength, holeSize }` */
+  dissolve?: DissolveInput;
 }
 
 /**
@@ -26,6 +29,8 @@ export function MeshComponent(Base: new (...args: any[]) => PixiMesh3D): any {
     _ownsMaterial = false;
     _materialSpec: MaterialSpec | null = null;
     _materialVersion = 0;
+    /** The material copy that carries the dissolve shader bit */
+    _dissolveMaterial: BaseMaterial3D | null = null;
 
     applyProps3D(props: Mesh3DProps, initial: boolean) {
       super.applyProps3D(props, initial);
@@ -34,6 +39,23 @@ export function MeshComponent(Base: new (...args: any[]) => PixiMesh3D): any {
       if (props.castShadow !== undefined) this.castShadow = props.castShadow;
       if (props.receiveShadow !== undefined) this.receiveShadow = props.receiveShadow;
       if (props.billboardMode !== undefined) this.billboardMode = props.billboardMode;
+      if ("dissolve" in props) this.syncDissolve();
+    }
+
+    /** Gives the material the dissolve bit the first time `dissolve` is set, then writes its values. */
+    syncDissolve() {
+      const settings = normalizeDissolve(this.fullProps.dissolve);
+      const material = this.material as BaseMaterial3D | null;
+      if (!material || (!settings && !this._dissolveMaterial)) return;
+      if (settings && material !== this._dissolveMaterial) {
+        const copy = withDissolveBit(material);
+        const owned = this._ownsMaterial;
+        this.material = copy;
+        this._ownsMaterial = true;
+        this._dissolveMaterial = copy;
+        if (owned) material.destroy();
+      }
+      if (this._dissolveMaterial) applyDissolve(this._dissolveMaterial, settings ?? { amount: 0 });
     }
 
     setGeometrySpec(spec: GeometrySpec | Geometry3D | undefined) {
@@ -84,7 +106,9 @@ export function MeshComponent(Base: new (...args: any[]) => PixiMesh3D): any {
       const previous = this._ownsMaterial ? this.material : null;
       this.material = material;
       this._ownsMaterial = owned;
+      this._dissolveMaterial = null;
       if (previous && previous !== material) previous.destroy();
+      if (this.fullProps.dissolve !== undefined) this.syncDissolve();
     }
 
     onDestroy(parent: any, afterDestroy?: () => void) {

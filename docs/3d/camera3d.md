@@ -24,6 +24,7 @@
 | `orthographicSize` | `number` | In orthographic mode: half the view's width in world units. Default `5` |
 | `orbit` | `boolean` \| `object` | Mouse and touch orbit controls (see below) |
 | `fps` | `boolean` \| `object` | First-person controls (see below). Takes over from `orbit` |
+| `frame` | `boolean` \| `string` \| `object` | Places the camera so a node fits in view (see below) |
 
 ## Orbit Controls
 
@@ -88,6 +89,30 @@ Switch between orbit and first person with two signals:
   const fpsOptions = computed(() => (firstPerson() ? { height: 1.7 } : false));
 </script>
 ```
+
+## Framing a Model
+
+`frame` places the camera so a whole node fits in view, whatever its size. It frames again each time a `Model3D` finishes loading, so it works with models that load later:
+
+```html
+<Camera3D fov={45} frame="robot" orbit={true} />
+<Model3D src="./models/robot.glb" label="robot" />
+```
+
+A string frames the node with that `label`; `true` frames the whole scene (including the ground, so prefer a label). Options:
+
+```html
+<Camera3D frame={{ target: "robot", pitch: 20, yaw: -30, padding: 1.4 }} orbit={true} />
+```
+
+| Option | Description |
+|--------|-------------|
+| `target` | `label` of the node to frame. Default: the whole scene |
+| `pitch` | Angle above the horizon, in degrees. Default `30` |
+| `yaw` | Angle around the vertical axis, in degrees; `0` looks from +Z. Default `0` |
+| `padding` | Room around the target: `1` fits it exactly. Default `1.1` |
+
+`near` and `far` follow the distance, and an orbit camera turns around the framed centre, with zoom limits from the model's size (your own `minDistance` / `maxDistance` win).
 
 ## Follow Camera
 

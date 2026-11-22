@@ -11,13 +11,34 @@
     debug={debugOn}
   >
     <Camera3D position={[-8, 7, 16]} lookAt={[0, 2, 0]} fov={45} orbit={{ enableDamping: true, maxPolarAngle: 1.45, target: { x: 0, y: 2, z: 0 } }} />
-    <DirectionalLight color={0xfff2dc} intensity={3} rotation={[-0.9, -0.6, 0]} castShadow={true} />
+    <!-- 600 trees cast shadows: cascades keep them sharp without measuring every caster -->
+    <DirectionalLight color={0xfff2dc} intensity={3} rotation={[-0.9, -0.6, 0]} castShadow={true} shadow={{ cascades: 2, maxDistance: 45 }} />
 
     <Mesh3D
       geometry={{ type: "plane", width: 120, height: 120 }}
       material={{ baseColor: 0x6f7f5e, roughness: 1 }}
       rotation={[-Math.PI / 2, 0, 0]}
       castShadow={false}
+    />
+
+    <!-- A hill from the terrain geometry, coloured by height -->
+    <Mesh3D
+      geometry={{ type: "terrain", width: 24, depth: 24, segments: 48, height: hill, colorStops: [[0, 0x5f7a45], [1.8, 0x7c8a4e], [3.2, 0x9b8b6e], [4.4, 0xf1f5f9]] }}
+      material={{ baseColor: 0xffffff, roughness: 1, vertexColors: true }}
+      position={[-14, 0, -16]}
+    />
+
+    <!-- A path drawn with the lines geometry -->
+    <Mesh3D geometry={{ type: "lines", points: pathPoints }} material={{ type: "flat", baseColor: 0xffd34d }} castShadow={false} />
+
+    <!-- The 2D hero, animated with the same sheet format as the 2D Sprite -->
+    <Sprite3D
+      sheet={{ definition: heroSheet, playing: "walk", params: { direction: heroDirection } }}
+      position={heroPos}
+      anchor={{ x: 0.5, y: 1 }}
+      billboardMode="cylindrical"
+      alphaMode="mask"
+      pixelSize={0.02}
     />
 
     <!-- 600 trees, one draw call -->
@@ -78,11 +99,54 @@
 </Canvas>
 
 <script>
-  import { signal, computed } from "canvasengine";
+  import { signal, computed, tick } from "canvasengine";
   import {
-    View3D, Camera3D, Mesh3D, Model3D, Instances, Surface3D, Monitor3D, Label3D,
+    View3D, Camera3D, Mesh3D, Model3D, Instances, Surface3D, Monitor3D, Label3D, Sprite3D,
     DirectionalLight, Wireframe,
   } from "@canvasengine/3d";
+
+  // A smooth bump for the terrain: (x, z) => height
+  const hill = (x, z) => 4.5 * Math.exp(-(x * x + z * z) / 40) + 0.3 * Math.sin(x * 0.8) * Math.cos(z * 0.6);
+
+  // The hero walks along a closed path; the yellow line shows it
+  const pathPoints = Array.from({ length: 65 }, (_, i) => {
+    const t = (i / 64) * Math.PI * 2;
+    return [Math.cos(t) * 8, 0.02, Math.sin(t) * 5 + 4];
+  });
+
+  // Same sheet format as the 2D Sprite: 3 x 4 cells of 96 px, one row per direction
+  const ROW = { down: 0, left: 1, right: 2, up: 3 };
+  const heroSheet = {
+    image: "./characters/hero.png",
+    framesWidth: 3,
+    framesHeight: 4,
+    textures: {
+      walk: {
+        animations: ({ direction }) => {
+          const frameY = ROW[direction ?? "down"];
+          return [[
+            { time: 0, frameX: 0, frameY },
+            { time: 8, frameX: 1, frameY },
+            { time: 16, frameX: 2, frameY },
+            { time: 24, frameX: 1, frameY },
+          ]];
+        },
+      },
+    },
+  };
+  const heroPos = signal([8, 0, 4]);
+  const heroDirection = signal("down");
+  let walkAngle = 0;
+  tick(({ deltaTime }) => {
+    walkAngle += (deltaTime ?? 16.67) / 1000 * 0.3;
+    const x = Math.cos(walkAngle) * 8;
+    const z = Math.sin(walkAngle) * 5 + 4;
+    heroPos.set([x, 0, z]);
+    // Pick the sheet row from the walking direction, seen from the camera
+    const dx = -Math.sin(walkAngle), dz = Math.cos(walkAngle);
+    const next = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? "right" : "left") : dz > 0 ? "down" : "up";
+    if (heroDirection() !== next) heroDirection.set(next);
+  });
 
   const clicks = signal(0);
   const loaded = signal(false);

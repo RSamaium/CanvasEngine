@@ -39,6 +39,7 @@
 | `tint` | `number` | Multiplies the image colour |
 | `alpha` | `number` | Opacity |
 | `castShadow` / `receiveShadow` | `boolean` | Shadows |
+| `sheet` | object | Sprite-sheet animation, same format as the 2D `Sprite` (see below) |
 
 Plus the [common props](./getting-started#common-props).
 
@@ -58,23 +59,66 @@ Keep `"spherical"` sprites anchored at the centre: an anchor away from the centr
 
 ## Sprite Sheets and Animation
 
-There is no animated 3D sprite: drive `frame` with a signal. Frames of one image share its texture, so changing frames stays fast.
+`sheet` plays an animation from a sprite sheet, with **the same format as the 2D [Sprite](/components/sprite)**: a definition that cuts the image into cells, the animation to play, and parameters.
 
 ```html
-<Sprite3D image="./characters/hero.png" frame={heroFrame} position={heroPos} billboardMode="cylindrical" alphaMode="mask" />
+<Sprite3D
+  sheet={{ definition: heroSheet, playing: "walk", params: { direction } }}
+  position={heroPos}
+  anchor={{ x: 0.5, y: 1 }}
+  billboardMode="cylindrical"
+  alphaMode="mask"
+  pixelSize={0.02}
+/>
 
 <script>
-  import { signal, tick } from "canvasengine";
+  import { signal } from "canvasengine";
 
-  // 3 columns x 4 rows of 96 px cells
+  // 3 columns x 4 rows of cells, one row per direction
+  const ROW = { down: 0, left: 1, right: 2, up: 3 };
+  const heroSheet = {
+    image: "./characters/hero.png",
+    framesWidth: 3,
+    framesHeight: 4,
+    textures: {
+      walk: {
+        animations: ({ direction }) => {
+          const frameY = ROW[direction ?? "down"];
+          return [[
+            { time: 0, frameX: 0, frameY },
+            { time: 8, frameX: 1, frameY },
+            { time: 16, frameX: 2, frameY },
+            { time: 24, frameX: 1, frameY },
+          ]];
+        },
+      },
+    },
+  };
+  const direction = signal("down");
+</script>
+```
+
+| `sheet` field | Description |
+|---------------|-------------|
+| `definition` | The sheet: `image`, `framesWidth`, `framesHeight` (or `rectWidth`, `rectHeight`, `offset`), and `textures`, one entry per animation. An animation can override any of these |
+| `playing` | Name of the animation to play |
+| `params` | Passed to `animations` when it is a function; a change restarts the animation |
+| `onFinish` | Called each time the animation reaches its end |
+
+`time` counts 1/60 s ticks from the start of the animation, as in 2D, and the animation loops after its last key frame. A key frame can also set `opacity` and `anchor`. A 3D sprite shows one layer: the first array of `animations`.
+
+The same definition object works for a 2D `Sprite` and a `Sprite3D`.
+
+### Animating by Hand
+
+Without a sheet, drive `frame` with a signal; frames of one image share its texture, so changing frames stays fast:
+
+```html
+<Sprite3D image="./characters/hero.png" frame={heroFrame} billboardMode="cylindrical" alphaMode="mask" />
+
+<script>
+  import { signal } from "canvasengine";
   const heroFrame = signal({ x: 0, y: 0, width: 96, height: 96 });
-  let time = 0;
-
-  tick(({ deltaTime }) => {
-    time += deltaTime / 1000;
-    const column = [0, 1, 2, 1][Math.floor(time * 6) % 4];
-    heroFrame.set({ x: column * 96, y: 2 * 96, width: 96, height: 96 });
-  });
 </script>
 ```
 

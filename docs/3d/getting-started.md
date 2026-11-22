@@ -12,6 +12,18 @@ npm install @canvasengine/3d @pixi/3d
 
 `@pixi/3d` requires `pixi.js` 8.23 or later.
 
+### WebGPU
+
+The 3D renders with WebGL by default. To use WebGPU where the browser supports it, pass `preference: "webgpu"` to `bootstrapCanvas`, which forwards it to the PixiJS application:
+
+```js
+import { bootstrapCanvas } from "canvasengine";
+
+bootstrapCanvas(document.getElementById("root"), App, { preference: "webgpu" });
+```
+
+Nothing else changes in your components.
+
 ## First Scene
 
 ```html

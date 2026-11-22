@@ -26,6 +26,9 @@
 | `receiveShadow` | `boolean` | Shows shadows cast on it |
 | `morphWeights` | `number[]` \| `{ [meshLabel]: number[] }` | Morph target weights (see [Morph Targets](#morph-targets)) |
 | `unload` | `boolean` | Unloads the file from memory when no `Model3D` uses it any more. Default `true` |
+| `dissolve` | `number` \| object | Cuts the model away with noise (see [Dissolve](#dissolve)) |
+| `onAnimationEnd` | `(clip) => void` | Called when a clip that does not loop reaches its end |
+| `onAnimationLoop` | `(clip) => void` | Called each time a looping clip starts over |
 | `onLoad` | `(model) => void` | Called once the model is built, with the [`@pixi/3d` Model3D](https://3d.pixijs.download/release/docs/scene.Model3D.html) |
 
 Plus the [common props](./getting-started#common-props): `position`, `rotation`, `scale`, events...
@@ -86,6 +89,26 @@ For an action that should not loop (attack, jump, death), set `loop={false}`: th
 <Model3D src="./models/robot.glb" animation={clip} loop={clip !== "Death"} />
 ```
 
+`onAnimationEnd` tells when such a clip is over, for example to go back to `"Idle"` after an attack:
+
+```html
+<Model3D src="./models/robot.glb" animation={clip} loop={looping} onAnimationEnd={onEnd} />
+
+<script>
+  import { signal, computed } from "canvasengine";
+
+  const ONE_SHOT = ["Punch", "Jump", "Death"];
+  const clip = signal("Idle");
+  const looping = computed(() => !ONE_SHOT.includes(clip()));
+
+  function onEnd(name) {
+    if (name !== "Death") clip.set("Idle");
+  }
+</script>
+```
+
+`onAnimationLoop` is called each time a looping clip wraps around, for example to play a footstep sound.
+
 ## Facing and Size
 
 - glTF models face **+Z**. To turn a model toward its direction of travel `(dx, dz)`, use `rotation={[0, Math.atan2(dx, dz), 0]}`.
@@ -137,6 +160,34 @@ Morph targets reshape a mesh, often for facial expressions. `morphWeights` sets 
 ```
 
 An array applies to every mesh with morph targets; `{ meshLabel: [...] }` targets one mesh. While `morphWeights` is set, it wins over a clip that animates the weights.
+
+## Dissolve
+
+`dissolve` cuts the model away with noise, for a death, a teleport or an appearance: `0` draws it whole, `1` makes it disappear. Give an edge colour for a glowing border along the cut:
+
+```html
+<Model3D src="./models/robot.glb" dissolve={{ amount: fade, edgeColor: 0xff8a3d, edgeStrength: 6, holeSize: 25 }} />
+
+<script>
+  import { signal, tick } from "canvasengine";
+
+  const fade = signal(0);
+  tick(({ deltaTime }) => fade.update((v) => Math.min(1, v + deltaTime / 2000)));
+</script>
+```
+
+| Option | Description |
+|--------|-------------|
+| `amount` | `0` whole, `1` gone. A plain number is the amount |
+| `edgeColor` | Colour of the glowing edge. Default: no edge |
+| `edgeStrength` | Brightness of the edge; above 1 it glows and feeds [bloom](./effects). Default `4` |
+| `holeSize` | About how wide the holes are, in the model's own units. Default `0.25`. A model stored in centimetres (RobotExpressive) needs about `25` |
+
+The first time `dissolve` is set, the model gets its own copy of its materials: other models from the same file are not affected.
+
+::: warning
+Shadows and outlines don't dissolve: a half-dissolved model still casts its whole shadow. Objects attached with `bone` keep their own materials; give them a `dissolve` of their own.
+:::
 
 ## Compressed Models
 

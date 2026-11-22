@@ -272,3 +272,110 @@ describe("Model3D bone attachment", () => {
     warn.mockRestore();
   });
 });
+
+describe("Camera3D frame", () => {
+  async function viewWithCamera() {
+    const { Camera3D: PixiCamera3D } = await import("@pixi/3d");
+    const view = fakeView();
+    const camera = new PixiCamera3D({ fov: 60 });
+    view.root.addChild(camera);
+    let listener: (() => void) | null = null;
+    Object.assign(view.instance.view, { camera, width: 800, height: 600 });
+    Object.assign(view.instance, { onSceneChange: (fn: () => void) => ((listener = fn), () => (listener = null)) });
+    return { view, camera, notify: () => listener?.() };
+  }
+
+  test("moves back until the target fits, looking at its centre", async () => {
+    const { view, camera } = await viewWithCamera();
+    mountUnder(view.element, "Mesh3D", { label: "box", geometry: { type: "cube", width: 2, height: 2, depth: 2 }, position: [5, 1, 0] });
+    mountUnder(view.element, "Camera3D", { frame: { target: "box", pitch: 0, yaw: 0, padding: 1 } });
+    // A 2-unit cube has a bounding sphere of radius sqrt(3); half the vertical fov is 30°
+    const distance = Math.sqrt(3) / Math.sin(Math.PI / 6);
+    expect(camera.position.x).toBeCloseTo(5);
+    expect(camera.position.y).toBeCloseTo(1);
+    expect(camera.position.z).toBeCloseTo(distance);
+    expect(camera.near).toBeCloseTo(distance / 100);
+  });
+
+  test("frames again when the scene changes", async () => {
+    const { view, camera, notify } = await viewWithCamera();
+    const box = mountUnder(view.element, "Mesh3D", { label: "box", geometry: { type: "cube" } }).componentInstance;
+    mountUnder(view.element, "Camera3D", { frame: { target: "box", pitch: 0 } });
+    box.position.set(10, 0, 0);
+    notify();
+    expect(camera.position.x).toBeCloseTo(10);
+  });
+});
+
+describe("Sprite3D sheet", () => {
+  const sheet = (direction: string) => ({
+    definition: {
+      image: "hero.png",
+      framesWidth: 3,
+      framesHeight: 4,
+      textures: {
+        walk: {
+          animations: ({ direction }: { direction: string }) => {
+            const frameY = { down: 0, left: 1 }[direction] ?? 0;
+            return [[{ time: 0, frameX: 0, frameY }, { time: 8, frameX: 1, frameY }, { time: 16, frameX: 2, frameY }]];
+          },
+        },
+      },
+    },
+    playing: "walk",
+    params: { direction },
+  });
+
+  test("shows the cell of the current key frame, advances with time and loops", async () => {
+    const { Assets, Texture } = await import("pixi.js");
+    const image = new Texture({ source: Texture.WHITE.source });
+    Object.defineProperty(image, "width", { value: 288 });
+    Object.defineProperty(image, "height", { value: 384 });
+    const load = vi.spyOn(Assets, "load").mockResolvedValue(image as any);
+    const onFinish = vi.fn();
+    // Catch the sprite's ticker callback, to call it with exact 1/60 s ticks
+    const listeners: ((ticker: any) => void)[] = [];
+    const add = vi.spyOn(Ticker.shared, "add").mockImplementation(((fn: any) => {
+      listeners.push(fn);
+      return Ticker.shared;
+    }) as any);
+    const view = fakeView();
+    const sprite = mountUnder(view.element, "Sprite3D", { sheet: { ...sheet("left"), onFinish }, position: [0, 0, 0] }).componentInstance;
+    await settle();
+    // Row 1 ("left"), first cell, cells of 288 / 3 by 384 / 4 px
+    expect([sprite.texture.frame.x, sprite.texture.frame.y, sprite.texture.frame.width]).toEqual([0, 96, 96]);
+
+    // One tick is 1/60 s: 8 ticks reach the second key frame
+    const step = (ticks: number) => {
+      for (let i = 0; i < ticks; i++) for (const fn of listeners) fn({ deltaTime: 1 });
+    };
+    step(8);
+    expect(sprite.texture.frame.x).toBe(96);
+    step(8);
+    expect(sprite.texture.frame.x).toBe(192);
+    // Past the last key frame, the animation starts over
+    step(1);
+    expect(sprite.texture.frame.x).toBe(0);
+    expect(onFinish).toHaveBeenCalledTimes(1);
+    load.mockRestore();
+    add.mockRestore();
+  });
+});
+
+describe("Mesh3D dissolve", () => {
+  test("copies the material with the dissolve bit, then writes the amount in place", async () => {
+    const amount = signal(0.25);
+    const mesh = mountUnder(fakeView().element, "Mesh3D", {
+      geometry: { type: "cube" },
+      material: { baseColor: 0xffffff },
+      dissolve: amount,
+    }).componentInstance;
+    await settle();
+    // The dissolve bit adds `dissolve` to the material data
+    expect(mesh.material.data.dissolve).toBeCloseTo(0.25);
+    const material = mesh.material;
+    amount.set(0.8);
+    expect(mesh.material).toBe(material);
+    expect(mesh.material.data.dissolve).toBeCloseTo(0.8);
+  });
+});

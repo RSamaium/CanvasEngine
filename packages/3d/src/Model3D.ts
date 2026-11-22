@@ -10,7 +10,8 @@ import {
   type AnimationState,
   type Scene3DSource,
 } from "@pixi/3d";
-import { Node3D, type Node3DProps } from "./Node3D";
+import { findViewComponent, Node3D, type Node3DProps } from "./Node3D";
+import { applyDissolve, normalizeDissolve, withDissolveBit, type DissolveInput } from "./dissolve";
 
 // Scratch values for the bone followers, reused every frame
 const followMatrix = new Matrix4();
@@ -58,6 +59,12 @@ export interface Model3DProps extends Node3DProps {
   morphWeights?: number[] | Record<string, number[]>;
   /** Unloads the file when no Model3D uses it any more. Default `true` */
   unload?: boolean;
+  /** Cuts the model away with noise: 0 whole, 1 gone, or `{ amount, edgeColor, edgeStrength, holeSize }` */
+  dissolve?: DissolveInput;
+  /** Called when a clip that does not loop reaches its end, with the clip name */
+  onAnimationEnd?: (clip: string) => void;
+  /** Called each time a looping clip starts over, with the clip name */
+  onAnimationLoop?: (clip: string) => void;
   /** Called once the model is built */
   onLoad?: (model: PixiModel3D) => void;
 }
@@ -84,6 +91,7 @@ class CanvasModel3D extends Node3D(Container3D) {
       if (this.#state && props.loop !== undefined) this.#state.loop = props.loop;
       if (this.#state && props.animationSpeed !== undefined) this.#state.animationSpeed = props.animationSpeed;
       if (props.castShadow !== undefined || props.receiveShadow !== undefined) this.#applyShadows();
+      if ("dissolve" in props) this.#syncDissolve();
       if (props.morphWeights !== undefined) {
         this.#applyMorphWeights();
         this.#syncMorphTick();
@@ -220,6 +228,21 @@ class CanvasModel3D extends Node3D(Container3D) {
   /** Re-applies `morphWeights` after the player, which a clip with a weights track would overwrite */
   #morphTick = () => this.#applyMorphWeights();
   #morphTickActive = false;
+  /** Whether the model's materials carry the dissolve shader bit */
+  #dissolveReady = false;
+
+  /** Gives every material of the model the dissolve bit the first time, then writes the values. */
+  #syncDissolve() {
+    if (!this.model) return;
+    const settings = normalizeDissolve(this.fullProps.dissolve);
+    if (!settings && !this.#dissolveReady) return;
+    if (settings && !this.#dissolveReady) {
+      // Copies: other models from the same file keep their materials
+      this.model.materials = (material) => withDissolveBit(material);
+      this.#dissolveReady = true;
+    }
+    for (const material of this.model.materials) applyDissolve(material, settings ?? { amount: 0 });
+  }
 
   #syncMorphTick() {
     const wanted = !!this.fullProps.morphWeights && !!this.model;
@@ -260,7 +283,11 @@ class CanvasModel3D extends Node3D(Container3D) {
     this.applyPassFlag("outline", this.fullProps.outlined);
     this.applyPassFlag("wireframe", this.fullProps.wireframe);
     for (const [node, bone] of this.#boneChildren) this.#placeOnBone(node, bone);
+    this.#dissolveReady = false;
+    if (this.fullProps.dissolve !== undefined) this.#syncDissolve();
     this.fullProps.onLoad?.(this.model);
+    // A camera framing the scene re-frames once the model is in
+    if (this.element) findViewComponent(this.element)?.notifySceneChange?.();
   }
 
   /** Switches to the clip named by `animation`, fading out the clip that was playing. */
@@ -285,6 +312,9 @@ class CanvasModel3D extends Node3D(Container3D) {
       return;
     }
     const next = player.play(clip);
+    // Callbacks read the props when they fire, so a new handler takes effect at once
+    next.onComplete = () => this.fullProps.onAnimationEnd?.(clip);
+    next.onLoop = () => this.fullProps.onAnimationLoop?.(clip);
     next.loop = this.fullProps.loop ?? true;
     next.animationSpeed = this.fullProps.animationSpeed ?? 1;
     this.#state = next;

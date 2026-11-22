@@ -9,7 +9,8 @@
     environment={{ skyColor: 0xcfe0f5, groundColor: 0x4a4636, intensity: 0.8 }}
     fog={{ type: "linear", color: 0x9fb8d6, near: 25, far: 60 }}
   >
-    <Camera3D position={[-6, 5, 12]} lookAt={[0, 2, 0]} fov={45} orbit={{ enableDamping: true, maxPolarAngle: 1.45, target: { x: 0, y: 2, z: 0 } }} />
+    <!-- frame: fits the robot in view once it has loaded -->
+    <Camera3D fov={45} frame={{ target: "robot", pitch: 18, yaw: -25, padding: 1.6 }} orbit={{ enableDamping: true, maxPolarAngle: 1.45 }} />
 
     <DirectionalLight color={0xfff2dc} intensity={3} rotation={[-0.9, -0.6, 0]} castShadow={true} />
 
@@ -23,12 +24,16 @@
     <!-- CC0 model by Tomás Laulhé (Quaternius), see public/models/CREDITS.md -->
     <Model3D
       src="./models/RobotExpressive.glb"
+      label="robot"
       position={robotPos}
       rotation={[0, heading, 0]}
       animation={clip}
       fadeDuration={0.25}
+      loop={looping}
+      dissolve={dissolve}
       castShadow={true}
       onLoad={onLoad}
+      onAnimationEnd={onAnimationEnd}
     >
       <!-- A sword in the right hand: Palm2.R exists only in the skeleton -->
       <Group3D bone="Palm2.R" rotation={[Math.PI / 2, 0, 0]}>
@@ -63,6 +68,8 @@
   import { View3D, Camera3D, Mesh3D, Model3D, Group3D, DirectionalLight } from "@canvasengine/3d";
 
   const GESTURES = ["Wave", "Dance", "ThumbsUp", "Yes", "No", "Punch", "Jump", "Death"];
+  // These play once; onAnimationEnd then goes back to Idle
+  const ONE_SHOT = ["ThumbsUp", "Yes", "No", "Punch", "Jump", "Death"];
 
   const robotPos = signal([0, 0, 0]);
   const heading = signal(0);
@@ -77,6 +84,21 @@
     if (isMoving) return isRunning ? "Running" : "Walking";
     return current ?? "Idle";
   });
+
+  const looping = computed(() => !ONE_SHOT.includes(clip()));
+
+  // After "Death", the robot dissolves with a glowing edge, then comes back
+  const dissolveAmount = signal(0);
+  const dissolve = computed(() => ({ amount: dissolveAmount(), edgeColor: 0xff8a3d, edgeStrength: 6, holeSize: 25 }));
+  let dissolveDirection = 0;
+
+  function onAnimationEnd(name) {
+    if (name === "Death") {
+      dissolveDirection = 1;
+      return;
+    }
+    gesture.set(null);
+  }
 
   // Read both signals on every run: a computed only tracks what its first run reads
   const status = computed(() => {
@@ -111,6 +133,15 @@
 
   tick(({ deltaTime }) => {
     const dt = (deltaTime ?? 16.67) / 1000;
+    if (dissolveDirection) {
+      const next = dissolveAmount() + dissolveDirection * dt * 0.7;
+      if (next >= 1) {
+        dissolveDirection = -1;
+        gesture.set(null);
+      }
+      if (next <= 0) dissolveDirection = 0;
+      dissolveAmount.set(Math.min(1, Math.max(0, next)));
+    }
     const dx = (keys.has("ArrowRight") ? 1 : 0) - (keys.has("ArrowLeft") ? 1 : 0);
     const dz = (keys.has("ArrowDown") ? 1 : 0) - (keys.has("ArrowUp") ? 1 : 0);
     const isMoving = Boolean(dx || dz);

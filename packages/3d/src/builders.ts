@@ -17,6 +17,7 @@ import {
 } from "@pixi/3d";
 import { ToonMaterial } from "@pixi/3d/extras";
 import { isPlainObject } from "./utils";
+import { buildProceduralGeometry, PROCEDURAL_TYPES, type ProceduralGeometrySpec } from "./geometries";
 
 export const GEOMETRIES = {
   cube: CubeGeometry,
@@ -30,7 +31,7 @@ export const GEOMETRIES = {
   icosahedron: IcosahedronGeometry,
 } as const;
 
-export type GeometrySpec = { type: keyof typeof GEOMETRIES; [option: string]: any };
+export type GeometrySpec = { type: keyof typeof GEOMETRIES; [option: string]: any } | ProceduralGeometrySpec;
 
 export interface MaterialSpec {
   /** `"pbr"` (default, lit), `"flat"` (unlit), `"phong"` or `"toon"` (cel shading) */
@@ -72,8 +73,16 @@ export const LIVE_MATERIAL_FIELDS = [
 /** Builds a geometry from `{ type, ...options }`, or returns a Geometry3D as is. */
 export function buildGeometry(spec: GeometrySpec | Geometry3D): { geometry: Geometry3D; owned: boolean } | null {
   if (spec instanceof Geometry3D) return { geometry: spec, owned: false };
-  const { type, ...options } = spec ?? ({} as GeometrySpec);
-  const GeometryClass = GEOMETRIES[type];
+  if (spec && PROCEDURAL_TYPES.includes(spec.type)) {
+    try {
+      return { geometry: buildProceduralGeometry(spec as ProceduralGeometrySpec), owned: true };
+    } catch (error) {
+      console.warn(`geometry "${spec.type}":`, error);
+      return null;
+    }
+  }
+  const { type, ...options } = (spec ?? {}) as any;
+  const GeometryClass = GEOMETRIES[type as keyof typeof GEOMETRIES];
   if (!GeometryClass) {
     console.warn(`unknown geometry type "${type}"`);
     return null;

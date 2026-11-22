@@ -74,3 +74,71 @@ describe("3d builders", () => {
     expect(canPatchMaterial({ type: "flat" })).toBe(false);
   });
 });
+
+describe("procedural geometries", async () => {
+  const { buildProceduralGeometry, computeNormals } = await import("../../packages/3d/src/geometries");
+
+  test("custom: computes smooth normals for triangles", async () => {
+    const geometry: any = buildProceduralGeometry({
+      type: "custom",
+      positions: [[0, 0, 0], [1, 0, 0], [0, 0, -1]],
+      indices: [0, 1, 2],
+    });
+    // Normals are stored quantized: read them back as floats
+    const { getAttributeData } = await import("@pixi/3d");
+    const normals = Array.from(getAttributeData(geometry, "aNormal", 3));
+    // Counter-clockwise seen from above: the face points up
+    expect(normals.slice(0, 3).map((v) => Math.round(v))).toEqual([0, 1, 0]);
+  });
+
+  test("custom: hex colours become linear RGBA", () => {
+    const geometry: any = buildProceduralGeometry({
+      type: "custom",
+      positions: [0, 0, 0, 1, 0, 0, 0, 1, 0],
+      colors: [0xffffff, 0x000000, 0xff0000],
+    });
+    const colors = Array.from(geometry.attributes.aColor.buffer.data as Float32Array).slice(0, 12);
+    expect(colors.slice(0, 4)).toEqual([1, 1, 1, 1]);
+    expect(colors.slice(8, 12)).toEqual([1, 0, 0, 1]);
+  });
+
+  test("lines: joins the points, and closes the loop when asked", () => {
+    const open: any = buildProceduralGeometry({ type: "lines", points: [[0, 0, 0], [1, 0, 0], [1, 1, 0]] });
+    expect(Array.from(open.indices)).toEqual([0, 1, 1, 2]);
+    const closed: any = buildProceduralGeometry({ type: "lines", points: [[0, 0, 0], [1, 0, 0], [1, 1, 0]], closed: true });
+    expect(Array.from(closed.indices)).toEqual([0, 1, 1, 2, 2, 0]);
+  });
+
+  test("terrain: one vertex per grid point, raised by the height function", () => {
+    const geometry: any = buildProceduralGeometry({ type: "terrain", width: 2, depth: 2, segments: 2, height: (x: number) => x });
+    const positions = geometry.positions as Float32Array;
+    expect(positions.length / 3).toBe(9);
+    expect(geometry.indices.length).toBe(2 * 2 * 6);
+    // First vertex at x = -1 has height -1
+    expect([positions[0], positions[1], positions[2]]).toEqual([-1, -1, -1]);
+  });
+
+  test("terrain: flat ground normals point up", () => {
+    const geometry: any = buildProceduralGeometry({ type: "terrain", segments: 1 });
+    const normals = computeNormals(geometry.positions, geometry.indices);
+    expect(Math.round(normals[1])).toBe(1);
+  });
+});
+
+describe("dissolve", async () => {
+  const { applyDissolve, normalizeDissolve } = await import("../../packages/3d/src/dissolve");
+
+  test("normalizes a number or settings", () => {
+    expect(normalizeDissolve(0.5)).toEqual({ amount: 0.5 });
+    expect(normalizeDissolve({ amount: 1, edgeColor: 0xff0000 })).toEqual({ amount: 1, edgeColor: 0xff0000 });
+    expect(normalizeDissolve(undefined)).toBeNull();
+  });
+
+  test("writes amount, edge colour in linear light and hole size", () => {
+    const material: any = { data: {} };
+    applyDissolve(material, { amount: 2, edgeColor: 0xff0000, edgeStrength: 3, holeSize: 25 });
+    expect(material.data.dissolve).toBe(1);
+    expect(material.data.dissolveEdgeColor).toEqual([3, 0, 0]);
+    expect(material.data.dissolveHoleSize).toBe(25);
+  });
+});
