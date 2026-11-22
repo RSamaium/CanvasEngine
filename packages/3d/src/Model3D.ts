@@ -296,11 +296,11 @@ class CanvasModel3D extends Node3D(Container3D) {
     const version = ++this.#loadVersion;
     const source = typeof src === "string" ? await Assets.load<Scene3DSource>(src) : src;
     if (version !== this.#loadVersion || this.destroyed) return;
+    // Retain the new file before releasing the old one: rebuilding from the same file
+    // (another `scene`) must not unload it in between
+    if (typeof src === "string") retainSource(src);
     this.#disposeModel();
-    if (typeof src === "string") {
-      retainSource(src);
-      this.#sourceUrl = src;
-    }
+    if (typeof src === "string") this.#sourceUrl = src;
     const { castShadow, receiveShadow } = this.fullProps;
     // The `animation` prop drives playback: no clip starts on its own
     this.model = new PixiModel3D({ source, castShadow, receiveShadow, autoPlay: false, scene: this.fullProps.scene });

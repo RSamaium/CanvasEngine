@@ -252,6 +252,8 @@ A glTF file can hold several scenes (levels, variants). `scene` picks one by nam
 <Model3D src="./models/levels.glb" scene="Level2" />
 ```
 
+Only named scenes can be picked: a file whose scenes have no name always builds its default scene. Name the scenes in your 3D tool before exporting.
+
 ## Cameras from the File
 
 A file can carry cameras placed by the artist. `useCamera` makes the view look through one of them, by name or index (`true` for the first):
