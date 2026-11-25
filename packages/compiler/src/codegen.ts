@@ -197,7 +197,6 @@ export function generateTemplateCode(root: TemplateRoot, options: CodegenOptions
       return `${formattedName}: ${attributeValue}`;
     }
 
-    const isTernaryExpression = trimmedValue.includes("?") && trimmedValue.includes(":");
     if (isObjectLiteral) {
       const formattedObject = formatObjectLiteralSpacing(attributeValue);
       if (hasFunctionCall(trimmedValue)) {
@@ -212,16 +211,16 @@ export function generateTemplateCode(root: TemplateRoot, options: CodegenOptions
       return `${formattedName}: ${attributeValue}`;
     }
 
-    if (isTernaryExpression) {
-      return `${formattedName}: computed(() => ${attributeValue})`;
-    }
-
     if (hasFunctionCall(trimmedValue)) {
       return `${formattedName}: computed(() => ${attributeValue})`;
     }
 
     if (!hasIdentifier(trimmedValue)) {
       return `${formattedName}: ${attributeValue}`;
+    }
+
+    if (isTernaryExpression(trimmedValue)) {
+      return `${formattedName}: ${ternaryComputed(attributeValue)}`;
     }
 
     const computedValue = transformBareIdentifiersToSignals(attributeValue);
@@ -565,11 +564,54 @@ function collectMemberRoots(value: string): Set<string> {
   return roots;
 }
 
-function transformBareIdentifiersToSignals(value: string): string {
+/** Words that are not variables: never turned into signal calls. */
+const NON_SIGNAL_WORDS = new Set([
+  "true", "false", "null", "undefined", "NaN", "Infinity",
+  "this", "typeof", "instanceof", "in", "new", "void", "delete",
+]);
+
+/**
+ * Calls every bare identifier as a signal: `a + b` becomes `a() + b()`, or
+ * passes it to `replace`. Member roots (`obj.id`), calls, strings, keywords and
+ * object keys are left as written.
+ */
+/** True for `a ? b : c`, not for optional chaining (`a?.b`) or `a ?? b`. */
+function isTernaryExpression(value: string): boolean {
+  return /(^|[^?])\?(?![?.])/.test(value) && value.includes(":");
+}
+
+/**
+ * A ternary may use signals or plain values (loop variables): each bare
+ * identifier is read once at run time, at the top of the computed. Reading them
+ * all before the condition makes the computed track the signals of every branch.
+ *
+ * @example
+ * ternaryComputed('moving ? "Run" : "Idle"')
+ * // computed(() => { const $$moving = (isSignal(moving) ? moving() : moving); return $$moving ? "Run" : "Idle"; })
+ */
+function ternaryComputed(value: string): string {
+  const names: string[] = [];
+  const expression = transformBareIdentifiersToSignals(value, {
+    replace: name => {
+      if (!names.includes(name)) names.push(name);
+      return "$$" + name;
+    },
+  });
+  if (names.length === 0) {
+    return `computed(() => ${expression})`;
+  }
+  const reads = names.map(name => `$$${name} = (isSignal(${name}) ? ${name}() : ${name})`).join(", ");
+  return `computed(() => { const ${reads}; return ${expression}; })`;
+}
+
+function transformBareIdentifiersToSignals(
+  value: string,
+  options: { replace?: (name: string) => string } = {},
+): string {
   const memberRoots = collectMemberRoots(value);
 
   return value.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g, (match, name, offset) => {
-    if (["true", "false", "null"].includes(name)) {
+    if (NON_SIGNAL_WORDS.has(name)) {
       return match;
     }
 
@@ -596,6 +638,11 @@ function transformBareIdentifiersToSignals(value: string): string {
       return match;
     }
 
-    return `${name}()`;
+    // Object key: `{ x: 1 }` or `{ a: 1, x: 2 }`, unlike the `b` of `a ? b : c`
+    if (/^\s*:(?!:)/.test(afterSlice) && /[{,]\s*$/.test(beforeMatch)) {
+      return match;
+    }
+
+    return options.replace ? options.replace(name) : `${name}()`;
   });
 }

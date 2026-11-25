@@ -1,0 +1,92 @@
+<Canvas backgroundColor="#0f1420">
+  <View3D
+    positionType="absolute"
+    left={0}
+    top={0}
+    toneMapping="aces"
+    shadowQuality="medium"
+    background={0x1b2236}
+    environment={{ skyColor: 0x8ea8d8, groundColor: 0x2a2620, intensity: 0.7 }}
+  >
+    <Camera3D position={[0, 4, 11]} lookAt={[0, 1.8, 0]} fov={50} orbit={{ enableDamping: true, maxPolarAngle: 1.45, target: { x: 0, y: 1.8, z: 0 } }} />
+    <DirectionalLight intensity={2.5} rotation={[-0.9, 0.5, 0]} castShadow={true} />
+
+    <!-- Here: a grey floor -->
+    <Mesh3D geometry={{ type: "plane", width: 30, height: 30 }} material={{ baseColor: 0x55606e, roughness: 1 }} rotation={[-Math.PI / 2, 0, 0]} castShadow={false} />
+
+    <!-- The far side, 60 units away: a warm room the portal looks into -->
+    <Group3D position={[60, 0, 0]}>
+      <Mesh3D geometry={{ type: "plane", width: 16, height: 16 }} material={{ baseColor: 0xb85c38, roughness: 1 }} rotation={[-Math.PI / 2, 0, 0]} castShadow={false} />
+      <Mesh3D geometry={{ type: "cube", width: 16, height: 6, depth: 0.3 }} material={{ baseColor: 0xe0a458 }} position={[0, 3, -8]} />
+      <Mesh3D geometry={{ type: "cube", width: 0.3, height: 6, depth: 16 }} material={{ baseColor: 0xe0a458 }} position={[-8, 3, 0]} />
+      <Mesh3D geometry={{ type: "cube", width: 0.3, height: 6, depth: 16 }} material={{ baseColor: 0xe0a458 }} position={[8, 3, 0]} />
+      <Mesh3D geometry={{ type: "torusKnot", radius: 0.9, tube: 0.3 }} material={{ baseColor: 0x3d9970, metallic: 0.5, roughness: 0.3 }} position={[0, 2, -3]} rotation={[spin, spin, 0]} />
+      <PointLight color={0xffc070} intensity={40} range={14} position={[0, 4, -2]} />
+    </Group3D>
+
+    <!-- The doorway: its far side is the room above. Its frame is a plain mesh. -->
+    <Portal3D position={[-4, 1.6, -3]} rotation={[0, 0.4, 0]} size={[2, 3.2]} exit={{ position: [60, 1.6, 4], rotation: [0, Math.PI + 0.4, 0] }} />
+    <Mesh3D geometry={{ type: "cube", width: 2.4, height: 3.6, depth: 0.2 }} material={{ baseColor: 0x2d2d38 }} position={[-4.04, 1.6, -3.11]} rotation={[0, 0.4, 0]} />
+
+    <!-- Robot: two clips mixed by weight, and its own recoloured materials -->
+    <Model3D
+      src="./models/RobotExpressive.glb"
+      position={[1.5, 0, 0]}
+      blend={layers}
+      materials={recolor}
+      castShadow={true}
+    />
+
+    <!-- 2000 particles placed by code each frame -->
+    <ParticlePool3D position={[1.5, 2.2, 0]} capacity={2000} blendMode="add" onUpdate={swirl} />
+  </View3D>
+
+  <Container>
+    <Text text="@canvasengine/3d · Portal3D, clip blending, material overrides, ParticlePool3D" x={16} y={14} color="#ffffff" size={17} />
+    <Text text={info} x={16} y={40} color="#b8c2d6" size={13} />
+  </Container>
+</Canvas>
+
+<script>
+  import { signal, computed, tick } from "canvasengine";
+  import { View3D, Camera3D, Mesh3D, Group3D, Model3D, Portal3D, ParticlePool3D, DirectionalLight, PointLight } from "@canvasengine/3d";
+
+  // Keys 1 to 3 move the mix between walking and waving
+  const waveShare = signal(0.5);
+  const layers = computed(() => {
+    const share = waveShare();
+    return [
+      { clip: "Walking", weight: 1 - share },
+      { clip: "Wave", weight: share },
+    ];
+  });
+  const info = computed(() => `blend: Walking ${Math.round((1 - waveShare()) * 100)}% · Wave ${Math.round(waveShare() * 100)}% (keys 1, 2, 3) · look into the doorway`);
+
+  // RobotExpressive's yellow material is named "Main": paint this robot blue
+  const recolor = (material) => (material.label === "Main" ? material.clone({ baseColor: 0x4aa3ff }) : material);
+
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Digit1") waveShare.set(0);
+    if (e.code === "Digit2") waveShare.set(0.5);
+    if (e.code === "Digit3") waveShare.set(1);
+  });
+
+  const spin = signal(0);
+  let time = 0;
+  tick(({ deltaTime }) => {
+    time += (deltaTime ?? 16.67) / 1000;
+    spin.set(time * 0.6);
+  });
+
+  // A ring of motes swirling around the robot
+  const COUNT = 2000;
+  const seeds = Array.from({ length: COUNT }, (_, i) => ({ angle: (i / COUNT) * Math.PI * 2, radius: 1.6 + Math.random() * 0.8, height: (Math.random() - 0.5) * 3, speed: 0.4 + Math.random() }));
+  function swirl(pool) {
+    for (let i = 0; i < COUNT; i++) {
+      const seed = seeds[i];
+      const angle = seed.angle + time * seed.speed;
+      const y = seed.height + Math.sin(time * 2 + i) * 0.1;
+      pool.setParticleAt(i, Math.cos(angle) * seed.radius, y, Math.sin(angle) * seed.radius, 0.06, 0, i % 2 ? 0x66ccff : 0xffd34d, 0.8);
+    }
+  }
+</script>

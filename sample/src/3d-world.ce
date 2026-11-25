@@ -1,0 +1,192 @@
+<Canvas backgroundColor="#9fb8d6">
+  <View3D
+    positionType="absolute"
+    left={0}
+    top={0}
+    toneMapping="aces"
+    shadowQuality="medium"
+    background={{ skyColor: 0x8ec5ff, groundColor: 0xd8e4ef }}
+    environment={{ skyColor: 0xcfe0f5, groundColor: 0x4a4636, intensity: 0.8 }}
+    fog={{ type: "linear", color: 0xc4d6ea, near: 30, far: 70 }}
+    debug={debugOn}
+  >
+    <Camera3D position={[-8, 7, 16]} lookAt={[0, 2, 0]} fov={45} orbit={{ enableDamping: true, maxPolarAngle: 1.45, target: { x: 0, y: 2, z: 0 } }} />
+    <!-- 600 trees cast shadows: cascades keep them sharp without measuring every caster -->
+    <DirectionalLight color={0xfff2dc} intensity={3} rotation={[-0.9, -0.6, 0]} castShadow={true} shadow={{ cascades: 2, maxDistance: 45 }} />
+
+    <Mesh3D
+      geometry={{ type: "plane", width: 120, height: 120 }}
+      material={{ baseColor: 0x6f7f5e, roughness: 1 }}
+      rotation={[-Math.PI / 2, 0, 0]}
+      castShadow={false}
+    />
+
+    <!-- A hill from the terrain geometry, coloured by height -->
+    <Mesh3D
+      geometry={{ type: "terrain", width: 24, depth: 24, segments: 48, height: hill, colorStops: [[0, 0x5f7a45], [1.8, 0x7c8a4e], [3.2, 0x9b8b6e], [4.4, 0xf1f5f9]] }}
+      material={{ baseColor: 0xffffff, roughness: 1, vertexColors: true }}
+      position={[-14, 0, -16]}
+    />
+
+    <!-- A path drawn with the lines geometry -->
+    <Mesh3D geometry={{ type: "lines", points: pathPoints }} material={{ type: "flat", baseColor: 0xffd34d }} castShadow={false} />
+
+    <!-- The 2D hero, animated with the same sheet format as the 2D Sprite -->
+    <Sprite3D
+      sheet={{ definition: heroSheet, playing: "walk", params: { direction: heroDirection } }}
+      position={heroPos}
+      anchor={{ x: 0.5, y: 1 }}
+      billboardMode="cylindrical"
+      alphaMode="mask"
+      pixelSize={0.02}
+    />
+
+    <!-- 600 trees, one draw call -->
+    <Instances
+      geometry={{ type: "cone", radius: 0.9, height: 3, radialSegments: 7 }}
+      material={{ baseColor: 0xffffff, roughness: 0.9 }}
+      items={trees}
+    />
+
+    <!-- Robot with a hat on its head bone and a face expression -->
+    <Model3D
+      src="./models/RobotExpressive.glb"
+      animation="Idle"
+      castShadow={true}
+      morphWeights={face}
+      onLoad={() => loaded.set(true)}
+      wireframe={wireframeOn}
+    >
+      <Mesh3D
+        bone="Head"
+        geometry={{ type: "cone", radius: 0.6, height: 0.9 }}
+        material={{ type: "toon", baseColor: 0xd9534f, bands: 3 }}
+        position={[0, 1.9, 0]}
+      />
+    </Model3D>
+
+    <!-- A 2D sign: CanvasEngine components drawn on a 3D plane -->
+    <!-- A 2D panel on a 3D plane: its buttons are real CanvasEngine components, clickable in 3D -->
+    <Surface3D position={[4.5, 3, -2]} rotation={[0, -0.5, 0]} width={4} resolution={[512, 256]} clearColor={0x1b1430}>
+      <Rect x={0} y={0} width={512} height={256} color="#1b1430" />
+      <Rect x={12} y={12} width={488} height={232} color="#2c2150" />
+      <Text text="Surface3D" x={256} y={50} anchor={0.5} size={40} color="#ffc46b" />
+      <Text text={signText} x={256} y={110} anchor={0.5} size={32} color="#ffffff" />
+      <Rect x={56} y={160} width={180} height={64} color={plusColor} cursor="pointer" click={() => clicks.update((n) => n + 1)} pointerover={() => plusHover.set(true)} pointerout={() => plusHover.set(false)} />
+      <Text text="+1" x={146} y={192} anchor={0.5} size={32} color="#ffffff" />
+      <Rect x={276} y={160} width={180} height={64} color={resetColor} cursor="pointer" click={() => clicks.set(0)} pointerover={() => resetHover.set(true)} pointerout={() => resetHover.set(false)} />
+      <Text text="reset" x={366} y={192} anchor={0.5} size={32} color="#ffffff" />
+    </Surface3D>
+    <Mesh3D geometry={{ type: "cylinder", radiusTop: 0.08, radiusBottom: 0.08, height: 3 }} material={{ type: "phong", baseColor: 0x8b5a2b, shininess: 30 }} position={[4.5, 0.75, -2]} />
+
+    <!-- Security monitor: the scene seen from a second camera -->
+    <Monitor3D
+      position={[-5, 3, -3]}
+      rotation={[0, 0.6, 0]}
+      width={4}
+      resolution={[512, 288]}
+      camera={{ position: [6, 9, 10], lookAt: [0, 1.5, 0], fov: 40 }}
+    />
+    <Mesh3D geometry={{ type: "cube", width: 4.3, height: 2.6, depth: 0.2 }} material={{ baseColor: 0x222222, roughness: 0.4 }} position={[-5.03, 3, -3.12]} rotation={[0, 0.6, 0]} />
+
+    <!-- Label pinned over the robot's head -->
+    <Label3D at={[0, 6.3, 0]}>
+      <Text text={robotLabel} anchor={{ x: 0.5, y: 1 }} size={16} color="#ffffff" />
+    </Label3D>
+
+    <Wireframe color={0x00ff88} enabled={wireframeOn} />
+  </View3D>
+
+  <Container>
+    <Text text="@canvasengine/3d · Surface3D, Label3D, Monitor3D, Instances, bones, morphs" x={16} y={14} color="#ffffff" size={17} />
+    <Text text="Click the sign's buttons · keys E: face expression, W: wireframe, D: debug panel" x={16} y={40} color="#1d2533" size={13} />
+  </Container>
+</Canvas>
+
+<script>
+  import { signal, computed, tick } from "canvasengine";
+  import {
+    View3D, Camera3D, Mesh3D, Model3D, Instances, Surface3D, Monitor3D, Label3D, Sprite3D,
+    DirectionalLight, Wireframe,
+  } from "@canvasengine/3d";
+
+  // A smooth bump for the terrain: (x, z) => height
+  const hill = (x, z) => 4.5 * Math.exp(-(x * x + z * z) / 40) + 0.3 * Math.sin(x * 0.8) * Math.cos(z * 0.6);
+
+  // The hero walks along a closed path; the yellow line shows it
+  const pathPoints = Array.from({ length: 65 }, (_, i) => {
+    const t = (i / 64) * Math.PI * 2;
+    return [Math.cos(t) * 8, 0.02, Math.sin(t) * 5 + 4];
+  });
+
+  // Same sheet format as the 2D Sprite: 3 x 4 cells of 96 px, one row per direction
+  const ROW = { down: 0, left: 1, right: 2, up: 3 };
+  const heroSheet = {
+    image: "./characters/hero.png",
+    framesWidth: 3,
+    framesHeight: 4,
+    textures: {
+      walk: {
+        animations: ({ direction }) => {
+          const frameY = ROW[direction ?? "down"];
+          return [[
+            { time: 0, frameX: 0, frameY },
+            { time: 8, frameX: 1, frameY },
+            { time: 16, frameX: 2, frameY },
+            { time: 24, frameX: 1, frameY },
+          ]];
+        },
+      },
+    },
+  };
+  const heroPos = signal([8, 0, 4]);
+  const heroDirection = signal("down");
+  let walkAngle = 0;
+  tick(({ deltaTime }) => {
+    walkAngle += (deltaTime ?? 16.67) / 1000 * 0.3;
+    const x = Math.cos(walkAngle) * 8;
+    const z = Math.sin(walkAngle) * 5 + 4;
+    heroPos.set([x, 0, z]);
+    // Pick the sheet row from the walking direction, seen from the camera
+    const dx = -Math.sin(walkAngle), dz = Math.cos(walkAngle);
+    const next = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? "right" : "left") : dz > 0 ? "down" : "up";
+    if (heroDirection() !== next) heroDirection.set(next);
+  });
+
+  const clicks = signal(0);
+  const loaded = signal(false);
+  const wireframeOn = signal(false);
+  const debugOn = signal(false);
+  const expression = signal(0);
+
+  const signText = computed(() => `clicks: ${clicks()}`);
+  const plusHover = signal(false);
+  const resetHover = signal(false);
+  const plusColor = computed(() => (plusHover() ? "#4caf50" : "#2e7d32"));
+  const resetColor = computed(() => (resetHover() ? "#ef5350" : "#c62828"));
+  const robotLabel = computed(() => (loaded() ? "Robot · Label3D" : "loading…"));
+
+  // RobotExpressive has 3 face morph targets
+  const FACES = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  const face = computed(() => FACES[expression() % FACES.length]);
+
+  // Trees on a ring around the clearing, tinted per item
+  const random = (() => { let seed = 7; return () => (seed = (seed * 16807) % 2147483647) / 2147483647; })();
+  const GREENS = [0x2f6b3a, 0x3d7d45, 0x24572f, 0x4b8a3c];
+  const trees = Array.from({ length: 600 }, () => {
+    const angle = random() * Math.PI * 2;
+    const distance = 14 + random() * 40;
+    const size = 0.7 + random() * 0.8;
+    return {
+      position: [Math.cos(angle) * distance, 1.5 * size, Math.sin(angle) * distance],
+      scale: size,
+      color: GREENS[Math.floor(random() * GREENS.length)],
+    };
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "KeyE") expression.update((n) => n + 1);
+    if (e.code === "KeyW") wireframeOn.update((v) => !v);
+    if (e.code === "KeyD") debugOn.update((v) => !v);
+  });
+</script>

@@ -1,0 +1,176 @@
+<Canvas backgroundColor="#1d2533">
+  <View3D
+    positionType="absolute"
+    left={0}
+    top={0}
+    toneMapping="aces"
+    shadowQuality="high"
+    background={0x9fb8d6}
+    environment={{ skyColor: 0xcfe0f5, groundColor: 0x4a4636, intensity: 0.8 }}
+    fog={{ type: "linear", color: 0x9fb8d6, near: 25, far: 60 }}
+  >
+    <!-- frame: fits the robot in view once it has loaded -->
+    <Camera3D fov={45} frame={{ target: "robot", pitch: 18, yaw: -25, padding: 1.6 }} orbit={{ enableDamping: true, maxPolarAngle: 1.45 }} />
+
+    <DirectionalLight color={0xfff2dc} intensity={3} rotation={[-0.9, -0.6, 0]} castShadow={true} />
+
+    <Mesh3D
+      geometry={{ type: "plane", width: 80, height: 80 }}
+      material={{ baseColor: 0x6f7f5e, roughness: 1, metallic: 0 }}
+      rotation={[-Math.PI / 2, 0, 0]}
+      receiveShadow={true}
+    />
+
+    <!-- Drag the ball: the robot's head follows it -->
+    <Mesh3D
+      geometry={{ type: "sphere", radius: 0.35 }}
+      material={{ baseColor: 0xffd34d, emissive: { color: 0xffaa00, strength: 0.6 } }}
+      position={ball}
+      drag3d={{ move: (p) => ball.set([p.x, p.y, p.z]) }}
+    />
+
+    <!-- CC0 model by Tomás Laulhé (Quaternius), see public/models/CREDITS.md -->
+    <Model3D
+      src="./models/RobotExpressive.glb"
+      label="robot"
+      position={robotPos}
+      rotation={[0, heading, 0]}
+      animation={clip}
+      fadeDuration={0.25}
+      loop={looping}
+      dissolve={dissolve}
+      castShadow={true}
+      onLoad={onLoad}
+      onAnimationEnd={onAnimationEnd}
+      lookAtBone={{ bone: "Head", target: ballHead, maxAngle: 1.1, speed: 6 }}
+    >
+      <!-- A sword in the right hand: Palm2.R exists only in the skeleton -->
+      <Group3D bone="Palm2.R" rotation={[Math.PI / 2, 0, 0]}>
+        <Mesh3D geometry={{ type: "cylinder", radiusTop: 0.07, radiusBottom: 0.07, height: 0.5 }} material={{ baseColor: 0x5a3a1a, roughness: 0.8 }} />
+        <Mesh3D geometry={{ type: "cube", width: 0.6, height: 0.08, depth: 0.12 }} material={{ baseColor: 0xc9a227, metallic: 0.8, roughness: 0.3 }} position={[0, 0.27, 0]} />
+        <Mesh3D geometry={{ type: "cube", width: 0.14, height: 1.8, depth: 0.04 }} material={{ baseColor: 0xd8dde3, metallic: 1, roughness: 0.2 }} position={[0, 1.2, 0]} />
+      </Group3D>
+    </Model3D>
+  </View3D>
+
+  <!-- 2D HUD over the 3D view -->
+  <Container>
+    <Text text={status} x={16} y={14} color="#ffffff" size={18} />
+    <Text text="Arrow keys: walk (Shift: run) · click a gesture · drag the ball: the head follows it" x={16} y={40} color="#cfd8e3" size={13} />
+
+    @for (gesture of gestures) {
+      <Text
+        text={gesture.label}
+        x={16}
+        y={gesture.y}
+        color={gesture.color}
+        size={15}
+        cursor="pointer"
+        click={() => playGesture(gesture.clip)}
+      />
+    }
+  </Container>
+</Canvas>
+
+<script>
+  import { signal, computed, tick } from "canvasengine";
+  import { View3D, Camera3D, Mesh3D, Model3D, Group3D, DirectionalLight } from "@canvasengine/3d";
+
+  const GESTURES = ["Wave", "Dance", "ThumbsUp", "Yes", "No", "Punch", "Jump", "Death"];
+  // These play once; onAnimationEnd then goes back to Idle
+  const ONE_SHOT = ["ThumbsUp", "Yes", "No", "Punch", "Jump", "Death"];
+
+  const robotPos = signal([0, 0, 0]);
+  const ball = signal([3, 0.35, 3]);
+  // Look at the ball's centre
+  const ballHead = computed(() => ball());
+  const heading = signal(0);
+  const moving = signal(false);
+  const running = signal(false);
+  const gesture = signal(null);
+  const loaded = signal(false);
+
+  // Walking wins over gestures; a gesture plays while the robot stands still
+  const clip = computed(() => {
+    const [isMoving, isRunning, current] = [moving(), running(), gesture()];
+    if (isMoving) return isRunning ? "Running" : "Walking";
+    return current ?? "Idle";
+  });
+
+  const looping = computed(() => !ONE_SHOT.includes(clip()));
+
+  // After "Death", the robot dissolves with a glowing edge, then comes back
+  const dissolveAmount = signal(0);
+  const dissolve = computed(() => ({ amount: dissolveAmount(), edgeColor: 0xff8a3d, edgeStrength: 6, holeSize: 25 }));
+  let dissolveDirection = 0;
+
+  function onAnimationEnd(name) {
+    if (name === "Death") {
+      dissolveDirection = 1;
+      return;
+    }
+    gesture.set(null);
+  }
+
+  // Read both signals on every run: a computed only tracks what its first run reads
+  const status = computed(() => {
+    const current = clip();
+    return loaded() ? `Model3D · clip: ${current}` : "Loading RobotExpressive.glb…";
+  });
+
+  const gestures = GESTURES.map((name, i) => ({
+    clip: name,
+    label: `▶ ${name}`,
+    y: 72 + i * 24,
+    color: computed(() => {
+      const [current, isMoving] = [gesture(), moving()];
+      return current === name && !isMoving ? "#ffd34d" : "#ffffff";
+    }),
+  }));
+
+  function playGesture(name) {
+    gesture.set(gesture() === name ? null : name);
+  }
+
+  function onLoad() {
+    loaded.set(true);
+  }
+
+  const keys = new Set();
+  window.addEventListener("keydown", (e) => {
+    keys.add(e.code);
+    if (e.code.startsWith("Arrow")) e.preventDefault();
+  });
+  window.addEventListener("keyup", (e) => keys.delete(e.code));
+
+  tick(({ deltaTime }) => {
+    const dt = (deltaTime ?? 16.67) / 1000;
+    if (dissolveDirection) {
+      const next = dissolveAmount() + dissolveDirection * dt * 0.7;
+      if (next >= 1) {
+        dissolveDirection = -1;
+        gesture.set(null);
+      }
+      if (next <= 0) dissolveDirection = 0;
+      dissolveAmount.set(Math.min(1, Math.max(0, next)));
+    }
+    const dx = (keys.has("ArrowRight") ? 1 : 0) - (keys.has("ArrowLeft") ? 1 : 0);
+    const dz = (keys.has("ArrowDown") ? 1 : 0) - (keys.has("ArrowUp") ? 1 : 0);
+    const isMoving = Boolean(dx || dz);
+    const isRunning = keys.has("ShiftLeft") || keys.has("ShiftRight");
+    if (moving() !== isMoving) moving.set(isMoving);
+    if (running() !== isRunning) running.set(isRunning);
+    if (!isMoving) return;
+
+    gesture.set(null);
+    const length = Math.hypot(dx, dz);
+    const speed = isRunning ? 7 : 3;
+    // glTF models face +Z
+    heading.set(Math.atan2(dx, dz));
+    robotPos.update(([x, y, z]) => [
+      Math.max(-35, Math.min(35, x + (dx / length) * speed * dt)),
+      y,
+      Math.max(-35, Math.min(35, z + (dz / length) * speed * dt)),
+    ]);
+  });
+</script>

@@ -1,0 +1,59 @@
+<Canvas backgroundColor="#0f1420">
+  <View3D
+    positionType="absolute"
+    left={0}
+    top={0}
+    width={800}
+    height={500}
+    toneMapping="aces"
+    background={0x9fb8d6}
+    environment={{ skyColor: 0xcfe0f5, groundColor: 0x4a4636, intensity: 0.8 }}
+  >
+    <!-- Player 1: the main camera draws in the left half -->
+    <Camera3D position={[-6, 4, 8]} lookAt={redPos} fov={55} viewport={[0, 0, 0.5, 1]} />
+
+    <!-- Player 2: a second camera draws into a texture, shown on the right half -->
+    <Monitor3D showScreen={false} resolution={[400, 500]} camera={{ position: bluePos2, lookAt: bluePos, fov: 55 }} onTexture={(texture) => player2.set(texture)} />
+
+    <DirectionalLight intensity={3} rotation={[-0.9, 0.5, 0]} castShadow={true} />
+    <Mesh3D geometry={{ type: "plane", width: 40, height: 40 }} material={{ baseColor: 0x6f7f5e, roughness: 1 }} rotation={[-Math.PI / 2, 0, 0]} castShadow={false} />
+    <Mesh3D geometry={{ type: "cube" }} material={{ baseColor: 0xd9534f }} position={redPos} />
+    <Mesh3D geometry={{ type: "sphere", radius: 0.6 }} material={{ baseColor: 0x4a90d9 }} position={bluePos} />
+  </View3D>
+
+  <Container>
+    <Sprite texture={player2} x={400} y={0} />
+    <Rect x={398} y={0} width={4} height={500} color="#0f1420" />
+    <Text text="Player 1: arrow keys" x={16} y={14} color="#1d2533" size={15} />
+    <Text text="Player 2: WASD" x={416} y={14} color="#1d2533" size={15} />
+  </Container>
+</Canvas>
+
+<script>
+  import { signal, computed, tick } from "canvasengine";
+  import { View3D, Camera3D, Monitor3D, Mesh3D, DirectionalLight } from "@canvasengine/3d";
+
+  const redPos = signal([-2, 0.5, 0]);
+  const bluePos = signal([2, 0.6, 0]);
+  // Player 2's camera follows the sphere from behind and above
+  const bluePos2 = computed(() => {
+    const [x, y, z] = bluePos();
+    return [x + 5, y + 4, z + 7];
+  });
+  const player2 = signal(null);
+
+  const keys = new Set();
+  window.addEventListener("keydown", (e) => keys.add(e.code));
+  window.addEventListener("keyup", (e) => keys.delete(e.code));
+
+  tick(({ deltaTime }) => {
+    const step = ((deltaTime ?? 16.67) / 1000) * 4;
+    const move = (signalPos, left, right, up, down) => {
+      const dx = (keys.has(right) ? 1 : 0) - (keys.has(left) ? 1 : 0);
+      const dz = (keys.has(down) ? 1 : 0) - (keys.has(up) ? 1 : 0);
+      if (dx || dz) signalPos.update(([x, y, z]) => [x + dx * step, y, z + dz * step]);
+    };
+    move(redPos, "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown");
+    move(bluePos, "KeyA", "KeyD", "KeyW", "KeyS");
+  });
+</script>

@@ -1650,7 +1650,8 @@ describe('DOM', () => {
   test('should compile DOM with conditional tabindex and click attributes', () => {
     const input = `<button tabindex={skill ? index : -1} click={skill ? onSelectSkill(index) : undefined} />`;
     const output = parser.parse(input);
-    expect(output).toBe('h(DOMElement, { element: "button", attrs: { tabindex: computed(() => skill ? index : -1), click: skill ? onSelectSkill(index) : undefined } })');
+    // `skill` and `index` may be plain loop values: they are read, not called
+    expect(output).toBe('h(DOMElement, { element: "button", attrs: { tabindex: computed(() => { const $$skill = (isSignal(skill) ? skill() : skill), $$index = (isSignal(index) ? index() : index); return $$skill ? $$index : -1; }), click: skill ? onSelectSkill(index) : undefined } })');
   });
 
   test('should not transform Canvas to DOM', () => {
@@ -2040,4 +2041,87 @@ button {
   });
 
   
+});
+
+describe("Compiler: ternary attributes", () => {
+  // Each bare identifier is read once at the top: works for signals and plain values,
+  // and the computed tracks the signals of every branch
+  const ternary = (names: string[], expression: string) => {
+    const reads = names.map(name => `$$${name} = (isSignal(${name}) ? ${name}() : ${name})`).join(", ");
+    return `computed(() => { const ${reads}; return ${expression}; })`;
+  };
+
+  test("reads a bare signal used as the condition", () => {
+    const output = parser.parse(`<Model3D animation={moving ? "Run" : "Idle"} />`);
+    expect(output).toBe(`h(Model3D, { animation: ${ternary(["moving"], `$$moving ? "Run" : "Idle"`)} })`);
+  });
+
+  test("reads bare identifiers in the condition and the branches", () => {
+    const output = parser.parse(`<Text text={selected ? label : fallback} />`);
+    expect(output).toBe(
+      `h(Text, { text: ${ternary(["selected", "label", "fallback"], "$$selected ? $$label : $$fallback")} })`,
+    );
+  });
+
+  test("reads bare identifiers in a comparison condition", () => {
+    const output = parser.parse(`<Text color={hp < 10 ? "red" : "white"} />`);
+    expect(output).toBe(`h(Text, { color: ${ternary(["hp"], `$$hp < 10 ? "red" : "white"`)} })`);
+  });
+
+  test("keeps explicit calls as written", () => {
+    const output = parser.parse(`<Text color={selected() ? "#fff" : "#000"} />`);
+    expect(output).toBe(`h(Text, { color: computed(() => selected() ? "#fff" : "#000") })`);
+  });
+
+  test("leaves member access as written", () => {
+    const output = parser.parse(`<Text text={obj.completed ? "✓" : "○"} />`);
+    expect(output).toBe(`h(Text, { text: computed(() => obj.completed ? "✓" : "○") })`);
+  });
+
+  test("leaves object keys in a branch as written", () => {
+    const output = parser.parse(`<Mesh3D material={active ? { baseColor: color } : null} />`);
+    expect(output).toBe(
+      `h(Mesh3D, { material: ${ternary(["active", "color"], "$$active ? { baseColor: $$color } : null")} })`,
+    );
+  });
+
+  test("leaves keywords as written and reads an identifier once", () => {
+    const output = parser.parse(`<Text text={item === undefined ? "none" : item} />`);
+    expect(output).toBe(`h(Text, { text: ${ternary(["item"], `$$item === undefined ? "none" : $$item`)} })`);
+  });
+
+  test("handles nested ternaries", () => {
+    const output = parser.parse(`<Model3D animation={moving ? (running ? "Running" : "Walking") : "Idle"} />`);
+    expect(output).toBe(
+      `h(Model3D, { animation: ${ternary(["moving", "running"], `$$moving ? ($$running ? "Running" : "Walking") : "Idle"`)} })`,
+    );
+  });
+
+  test("does not treat optional chaining or ?? as a ternary", () => {
+    const output = parser.parse(`<Text text={label ?? fallback} />`);
+    expect(output).toBe(`h(Text, { text: computed(() => label() ?? fallback()) })`);
+  });
+
+  test("evaluates to the right value with signals and with plain values", async () => {
+    const { signal, computed, isSignal } = await import("canvasengine");
+    const code = parser.parse(`<Model3D animation={moving ? (running ? "Running" : "Walking") : "Idle"} />`)!;
+    // Runs the generated code with `h` returning the props
+    const build = (moving: unknown, running: unknown) =>
+      new Function("h", "computed", "isSignal", "Model3D", "moving", "running", `return ${code}`)(
+        (_tag: unknown, props: any) => props, computed, isSignal, "Model3D", moving, running,
+      );
+
+    const moving = signal(false);
+    const running = signal(false);
+    const props = build(moving, running);
+    expect(props.animation()).toBe("Idle");
+    moving.set(true);
+    expect(props.animation()).toBe("Walking");
+    running.set(true);
+    expect(props.animation()).toBe("Running");
+
+    // Plain values, such as loop variables
+    expect(build(true, false).animation()).toBe("Walking");
+    expect(build(false, true).animation()).toBe("Idle");
+  });
 });

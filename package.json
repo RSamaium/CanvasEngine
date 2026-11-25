@@ -26,7 +26,7 @@
     "@changesets/cli": "^2.31.0",
     "bumpp": "^11.0.1",
     "howler": "^2.2.4",
-    "pixi.js": "^8.19.0",
+    "pixi.js": "^8.23.0",
     "rollup-plugin-node-polyfills": "^0.2.1",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3"
