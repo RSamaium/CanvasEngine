@@ -1,5 +1,11 @@
 # canvasengine
 
+## 2.6.0
+
+### Minor Changes
+
+- d9663e9: Update `@signe/reactive` to `^3.2.0` (re-exported by `canvasengine`). Sprites also keep their `sheet.params` and movement animation changes on hold while they or an ancestor are frozen, and replay the latest ones on unfreeze.
+
 ## 2.5.2
 
 ### Patch Changes
