@@ -25,3 +25,4 @@ Write the documentation in English, like the rest of the repository.
 - Check every example against the code: prop names, types, default values. Run it in the playground (`sample/`) when it shows behavior.
 - When a prop or behavior changes, update its page in the same change. When an API is removed, remove or rewrite its documentation.
 - Check that internal links and anchors resolve, then run the docs server (`.claude/launch.json`, configuration `docs`) to see that the pages render.
+- Build the docs before pushing: `cd docs && npx vitepress build .`. The site deploys only if this build passes. VitePress compiles pages with Vue, so `{{` outside a fenced code block (inline code included) is read as a Vue expression and breaks the build: write `{ x: 0.5 }` in prose, and keep `{{ ... }}` template props in fenced blocks.

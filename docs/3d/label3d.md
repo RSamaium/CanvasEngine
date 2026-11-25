@@ -26,7 +26,7 @@
 </script>
 ```
 
-The label's own (0, 0) sits on the screen point of `at`. Anchor the children to place them around it, for example `anchor={{ x: 0.5, y: 1 }}` to center a text above the point.
+The label's own (0, 0) sits on the screen point of `at`. Anchor the children to place them around it, for example an `anchor` of `{ x: 0.5, y: 1 }` to center a text above the point.
 
 ## Properties
 

@@ -51,7 +51,7 @@ Plus the [common props](./getting-started#common-props).
 | `"cylindrical"` | Turns around its vertical axis only, so it stays upright | Characters, trees, signs |
 | `"none"` | A fixed card, turned by `rotation` | Decals, posters |
 
-For a character standing on the ground, use `"cylindrical"` with `anchor={{ x: 0.5, y: 1 }}`: the bottom middle of the image sits on `position`.
+For a character standing on the ground, use `"cylindrical"` with an `anchor` of `{ x: 0.5, y: 1 }`: the bottom middle of the image sits on `position`.
 
 ::: tip
 Keep `"spherical"` sprites anchored at the centre: an anchor away from the centre makes them drift as the camera moves.
