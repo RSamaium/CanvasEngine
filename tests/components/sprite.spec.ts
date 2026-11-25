@@ -465,4 +465,52 @@ describe('Sprite Component', () => {
             expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ deltaRatio: 2 }))
         })
     })
+    describe('freeze', () => {
+        // A mounted sprite whose parent container can be frozen
+        const mountUnderParent = async (frozen: ReturnType<typeof signal<boolean>>) => {
+            const dir = signal('down')
+            const sprite = new CanvasSprite()
+            const element: any = {
+                props: {
+                    context: { tick: signal(0), app: () => null, globalLoader: new GlobalAssetLoader() },
+                    sheet: { params: { dir: 'down' } },
+                },
+                propObservables: { sheet: { params: { dir } } },
+                parent: { props: {}, propObservables: { freeze: frozen } },
+            }
+            await sprite.onMount(element)
+            sprite.animations.set('stand', {} as any)
+            sprite.sheetCurrentAnimation = 'stand'
+            const play = vi.spyOn(sprite, 'play').mockImplementation(() => {})
+            return { sprite, element, dir, play }
+        }
+
+        test('does not replay sheet params while an ancestor is frozen', async () => {
+            const frozen = signal(false)
+            const { dir, play } = await mountUnderParent(frozen)
+
+            dir.set('left')
+            expect(play).toHaveBeenCalledTimes(1)
+
+            frozen.set(true)
+            dir.set('up')
+            dir.set('right')
+            expect(play).toHaveBeenCalledTimes(1)
+        })
+
+        test('replays the latest sheet params on unfreeze', async () => {
+            const frozen = signal(false)
+            const { element, dir, play } = await mountUnderParent(frozen)
+
+            frozen.set(true)
+            dir.set('up')
+            dir.set('right')
+            expect(element.pendingUpdates?.size).toBeGreaterThan(0)
+
+            frozen.set(false)
+            element.pendingUpdates?.forEach((apply: () => void) => apply())
+            expect(play).toHaveBeenCalledTimes(1)
+            expect(play).toHaveBeenLastCalledWith('stand', [expect.objectContaining({ dir: 'right' })])
+        })
+    })
 })
