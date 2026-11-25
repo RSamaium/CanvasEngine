@@ -26,3 +26,7 @@ Write the documentation in English, like the rest of the repository.
 - When a prop or behavior changes, update its page in the same change. When an API is removed, remove or rewrite its documentation.
 - Check that internal links and anchors resolve, then run the docs server (`.claude/launch.json`, configuration `docs`) to see that the pages render.
 - Build the docs before pushing: `cd docs && npx vitepress build .`. The site deploys only if this build passes. VitePress compiles pages with Vue, so `{{` outside a fenced code block (inline code included) is read as a Vue expression and breaks the build: write `{ x: 0.5 }` in prose, and keep `{{ ... }}` template props in fenced blocks.
+
+## V2 changes must be applied to V3
+
+The `v2` and `v3` branches are maintained in parallel. Every modification or fix made on V2 (features, bug fixes, dependency bumps, docs) must also be applied to V3, in the same piece of work: commit it on `v2`, then bring it to `v3` (merge or cherry-pick) and check that the tests still pass there. Do not leave a V2 change without its V3 counterpart.
