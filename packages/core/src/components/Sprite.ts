@@ -361,10 +361,13 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
         const value = propObservables?.sheet["params"][key] as Signal;
         if (isSignal(value)) {
           this.subscriptionSheet.push(
-            value.observable.subscribe((value) => {
-              if (this.animations.size == 0) return;
-              if (!this.has(this.sheetCurrentAnimation)) return;
-              this.play(this.sheetCurrentAnimation, [{ ...this.sheetParams, [key]: value }]);
+            value.observable.subscribe(() => {
+              // Frozen: keep the latest value, replayed on unfreeze
+              this.whenNotFrozen(`sheet.params.${key}`, () => {
+                if (this.animations.size == 0) return;
+                if (!this.has(this.sheetCurrentAnimation)) return;
+                this.play(this.sheetCurrentAnimation, [{ ...this.sheetParams, [key]: value() }]);
+              });
             })
           );
         } else {
@@ -393,13 +396,29 @@ export class CanvasSprite extends DisplayObject(PixiSprite) {
 
       if (!this.isMounted) return;
 
-      const animationName = this.getMovementAnimationName(_isMoving);
-      if (!animationName) return;
+      this.whenNotFrozen("sheet.moving", () => {
+        const animationName = this.getMovementAnimationName(_isMoving);
+        if (!animationName) return;
 
-      this.sheetCurrentAnimation = animationName;
-      if (this.spritesheet) this.play(this.sheetCurrentAnimation, [this.sheetParams]);
+        this.sheetCurrentAnimation = animationName;
+        if (this.spritesheet) this.play(this.sheetCurrentAnimation, [this.sheetParams]);
+      });
     });
     super.onMount(params);
+  }
+
+  /**
+   * Runs `apply` now, or, while the element or one of its ancestors is frozen,
+   * keeps it as a pending update that replays when the freeze ends.
+   */
+  private whenNotFrozen(key: string, apply: () => void) {
+    const element = this.getElement();
+    if (element && isElementFrozen(element)) {
+      (element.pendingUpdates ??= new Map()).set(key, apply);
+      return;
+    }
+    element?.pendingUpdates?.delete(key);
+    apply();
   }
 
   async onUpdate(props) {
